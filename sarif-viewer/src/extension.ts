@@ -46,6 +46,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(explorerRequestDisposable);
     context.subscriptions.push(codeActionProvider);
     context.subscriptions.push(remapCodeActionCommandDisposable);
+    context.subscriptions.push(FileMapper.Instance);
 }
 
 /**
