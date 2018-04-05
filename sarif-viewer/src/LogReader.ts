@@ -18,6 +18,8 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 export class LogReader {
     private static instance: LogReader;
 
+    public sarifJSONMapping: Map<string, any>;
+
     private closeListenerDisposable: Disposable;
     private resultCollection: SVDiagnosticCollection;
     private openListenerDisposable: Disposable;
@@ -32,6 +34,7 @@ export class LogReader {
 
     private constructor() {
         this.resultCollection = new SVDiagnosticCollection();
+        this.sarifJSONMapping = new Map<string, any>();
         FileMapper.Instance.OnMappingChanged(this.resultCollection.mappingChanged, this.resultCollection);
 
         // Listen for new sarif files to open or close
@@ -99,12 +102,15 @@ export class LogReader {
      * @param sync Optional flag to sync the issues after reading this file
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
+        const jsonMap = require("json-source-map");
         if (doc.languageId === "sarif") {
             let runInfo: RunInfo;
             let log: sarif.Log;
 
             try {
-                log = JSON.parse(doc.getText());
+                const docMapping = jsonMap.parse(doc.getText());
+                this.sarifJSONMapping.set(doc.uri.toString(), docMapping );
+                log = docMapping.data;
             } catch (error) {
                 window.showErrorMessage(`Cannot display results for '${doc.fileName}' because: ${error.message}`);
                 return;
@@ -117,7 +123,7 @@ export class LogReader {
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     await ResultInfo.create(run.results[resultIndex], run.rules).then((resultInfo: ResultInfo) => {
                         if (resultInfo.locations[0] === null) {
-                            resultInfo.locations[0] = ResultLocation.mapToSarifFile(doc, runIndex, resultIndex);
+                            resultInfo.locations[0] = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
                         this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));

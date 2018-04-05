@@ -4,8 +4,9 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { Range, TextDocument, Uri } from "vscode";
+import { Range, Uri } from "vscode";
 import { FileMapper } from "./FileMapper";
+import { LogReader } from "./LogReader";
 
 /**
  * Class that holds the processed location from a results location
@@ -17,7 +18,7 @@ export class ResultLocation {
      * @param location location from result in sarif file
      * @param snippet snippet from the result, this is only used if it can't get enough information from the location
      */
-    public static async create( location: sarif.PhysicalLocation, snippet: string): Promise<ResultLocation> {
+    public static async create(location: sarif.PhysicalLocation, snippet: string): Promise<ResultLocation> {
         const resultLocation = new ResultLocation();
 
         if (location.uri !== undefined) {
@@ -41,20 +42,19 @@ export class ResultLocation {
 
     /**
      * Maps the result back to the location in the SARIF file
-     * @param sarifDoc SARIF text document the result is in
+     * @param sarifUri Uri of the SARIF document the result is in
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFile(sarifDoc: TextDocument, runIndex: number, resultIndex: number): ResultLocation {
-        const jsonMap = require("json-source-map");
+    public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): ResultLocation {
         const resultPath = "/runs/" + runIndex + "/results/" + resultIndex + "/locations/0/resultFile";
-        const resultMapping = jsonMap.parse(sarifDoc.getText()).pointers[resultPath];
+        const resultMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString()).pointers[resultPath];
         const resultLocation = new ResultLocation();
 
         resultLocation.location = new Range(resultMapping.value.line, resultMapping.value.column,
             resultMapping.valueEnd.line, resultMapping.valueEnd.column);
-        resultLocation.uri = sarifDoc.uri;
-        resultLocation.fileName = sarifDoc.uri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
+        resultLocation.uri = sarifUri;
+        resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
         resultLocation.notMapped = true;
 
         return resultLocation;
