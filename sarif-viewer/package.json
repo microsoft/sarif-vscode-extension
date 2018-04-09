@@ -2,8 +2,8 @@
     "name": "sarif-viewer",
     "displayName": "Sarif Viewer",
     "description": "The SARIF Viewer extension visualizes the results in a sarif file",
-    "version": "0.1.0",
-    "publisher": "Rusty",
+    "version": "0.2.0",
+    "publisher": "RScrivens",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/sarif-vscode-extension.git"
