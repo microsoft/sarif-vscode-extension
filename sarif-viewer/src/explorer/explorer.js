@@ -4,6 +4,12 @@
 // *                                                       *
 // ********************************************************/
 
+var TreeClassNames = {
+    ExpandState: 0,
+    Importance: 1,
+    VerbosityShowState: 2
+}
+
 /**
  * Method to add tooltips to the content, currently just puts the text content into the tooltip
  */
@@ -40,7 +46,7 @@ function hookupEventListeners() {
 function onCodeFlowTreeClicked(event) {
     const ele = event.srcElement;
     if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
-        toggleExpandedState(ele);
+        toggleTreeElement(ele);
     } else {
         sendExplorerCallback({ request: "treeselectionchange", treeid_step: ele.id });
     }
@@ -59,7 +65,7 @@ function onCollapseAllClicked(event) {
  * @param event event fired when user clicked Expand all button
  */
 function onExpandAllClicked(event) {
-    toggleExpandedState("collapsed", "expanded");
+    toggleTreeElements("collapsed", "expanded");
 }
 
 /**
@@ -119,9 +125,28 @@ function setVerbosityShowState(type, state) {
     const elements = document.getElementsByClassName(type);
     for (let i = 0; i < elements.length; i++) {
         const classes = elements[i].className.split(" ");
-        classes[2] = state;
+        classes[TreeClassNames.VerbosityShowState] = state;
         elements[i].className = classes.join(" ");
     }
+}
+
+/**
+ * Toggles an element to the passed in state, or the opposite of it's current if no state is passed in
+ * @param ele element that needs to toggle
+ * @param toggleToState state to toggle it to, if not defined it will determine it based on the current state
+ */
+function toggleTreeElement(ele, toggleToState) {
+    const classNames = ele.className.split(" ");
+    if (toggleToState === undefined) {
+        if (classNames[TreeClassNames.ExpandState] === "expanded") {
+            toggleToState = "collapsed";
+        } else {
+            toggleToState = "expanded";
+        }
+    }
+
+    classNames[TreeClassNames.ExpandState] = toggleToState;
+    ele.className = classNames.join(" ");
 }
 
 /**
@@ -134,9 +159,7 @@ function toggleTreeElements(stateToToggle, toggleToState) {
     for (let i = 0; i < treeroots.length; i++) {
         const elements = treeroots[i].getElementsByClassName(stateToToggle);
         while (elements.length > 0) {
-            const classNames = elements[0].className.split(" ");
-            classNames[0] = toggleToState;
-            elements[0].className = classNames.join(" ");
+            toggleTreeElement(elements[0], toggleToState);
         }
     }
 }
