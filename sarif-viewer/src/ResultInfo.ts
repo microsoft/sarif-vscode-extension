@@ -51,35 +51,11 @@ export class ResultInfo {
     }
 
     /**
-     * Builds a messaged for the result based on the Rule's formated message
-     * @param rule the rule associated with this result
-     * @param formattedRuleMessage the formated messaged from the result
-     */
-    private static parseRuleBasedMessage(rule: sarif.Rule, formattedRuleMessage: sarif.FormattedRuleMessage): string {
-        let message: string;
-        if (formattedRuleMessage !== undefined &&
-            rule.messageFormats !== undefined &&
-            rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
-            message = rule.messageFormats[formattedRuleMessage.formatId];
-            for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
-                message = message.replace("{" + index + "}",
-                    formattedRuleMessage.arguments[index]);
-            }
-        } else if (rule.fullDescription !== undefined) {
-            message = rule.fullDescription;
-        } else {
-            message = rule.shortDescription;
-        }
-
-        return message;
-    }
-
-    /**
-     * Itterates through the locations in the result and ctreates ResultLocations for each
-     * If a location can't be created it set it adds a null value to the array
+     * Itterates through the locations in the result and creates ResultLocations for each
+     * If a location can't be created, it adds a null value to the array
      * @param result result file with the locations that need to be created
      */
-    private static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
+    public static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
         const locations = [];
 
         if (result.locations !== undefined) {
@@ -103,6 +79,30 @@ export class ResultInfo {
         }
 
         return Promise.resolve(locations);
+    }
+
+    /**
+     * Builds a messaged for the result based on the Rule's formated message
+     * @param rule the rule associated with this result
+     * @param formattedRuleMessage the formated messaged from the result
+     */
+    private static parseRuleBasedMessage(rule: sarif.Rule, formattedRuleMessage: sarif.FormattedRuleMessage): string {
+        let message: string;
+        if (formattedRuleMessage !== undefined &&
+            rule.messageFormats !== undefined &&
+            rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
+            message = rule.messageFormats[formattedRuleMessage.formatId];
+            for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
+                message = message.replace("{" + index + "}",
+                    formattedRuleMessage.arguments[index]);
+            }
+        } else if (rule.fullDescription !== undefined) {
+            message = rule.fullDescription;
+        } else {
+            message = rule.shortDescription;
+        }
+
+        return message;
     }
 
     public locations: ResultLocation[];

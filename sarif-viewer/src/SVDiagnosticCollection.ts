@@ -3,10 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri } from "vscode";
-import { FileMapper } from "./FileMapper";
-import { ResultLocation } from "./ResultLocation";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
 import { SVDiagnostic } from "./SVDiagnostic";
 
 /**
@@ -76,29 +73,13 @@ export class SVDiagnosticCollection {
             const remainingUnmappedIssues = [];
             const issues = this.unmappedIssuesCollection.get(key);
             for (const issue of issues) {
-                if (issue.rawResult.locations !== undefined && issue.rawResult.locations[0] !== undefined) {
-                    const location = issue.rawResult.locations[0];
-                    let physicalLocation: sarif.PhysicalLocation;
-                    if (location.resultFile !== undefined && location.resultFile.uri !== undefined) {
-                        physicalLocation = location.resultFile;
-                    } else if (location.analysisTarget !== undefined && location.analysisTarget.uri !== undefined) {
-                        physicalLocation = location.analysisTarget;
+                await issue.tryToRemapLocations().then((remapped) => {
+                    if (remapped) {
+                        this.add(issue);
                     } else {
                         remainingUnmappedIssues.push(issue);
-                        continue;
                     }
-
-                    const uri = Uri.parse(physicalLocation.uri);
-                    await FileMapper.Instance.map(uri, false, false).then(() => {
-                        return ResultLocation.create(physicalLocation,
-                            issue.rawResult.snippet);
-                    }).then((resultLocation: ResultLocation) => {
-                        issue.remap(resultLocation);
-                        this.add(issue);
-                    }, (reason) => {
-                        remainingUnmappedIssues.push(issue);
-                    });
-                }
+                });
             }
 
             if (remainingUnmappedIssues.length === 0) {
