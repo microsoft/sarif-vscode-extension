@@ -56,7 +56,8 @@ export class SVCodeActionProvider implements CodeActionProvider {
         token: CancellationToken): ProviderResult<Command[]> {
         const index = context.diagnostics.findIndex((x) => x.code === SVDiagnostic.Code);
         if (index !== -1) {
-            if (context.diagnostics[index].source === "SARIFViewer") {
+            const svDiagnostic = context.diagnostics[index] as SVDiagnostic;
+            if (svDiagnostic.source === "SARIFViewer") {
                 // Currently diagnostic is the place holder for the 250 limit,
                 // can possibly put logic here to allow for showing next set of diagnostics
             } else {
@@ -65,25 +66,44 @@ export class SVCodeActionProvider implements CodeActionProvider {
                     this.isFirstCall = false;
                 }
 
-                const explorerContentInstance = ExplorerContentProvider.Instance;
-                if (explorerContentInstance.activeSVDiagnostic === undefined ||
-                    explorerContentInstance.activeSVDiagnostic !== (context.diagnostics[index] as SVDiagnostic)) {
-                    explorerContentInstance.update(context.diagnostics[index] as SVDiagnostic);
+                const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+                if (activeSVDiagnostic === undefined || activeSVDiagnostic !== svDiagnostic) {
+                    ExplorerContentProvider.Instance.update(svDiagnostic);
                 }
 
-                const actions = [];
-                if ((context.diagnostics[index] as SVDiagnostic).resultInfo.locations[0].notMapped) {
-                    actions.push({
-                        arguments: [(context.diagnostics[index] as SVDiagnostic).result.locations[0].resultFile.uri],
-                        command: FileMapper.MapCommand,
-                        title: "Map To Source",
-                    });
-                }
+                const actions = this.getCodeActions(svDiagnostic);
 
                 return actions;
             }
         } else {
             return undefined;
         }
+    }
+
+    /**
+     * Creates the set of code actions for the passed in Sarif Viewer Diagnostic
+     * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
+     */
+    private getCodeActions(svDiagnostic: SVDiagnostic): any[] {
+        const locations = svDiagnostic.rawResult.locations;
+        const actions = [];
+        if (svDiagnostic.resultInfo.locations[0].notMapped && locations !== undefined) {
+            let filePath: string;
+            if (locations[0].resultFile !== undefined && locations[0].resultFile.uri !== undefined) {
+                filePath = locations[0].resultFile.uri;
+            } else if (locations[0].analysisTarget !== undefined && locations[0].analysisTarget.uri !== undefined) {
+                filePath = locations[0].analysisTarget.uri;
+            }
+
+            if (filePath !== undefined) {
+                actions.push({
+                    arguments: [filePath],
+                    command: FileMapper.MapCommand,
+                    title: "Map To Source",
+                });
+            }
+        }
+
+        return actions;
     }
 }

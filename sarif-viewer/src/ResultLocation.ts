@@ -47,12 +47,22 @@ export class ResultLocation {
      * @param resultIndex the index of the result in the SARIF file
      */
     public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): ResultLocation {
-        const resultPath = "/runs/" + runIndex + "/results/" + resultIndex + "/locations/0/resultFile";
-        const resultMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString()).pointers[resultPath];
+        const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+        const locations = sarifMapping.data.runs[runIndex].results[resultIndex].locations;
+        let resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
+        if (locations !== undefined) {
+            if (locations[0].resultFile !== undefined) {
+                resultPath += "/locations/0/resultFile";
+            } else if (locations[0].analysisTarget !== undefined) {
+                resultPath += "/locations/0/analysisTarget";
+            }
+        }
+
+        const locationMapping = sarifMapping.pointers[resultPath];
         const resultLocation = new ResultLocation();
 
-        resultLocation.location = new Range(resultMapping.value.line, resultMapping.value.column,
-            resultMapping.valueEnd.line, resultMapping.valueEnd.column);
+        resultLocation.location = new Range(locationMapping.value.line, locationMapping.value.column,
+            locationMapping.valueEnd.line, locationMapping.valueEnd.column);
         resultLocation.uri = sarifUri;
         resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
         resultLocation.notMapped = true;

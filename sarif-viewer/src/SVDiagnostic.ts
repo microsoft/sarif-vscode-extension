@@ -19,7 +19,7 @@ export class SVDiagnostic extends Diagnostic {
 
     public runinfo: RunInfo;
     public resultInfo: ResultInfo;
-    public result: sarif.Result;
+    public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
         super(resultinfo.locations[0].location, resultinfo.message);
@@ -27,7 +27,7 @@ export class SVDiagnostic extends Diagnostic {
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
         this.resultInfo = resultinfo;
-        this.result = result;
+        this.rawResult = result;
         this.source = this.runinfo.toolName;
 
         this.updateMessage();

@@ -81,15 +81,21 @@ export class ResultInfo {
      */
     private static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
         const locations = [];
-        // Parse the locations related info
+
         if (result.locations !== undefined) {
             for (const location of result.locations) {
-                await ResultLocation.create(location.resultFile,
-                    result.snippet).then((resultLocation: ResultLocation) => {
-                        locations.push(resultLocation);
-                    }, (reason) => {
-                        locations.push(null);
-                    });
+                const physicalLocation = location.resultFile || location.analysisTarget;
+
+                if (physicalLocation !== undefined) {
+                    await ResultLocation.create(physicalLocation,
+                        result.snippet).then((resultLocation: ResultLocation) => {
+                            locations.push(resultLocation);
+                        }, (reason) => {
+                            locations.push(null);
+                        });
+                } else { // no physicalLocation to use
+                    locations.push(null);
+                }
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.

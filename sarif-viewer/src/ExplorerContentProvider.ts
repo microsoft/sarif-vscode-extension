@@ -224,12 +224,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             let hideCodeFlow = "";
             let codeFlowContent = "";
             let setOpenTab: string;
-            if (this.activeSVDiagnostic.result.codeFlows === undefined ||
-                this.activeSVDiagnostic.result.codeFlows.length === 0) {
+            if (this.activeSVDiagnostic.rawResult.codeFlows === undefined ||
+                this.activeSVDiagnostic.rawResult.codeFlows.length === 0) {
                 hideCodeFlow = "#codeflowtab{display:none;}";
                 setOpenTab = "resultinfotab";
             } else {
-                codeFlowContent = this.generateCodeFlowContent(this.activeSVDiagnostic.result.codeFlows);
+                codeFlowContent = this.generateCodeFlowContent(this.activeSVDiagnostic.rawResult.codeFlows);
                 setOpenTab = "codeflowtab";
             }
 
