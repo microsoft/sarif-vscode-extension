@@ -3,9 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri } from "vscode";
-import { FileMapper } from "./FileMapper";
-import { ResultLocation } from "./ResultLocation";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
 import { SVDiagnostic } from "./SVDiagnostic";
 
 /**
@@ -75,21 +73,13 @@ export class SVDiagnosticCollection {
             const remainingUnmappedIssues = [];
             const issues = this.unmappedIssuesCollection.get(key);
             for (const issue of issues) {
-                if (issue.result.locations !== undefined &&
-                    issue.result.locations[0] !== undefined &&
-                    issue.result.locations[0].resultFile !== undefined &&
-                    issue.result.locations[0].resultFile.uri !== undefined) {
-                    const uri = Uri.parse(issue.result.locations[0].resultFile.uri);
-                    await FileMapper.Instance.map(uri, false, false).then(() => {
-                        return ResultLocation.create(issue.result.locations[0].resultFile,
-                            issue.result.snippet);
-                    }).then((resultLocation: ResultLocation) => {
-                        issue.remap(resultLocation);
+                await issue.tryToRemapLocations().then((remapped) => {
+                    if (remapped) {
                         this.add(issue);
-                    }, (reason) => {
+                    } else {
                         remainingUnmappedIssues.push(issue);
-                    });
-                }
+                    }
+                });
             }
 
             if (remainingUnmappedIssues.length === 0) {

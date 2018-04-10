@@ -234,7 +234,9 @@ export class FileMapper {
         openOptions.canSelectFolders = false;
         openOptions.canSelectMany = false;
         openOptions.openLabel = "Map";
-        openOptions.defaultUri = uri;
+        if (uri.scheme === "file") {
+            openOptions.defaultUri = uri;
+        }
 
         const index = uri.fsPath.lastIndexOf(".");
         if (index !== -1) {

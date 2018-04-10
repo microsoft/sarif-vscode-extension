@@ -22,14 +22,14 @@ export class CodeFlowDecorations {
      */
     public static async updateLocationsHighlight() {
         const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.result.codeFlows !== undefined
-            && activeSVDiagnostic.result.codeFlows.length > 0) {
+        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.rawResult.codeFlows !== undefined
+            && activeSVDiagnostic.rawResult.codeFlows.length > 0) {
 
             // for each visible editor add any of the codeflow locations that match it's Uri
             for (const editor of window.visibleTextEditors) {
                 const decorations: DecorationOptions[] = [];
                 const unimportantDecorations: DecorationOptions[] = [];
-                for (const codeflow of activeSVDiagnostic.result.codeFlows) {
+                for (const codeflow of activeSVDiagnostic.rawResult.codeFlows) {
                     for (const location of codeflow.locations) {
                         await CodeFlowDecorations.createHighlightDecoration(location, editor).then((decoration) => {
                             if (decoration === undefined) { return; }
@@ -57,8 +57,8 @@ export class CodeFlowDecorations {
      * @param stepId Id of the step in the tree that is selected
      */
     public static async updateSelectionHighlight(treeId: string, stepId: string): Promise<void> {
-        const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        const cfLocation: sarif.AnnotatedCodeLocation = activeSVDiagnostic.result.codeFlows[treeId].locations[stepId];
+        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const cfLocation: sarif.AnnotatedCodeLocation = svDiagnostic.rawResult.codeFlows[treeId].locations[stepId];
         if (cfLocation.physicalLocation !== undefined) {
             let resultLocation: ResultLocation;
             await ResultLocation.create(cfLocation.physicalLocation,

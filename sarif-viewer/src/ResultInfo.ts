@@ -51,6 +51,37 @@ export class ResultInfo {
     }
 
     /**
+     * Itterates through the locations in the result and creates ResultLocations for each
+     * If a location can't be created, it adds a null value to the array
+     * @param result result file with the locations that need to be created
+     */
+    public static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
+        const locations = [];
+
+        if (result.locations !== undefined) {
+            for (const location of result.locations) {
+                const physicalLocation = location.resultFile || location.analysisTarget;
+
+                if (physicalLocation !== undefined) {
+                    await ResultLocation.create(physicalLocation,
+                        result.snippet).then((resultLocation: ResultLocation) => {
+                            locations.push(resultLocation);
+                        }, (reason) => {
+                            locations.push(null);
+                        });
+                } else { // no physicalLocation to use
+                    locations.push(null);
+                }
+            }
+        } else {
+            // Default location if none is defined points to the location of the result in the SARIF file.
+            locations.push(null);
+        }
+
+        return Promise.resolve(locations);
+    }
+
+    /**
      * Builds a messaged for the result based on the Rule's formated message
      * @param rule the rule associated with this result
      * @param formattedRuleMessage the formated messaged from the result
@@ -72,31 +103,6 @@ export class ResultInfo {
         }
 
         return message;
-    }
-
-    /**
-     * Itterates through the locations in the result and ctreates ResultLocations for each
-     * If a location can't be created it set it adds a null value to the array
-     * @param result result file with the locations that need to be created
-     */
-    private static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
-        const locations = [];
-        // Parse the locations related info
-        if (result.locations !== undefined) {
-            for (const location of result.locations) {
-                await ResultLocation.create(location.resultFile,
-                    result.snippet).then((resultLocation: ResultLocation) => {
-                        locations.push(resultLocation);
-                    }, (reason) => {
-                        locations.push(null);
-                    });
-            }
-        } else {
-            // Default location if none is defined points to the location of the result in the SARIF file.
-            locations.push(null);
-        }
-
-        return Promise.resolve(locations);
     }
 
     public locations: ResultLocation[];

@@ -7,8 +7,8 @@
 var TreeClassNames = {
     ExpandState: 0,
     Importance: 1,
-    VerbosityShowState: 2
-}
+    VerbosityShowState: 2,
+};
 
 /**
  * Method to add tooltips to the content, currently just puts the text content into the tooltip
