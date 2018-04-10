@@ -29,14 +29,16 @@ function hookupEventListeners() {
         tabs[i].addEventListener("click", onTabClicked);
     }
 
-    const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
-    for (let i = 0; i < codeflowtrees.length; i++) {
-        codeflowtrees[i].addEventListener("click", onCodeFlowTreeClicked);
-    }
+    if (document.getElementById("codeflowtabcontent") !== null) {
+        const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
+        for (let i = 0; i < codeflowtrees.length; i++) {
+            codeflowtrees[i].addEventListener("click", onCodeFlowTreeClicked);
+        }
 
-    document.getElementById("expandallcodeflow").addEventListener("click", onExpandAllClicked);
-    document.getElementById("collapseallcodeflow").addEventListener("click", onCollapseAllClicked);
-    document.getElementById("codeflowverbosity").addEventListener("change", onVerbosityChange);
+        document.getElementById("expandallcodeflow").addEventListener("click", onExpandAllClicked);
+        document.getElementById("collapseallcodeflow").addEventListener("click", onCollapseAllClicked);
+        document.getElementById("codeflowverbosity").addEventListener("change", onVerbosityChange);
+    }
 }
 
 /**
@@ -193,6 +195,9 @@ function updateTreeVerbosity() {
     setVerbosityShowState("unimportant", unimportantClass);
 }
 
-updateTreeVerbosity();
+if (document.getElementById("codeflowtabcontent") !== null) {
+    updateTreeVerbosity();
+}
+
 addTooltips();
 hookupEventListeners();
