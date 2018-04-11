@@ -75,7 +75,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      */
     public provideTextDocumentContent(uri: Uri): string {
         CodeFlowDecorations.updateLocationsHighlight();
-        return this.generateViewer();
+        return this.assembleExplorerContent();
     }
 
     /**
@@ -88,15 +88,88 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
+     * Primary function that generates the HTML displayed in the Explorer window
+     */
+    private assembleExplorerContent(): string {
+        if (this.activeSVDiagnostic !== undefined) {
+            const cssMarkup = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.css")).toString();
+            const scriptPath = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.js")).toString();
+
+            const explorerHeaderContent = this.createExplorerHeaderContent();
+            const ruleDescription = this.sanatizeText(this.activeSVDiagnostic.resultInfo.message);
+            const resultInfoTabContent = this.createResultInfoTabContent();
+            const runInfoTabContent = this.createRunInfoTabContent();
+            const codeFlowTabContent = this.createCodeFlowTabContent(this.activeSVDiagnostic.rawResult.codeFlows);
+
+            const tabsContainerContent = this.createTabContainerHeaderContent(codeFlowTabContent !== "");
+
+            let setOpenTab: string;
+            if (codeFlowTabContent !== "") {
+                setOpenTab = "codeflowtab";
+            } else {
+                setOpenTab = "resultinfotab";
+            }
+
+            return `
+            <head>
+                <link rel="stylesheet" type="text/css" href="${cssMarkup}" />
+            </head>
+            <body>
+                ${explorerHeaderContent}
+                <div id="ruledescription">${ruleDescription}</div>
+                ${tabsContainerContent}
+                <div id="tabContentContainer">
+                    ${resultInfoTabContent}
+                    ${codeFlowTabContent}
+                    ${runInfoTabContent}
+                </div>
+            </body>
+            <script src=${scriptPath}></script>
+            <script>
+                openTab("${setOpenTab}");
+            </script>
+            `;
+        } else {
+            return `Select an issue in the Problems window`;
+        }
+
+    }
+
+    /**
+     * Creates the content that shows when the user clicks the Code Flow tab
+     */
+    private createCodeFlowTabContent(codeFlows: sarif.CodeFlow[]): string {
+        let output = "";
+        if (codeFlows !== undefined && codeFlows.length > 0) {
+            const codeFlowContent = this.createCodeFlowTrees(codeFlows);
+            output = `
+            <div id="codeflowtabcontent" class="tabcontent">
+                <div class="tabcontentheader">
+                    <div class="tabcontentheaderbutton" id="expandallcodeflow" title="Expand All">+</div>
+                    <div class="tabcontentheaderbutton" id="collapseallcodeflow" title="Collapse All">-</div>
+                    <div class="tabcontentheadersperator">|</div>
+                    <div>
+                        <input id="codeflowverbosity" type="range" max="2" title="Tree Verbosity">
+                    </div>
+                </div>
+                <div id="codeflowtreecontainer">
+                    ${codeFlowContent}
+                </div>
+            </div>`;
+        }
+        return output;
+    }
+
+    /**
      * Generates the html for all of the Code Flows
      * @param codeflows array of code flows that need to be displayed
      */
-    private generateCodeFlowContent(codeflows: sarif.CodeFlow[]): string {
+    private createCodeFlowTrees(codeflows: sarif.CodeFlow[]): string {
         let output = "";
 
         for (let i = 0; i < codeflows.length; i++) {
             output += `<ul class="codeflowtreeroot">`;
-            output += this.generateCodeFlowTree(codeflows[i], i);
+            output += this.createCodeFlowTree(codeflows[i], i);
             output += `</ul><br>`;
         }
 
@@ -108,7 +181,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param codeflow Code Flow that needs to be converted to a tree
      * @param treeId Id of the tree for later reference
      */
-    private generateCodeFlowTree(codeflow: sarif.CodeFlow, treeId: number): string {
+    private createCodeFlowTree(codeflow: sarif.CodeFlow, treeId: number): string {
         let output = "";
         let nestedCount = 0;
 
@@ -189,10 +262,28 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
-     * Generates the Related locations Html in the ResultInfo
+     * Creates the content that shows in the header of the Explorer window
+     */
+    private createExplorerHeaderContent(): string {
+        let filenameandline = this.activeSVDiagnostic.resultInfo.locations[0].fileName + " (" +
+            (this.activeSVDiagnostic.resultInfo.locations[0].location.start.line + 1/*Range is 0 based*/) + ")";
+        filenameandline = this.sanatizeText(filenameandline);
+        const ruleId = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleId);
+        const ruleName = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleName);
+
+        return `
+        <div id="title">
+            <label id="titleruleid">${ruleId}</label>
+            <label id="titlerulename">${ruleName}</label> |
+            <label>${filenameandline}</label>
+        </div>`;
+    }
+
+    /**
+     * Creates the Related locations Html in the ResultInfo
      * @param locations Array of ResultLocations to be added to the Html
      */
-    private generateLocations(locations: ResultLocation[]): string {
+    private createLocations(locations: ResultLocation[]): string {
         let output = "";
 
         for (let index = 0; index < locations.length; index++) {
@@ -210,74 +301,18 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
-     * Primary function that generates the HTML displayed in the Explorer window
+     * Creates the content that shows when the user clicks the resultinfo tab
      */
-    private generateViewer(): string {
-        if (this.activeSVDiagnostic !== undefined) {
-            const cssMarkup = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.css")).toString();
-            const scriptPath = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.js")).toString();
+    private createResultInfoTabContent(): string {
+        const ruleId = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleId);
+        const ruleName = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleName);
+        const ruleDefaultLevel = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleDefaultLevel);
+        const ruleHelpUriText = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
+        const ruleHelpUri = encodeURI(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
+        const locations = this.createLocations(this.activeSVDiagnostic.resultInfo.locations);
 
-            let headerfilenameandline = this.activeSVDiagnostic.resultInfo.locations[0].fileName + " (" +
-                (this.activeSVDiagnostic.resultInfo.locations[0].location.start.line + 1/*Range is 0 based*/) + ")";
-            const locations = this.generateLocations(this.activeSVDiagnostic.resultInfo.locations);
-
-            let hideCodeFlow = "";
-            let codeFlowContent = "";
-            let setOpenTab: string;
-            if (this.activeSVDiagnostic.rawResult.codeFlows === undefined ||
-                this.activeSVDiagnostic.rawResult.codeFlows.length === 0) {
-                hideCodeFlow = "#codeflowtab{display:none;}";
-                setOpenTab = "resultinfotab";
-            } else {
-                codeFlowContent = this.generateCodeFlowContent(this.activeSVDiagnostic.rawResult.codeFlows);
-                setOpenTab = "codeflowtab";
-            }
-
-            const ruleId = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleId);
-            const ruleName = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleName);
-            headerfilenameandline = this.sanatizeText(headerfilenameandline);
-            const ruleDescription = this.sanatizeText(this.activeSVDiagnostic.resultInfo.message);
-            const ruleDefaultLevel = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleDefaultLevel);
-            const ruleHelpUriText = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
-            const ruleHelpUri = encodeURI(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
-            const toolName = this.sanatizeText(this.activeSVDiagnostic.runinfo.toolName);
-            const cmdLine = this.sanatizeText(this.activeSVDiagnostic.runinfo.cmdLine);
-            const fileName = this.sanatizeText(this.activeSVDiagnostic.runinfo.fileName);
-            const workingDir = this.sanatizeText(this.activeSVDiagnostic.runinfo.workingDir);
-
-            return `
-            <head>
-            <link rel="stylesheet" type="text/css" href="${cssMarkup}" />
-            <style>
-            ${hideCodeFlow}
-            </style>
-            </head>
-<body>
-    <div id="title">
-        <label id="titleruleid">${ruleId}</label>
-        <label id="titlerulename">${ruleName}</label> |
-        <label>${headerfilenameandline}</label>
-    </div>
-    <div id="ruledescription">${ruleDescription}</div>
-    <div id="tabcontainer">
-        <div id="resultinfotab" class="tab tabactive" title="Results info">
-            <label class="tablabel">
-                RESULT INFO
-            </label>
-        </div>
-        <div id="codeflowtab" class="tab" title="Code flow">
-            <label class="tablabel">
-                CODE FLOW
-            </label>
-        </div>
-        <div id="runinfotab" class="tab" title="Run info">
-            <label class="tablabel">
-                RUN INFO
-            </label>
-        </div>
-    </div>
-    <div id="tabContentContainer">
-        <div id="resultinfotabcontent" class="tabcontent tabcontentactive">
+        return `
+        <div id="resultinfotabcontent" class="tabcontent">
             <table>
                 <tr>
                     <td class="td-contentname">${ruleId}</td>
@@ -298,20 +333,18 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                     <td class="td-contentvalue">${locations}</td>
                 </tr>
             </table>
-        </div>
-        <div id="codeflowtabcontent" class="tabcontent">
-            <div class="tabcontentheader">
-                <div class="tabcontentheaderbutton" id="expandallcodeflow" title="Expand All">+</div>
-                <div class="tabcontentheaderbutton" id="collapseallcodeflow" title="Collapse All">-</div>
-                <div class="tabcontentheadersperator">|</div>
-                <div>
-                    <input id="codeflowverbosity" type="range" max="2" title="Tree Verbosity">
-                </div>
-            </div>
-            <div id="codeflowtreecontainer">
-                ${codeFlowContent}
-            </div>
-        </div>
+        </div>`;
+    }
+
+    /**
+     * Creates the content that shows when the user clicks the runinfo tab
+     */
+    private createRunInfoTabContent(): string {
+        const toolName = this.sanatizeText(this.activeSVDiagnostic.runinfo.toolName);
+        const cmdLine = this.sanatizeText(this.activeSVDiagnostic.runinfo.cmdLine);
+        const fileName = this.sanatizeText(this.activeSVDiagnostic.runinfo.fileName);
+        const workingDir = this.sanatizeText(this.activeSVDiagnostic.runinfo.workingDir);
+        return `
         <div id="runinfotabcontent" class="tabcontent">
             <table>
                 <tr>
@@ -331,18 +364,40 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                     <td class="td-contentvalue">${workingDir}</td>
                 </tr>
             </table>
-        </div>
-    </div>
-</body>
-<script src=${scriptPath}></script>
-<script>
-    openTab("${setOpenTab}");
-</script>
-`;
-        } else {
-            return `Select an issue in the Problems window`;
+        </div>`;
+    }
+
+    /**
+     * Creates the Tabs Container content, the tabs at the top of the tab container
+     * @param includeCodeFlow Flag to include the CodeFlow tab in the set of tabs
+     */
+    private createTabContainerHeaderContent(includeCodeFlow: boolean): string {
+        let codeFlowTab = "";
+        if (includeCodeFlow) {
+            codeFlowTab = this.createTabForTabContainer("codeflowtab", "Code flow", "CODE FLOW");
         }
 
+        return `
+        <div id="tabcontainer">
+            ${this.createTabForTabContainer("resultinfotab", "Results info", "RESULT INFO")}
+            ${codeFlowTab}
+            ${this.createTabForTabContainer("runinfotab", "Run info", "RUN INFO")}
+        </div>`;
+    }
+
+    /**
+     * Creates a tab to add to the tab container
+     * @param id id of the tab
+     * @param tooltip tooltip of the tab
+     * @param label text that shows on the tab
+     */
+    private createTabForTabContainer(id: string, tooltip: string, label: string) {
+        return `
+        <div id="${id}" class="tab" title="${tooltip}">
+            <label class="tablabel">
+                ${label}
+            </label>
+        </div>`;
     }
 
     /**
