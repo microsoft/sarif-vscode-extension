@@ -52,9 +52,9 @@ export class ResultLocation {
         let resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
         if (locations !== undefined) {
             if (locations[0].resultFile !== undefined) {
-                resultPath += "/locations/0/resultFile";
+                resultPath = resultPath + "/locations/0/resultFile";
             } else if (locations[0].analysisTarget !== undefined) {
-                resultPath += "/locations/0/analysisTarget";
+                resultPath = resultPath + "/locations/0/analysisTarget";
             }
         }
 

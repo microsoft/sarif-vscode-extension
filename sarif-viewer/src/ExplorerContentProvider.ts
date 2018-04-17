@@ -8,7 +8,10 @@ import {
     Disposable, Event, EventEmitter, ExtensionContext, TextDocumentContentProvider, Uri, window, workspace,
 } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
+import { HTMLElementOptions } from "./Interfaces";
+import { ResultInfo } from "./ResultInfo";
 import { ResultLocation } from "./ResultLocation";
+import { RunInfo } from "./RunInfo";
 import { SVDiagnostic } from "./SVDiagnostic";
 
 /**
@@ -28,11 +31,15 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private onDidChangeEmitter = new EventEmitter<Uri>();
     private textDocContentProRegistration: Disposable;
     private visibleChangeDisposable: Disposable;
+    private document;
 
     private constructor() {
         this.textDocContentProRegistration = workspace.registerTextDocumentContentProvider("sarifExplorer", this);
         this.visibleChangeDisposable = window.onDidChangeVisibleTextEditors(
             CodeFlowDecorations.updateLocationsHighlight, this);
+
+        const jsdom = require("jsdom");
+        this.document = (new jsdom.JSDOM(``)).window.document;
     }
 
     public get onDidChange(): Event<Uri> {
@@ -88,6 +95,36 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
+     * Recursive function that goes through the locations
+     * adds a node to it's parent
+     * if a node is a "call" the node will become a parent to add the next nodes
+     * if a node is a "callreturn" the node will end the recursion
+     * @param parent Parent html element to add the children to
+     * @param locations Array of all of the locations in the tree
+     * @param start Starting point in the Array
+     * @param treeId Id of the tree
+     */
+    private addNodes(parent: any, locations: sarif.AnnotatedCodeLocation[], start: number, treeId: number): number {
+        for (let index = start; index < locations.length; index++) {
+            const node = this.createNode(locations[index], `${treeId}_${index}`);
+            parent.appendChild(node);
+
+            if (locations[index].kind === sarif.AnnotatedCodeLocation.kind.call) {
+                index++;
+                const childrenContainer = this.createElement("ul");
+                index = this.addNodes(childrenContainer, locations, index, treeId);
+                node.appendChild(childrenContainer);
+            } else if (locations[index].kind === sarif.AnnotatedCodeLocation.kind.callReturn) {
+                // if it's a callReturn we want to pop out of the recursion returning the index we stopped at
+                return index;
+            }
+        }
+
+        // finished all of the elements in the locations
+        return locations.length;
+    }
+
+    /**
      * Primary function that generates the HTML displayed in the Explorer window
      */
     private assembleExplorerContent(): string {
@@ -95,344 +132,289 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             const cssMarkup = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.css")).toString();
             const scriptPath = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.js")).toString();
 
-            const explorerHeaderContent = this.createExplorerHeaderContent();
-            const ruleDescription = this.sanatizeText(this.activeSVDiagnostic.resultInfo.message);
-            const resultInfoTabContent = this.createResultInfoTabContent();
-            const runInfoTabContent = this.createRunInfoTabContent();
-            const codeFlowTabContent = this.createCodeFlowTabContent(this.activeSVDiagnostic.rawResult.codeFlows);
+            const headElement = this.createElement("head");
+            headElement.appendChild(this.createElement("link", {
+                attributes: { rel: "stylesheet", type: "text/css", href: cssMarkup },
+            }));
 
-            const tabsContainerContent = this.createTabContainerHeaderContent(codeFlowTabContent !== "");
+            const bodyElement = this.createBodyContent();
 
-            let setOpenTab: string;
-            if (codeFlowTabContent !== "") {
-                setOpenTab = "codeflowtab";
-            } else {
-                setOpenTab = "resultinfotab";
-            }
+            const scriptElement = this.createElement("script", { attributes: { src: scriptPath } });
 
             return `
-            <head>
-                <link rel="stylesheet" type="text/css" href="${cssMarkup}" />
-            </head>
-            <body>
-                ${explorerHeaderContent}
-                <div id="ruledescription">${ruleDescription}</div>
-                ${tabsContainerContent}
-                <div id="tabContentContainer">
-                    ${resultInfoTabContent}
-                    ${codeFlowTabContent}
-                    ${runInfoTabContent}
-                </div>
-            </body>
-            <script src=${scriptPath}></script>
-            <script>
-                openTab("${setOpenTab}");
-            </script>
+            ${headElement.outerHTML}
+            ${bodyElement.outerHTML}
+            ${scriptElement.outerHTML}
             `;
         } else {
-            return `Select an issue in the Problems window`;
+            return `Select a Sarif result in the Problems panel`;
         }
 
+    }
+
+    /**
+     * Creates the body element and content
+     */
+    private createBodyContent() {
+        const resultInfo = this.activeSVDiagnostic.resultInfo;
+
+        const body = this.createElement("body");
+        body.appendChild(this.createExplorerHeaderContent(resultInfo));
+        body.appendChild(this.createElement("div", { id: "ruledescription", text: resultInfo.message }));
+
+        const codeFlowPanel = this.createCodeFlowPanel(this.activeSVDiagnostic.rawResult.codeFlows);
+
+        const panelContainer = this.createElement("div", { id: "tabContentContainer" });
+        panelContainer.appendChild(this.createResultInfoPanel(resultInfo));
+        if (codeFlowPanel !== undefined) { panelContainer.appendChild(codeFlowPanel); }
+        panelContainer.appendChild(this.createRunInfoPanel(this.activeSVDiagnostic.runinfo));
+
+        body.appendChild(this.createTabHeaderContainer(codeFlowPanel !== undefined));
+        body.appendChild(panelContainer);
+
+        return body;
     }
 
     /**
      * Creates the content that shows when the user clicks the Code Flow tab
+     * @param codeFlows Array of code flows to create the content from
      */
-    private createCodeFlowTabContent(codeFlows: sarif.CodeFlow[]): string {
-        let output = "";
+    private createCodeFlowPanel(codeFlows: sarif.CodeFlow[]): any {
         if (codeFlows !== undefined && codeFlows.length > 0) {
-            const codeFlowContent = this.createCodeFlowTrees(codeFlows);
-            output = `
-            <div id="codeflowtabcontent" class="tabcontent">
-                <div class="tabcontentheader">
-                    <div class="tabcontentheaderbutton" id="expandallcodeflow" title="Expand All">+</div>
-                    <div class="tabcontentheaderbutton" id="collapseallcodeflow" title="Collapse All">-</div>
-                    <div class="tabcontentheadersperator">|</div>
-                    <div>
-                        <input id="codeflowverbosity" type="range" max="2" title="Tree Verbosity">
-                    </div>
-                </div>
-                <div id="codeflowtreecontainer">
-                    ${codeFlowContent}
-                </div>
-            </div>`;
+            const returnEle = this.createElement("div", { id: "codeflowtabcontent", className: "tabcontent" });
+
+            const headerEle = this.createElement("div", { className: "tabcontentheader" });
+            headerEle.appendChild(this.createElement("div", {
+                className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
+            }));
+            headerEle.appendChild(this.createElement("div", {
+                className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
+            }));
+            headerEle.appendChild(this.createElement("div", { className: "tabcontentheadersperator", text: "|" }));
+            headerEle.appendChild(this.createElement("input", {
+                attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
+            }));
+            returnEle.appendChild(headerEle);
+
+            returnEle.appendChild(this.createCodeFlowTrees(codeFlows));
+
+            return returnEle;
+        } else {
+            return undefined;
         }
-        return output;
     }
 
     /**
-     * Generates the html for all of the Code Flows
+     * Creates a tree for each of the Code Flows
      * @param codeflows array of code flows that need to be displayed
      */
-    private createCodeFlowTrees(codeflows: sarif.CodeFlow[]): string {
-        let output = "";
+    private createCodeFlowTrees(codeflows: sarif.CodeFlow[]): any {
+        const returnEle = this.createElement("div", { id: "codeflowtreecontainer" });
 
         for (let i = 0; i < codeflows.length; i++) {
-            output += `<ul class="codeflowtreeroot">`;
-            output += this.createCodeFlowTree(codeflows[i], i);
-            output += `</ul><br>`;
+            const rootEle = this.createElement("ul", { className: "codeflowtreeroot" });
+            this.addNodes(rootEle, codeflows[i].locations, 0, i);
+            returnEle.appendChild(rootEle);
+            returnEle.appendChild(this.createElement("br"));
         }
 
-        return output;
+        return returnEle;
     }
 
     /**
-     * Generates the Html tree for a Code Flow
-     * @param codeflow Code Flow that needs to be converted to a tree
-     * @param treeId Id of the tree for later reference
+     * Helper function for creating an element and setting some of it's properties
+     * @param tagName Type of element to create(div, label, etc.)
+     * @param options Additional properties to set on the new element
      */
-    private createCodeFlowTree(codeflow: sarif.CodeFlow, treeId: number): string {
-        let output = "";
-        let nestedCount = 0;
+    private createElement(tagName: string, options?: HTMLElementOptions): any {
+        const ele = this.document.createElement(tagName);
+        if (options !== undefined) {
+            if (options.text !== undefined) { ele.textContent = options.text; }
+            if (options.id !== undefined) { ele.id = options.id; }
+            if (options.className !== undefined) { ele.className = options.className; }
+            if (options.tooltip !== undefined) { ele.setAttribute("title", options.tooltip); }
 
-        for (let i = 0; i < codeflow.locations.length; i++) {
-            const location = codeflow.locations[i];
-            let liClass: string;
-            let tooltip: string;
-            let fileNameAndLine: string;
-            let message: string;
-
-            // Set any special values based on the kind
-            switch (location.kind) {
-                case sarif.AnnotatedCodeLocation.kind.call:
-                    liClass = "expanded";
-                    break;
-                case sarif.AnnotatedCodeLocation.kind.callReturn:
-                    message = "Return";
-                    fileNameAndLine = " ";
-                    break;
-                default:
-            }
-
-            // Anything that still not defined use the default method of finding the value
-            liClass = liClass || "unexpandable";
-            tooltip = tooltip || location.kind || "Unknown";
-            message = message || location.message || location.target || "";
-            fileNameAndLine = fileNameAndLine ||
-                `${location.physicalLocation.uri.substring(location.physicalLocation.uri.lastIndexOf("/") + 1)}
-                (${location.physicalLocation.region.startLine})`;
-
-            // Add the importance to the class
-            liClass += " " + (location.importance || sarif.AnnotatedCodeLocation.importance.important);
-
-            // Add the Verbosity show state to the class
-            liClass += " verbosityshow";
-
-            // Sanatize all of the strings before putting in the html string
-            liClass = this.sanatizeText(liClass);
-            tooltip = this.sanatizeText(tooltip);
-            fileNameAndLine = this.sanatizeText(fileNameAndLine);
-            message = this.sanatizeText(message);
-
-            // if no message is defined need to set it to space so the element shows up correctly
-            if (message === "") {
-                message = "&nbsp;";
-            }
-
-            // Add the html with values
-            output += `<li id="${treeId}_${i}" class="${liClass}" title="${tooltip}" tabindex="0">`;
-            output += `<span class="codeflowlocation">${fileNameAndLine}</span>`;
-            output += `${message}`;
-
-            if (location.kind === sarif.AnnotatedCodeLocation.kind.call) {
-                // if it's a call don't close element, instead open add a child element
-                nestedCount++;
-                output += `<ul>`;
-            } else if (location.kind === sarif.AnnotatedCodeLocation.kind.callReturn) {
-                // if it's a callReturn close the child element and call element
-                nestedCount--;
-                output += `</li>`;
-                output += `</ul>`;
-                // closes the call element
-                output += `</li>`;
-            } else {
-                // default to closing the element
-                output += `</li>`;
+            for (const name in options.attributes) {
+                if (options.attributes.hasOwnProperty(name)) {
+                    ele.setAttribute(name, options.attributes[name]);
+                }
             }
         }
 
-        // Clean up incase the codeflow ended inside a method call with no call return.
-        while (nestedCount > 0) {
-            nestedCount--;
-            output += `</ul>`;
-            output += `</li>`;
-        }
-
-        return output;
+        return ele;
     }
 
     /**
      * Creates the content that shows in the header of the Explorer window
      */
-    private createExplorerHeaderContent(): string {
-        let filenameandline = this.activeSVDiagnostic.resultInfo.locations[0].fileName + " (" +
-            (this.activeSVDiagnostic.resultInfo.locations[0].location.start.line + 1/*Range is 0 based*/) + ")";
-        filenameandline = this.sanatizeText(filenameandline);
-        const ruleId = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleId);
-        const ruleName = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleName);
+    private createExplorerHeaderContent(resultInfo: ResultInfo): any {
+        const filenameandline = resultInfo.locations[0].fileName + " (" +
+            (resultInfo.locations[0].location.start.line + 1/*Range is 0 based*/) + ")";
 
-        return `
-        <div id="title">
-            <label id="titleruleid">${ruleId}</label>
-            <label id="titlerulename">${ruleName}</label> |
-            <label>${filenameandline}</label>
-        </div>`;
+        const returnEle = this.createElement("div", { id: "title" });
+
+        returnEle.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
+        returnEle.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
+        returnEle.appendChild(this.createElement("label", { text: " | " }));
+        returnEle.appendChild(this.createElement("label", { text: filenameandline }));
+
+        return returnEle;
     }
 
     /**
-     * Creates the Related locations Html in the ResultInfo
-     * @param locations Array of ResultLocations to be added to the Html
+     * Helper function creates a simple two row column with the name on the left and value on the right
+     * For more complex values(not string) you'll need to manually create the element
+     * @param name value in the left column
+     * @param value value in the right column
      */
-    private createLocations(locations: ResultLocation[]): string {
-        let output = "";
+    private createNameValueRow(name: string, value: string) {
+        const row = this.createElement("tr");
+        row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
+        row.appendChild(this.createElement("td", { className: "td-contentvalue", text: value }));
 
-        for (let index = 0; index < locations.length; index++) {
-            if (index > 0) {
-                output += "<br>";
-            }
+        return row;
+    }
 
-            output += `<label title="${encodeURI(locations[index].uri.fsPath)}">
-            ${this.sanatizeText(locations[index].fileName)}
-            (${this.sanatizeInt(locations[index].location.start.line) + 1/*because Range is zero based*/})
-            </label>`;
+    /**
+     * Creates a Node for the CodeFlow tree
+     * @param location CodeFlow location to populate the node with
+     * @param nodeId Id of the node comprised of treeId_nodeindex for use in request to display location
+     */
+    private createNode(location: sarif.AnnotatedCodeLocation, nodeId: string): any {
+        let liClass: string;
+        let fileNameAndLine: string;
+        let message: string;
+
+        liClass = "unexpandable";
+        message = location.message || location.target || "[no description]";
+        if (location.physicalLocation !== undefined) {
+            const loc = location.physicalLocation;
+            fileNameAndLine = `${loc.uri.substring(loc.uri.lastIndexOf("/") + 1)} (${loc.region.startLine})`;
+        } else {
+            fileNameAndLine = "[no location]";
         }
 
-        return output;
+        if (location.kind === sarif.AnnotatedCodeLocation.kind.call) {
+            liClass = "expanded";
+        } else if (location.kind === sarif.AnnotatedCodeLocation.kind.callReturn) {
+            message = "Return";
+        }
+
+        liClass = liClass + ` ${location.importance || sarif.AnnotatedCodeLocation.importance.important} verbosityshow`;
+
+        const node = this.createElement("li", {
+            attributes: { tabindex: "0" }, className: liClass, id: nodeId, tooltip: (location.kind || "Unknown"),
+        });
+
+        node.appendChild(this.createElement("span", { className: "codeflowlocation", text: fileNameAndLine }));
+        node.appendChild(this.document.createTextNode(message));
+
+        return node;
+    }
+
+    /**
+     * Creates the locations content to show in the ResultInfo
+     * @param locations Array of ResultLocations to be added to the Html
+     */
+    private createResultInfoLocations(locations: ResultLocation[]): string {
+        const element = this.createElement("div");
+
+        for (const location of locations) {
+            const locationText = `${location.fileName}(${(location.location.start.line + 1)})`;
+            element.appendChild(this.createElement("label", { text: locationText, tooltip: location.uri.fsPath }));
+            element.appendChild(this.createElement("br"));
+        }
+
+        return element;
     }
 
     /**
      * Creates the content that shows when the user clicks the resultinfo tab
+     * @param resultInfo Result info to create the tab content from
      */
-    private createResultInfoTabContent(): string {
-        const ruleId = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleId);
-        const ruleName = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleName);
-        const ruleDefaultLevel = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleDefaultLevel);
-        const ruleHelpUriText = this.sanatizeText(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
-        const ruleHelpUri = encodeURI(this.activeSVDiagnostic.resultInfo.ruleHelpUri);
-        const locations = this.createLocations(this.activeSVDiagnostic.resultInfo.locations);
+    private createResultInfoPanel(resultInfo: ResultInfo): any {
+        const returnEle = this.createElement("div", { id: "resultinfotabcontent", className: "tabcontent" });
+        const tableEle = this.createElement("table");
 
-        return `
-        <div id="resultinfotabcontent" class="tabcontent">
-            <table>
-                <tr>
-                    <td class="td-contentname">${ruleId}</td>
-                    <td class="td-contentvalue">${ruleName}</td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Default level:</td>
-                    <td class="td-contentvalue">${ruleDefaultLevel}</td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Help:</td>
-                    <td class="td-contentvalue">
-                        <a href="${ruleHelpUri}">${ruleHelpUriText}</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Locations:</td>
-                    <td class="td-contentvalue">${locations}</td>
-                </tr>
-            </table>
-        </div>`;
+        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
+        tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.ruleDefaultLevel));
+
+        let row = this.createElement("tr");
+        if (resultInfo.ruleHelpUri !== undefined) {
+            row = this.createElement("tr");
+            row.appendChild(this.createElement("td", { className: "td-contentname", text: "Help:" }));
+            const helpCell = this.createElement("td", { className: "td-contentvalue" });
+            const linkEle = this.createElement("a", { text: resultInfo.ruleHelpUri });
+            linkEle.href = resultInfo.ruleHelpUri;
+            helpCell.appendChild(linkEle);
+            row.appendChild(helpCell);
+            tableEle.appendChild(row);
+        }
+
+        row = this.createElement("tr");
+        row.appendChild(this.createElement("td", { className: "td-contentname", text: "Locations:" }));
+        const cell = this.createElement("td", { className: "td-contentvalue" });
+        cell.appendChild(this.createResultInfoLocations(resultInfo.locations));
+        row.appendChild(cell);
+
+        tableEle.appendChild(row);
+
+        returnEle.appendChild(tableEle);
+
+        return returnEle;
     }
 
     /**
      * Creates the content that shows when the user clicks the runinfo tab
+     * @param runInfo Run info to create the tab content from
      */
-    private createRunInfoTabContent(): string {
-        const toolName = this.sanatizeText(this.activeSVDiagnostic.runinfo.toolName);
-        const cmdLine = this.sanatizeText(this.activeSVDiagnostic.runinfo.cmdLine);
-        const fileName = this.sanatizeText(this.activeSVDiagnostic.runinfo.fileName);
-        const workingDir = this.sanatizeText(this.activeSVDiagnostic.runinfo.workingDir);
-        return `
-        <div id="runinfotabcontent" class="tabcontent">
-            <table>
-                <tr>
-                    <td class="td-contentname">Tool:</td>
-                    <td class="td-contentvalue">${toolName}</td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Command line:</td>
-                    <td class="td-contentvalue">${cmdLine}</td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Filename:</td>
-                    <td class="td-contentvalue">${fileName}</td>
-                </tr>
-                <tr>
-                    <td class="td-contentname">Working directory:</td>
-                    <td class="td-contentvalue">${workingDir}</td>
-                </tr>
-            </table>
-        </div>`;
+    private createRunInfoPanel(runInfo: RunInfo): any {
+        const returnEle = this.createElement("div", { id: "runinfotabcontent", className: "tabcontent" });
+        const tableEle = this.createElement("table");
+
+        if (runInfo.toolName !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolName));
+        }
+        if (runInfo.cmdLine !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
+        }
+        if (runInfo.fileName !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Filename:", runInfo.fileName));
+        }
+        if (runInfo.workingDir !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
+        }
+
+        returnEle.appendChild(tableEle);
+
+        return returnEle;
     }
 
     /**
      * Creates the Tabs Container content, the tabs at the top of the tab container
      * @param includeCodeFlow Flag to include the CodeFlow tab in the set of tabs
      */
-    private createTabContainerHeaderContent(includeCodeFlow: boolean): string {
-        let codeFlowTab = "";
-        if (includeCodeFlow) {
-            codeFlowTab = this.createTabForTabContainer("codeflowtab", "Code flow", "CODE FLOW");
-        }
+    private createTabHeaderContainer(includeCodeFlow: boolean): any {
+        const element = this.createElement("div", { id: "tabcontainer" });
 
-        return `
-        <div id="tabcontainer">
-            ${this.createTabForTabContainer("resultinfotab", "Results info", "RESULT INFO")}
-            ${codeFlowTab}
-            ${this.createTabForTabContainer("runinfotab", "Run info", "RUN INFO")}
-        </div>`;
+        element.appendChild(this.createTabElement("resultinfotab", "Results info", "RESULT INFO"));
+        if (includeCodeFlow) {
+            element.appendChild(this.createTabElement("codeflowtab", "Code flow", "CODE FLOW"));
+        }
+        element.appendChild(this.createTabElement("runinfotab", "Run info", "RUN INFO"));
+
+        return element;
     }
 
     /**
      * Creates a tab to add to the tab container
-     * @param id id of the tab
-     * @param tooltip tooltip of the tab
-     * @param label text that shows on the tab
+     * @param tabId id of the tab
+     * @param tabTooltip tooltip of the tab
+     * @param tabText text that shows on the tab
      */
-    private createTabForTabContainer(id: string, tooltip: string, label: string) {
-        return `
-        <div id="${id}" class="tab" title="${tooltip}">
-            <label class="tablabel">
-                ${label}
-            </label>
-        </div>`;
-    }
-
-    /**
-     * Sanatizes the number passed in by converting it to a string, escaping any needed characters(currently escapes
-     * characters that would effect visible text in the HTML[ &, <, " ]) and parses it back to an int.
-     * If it fails to parse back to a number it returns 0.
-     * @param input number to be sanatized
-     */
-    private sanatizeInt(input: number): number {
-        let str = input.toString();
-        str = str.replace(/&/g, "&amp;");
-        str = str.replace(/</g, "&lt;");
-        str = str.replace(/"/, "&quot;");
-
-        let value = parseInt(str, 10);
-        if (isNaN(value)) {
-            value = 0;
-        }
-
-        return value;
-    }
-
-    /**
-     * Sanatizes the string passed in, escaping any needed characters(currently escapes characters that would effect
-     * visible text in the HTML[ &, <, " ]).
-     * @param input string that needs to be sanatized
-     */
-    private sanatizeText(input: string): string {
-        if (input === undefined) {
-            return undefined;
-        }
-        let output = input.replace(/&/g, "&amp;");
-        output = output.replace(/</g, "&lt;");
-        output = output.replace(/"/, "&quot;");
-
-        return output;
+    private createTabElement(tabId: string, tabTooltip: string, tabText: string): any {
+        const returnEle = this.createElement("div", { className: "tab", id: tabId, tooltip: tabTooltip });
+        returnEle.appendChild(this.createElement("label", { className: "tablabel", text: tabText }));
+        return returnEle;
     }
 }

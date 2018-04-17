@@ -59,6 +59,7 @@
         "tslint": "^5.0.0"
     },
     "dependencies": {
+        "jsdom": "^11.7.0",
         "json-source-map": "^0.4.0"
     }
 }
