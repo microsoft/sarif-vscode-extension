@@ -107,7 +107,7 @@ export class ResultInfo {
 
     public locations: ResultLocation[];
     public message = "";
-    public ruleHelpUri = "";
+    public ruleHelpUri: string;
     public ruleId = "";
     public ruleName = "";
     public ruleDefaultLevel = sarif.Rule.defaultLevel.warning;

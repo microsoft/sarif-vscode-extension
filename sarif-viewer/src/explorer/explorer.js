@@ -41,12 +41,24 @@ function hookupEventListeners() {
     }
 }
 
+function initializeOpenedTab() {
+    if (document.getElementById("codeflowtab")) {
+        openTab("codeflowtab");
+    } else {
+        openTab("resultinfotab");
+    }
+}
+
 /**
  * Callback when user clicks on the CodeFlow tree
  * @param event event fired when user clicked the codeflow tree
  */
 function onCodeFlowTreeClicked(event) {
-    const ele = event.srcElement;
+    let ele = event.srcElement;
+    if (ele.className === "codeflowlocation") {
+        ele = ele.parentElement;
+    }
+
     if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
         toggleTreeElement(ele);
     } else {
@@ -199,5 +211,6 @@ if (document.getElementById("codeflowtabcontent") !== null) {
     updateTreeVerbosity();
 }
 
+initializeOpenedTab();
 addTooltips();
 hookupEventListeners();

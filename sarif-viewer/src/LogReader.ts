@@ -23,6 +23,7 @@ export class LogReader {
     private closeListenerDisposable: Disposable;
     private resultCollection: SVDiagnosticCollection;
     private openListenerDisposable: Disposable;
+    private jsonMap;
 
     public static get Instance(): LogReader {
         if (LogReader.instance === undefined) {
@@ -35,6 +36,9 @@ export class LogReader {
     private constructor() {
         this.resultCollection = new SVDiagnosticCollection();
         this.sarifJSONMapping = new Map<string, any>();
+
+        this.jsonMap = require("json-source-map");
+
         FileMapper.Instance.OnMappingChanged(this.resultCollection.mappingChanged, this.resultCollection);
 
         // Listen for new sarif files to open or close
@@ -102,13 +106,12 @@ export class LogReader {
      * @param sync Optional flag to sync the issues after reading this file
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
-        const jsonMap = require("json-source-map");
         if (doc.languageId === "sarif") {
             let runInfo: RunInfo;
             let log: sarif.Log;
 
             try {
-                const docMapping = jsonMap.parse(doc.getText());
+                const docMapping = this.jsonMap.parse(doc.getText());
                 this.sarifJSONMapping.set(doc.uri.toString(), docMapping );
                 log = docMapping.data;
             } catch (error) {
