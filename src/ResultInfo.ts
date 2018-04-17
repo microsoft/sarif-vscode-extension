@@ -25,14 +25,19 @@ export class ResultInfo {
 
         resultInfo.message = result.message || "";
 
+        let ruleKey: string;
+        if (result.ruleKey !== undefined) {
+            ruleKey = result.ruleKey;
+        } else if (result.ruleId !== undefined) {
+            ruleKey = result.ruleId;
+        }
+
         // Parse the rule related info
         // Overwrites the message if a messageFormats is provided in the rule
-        if (result.ruleId !== undefined) {
-            resultInfo.ruleId = result.ruleId;
-
-            if (rules !== undefined && rules[resultInfo.ruleId] !== undefined) {
-                const rule: sarif.Rule = rules[resultInfo.ruleId];
-
+        if (ruleKey !== undefined) {
+            if (rules !== undefined && rules[ruleKey] !== undefined) {
+                const rule: sarif.Rule = rules[ruleKey];
+                resultInfo.ruleId = rule.id;
                 resultInfo.message = ResultInfo.parseRuleBasedMessage(rule, result.formattedRuleMessage);
 
                 if (rule.helpUri !== undefined) {
@@ -44,6 +49,8 @@ export class ResultInfo {
                 }
 
                 resultInfo.ruleDefaultLevel = rule.defaultLevel || sarif.Rule.defaultLevel.warning;
+            } else {
+                resultInfo.ruleId = ruleKey;
             }
         }
 
@@ -92,9 +99,10 @@ export class ResultInfo {
             rule.messageFormats !== undefined &&
             rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
             message = rule.messageFormats[formattedRuleMessage.formatId];
-            for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
-                message = message.replace("{" + index + "}",
-                    formattedRuleMessage.arguments[index]);
+            if (formattedRuleMessage.arguments !== undefined) {
+                for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
+                    message = message.replace("{" + index + "}", formattedRuleMessage.arguments[index]);
+                }
             }
         } else if (rule.fullDescription !== undefined) {
             message = rule.fullDescription;
