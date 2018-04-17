@@ -1,14 +1,20 @@
+# sarif-viewer README
 
-# Contributing
+The SARIF Viewer extension visualizes the results in a 'Static Analysis Results Interchange Format' (SARIF) file
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
+## Features
 
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+This extension allows the user to:
+ * view the results in a SARIF file.
+ * navigate to the source locations listed in a result
+ * view additional details about the result
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## Requirements
+
+## Known Issues
+
+## Release Notes
+
+### 0.1.0
+
+Initial preview release of the extension
