@@ -125,8 +125,8 @@ export class LogReader {
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     await ResultInfo.create(run.results[resultIndex], run.rules).then((resultInfo: ResultInfo) => {
-                        if (resultInfo.locations[0] === null) {
-                            resultInfo.locations[0] = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
+                        if (resultInfo.assignedLocation.notMapped === true) {
+                            resultInfo.assignedLocation = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
                         this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));

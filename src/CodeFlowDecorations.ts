@@ -62,16 +62,18 @@ export class CodeFlowDecorations {
         if (cfLocation.physicalLocation !== undefined) {
             let resultLocation: ResultLocation;
             await ResultLocation.create(cfLocation.physicalLocation,
-                cfLocation.snippet).then((rLocation: ResultLocation) => {
-                    resultLocation = rLocation;
-                }, (reason) => {
-                    // file mapping wasn't found, try to get the user to choose file
-                    const uri = Uri.parse(cfLocation.physicalLocation.uri);
-                    return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                        return ResultLocation.create(cfLocation.physicalLocation, cfLocation.snippet);
-                    }).then((rLocation) => {
-                        resultLocation = rLocation;
-                    });
+                cfLocation.snippet).then((location: ResultLocation) => {
+                    if (location.notMapped) {
+                        // file mapping wasn't found, try to get the user to choose file
+                        const uri = Uri.parse(cfLocation.physicalLocation.uri);
+                        return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
+                            return ResultLocation.create(cfLocation.physicalLocation, cfLocation.snippet);
+                        }).then((choosenLoc) => {
+                            resultLocation = choosenLoc;
+                        });
+                    } else {
+                        resultLocation = location;
+                    }
                 }).then(() => {
                     return workspace.openTextDocument(resultLocation.uri);
                 }).then((doc) => {
@@ -129,6 +131,10 @@ export class CodeFlowDecorations {
 
         return ResultLocation.create(location.physicalLocation,
             location.snippet).then((resultLocation: ResultLocation) => {
+                if (resultLocation.notMapped) {
+                    return Promise.resolve(undefined);
+                }
+
                 if (resultLocation.uri.toString() === editor.document.uri.toString()) {
                     const decoration = {
                         hoverMessage: `[CodeFlow] Step ${location.step}: ${location.message ||
@@ -141,7 +147,7 @@ export class CodeFlowDecorations {
                 }
             }, (reason) => {
                 // The code flow location hasn't been mapped yet so there's no highlight to add
-                return Promise.resolve();
+                return Promise.resolve(undefined);
             });
     }
 }

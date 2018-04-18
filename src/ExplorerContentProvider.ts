@@ -320,8 +320,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         const element = this.createElement("div");
 
         for (const location of locations) {
-            const locationText = `${location.fileName}(${(location.location.start.line + 1)})`;
-            element.appendChild(this.createElement("label", { text: locationText, tooltip: location.uri.fsPath }));
+            const locText = `${location.fileName} (${(location.location.start.line + 1)})`;
+            element.appendChild(this.createElement("label", { text: locText, tooltip: location.uri.toString(true) }));
             element.appendChild(this.createElement("br"));
         }
 
@@ -339,25 +339,24 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
         tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.ruleDefaultLevel));
 
-        let row = this.createElement("tr");
         if (resultInfo.ruleHelpUri !== undefined) {
-            row = this.createElement("tr");
-            row.appendChild(this.createElement("td", { className: "td-contentname", text: "Help:" }));
+            let helpRow = this.createElement("tr");
+            helpRow = this.createElement("tr");
+            helpRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Help:" }));
             const helpCell = this.createElement("td", { className: "td-contentvalue" });
             const linkEle = this.createElement("a", { text: resultInfo.ruleHelpUri });
             linkEle.href = resultInfo.ruleHelpUri;
             helpCell.appendChild(linkEle);
-            row.appendChild(helpCell);
-            tableEle.appendChild(row);
+            helpRow.appendChild(helpCell);
+            tableEle.appendChild(helpRow);
         }
 
-        row = this.createElement("tr");
-        row.appendChild(this.createElement("td", { className: "td-contentname", text: "Locations:" }));
+        const locationsRow = this.createElement("tr");
+        locationsRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Locations:" }));
         const cell = this.createElement("td", { className: "td-contentvalue" });
         cell.appendChild(this.createResultInfoLocations(resultInfo.locations));
-        row.appendChild(cell);
-
-        tableEle.appendChild(row);
+        locationsRow.appendChild(cell);
+        tableEle.appendChild(locationsRow);
 
         returnEle.appendChild(tableEle);
 
@@ -379,7 +378,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
         }
         if (runInfo.fileName !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("Filename:", runInfo.fileName));
+            tableEle.appendChild(this.createNameValueRow("File name:", runInfo.fileName));
         }
         if (runInfo.workingDir !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));

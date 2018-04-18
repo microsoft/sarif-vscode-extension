@@ -22,14 +22,17 @@ export class ResultLocation {
         const resultLocation = new ResultLocation();
 
         if (location.uri !== undefined) {
-            await FileMapper.Instance.get(location.uri).then((uri: Uri) => {
+            const fileUri = Uri.parse(location.uri);
+            await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
                     resultLocation.uri = uri;
-                    resultLocation.fileName = resultLocation.uri.fsPath.substring(
-                        resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
                 } else {
-                    return Promise.reject("uri not Mapped");
+                    resultLocation.notMapped = true;
+                    resultLocation.uri = fileUri;
                 }
+
+                resultLocation.fileName = resultLocation.uri.toString(true).substring(
+                    resultLocation.uri.toString(true).lastIndexOf("/") + 1);
             });
         } else {
             return Promise.reject("uri undefined");

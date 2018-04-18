@@ -40,7 +40,7 @@ export class SVDiagnosticCollection {
      * @param issue diagnostic to add to the problems panel
      */
     public add(issue: SVDiagnostic) {
-        if (issue.resultInfo.locations[0].notMapped) {
+        if (issue.resultInfo.assignedLocation.notMapped) {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         } else {
             this.addToCollection(this.issuesCollection, issue);
@@ -98,7 +98,7 @@ export class SVDiagnosticCollection {
      * @param issue diagnostic that needs to be added to dictionary
      */
     private addToCollection(collection: Map<string, SVDiagnostic[]>, issue: SVDiagnostic) {
-        const key = issue.resultInfo.locations[0].uri;
+        const key = issue.resultInfo.assignedLocation.uri;
 
         if (collection.has(key.path)) {
             collection.get(key.path).push(issue);
@@ -115,7 +115,7 @@ export class SVDiagnosticCollection {
     private addToDiagnosticCollection(collection: Map<string, SVDiagnostic[]>) {
         for (const issues of collection.values()) {
             let diags: Diagnostic[];
-            const key = issues[0].resultInfo.locations[0].uri;
+            const key = issues[0].resultInfo.assignedLocation.uri;
             if (issues.length > SVDiagnosticCollection.MaxDiagCollectionSize) {
                 const msg = `Only displaying 249 of the total ${issues.length} results in the SARIF log.`;
                 const maxReachedDiag = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);

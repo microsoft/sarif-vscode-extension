@@ -21,6 +21,7 @@ export class ResultInfo {
 
         await ResultInfo.parseLocations(result).then((locations) => {
             resultInfo.locations = locations;
+            resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
         resultInfo.message = result.message || "";
@@ -74,6 +75,7 @@ export class ResultInfo {
                         result.snippet).then((resultLocation: ResultLocation) => {
                             locations.push(resultLocation);
                         }, (reason) => {
+                            // Uri wasn't provided in the physical location
                             locations.push(null);
                         });
                 } else { // no physicalLocation to use
@@ -113,6 +115,7 @@ export class ResultInfo {
         return message;
     }
 
+    public assignedLocation: ResultLocation;
     public locations: ResultLocation[];
     public message = "";
     public ruleHelpUri: string;
