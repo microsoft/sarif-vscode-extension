@@ -249,7 +249,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      */
     private createExplorerHeaderContent(resultInfo: ResultInfo): any {
         const filenameandline = resultInfo.locations[0].fileName + " (" +
-            (resultInfo.locations[0].location.start.line + 1/*Range is 0 based*/) + ")";
+            (resultInfo.locations[0].range.start.line + 1/*Range is 0 based*/) + ")";
 
         const returnEle = this.createElement("div", { id: "title" });
 
@@ -320,7 +320,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         const element = this.createElement("div");
 
         for (const location of locations) {
-            const locText = `${location.fileName} (${(location.location.start.line + 1)})`;
+            const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
             element.appendChild(this.createElement("label", { text: locText, tooltip: location.uri.toString(true) }));
             element.appendChild(this.createElement("br"));
         }

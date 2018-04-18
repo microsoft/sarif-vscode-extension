@@ -80,8 +80,8 @@ export class CodeFlowDecorations {
                     return window.showTextDocument(doc, ViewColumn.One, true);
                 }).then((editor) => {
                     editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
-                        [{ range: resultLocation.location }]);
-                    editor.revealRange(resultLocation.location, TextEditorRevealType.InCenterIfOutsideViewport);
+                        [{ range: resultLocation.range }]);
+                    editor.revealRange(resultLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                 }, (reason) => {
                     // Failed to map after asking the user, fail silently as there's no location to add the selection
                     return Promise.resolve();
@@ -135,7 +135,7 @@ export class CodeFlowDecorations {
                     const decoration = {
                         hoverMessage: `[CodeFlow] Step ${location.step}: ${location.message ||
                             location.target || location.importance || ""}`,
-                        range: resultLocation.location,
+                        range: resultLocation.range,
                         renderOptions: undefined,
                     };
 

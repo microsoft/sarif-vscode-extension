@@ -21,7 +21,7 @@ export class SVDiagnostic extends Diagnostic {
     public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
-        super(resultinfo.assignedLocation.location, resultinfo.message);
+        super(resultinfo.assignedLocation.range, resultinfo.message);
         this.severity = this.getSeverity(resultinfo.ruleDefaultLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
@@ -47,7 +47,7 @@ export class SVDiagnostic extends Diagnostic {
             const firstLocation = this.resultInfo.locations[0];
             if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
                 this.resultInfo.assignedLocation = firstLocation;
-                this.range = firstLocation.location;
+                this.range = firstLocation.range;
                 this.updateMessage();
                 return Promise.resolve(true);
             } else {

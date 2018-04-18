@@ -39,7 +39,7 @@ export class ResultLocation {
             return Promise.reject("uri undefined");
         }
 
-        resultLocation.location = ResultLocation.parseRange(location.region, snippet);
+        resultLocation.range = ResultLocation.parseRange(location.region, snippet);
 
         return resultLocation;
     }
@@ -65,7 +65,7 @@ export class ResultLocation {
         const locationMapping = sarifMapping.pointers[resultPath];
         const resultLocation = new ResultLocation();
 
-        resultLocation.location = new Range(locationMapping.value.line, locationMapping.value.column,
+        resultLocation.range = new Range(locationMapping.value.line, locationMapping.value.column,
             locationMapping.valueEnd.line, locationMapping.valueEnd.column);
         resultLocation.uri = sarifUri;
         resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
@@ -126,12 +126,12 @@ export class ResultLocation {
     }
 
     public mapped: boolean;
-    public location: Range;
+    public range: Range;
     public uri: Uri;
     public fileName: string;
 
     private constructor() {
-        this.location = new Range(0, 0, 0, 1);
+        this.range = new Range(0, 0, 0, 1);
         this.uri = null;
         this.fileName = "";
     }
