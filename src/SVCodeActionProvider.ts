@@ -87,7 +87,8 @@ export class SVCodeActionProvider implements CodeActionProvider {
     private getCodeActions(svDiagnostic: SVDiagnostic): any[] {
         const locations = svDiagnostic.rawResult.locations;
         const actions = [];
-        if (svDiagnostic.resultInfo.assignedLocation.notMapped && locations !== undefined) {
+
+        if (!svDiagnostic.resultInfo.assignedLocation.mapped && locations !== undefined) {
             let filePath: string;
             if (locations[0].resultFile !== undefined && locations[0].resultFile.uri !== undefined) {
                 filePath = locations[0].resultFile.uri;

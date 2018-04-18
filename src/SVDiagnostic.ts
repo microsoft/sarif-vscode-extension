@@ -45,7 +45,7 @@ export class SVDiagnostic extends Diagnostic {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation = this.resultInfo.locations[0];
-            if (firstLocation.notMapped !== true && this.resultInfo.assignedLocation.notMapped === true) {
+            if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
                 this.resultInfo.assignedLocation = firstLocation;
                 this.range = firstLocation.location;
                 this.updateMessage();
@@ -67,7 +67,7 @@ export class SVDiagnostic extends Diagnostic {
             this.message = `[${this.resultInfo.ruleId}] ${this.message}`;
         }
 
-        if (this.resultInfo.assignedLocation.notMapped) {
+        if (!this.resultInfo.assignedLocation.mapped) {
             this.message = `[Unmapped] ${this.message}`;
         }
     }

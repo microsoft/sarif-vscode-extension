@@ -63,7 +63,9 @@ export class CodeFlowDecorations {
             let resultLocation: ResultLocation;
             await ResultLocation.create(cfLocation.physicalLocation,
                 cfLocation.snippet).then((location: ResultLocation) => {
-                    if (location.notMapped) {
+                    if (location.mapped) {
+                        resultLocation = location;
+                    } else {
                         // file mapping wasn't found, try to get the user to choose file
                         const uri = Uri.parse(cfLocation.physicalLocation.uri);
                         return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
@@ -71,8 +73,6 @@ export class CodeFlowDecorations {
                         }).then((choosenLoc) => {
                             resultLocation = choosenLoc;
                         });
-                    } else {
-                        resultLocation = location;
                     }
                 }).then(() => {
                     return workspace.openTextDocument(resultLocation.uri);
@@ -131,11 +131,7 @@ export class CodeFlowDecorations {
 
         return ResultLocation.create(location.physicalLocation,
             location.snippet).then((resultLocation: ResultLocation) => {
-                if (resultLocation.notMapped) {
-                    return Promise.resolve(undefined);
-                }
-
-                if (resultLocation.uri.toString() === editor.document.uri.toString()) {
+                if (resultLocation.mapped && resultLocation.uri.toString() === editor.document.uri.toString()) {
                     const decoration = {
                         hoverMessage: `[CodeFlow] Step ${location.step}: ${location.message ||
                             location.target || location.importance || ""}`,
@@ -144,6 +140,8 @@ export class CodeFlowDecorations {
                     };
 
                     return Promise.resolve(decoration);
+                } else {
+                    return Promise.resolve(undefined);
                 }
             }, (reason) => {
                 // The code flow location hasn't been mapped yet so there's no highlight to add

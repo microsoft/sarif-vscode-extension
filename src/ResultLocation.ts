@@ -26,8 +26,9 @@ export class ResultLocation {
             await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
                     resultLocation.uri = uri;
+                    resultLocation.mapped = true;
                 } else {
-                    resultLocation.notMapped = true;
+                    resultLocation.mapped = false;
                     resultLocation.uri = fileUri;
                 }
 
@@ -68,7 +69,7 @@ export class ResultLocation {
             locationMapping.valueEnd.line, locationMapping.valueEnd.column);
         resultLocation.uri = sarifUri;
         resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
-        resultLocation.notMapped = true;
+        resultLocation.mapped = false;
 
         return resultLocation;
     }
@@ -124,7 +125,7 @@ export class ResultLocation {
         return new Range(startline, startcol, endline, endcol);
     }
 
-    public notMapped: boolean;
+    public mapped: boolean;
     public location: Range;
     public uri: Uri;
     public fileName: string;

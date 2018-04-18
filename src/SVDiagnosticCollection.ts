@@ -40,10 +40,10 @@ export class SVDiagnosticCollection {
      * @param issue diagnostic to add to the problems panel
      */
     public add(issue: SVDiagnostic) {
-        if (issue.resultInfo.assignedLocation.notMapped) {
-            this.addToCollection(this.unmappedIssuesCollection, issue);
-        } else {
+        if (issue.resultInfo.assignedLocation.mapped) {
             this.addToCollection(this.issuesCollection, issue);
+        } else {
+            this.addToCollection(this.unmappedIssuesCollection, issue);
         }
     }
 
