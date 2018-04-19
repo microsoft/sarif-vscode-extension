@@ -14,9 +14,9 @@ export class ResultInfo {
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
-     * @param rules the set of results in the sarif file
+     * @param rules dictonary of rules in the run this result came from
      */
-    public static async create(result: sarif.Result, rules: Map<string, sarif.Rule>) {
+    public static async create(result: sarif.Result, rules: { [key: string]: sarif.Rule }) {
         const resultInfo = new ResultInfo();
 
         await ResultInfo.parseLocations(result).then((locations) => {

@@ -127,11 +127,11 @@ export class FileMapper {
 
     /**
      * Call to map the files in the Sarif run files object
-     * @param uri Uri that needs to be mapped
+     * @param files dictionary of sarif.Files that needs to be mapped
      * @param showMsgBox Flag that determines if the msg box letting the user know files need to be mapped is shown
      * @param showOpenDialog Flag that determines if the Open Dialog will be shown to let the user try to map
      */
-    public async mapFiles(files: Map<string, sarif.File>, showMsgBox?: boolean, showOpenDialog?: boolean) {
+    public async mapFiles(files: { [key: string]: sarif.File }, showMsgBox?: boolean, showOpenDialog?: boolean) {
         this.showedMsgBox = false;
         this.userCanceledMapping = false;
 
