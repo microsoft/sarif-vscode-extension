@@ -21,7 +21,7 @@ export class SVDiagnostic extends Diagnostic {
     public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
-        super(resultinfo.locations[0].location, resultinfo.message);
+        super(resultinfo.assignedLocation.range, resultinfo.message);
         this.severity = this.getSeverity(resultinfo.ruleDefaultLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
@@ -38,17 +38,20 @@ export class SVDiagnostic extends Diagnostic {
     public tryToRemapLocations(): Promise<boolean> {
         return ResultInfo.parseLocations(this.rawResult).then((locations) => {
             for (const index in locations) {
-                if (locations[index] !== null) {
+                if (this.resultInfo.locations[index] !== locations[index]) {
                     this.resultInfo.locations[index] = locations[index];
                 }
             }
 
-            if (this.resultInfo.locations[0].notMapped) {
-                return Promise.resolve(false);
-            } else {
-                this.range = this.resultInfo.locations[0].location;
+            // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
+            const firstLocation = this.resultInfo.locations[0];
+            if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
+                this.resultInfo.assignedLocation = firstLocation;
+                this.range = firstLocation.range;
                 this.updateMessage();
                 return Promise.resolve(true);
+            } else {
+                return Promise.resolve(false);
             }
         });
     }
@@ -64,7 +67,7 @@ export class SVDiagnostic extends Diagnostic {
             this.message = `[${this.resultInfo.ruleId}] ${this.message}`;
         }
 
-        if (this.resultInfo.locations[0].notMapped) {
+        if (!this.resultInfo.assignedLocation.mapped) {
             this.message = `[Unmapped] ${this.message}`;
         }
     }

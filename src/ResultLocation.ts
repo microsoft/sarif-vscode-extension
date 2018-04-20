@@ -22,20 +22,24 @@ export class ResultLocation {
         const resultLocation = new ResultLocation();
 
         if (location.uri !== undefined) {
-            await FileMapper.Instance.get(location.uri).then((uri: Uri) => {
+            const fileUri = Uri.parse(location.uri);
+            await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
                     resultLocation.uri = uri;
-                    resultLocation.fileName = resultLocation.uri.fsPath.substring(
-                        resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
+                    resultLocation.mapped = true;
                 } else {
-                    return Promise.reject("uri not Mapped");
+                    resultLocation.mapped = false;
+                    resultLocation.uri = fileUri;
                 }
+
+                resultLocation.fileName = resultLocation.uri.toString(true).substring(
+                    resultLocation.uri.toString(true).lastIndexOf("/") + 1);
             });
         } else {
             return Promise.reject("uri undefined");
         }
 
-        resultLocation.location = ResultLocation.parseRange(location.region, snippet);
+        resultLocation.range = ResultLocation.parseRange(location.region, snippet);
 
         return resultLocation;
     }
@@ -61,11 +65,11 @@ export class ResultLocation {
         const locationMapping = sarifMapping.pointers[resultPath];
         const resultLocation = new ResultLocation();
 
-        resultLocation.location = new Range(locationMapping.value.line, locationMapping.value.column,
+        resultLocation.range = new Range(locationMapping.value.line, locationMapping.value.column,
             locationMapping.valueEnd.line, locationMapping.valueEnd.column);
         resultLocation.uri = sarifUri;
         resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
-        resultLocation.notMapped = true;
+        resultLocation.mapped = false;
 
         return resultLocation;
     }
@@ -121,13 +125,13 @@ export class ResultLocation {
         return new Range(startline, startcol, endline, endcol);
     }
 
-    public notMapped: boolean;
-    public location: Range;
+    public mapped: boolean;
+    public range: Range;
     public uri: Uri;
     public fileName: string;
 
     private constructor() {
-        this.location = new Range(0, 0, 0, 1);
+        this.range = new Range(0, 0, 0, 1);
         this.uri = null;
         this.fileName = "";
     }

@@ -14,25 +14,31 @@ export class ResultInfo {
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
-     * @param rules the set of results in the sarif file
+     * @param rules dictonary of rules in the run this result came from
      */
-    public static async create(result: sarif.Result, rules: Map<string, sarif.Rule>) {
+    public static async create(result: sarif.Result, rules: { [key: string]: sarif.Rule }) {
         const resultInfo = new ResultInfo();
 
         await ResultInfo.parseLocations(result).then((locations) => {
             resultInfo.locations = locations;
+            resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
         resultInfo.message = result.message || "";
 
+        let ruleKey: string;
+        if (result.ruleKey !== undefined) {
+            ruleKey = result.ruleKey;
+        } else if (result.ruleId !== undefined) {
+            ruleKey = result.ruleId;
+        }
+
         // Parse the rule related info
         // Overwrites the message if a messageFormats is provided in the rule
-        if (result.ruleId !== undefined) {
-            resultInfo.ruleId = result.ruleId;
-
-            if (rules !== undefined && rules[resultInfo.ruleId] !== undefined) {
-                const rule: sarif.Rule = rules[resultInfo.ruleId];
-
+        if (ruleKey !== undefined) {
+            if (rules !== undefined && rules[ruleKey] !== undefined) {
+                const rule: sarif.Rule = rules[ruleKey];
+                resultInfo.ruleId = rule.id;
                 resultInfo.message = ResultInfo.parseRuleBasedMessage(rule, result.formattedRuleMessage);
 
                 if (rule.helpUri !== undefined) {
@@ -44,6 +50,8 @@ export class ResultInfo {
                 }
 
                 resultInfo.ruleDefaultLevel = rule.defaultLevel || sarif.Rule.defaultLevel.warning;
+            } else {
+                resultInfo.ruleId = ruleKey;
             }
         }
 
@@ -67,6 +75,7 @@ export class ResultInfo {
                         result.snippet).then((resultLocation: ResultLocation) => {
                             locations.push(resultLocation);
                         }, (reason) => {
+                            // Uri wasn't provided in the physical location
                             locations.push(null);
                         });
                 } else { // no physicalLocation to use
@@ -92,9 +101,10 @@ export class ResultInfo {
             rule.messageFormats !== undefined &&
             rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
             message = rule.messageFormats[formattedRuleMessage.formatId];
-            for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
-                message = message.replace("{" + index + "}",
-                    formattedRuleMessage.arguments[index]);
+            if (formattedRuleMessage.arguments !== undefined) {
+                for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
+                    message = message.replace("{" + index + "}", formattedRuleMessage.arguments[index]);
+                }
             }
         } else if (rule.fullDescription !== undefined) {
             message = rule.fullDescription;
@@ -105,6 +115,7 @@ export class ResultInfo {
         return message;
     }
 
+    public assignedLocation: ResultLocation;
     public locations: ResultLocation[];
     public message = "";
     public ruleHelpUri: string;

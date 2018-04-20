@@ -112,7 +112,7 @@ export class LogReader {
 
             try {
                 const docMapping = this.jsonMap.parse(doc.getText());
-                this.sarifJSONMapping.set(doc.uri.toString(), docMapping );
+                this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                 log = docMapping.data;
             } catch (error) {
                 window.showErrorMessage(`Cannot display results for '${doc.fileName}' because: ${error.message}`);
@@ -125,8 +125,8 @@ export class LogReader {
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     await ResultInfo.create(run.results[resultIndex], run.rules).then((resultInfo: ResultInfo) => {
-                        if (resultInfo.locations[0] === null) {
-                            resultInfo.locations[0] = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
+                        if (!resultInfo.assignedLocation.mapped) {
+                            resultInfo.assignedLocation = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
                         this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));

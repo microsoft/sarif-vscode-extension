@@ -53,10 +53,9 @@ export class FileMapper {
 
     /**
      * Gets the mapped Uri associated with the passed in file, promise returns null if not able to map
-     * @param filePath path to the file
+     * @param filePath Uri of the file
      */
-    public async get(filePath: string): Promise<Uri> {
-        const fileUri = Uri.parse(filePath);
+    public async get(fileUri: Uri): Promise<Uri> {
         if (!this.fileRemapping.has(fileUri.path)) {
             await this.map(fileUri);
         }
@@ -128,11 +127,11 @@ export class FileMapper {
 
     /**
      * Call to map the files in the Sarif run files object
-     * @param uri Uri that needs to be mapped
+     * @param files dictionary of sarif.Files that needs to be mapped
      * @param showMsgBox Flag that determines if the msg box letting the user know files need to be mapped is shown
      * @param showOpenDialog Flag that determines if the Open Dialog will be shown to let the user try to map
      */
-    public async mapFiles(files: Map<string, sarif.File>, showMsgBox?: boolean, showOpenDialog?: boolean) {
+    public async mapFiles(files: { [key: string]: sarif.File }, showMsgBox?: boolean, showOpenDialog?: boolean) {
         this.showedMsgBox = false;
         this.userCanceledMapping = false;
 
@@ -281,8 +280,8 @@ export class FileMapper {
      * @param remappedUri Uri the originalUri has been successfully mapped to
      */
     private saveBasePath(originalUri: Uri, remappedUri: Uri) {
-        const oPath = originalUri.toString();
-        const rPath = remappedUri.toString();
+        const oPath = originalUri.toString(true);
+        const rPath = remappedUri.toString(true);
         for (let i = 1; i <= rPath.length; i++) {
             const oIndex = oPath.length - i;
             const rIndex = rPath.length - i;
@@ -316,7 +315,7 @@ export class FileMapper {
      */
     private tryRebaseUri(uri: Uri): boolean {
         for (const [base, remappedBase] of this.baseRemapping.entries()) {
-            const uriText = uri.toString();
+            const uriText = uri.toString(true);
             if (uriText.indexOf(base) === 0) {
                 const newpath = uriText.replace(base, remappedBase);
                 const mappedUri = Uri.parse(newpath);
