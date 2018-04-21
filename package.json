@@ -3,7 +3,7 @@
     "displayName": "Sarif Viewer",
     "description": "The SARIF Viewer extension visualizes the results in a sarif file",
     "version": "0.2.0",
-    "publisher": "RScrivens",
+    "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/sarif-vscode-extension.git"
@@ -18,17 +18,14 @@
         "Other"
     ],
     "activationEvents": [
-        "onLanguage:sarif",
+        "onLanguage:json",
         "onCommand:extension.sarif.ExplorerLaunch"
     ],
     "main": "./out/extension",
     "contributes": {
         "languages": [
             {
-                "id": "sarif",
-                "aliases": [
-                    "sarif"
-                ],
+                "id": "json",
                 "extensions": [
                     ".sarif"
                 ]

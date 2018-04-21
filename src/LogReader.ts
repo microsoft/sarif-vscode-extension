@@ -18,6 +18,14 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 export class LogReader {
     private static instance: LogReader;
 
+    /**
+     * Helper method to check if the document provided is a sarif file
+     * @param doc document to check if it's a sarif file
+     */
+    private static isSarifFile(doc: TextDocument): boolean {
+        return (doc.languageId === "json" && doc.fileName.substring(doc.fileName.lastIndexOf(".")) === ".sarif");
+    }
+
     public sarifJSONMapping: Map<string, any>;
 
     private closeListenerDisposable: Disposable;
@@ -68,7 +76,7 @@ export class LogReader {
      * @param doc document that was closed
      */
     public onDocumentClosed(doc: TextDocument): void {
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             LogReader.Instance.clearList();
             LogReader.Instance.readAll();
         }
@@ -79,7 +87,7 @@ export class LogReader {
      * @param doc document that was opened
      */
     public onDocumentOpened(doc: TextDocument): void {
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             LogReader.Instance.read(doc, true);
         }
     }
@@ -106,7 +114,7 @@ export class LogReader {
      * @param sync Optional flag to sync the issues after reading this file
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             let runInfo: RunInfo;
             let log: sarif.Log;
 
