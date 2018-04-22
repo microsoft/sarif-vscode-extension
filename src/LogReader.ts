@@ -127,6 +127,14 @@ export class LogReader {
                 return;
             }
 
+            const version = log.version.split(".");
+            if (parseInt(version[0], 10) > 1) {
+                window.showErrorMessage(`Sarif version '${log.version}' is not currently supported by the Sarif Viewer.
+                    Please make sure you're updated to the latest version and check
+                    https://github.com/Microsoft/sarif-vscode-extension for future support.`);
+                return;
+            }
+
             for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
                 const run = log.runs[runIndex];
                 runInfo = RunInfo.Create(run);
