@@ -41,6 +41,6 @@ Sariv Viewer provides the following commands in the Command Palette:
 ## Release Notes
 
 ### 0.2.0
-* 
+* Various Minor Fixes
 ### 0.1.0
 * Initial preview release of the extension
