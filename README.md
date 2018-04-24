@@ -37,10 +37,3 @@ Sariv Viewer provides the following commands in the Command Palette:
  * Does not have tabs in the Sarif Explorer for:
     * Callstacks
     * Fixes
-
-## Release Notes
-
-### 0.2.0
-* Various Minor Fixes
-### 0.1.0
-* Initial preview release of the extension
