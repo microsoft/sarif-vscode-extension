@@ -2,7 +2,9 @@
     "name": "sarif-viewer",
     "displayName": "Sarif Viewer",
     "description": "The SARIF Viewer extension visualizes the results in a sarif file",
-    "version": "0.2.0",
+    "author": "Microsoft Corporation",
+    "license": "MIT",
+    "version": "1.0.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -11,12 +13,20 @@
     "bugs": {
         "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
     },
-    "engines": {
-        "vscode": "^1.21.0"
+    "icon": "icon.ico",
+    "galleryBanner": {
+        "color": "#4bb8a5",
+        "theme": "dark"
     },
     "categories": [
         "Other"
     ],
+    "keywords": [
+        "sarif"
+    ],
+    "engines": {
+        "vscode": "^1.21.0"
+    },
     "activationEvents": [
         "onLanguage:json",
         "onCommand:extension.sarif.ExplorerLaunch"
