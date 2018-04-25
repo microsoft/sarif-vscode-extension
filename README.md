@@ -35,8 +35,8 @@ Sarif Viewer provides the following commands in the Command Palette:
  * Sarif: Explorer: Launches the Sarif Explorer in the right panel
 
 ## Known Issues
- * Does not support Sarif V2
- * Sarif Explorer does not have: 
+ * Does not yet support Sarif V2
+ * Sarif Explorer does not yet have: 
     * Callstacks tab for displaying callstack data
     * Fixes tab for displaying fix data
 
