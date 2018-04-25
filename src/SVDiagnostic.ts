@@ -6,7 +6,6 @@
 import * as sarif from "sarif";
 import { Diagnostic, DiagnosticSeverity } from "vscode";
 import { ResultInfo } from "./ResultInfo";
-import { ResultLocation } from "./ResultLocation";
 import { RunInfo } from "./RunInfo";
 
 /**
@@ -19,28 +18,42 @@ export class SVDiagnostic extends Diagnostic {
 
     public runinfo: RunInfo;
     public resultInfo: ResultInfo;
-    public result: sarif.Result;
+    public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
-        super(resultinfo.locations[0].location, resultinfo.message);
+        super(resultinfo.assignedLocation.range, resultinfo.message);
         this.severity = this.getSeverity(resultinfo.ruleDefaultLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
         this.resultInfo = resultinfo;
-        this.result = result;
+        this.rawResult = result;
         this.source = this.runinfo.toolName;
 
         this.updateMessage();
     }
 
     /**
-     * Updates the location, range and updates the display message to no longer show unmapped
-     * @param resultLocation Location the diagnostic has been remapped to
+     * Tries to remap the locations for this diagnostic
      */
-    public remap(resultLocation: ResultLocation): void {
-        this.resultInfo.locations[0] = resultLocation;
-        this.range = this.resultInfo.locations[0].location;
-        this.updateMessage();
+    public tryToRemapLocations(): Promise<boolean> {
+        return ResultInfo.parseLocations(this.rawResult).then((locations) => {
+            for (const index in locations) {
+                if (this.resultInfo.locations[index] !== locations[index]) {
+                    this.resultInfo.locations[index] = locations[index];
+                }
+            }
+
+            // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
+            const firstLocation = this.resultInfo.locations[0];
+            if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
+                this.resultInfo.assignedLocation = firstLocation;
+                this.range = firstLocation.range;
+                this.updateMessage();
+                return Promise.resolve(true);
+            } else {
+                return Promise.resolve(false);
+            }
+        });
     }
 
     /**
@@ -54,7 +67,7 @@ export class SVDiagnostic extends Diagnostic {
             this.message = `[${this.resultInfo.ruleId}] ${this.message}`;
         }
 
-        if (this.resultInfo.locations[0].notMapped) {
+        if (!this.resultInfo.assignedLocation.mapped) {
             this.message = `[Unmapped] ${this.message}`;
         }
     }

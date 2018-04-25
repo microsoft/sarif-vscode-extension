@@ -22,11 +22,18 @@ export class FileMapper {
     private onMappingChanged: EventEmitter<Uri>;
     private userCanceledMapping: boolean;
     private showedMsgBox: boolean;
+    private os;
+    private pt;
+    private fs;
 
     private constructor() {
         this.baseRemapping = new Map<string, string>();
         this.fileRemapping = new Map<string, Uri>();
         this.onMappingChanged = new EventEmitter<Uri>();
+
+        this.pt = require("path");
+        this.os = require("os");
+        this.fs = require("fs");
     }
 
     public static get Instance(): FileMapper {
@@ -46,10 +53,9 @@ export class FileMapper {
 
     /**
      * Gets the mapped Uri associated with the passed in file, promise returns null if not able to map
-     * @param filePath path to the file
+     * @param filePath Uri of the file
      */
-    public async get(filePath: string): Promise<Uri> {
-        const fileUri = Uri.parse(filePath);
+    public async get(fileUri: Uri): Promise<Uri> {
         if (!this.fileRemapping.has(fileUri.path)) {
             await this.map(fileUri);
         }
@@ -121,11 +127,11 @@ export class FileMapper {
 
     /**
      * Call to map the files in the Sarif run files object
-     * @param uri Uri that needs to be mapped
+     * @param files dictionary of sarif.Files that needs to be mapped
      * @param showMsgBox Flag that determines if the msg box letting the user know files need to be mapped is shown
      * @param showOpenDialog Flag that determines if the Open Dialog will be shown to let the user try to map
      */
-    public async mapFiles(files: Map<string, sarif.File>, showMsgBox?: boolean, showOpenDialog?: boolean) {
+    public async mapFiles(files: { [key: string]: sarif.File }, showMsgBox?: boolean, showOpenDialog?: boolean) {
         this.showedMsgBox = false;
         this.userCanceledMapping = false;
 
@@ -147,16 +153,13 @@ export class FileMapper {
      * @param path directory path that needs to be created in temp directory(including temp directory)
      */
     private createDirectoryInTemp(path: string): string {
-        const pt = require("path");
-        const os = require("os");
-        const fs = require("fs");
-        const directories = path.split(pt.sep);
-        let createPath: string = os.tmpdir();
+        const directories = path.split(this.pt.sep);
+        let createPath: string = this.os.tmpdir();
 
         for (const directory of directories) {
-            createPath = pt.join(createPath, directory);
+            createPath = this.pt.join(createPath, directory);
             try {
-                fs.mkdirSync(createPath);
+                this.fs.mkdirSync(createPath);
             } catch (error) {
                 if (error.code !== "EEXIST") { throw error; }
             }
@@ -172,15 +175,13 @@ export class FileMapper {
      * @param contents content to add to the file after created
      */
     private createReadOnlyFile(path: string, contents: string): void {
-        const fs = require("fs");
-
         try {
-            fs.unlinkSync(path);
+            this.fs.unlinkSync(path);
         } catch (error) {
             if (error.code !== "ENOENT") { throw error; }
         }
 
-        fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
+        this.fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
     }
 
     /**
@@ -209,14 +210,12 @@ export class FileMapper {
      * @param file file object that contains the hash and embedded content
      */
     private mapEmbeddedContent(fileUri: Uri, file: sarif.File): void {
-        const pt = require("path");
-
         const hashValue = this.getHashValue(file.hashes);
 
-        const pathObj = pt.parse(fileUri.fsPath);
-        let path = pt.join(FileMapper.SarifViewerTempFolder, hashValue, pathObj.dir.replace(pathObj.root, ""));
+        const pathObj = this.pt.parse(fileUri.fsPath);
+        let path = this.pt.join(FileMapper.SarifViewerTempFolder, hashValue, pathObj.dir.replace(pathObj.root, ""));
         path = this.createDirectoryInTemp(path);
-        path = pt.join(path, pt.win32.basename(fileUri.fsPath));
+        path = this.pt.join(path, this.pt.win32.basename(fileUri.fsPath));
 
         const contents = Buffer.from(file.contents, "base64").toString();
 
@@ -234,7 +233,9 @@ export class FileMapper {
         openOptions.canSelectFolders = false;
         openOptions.canSelectMany = false;
         openOptions.openLabel = "Map";
-        openOptions.defaultUri = uri;
+        if (uri.scheme === "file") {
+            openOptions.defaultUri = uri;
+        }
 
         const index = uri.fsPath.lastIndexOf(".");
         if (index !== -1) {
@@ -250,17 +251,14 @@ export class FileMapper {
      * @param path directory to remove all contents from
      */
     private removeDirectoryContents(path: string): void {
-        const fs = require("fs");
-        const pt = require("path");
-
-        const contents = fs.readdirSync(path);
+        const contents = this.fs.readdirSync(path);
         for (const content of contents) {
-            const contentPath = pt.join(path, content);
-            if (fs.lstatSync(contentPath).isDirectory()) {
+            const contentPath = this.pt.join(path, content);
+            if (this.fs.lstatSync(contentPath).isDirectory()) {
                 this.removeDirectoryContents(contentPath);
-                fs.rmdirSync(contentPath);
+                this.fs.rmdirSync(contentPath);
             } else {
-                fs.unlinkSync(contentPath);
+                this.fs.unlinkSync(contentPath);
             }
         }
     }
@@ -269,13 +267,9 @@ export class FileMapper {
      * Handles cleaning up the Sarif Viewer temp directory used for embeded code
      */
     private removeSarifViewerTempDirectory(): void {
-        const fs = require("fs");
-        const os = require("os");
-        const pt = require("path");
-
-        const path = pt.join(os.tmpdir(), FileMapper.SarifViewerTempFolder);
+        const path = this.pt.join(this.os.tmpdir(), FileMapper.SarifViewerTempFolder);
         this.removeDirectoryContents(path);
-        fs.rmdirSync(path);
+        this.fs.rmdirSync(path);
     }
 
     /**
@@ -286,8 +280,8 @@ export class FileMapper {
      * @param remappedUri Uri the originalUri has been successfully mapped to
      */
     private saveBasePath(originalUri: Uri, remappedUri: Uri) {
-        const oPath = originalUri.toString();
-        const rPath = remappedUri.toString();
+        const oPath = originalUri.toString(true);
+        const rPath = remappedUri.toString(true);
         for (let i = 1; i <= rPath.length; i++) {
             const oIndex = oPath.length - i;
             const rIndex = rPath.length - i;
@@ -304,9 +298,8 @@ export class FileMapper {
      * @param key optional key to use for mapping, if not defined will use @param fileUri.path as key
      */
     private tryMapUri(uri: Uri, key?: string): boolean {
-        const fs = require("fs");
         try {
-            fs.statSync(uri.fsPath);
+            this.fs.statSync(uri.fsPath);
             this.fileRemapping.set(key || uri.path, uri);
             return true;
         } catch (error) {
@@ -322,7 +315,7 @@ export class FileMapper {
      */
     private tryRebaseUri(uri: Uri): boolean {
         for (const [base, remappedBase] of this.baseRemapping.entries()) {
-            const uriText = uri.toString();
+            const uriText = uri.toString(true);
             if (uriText.indexOf(base) === 0) {
                 const newpath = uriText.replace(base, remappedBase);
                 const mappedUri = Uri.parse(newpath);

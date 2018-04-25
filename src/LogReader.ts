@@ -18,11 +18,20 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 export class LogReader {
     private static instance: LogReader;
 
+    /**
+     * Helper method to check if the document provided is a sarif file
+     * @param doc document to check if it's a sarif file
+     */
+    private static isSarifFile(doc: TextDocument): boolean {
+        return (doc.languageId === "json" && doc.fileName.substring(doc.fileName.lastIndexOf(".")) === ".sarif");
+    }
+
     public sarifJSONMapping: Map<string, any>;
 
     private closeListenerDisposable: Disposable;
     private resultCollection: SVDiagnosticCollection;
     private openListenerDisposable: Disposable;
+    private jsonMap;
 
     public static get Instance(): LogReader {
         if (LogReader.instance === undefined) {
@@ -35,6 +44,9 @@ export class LogReader {
     private constructor() {
         this.resultCollection = new SVDiagnosticCollection();
         this.sarifJSONMapping = new Map<string, any>();
+
+        this.jsonMap = require("json-source-map");
+
         FileMapper.Instance.OnMappingChanged(this.resultCollection.mappingChanged, this.resultCollection);
 
         // Listen for new sarif files to open or close
@@ -64,7 +76,7 @@ export class LogReader {
      * @param doc document that was closed
      */
     public onDocumentClosed(doc: TextDocument): void {
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             LogReader.Instance.clearList();
             LogReader.Instance.readAll();
         }
@@ -75,7 +87,7 @@ export class LogReader {
      * @param doc document that was opened
      */
     public onDocumentOpened(doc: TextDocument): void {
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             LogReader.Instance.read(doc, true);
         }
     }
@@ -102,17 +114,24 @@ export class LogReader {
      * @param sync Optional flag to sync the issues after reading this file
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
-        const jsonMap = require("json-source-map");
-        if (doc.languageId === "sarif") {
+        if (LogReader.isSarifFile(doc)) {
             let runInfo: RunInfo;
             let log: sarif.Log;
 
             try {
-                const docMapping = jsonMap.parse(doc.getText());
-                this.sarifJSONMapping.set(doc.uri.toString(), docMapping );
+                const docMapping = this.jsonMap.parse(doc.getText());
+                this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                 log = docMapping.data;
             } catch (error) {
                 window.showErrorMessage(`Cannot display results for '${doc.fileName}' because: ${error.message}`);
+                return;
+            }
+
+            const version = log.version.split(".");
+            if (parseInt(version[0], 10) > 1) {
+                window.showErrorMessage(`Sarif version '${log.version}' is not currently supported by the Sarif Viewer.
+                    Please make sure you're updated to the latest version and check
+                    https://github.com/Microsoft/sarif-vscode-extension for future support.`);
                 return;
             }
 
@@ -122,8 +141,8 @@ export class LogReader {
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     await ResultInfo.create(run.results[resultIndex], run.rules).then((resultInfo: ResultInfo) => {
-                        if (resultInfo.locations[0] === null) {
-                            resultInfo.locations[0] = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
+                        if (!resultInfo.assignedLocation.mapped) {
+                            resultInfo.assignedLocation = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
                         this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));

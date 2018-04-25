@@ -22,24 +22,22 @@ export class RunInfo {
         if (runinfo.toolFullName === undefined || runinfo.toolFullName === "") {
             runinfo.toolFullName = run.tool.name;
             if (run.tool.semanticVersion !== undefined) {
-                runinfo.toolFullName += " " + run.tool.semanticVersion;
+                runinfo.toolFullName = runinfo.toolFullName + " " + run.tool.semanticVersion;
             }
         }
 
         if (run.invocation) {
-            runinfo.cmdLine = run.invocation.commandLine || RunInfo.DefaultValue;
-            runinfo.fileName = run.invocation.fileName || RunInfo.DefaultValue;
-            runinfo.workingDir = run.invocation.workingDirectory || RunInfo.DefaultValue;
+            runinfo.cmdLine = run.invocation.commandLine;
+            runinfo.fileName = run.invocation.fileName;
+            runinfo.workingDir = run.invocation.workingDirectory;
         }
 
         return runinfo;
     }
 
-    private static readonly DefaultValue = "unspecified";
-
     public toolFullName: string;
     public toolName: string;
-    public cmdLine = RunInfo.DefaultValue;
-    public fileName = RunInfo.DefaultValue;
-    public workingDir = RunInfo.DefaultValue;
+    public cmdLine: string;
+    public fileName: string;
+    public workingDir: string;
 }

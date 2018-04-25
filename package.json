@@ -1,9 +1,11 @@
 {
     "name": "sarif-viewer",
     "displayName": "Sarif Viewer",
-    "description": "The SARIF Viewer extension visualizes the results in a sarif file",
-    "version": "0.1.0",
-    "publisher": "Rusty",
+    "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
+    "author": "Microsoft Corporation",
+    "license": "MIT",
+    "version": "1.0.0",
+    "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/sarif-vscode-extension.git"
@@ -11,24 +13,29 @@
     "bugs": {
         "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
     },
-    "engines": {
-        "vscode": "^1.21.0"
+    "icon": "icon.ico",
+    "galleryBanner": {
+        "color": "#c9c2a0",
+        "theme": "light"
     },
     "categories": [
         "Other"
     ],
+    "keywords": [
+        "sarif"
+    ],
+    "engines": {
+        "vscode": "^1.21.0"
+    },
     "activationEvents": [
-        "onLanguage:sarif",
+        "onLanguage:json",
         "onCommand:extension.sarif.ExplorerLaunch"
     ],
     "main": "./out/extension",
     "contributes": {
         "languages": [
             {
-                "id": "sarif",
-                "aliases": [
-                    "sarif"
-                ],
+                "id": "json",
                 "extensions": [
                     ".sarif"
                 ]
@@ -59,6 +66,7 @@
         "tslint": "^5.0.0"
     },
     "dependencies": {
+        "jsdom": "^11.7.0",
         "json-source-map": "^0.4.0"
     }
 }

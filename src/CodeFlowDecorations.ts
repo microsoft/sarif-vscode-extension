@@ -22,14 +22,14 @@ export class CodeFlowDecorations {
      */
     public static async updateLocationsHighlight() {
         const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.result.codeFlows !== undefined
-            && activeSVDiagnostic.result.codeFlows.length > 0) {
+        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.rawResult.codeFlows !== undefined
+            && activeSVDiagnostic.rawResult.codeFlows.length > 0) {
 
             // for each visible editor add any of the codeflow locations that match it's Uri
             for (const editor of window.visibleTextEditors) {
                 const decorations: DecorationOptions[] = [];
                 const unimportantDecorations: DecorationOptions[] = [];
-                for (const codeflow of activeSVDiagnostic.result.codeFlows) {
+                for (const codeflow of activeSVDiagnostic.rawResult.codeFlows) {
                     for (const location of codeflow.locations) {
                         await CodeFlowDecorations.createHighlightDecoration(location, editor).then((decoration) => {
                             if (decoration === undefined) { return; }
@@ -57,29 +57,31 @@ export class CodeFlowDecorations {
      * @param stepId Id of the step in the tree that is selected
      */
     public static async updateSelectionHighlight(treeId: string, stepId: string): Promise<void> {
-        const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        const cfLocation: sarif.AnnotatedCodeLocation = activeSVDiagnostic.result.codeFlows[treeId].locations[stepId];
+        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const cfLocation: sarif.AnnotatedCodeLocation = svDiagnostic.rawResult.codeFlows[treeId].locations[stepId];
         if (cfLocation.physicalLocation !== undefined) {
             let resultLocation: ResultLocation;
             await ResultLocation.create(cfLocation.physicalLocation,
-                cfLocation.snippet).then((rLocation: ResultLocation) => {
-                    resultLocation = rLocation;
-                }, (reason) => {
-                    // file mapping wasn't found, try to get the user to choose file
-                    const uri = Uri.parse(cfLocation.physicalLocation.uri);
-                    return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                        return ResultLocation.create(cfLocation.physicalLocation, cfLocation.snippet);
-                    }).then((rLocation) => {
-                        resultLocation = rLocation;
-                    });
+                cfLocation.snippet).then((location: ResultLocation) => {
+                    if (location.mapped) {
+                        resultLocation = location;
+                    } else {
+                        // file mapping wasn't found, try to get the user to choose file
+                        const uri = Uri.parse(cfLocation.physicalLocation.uri);
+                        return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
+                            return ResultLocation.create(cfLocation.physicalLocation, cfLocation.snippet);
+                        }).then((choosenLoc) => {
+                            resultLocation = choosenLoc;
+                        });
+                    }
                 }).then(() => {
                     return workspace.openTextDocument(resultLocation.uri);
                 }).then((doc) => {
                     return window.showTextDocument(doc, ViewColumn.One, true);
                 }).then((editor) => {
                     editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
-                        [{ range: resultLocation.location }]);
-                    editor.revealRange(resultLocation.location, TextEditorRevealType.InCenterIfOutsideViewport);
+                        [{ range: resultLocation.range }]);
+                    editor.revealRange(resultLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                 }, (reason) => {
                     // Failed to map after asking the user, fail silently as there's no location to add the selection
                     return Promise.resolve();
@@ -129,19 +131,21 @@ export class CodeFlowDecorations {
 
         return ResultLocation.create(location.physicalLocation,
             location.snippet).then((resultLocation: ResultLocation) => {
-                if (resultLocation.uri.toString() === editor.document.uri.toString()) {
+                if (resultLocation.mapped && resultLocation.uri.toString() === editor.document.uri.toString()) {
                     const decoration = {
                         hoverMessage: `[CodeFlow] Step ${location.step}: ${location.message ||
                             location.target || location.importance || ""}`,
-                        range: resultLocation.location,
+                        range: resultLocation.range,
                         renderOptions: undefined,
                     };
 
                     return Promise.resolve(decoration);
+                } else {
+                    return Promise.resolve(undefined);
                 }
             }, (reason) => {
                 // The code flow location hasn't been mapped yet so there's no highlight to add
-                return Promise.resolve();
+                return Promise.resolve(undefined);
             });
     }
 }

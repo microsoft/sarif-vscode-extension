@@ -7,8 +7,8 @@
 var TreeClassNames = {
     ExpandState: 0,
     Importance: 1,
-    VerbosityShowState: 2
-}
+    VerbosityShowState: 2,
+};
 
 /**
  * Method to add tooltips to the content, currently just puts the text content into the tooltip
@@ -29,14 +29,24 @@ function hookupEventListeners() {
         tabs[i].addEventListener("click", onTabClicked);
     }
 
-    const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
-    for (let i = 0; i < codeflowtrees.length; i++) {
-        codeflowtrees[i].addEventListener("click", onCodeFlowTreeClicked);
-    }
+    if (document.getElementById("codeflowtabcontent") !== null) {
+        const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
+        for (let i = 0; i < codeflowtrees.length; i++) {
+            codeflowtrees[i].addEventListener("click", onCodeFlowTreeClicked);
+        }
 
-    document.getElementById("expandallcodeflow").addEventListener("click", onExpandAllClicked);
-    document.getElementById("collapseallcodeflow").addEventListener("click", onCollapseAllClicked);
-    document.getElementById("codeflowverbosity").addEventListener("change", onVerbosityChange);
+        document.getElementById("expandallcodeflow").addEventListener("click", onExpandAllClicked);
+        document.getElementById("collapseallcodeflow").addEventListener("click", onCollapseAllClicked);
+        document.getElementById("codeflowverbosity").addEventListener("change", onVerbosityChange);
+    }
+}
+
+function initializeOpenedTab() {
+    if (document.getElementById("codeflowtab")) {
+        openTab("codeflowtab");
+    } else {
+        openTab("resultinfotab");
+    }
 }
 
 /**
@@ -44,7 +54,11 @@ function hookupEventListeners() {
  * @param event event fired when user clicked the codeflow tree
  */
 function onCodeFlowTreeClicked(event) {
-    const ele = event.srcElement;
+    let ele = event.srcElement;
+    if (ele.className === "codeflowlocation") {
+        ele = ele.parentElement;
+    }
+
     if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
         toggleTreeElement(ele);
     } else {
@@ -193,6 +207,10 @@ function updateTreeVerbosity() {
     setVerbosityShowState("unimportant", unimportantClass);
 }
 
-updateTreeVerbosity();
+if (document.getElementById("codeflowtabcontent") !== null) {
+    updateTreeVerbosity();
+}
+
+initializeOpenedTab();
 addTooltips();
 hookupEventListeners();
