@@ -1,7 +1,7 @@
 {
     "name": "sarif-viewer",
     "displayName": "Sarif Viewer",
-    "description": "The SARIF Viewer extension visualizes the results in a sarif file",
+    "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
     "version": "1.0.0",
@@ -15,8 +15,8 @@
     },
     "icon": "icon.ico",
     "galleryBanner": {
-        "color": "#4bb8a5",
-        "theme": "dark"
+        "color": "#c9c2a0",
+        "theme": "light"
     },
     "categories": [
         "Other"
