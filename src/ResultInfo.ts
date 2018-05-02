@@ -4,7 +4,9 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { ResultLocation } from "./ResultLocation";
+import { CodeFlows } from "./CodeFlows";
+import { CodeFlow } from "./Interfaces";
+import { Location } from "./Location";
 
 /**
  * Class that holds the result information processed from the Sarif result
@@ -14,9 +16,9 @@ export class ResultInfo {
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
-     * @param rules dictonary of rules in the run this result came from
+     * @param resouces resources object that is used for the rules
      */
-    public static async create(result: sarif.Result, rules: { [key: string]: sarif.Rule }) {
+    public static async create(result: sarif.Result, resources: sarif.Resources) {
         const resultInfo = new ResultInfo();
 
         await ResultInfo.parseLocations(result).then((locations) => {
@@ -24,7 +26,7 @@ export class ResultInfo {
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        resultInfo.message = result.message || "";
+        resultInfo.message = this.parseMessage(result.message);
 
         let ruleKey: string;
         if (result.ruleKey !== undefined) {
@@ -34,28 +36,63 @@ export class ResultInfo {
         }
 
         // Parse the rule related info
-        // Overwrites the message if a messageFormats is provided in the rule
         if (ruleKey !== undefined) {
-            if (rules !== undefined && rules[ruleKey] !== undefined) {
-                const rule: sarif.Rule = rules[ruleKey];
+            if (resources !== undefined && resources.rules !== undefined && resources.rules[ruleKey] !== undefined) {
+                const rule: sarif.Rule = resources.rules[ruleKey];
                 resultInfo.ruleId = rule.id;
-                resultInfo.message = ResultInfo.parseRuleBasedMessage(rule, result.formattedRuleMessage);
 
-                if (rule.helpUri !== undefined) {
-                    resultInfo.ruleHelpUri = rule.helpUri;
+                if (rule.helpLocation !== undefined) {
+                    resultInfo.ruleHelpUri = rule.helpLocation;
                 }
 
                 if (rule.name !== undefined) {
-                    resultInfo.ruleName = rule.name;
+                    resultInfo.ruleName = this.parseMessage(rule.name);
                 }
 
-                resultInfo.ruleDefaultLevel = rule.defaultLevel || sarif.Rule.defaultLevel.warning;
+                if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
+                    resultInfo.severityLevel = rule.configuration.defaultLevel;
+                }
+
+                if (resultInfo.message === undefined) {
+                    let message: sarif.Message;
+
+                    if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
+                        message = { text: rule.messageStrings[result.ruleMessageId] };
+                    } else if (rule.fullDescription !== undefined) {
+                        message = rule.fullDescription;
+                    } else {
+                        message = rule.shortDescription;
+                    }
+
+                    resultInfo.message = this.parseMessage(message);
+                }
             } else {
                 resultInfo.ruleId = ruleKey;
             }
         }
 
+        await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
+            resultInfo.codeFlows = codeFlows;
+        });
+
         return resultInfo;
+    }
+
+    public static parseMessage(message: sarif.Message): string {
+        let str;
+
+        if (message !== undefined) {
+            if (message.text !== undefined) {
+                str = message.text;
+                if (message.arguments !== undefined) {
+                    for (let index = 0; index < message.arguments.length; index++) {
+                        str = str.replace("{" + index + "}", message.arguments[index]);
+                    }
+                }
+            }
+        }
+
+        return str;
     }
 
     /**
@@ -63,21 +100,20 @@ export class ResultInfo {
      * If a location can't be created, it adds a null value to the array
      * @param result result file with the locations that need to be created
      */
-    public static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
+    public static async parseLocations(result: sarif.Result): Promise<Location[]> {
         const locations = [];
 
         if (result.locations !== undefined) {
             for (const location of result.locations) {
-                const physicalLocation = location.resultFile || location.analysisTarget;
+                const physicalLocation = location.physicalLocation;
 
                 if (physicalLocation !== undefined) {
-                    await ResultLocation.create(physicalLocation,
-                        result.snippet).then((resultLocation: ResultLocation) => {
-                            locations.push(resultLocation);
-                        }, (reason) => {
-                            // Uri wasn't provided in the physical location
-                            locations.push(null);
-                        });
+                    await Location.create(physicalLocation).then((resultLocation: Location) => {
+                        locations.push(resultLocation);
+                    }, (reason) => {
+                        // Uri wasn't provided in the physical location
+                        locations.push(null);
+                    });
                 } else { // no physicalLocation to use
                     locations.push(null);
                 }
@@ -90,36 +126,12 @@ export class ResultInfo {
         return Promise.resolve(locations);
     }
 
-    /**
-     * Builds a messaged for the result based on the Rule's formated message
-     * @param rule the rule associated with this result
-     * @param formattedRuleMessage the formated messaged from the result
-     */
-    private static parseRuleBasedMessage(rule: sarif.Rule, formattedRuleMessage: sarif.FormattedRuleMessage): string {
-        let message: string;
-        if (formattedRuleMessage !== undefined &&
-            rule.messageFormats !== undefined &&
-            rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
-            message = rule.messageFormats[formattedRuleMessage.formatId];
-            if (formattedRuleMessage.arguments !== undefined) {
-                for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
-                    message = message.replace("{" + index + "}", formattedRuleMessage.arguments[index]);
-                }
-            }
-        } else if (rule.fullDescription !== undefined) {
-            message = rule.fullDescription;
-        } else {
-            message = rule.shortDescription;
-        }
-
-        return message;
-    }
-
-    public assignedLocation: ResultLocation;
-    public locations: ResultLocation[];
+    public assignedLocation: Location;
+    public locations: Location[];
     public message = "";
     public ruleHelpUri: string;
     public ruleId = "";
     public ruleName = "";
-    public ruleDefaultLevel = sarif.Rule.defaultLevel.warning;
+    public severityLevel = sarif.RuleConfiguration.defaultLevel.warning;
+    public codeFlows: CodeFlow[];
 }

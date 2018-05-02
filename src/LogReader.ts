@@ -6,8 +6,8 @@
 import * as sarif from "sarif";
 import { commands, Disposable, TextDocument, window, workspace } from "vscode";
 import { FileMapper } from "./FileMapper";
+import { Location } from "./Location";
 import { ResultInfo } from "./ResultInfo";
-import { ResultLocation } from "./ResultLocation";
 import { RunInfo } from "./RunInfo";
 import { SVDiagnostic } from "./SVDiagnostic";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
@@ -127,22 +127,16 @@ export class LogReader {
                 return;
             }
 
-            const version = log.version.split(".");
-            if (parseInt(version[0], 10) > 1) {
-                window.showErrorMessage(`Sarif version '${log.version}' is not currently supported by the Sarif Viewer.
-                    Please make sure you're updated to the latest version and check
-                    https://github.com/Microsoft/sarif-vscode-extension for future support.`);
-                return;
-            }
+            if (!this.isVersionSupported(log.version)) { return; }
 
             for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
                 const run = log.runs[runIndex];
                 runInfo = RunInfo.Create(run);
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
-                    await ResultInfo.create(run.results[resultIndex], run.rules).then((resultInfo: ResultInfo) => {
-                        if (!resultInfo.assignedLocation.mapped) {
-                            resultInfo.assignedLocation = ResultLocation.mapToSarifFile(doc.uri, runIndex, resultIndex);
+                    await ResultInfo.create(run.results[resultIndex], run.resources).then((resultInfo: ResultInfo) => {
+                        if (resultInfo.assignedLocation === null || !resultInfo.assignedLocation.mapped) {
+                            resultInfo.assignedLocation = Location.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
                         this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));
@@ -154,5 +148,27 @@ export class LogReader {
                 this.resultCollection.syncDiagnostics();
             }
         }
+    }
+
+    private isVersionSupported(version: string): boolean {
+        const versionParts = version.split(".");
+        const supportedVersionMajor = 2;
+        const versionMajor = parseInt(versionParts[0], 10);
+        if (versionMajor === supportedVersionMajor) {
+            return true;
+        }
+
+        let notSupportedMsg: string;
+        if (versionMajor < supportedVersionMajor) {
+            notSupportedMsg = `Sarif version '${version}' is no longer supported by the Sarif Viewer.
+            Please make contact the creator of the Sarif file and have them upgrade to the latest sdk.`;
+        } else {
+            notSupportedMsg = `Sarif version '${version}' is not yet supported by the Sarif Viewer.
+            Please make sure you're updated to the latest version and check
+            https://github.com/Microsoft/sarif-vscode-extension for future support.`;
+        }
+
+        window.showErrorMessage(notSupportedMsg);
+        return false;
     }
 }

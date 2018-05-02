@@ -8,9 +8,9 @@ import {
     Disposable, Event, EventEmitter, ExtensionContext, TextDocumentContentProvider, Uri, window, workspace,
 } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { HTMLElementOptions } from "./Interfaces";
+import { CodeFlow, CodeFlowStep, HTMLElementOptions } from "./Interfaces";
+import { Location } from "./Location";
 import { ResultInfo } from "./ResultInfo";
-import { ResultLocation } from "./ResultLocation";
 import { RunInfo } from "./RunInfo";
 import { SVDiagnostic } from "./SVDiagnostic";
 
@@ -36,7 +36,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private constructor() {
         this.textDocContentProRegistration = workspace.registerTextDocumentContentProvider("sarifExplorer", this);
         this.visibleChangeDisposable = window.onDidChangeVisibleTextEditors(
-            CodeFlowDecorations.updateLocationsHighlight, this);
+            CodeFlowDecorations.updateStepsHighlight, this);
 
         const jsdom = require("jsdom");
         this.document = (new jsdom.JSDOM(``)).window.document;
@@ -66,8 +66,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         switch (request.request) {
             case "treeselectionchange":
                 const selectionId = (request.treeid_step as string).split("_");
-                if (selectionId.length === 2) {
-                    CodeFlowDecorations.updateSelectionHighlight(selectionId[0], selectionId[1]);
+                if (selectionId.length === 3) {
+                    CodeFlowDecorations.updateSelectionHighlight(parseInt(selectionId[0], 10),
+                        parseInt(selectionId[1], 10), parseInt(selectionId[2], 10));
                 }
                 break;
             case "verbositychanged":
@@ -81,7 +82,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param uri An uri which scheme matches the scheme this provider was registered for.
      */
     public provideTextDocumentContent(uri: Uri): string {
-        CodeFlowDecorations.updateLocationsHighlight();
+        CodeFlowDecorations.updateStepsHighlight();
         return this.assembleExplorerContent();
     }
 
@@ -100,28 +101,29 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * if a node is a "call" the node will become a parent to add the next nodes
      * if a node is a "callreturn" the node will end the recursion
      * @param parent Parent html element to add the children to
-     * @param locations Array of all of the locations in the tree
+     * @param steps Array of all of the locations in the tree
      * @param start Starting point in the Array
      * @param treeId Id of the tree
      */
-    private addNodes(parent: any, locations: sarif.AnnotatedCodeLocation[], start: number, treeId: number): number {
-        for (let index = start; index < locations.length; index++) {
-            const node = this.createNode(locations[index], `${treeId}_${index}`);
+    private addNodes(parent: any, steps: CodeFlowStep[], start: number, treeId: number): number {
+        for (let index = start; index < steps.length; index++) {
+
+            const node = this.createNode(steps[index]);
             parent.appendChild(node);
 
-            if (locations[index].kind === sarif.AnnotatedCodeLocation.kind.call) {
+            if (steps[index].isCall) {
                 index++;
                 const childrenContainer = this.createElement("ul");
-                index = this.addNodes(childrenContainer, locations, index, treeId);
+                index = this.addNodes(childrenContainer, steps, index, treeId);
                 node.appendChild(childrenContainer);
-            } else if (locations[index].kind === sarif.AnnotatedCodeLocation.kind.callReturn) {
+            } else if (steps[index].isReturn) {
                 // if it's a callReturn we want to pop out of the recursion returning the index we stopped at
                 return index;
             }
         }
 
         // finished all of the elements in the locations
-        return locations.length;
+        return steps.length;
     }
 
     /**
@@ -162,7 +164,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         body.appendChild(this.createExplorerHeaderContent(resultInfo));
         body.appendChild(this.createElement("div", { id: "ruledescription", text: resultInfo.message }));
 
-        const codeFlowPanel = this.createCodeFlowPanel(this.activeSVDiagnostic.rawResult.codeFlows);
+        const codeFlowPanel = this.createCodeFlowPanel(resultInfo.codeFlows);
 
         const panelContainer = this.createElement("div", { id: "tabContentContainer" });
         panelContainer.appendChild(this.createResultInfoPanel(resultInfo));
@@ -179,8 +181,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the content that shows when the user clicks the Code Flow tab
      * @param codeFlows Array of code flows to create the content from
      */
-    private createCodeFlowPanel(codeFlows: sarif.CodeFlow[]): any {
-        if (codeFlows !== undefined && codeFlows.length > 0) {
+    private createCodeFlowPanel(codeFlows: CodeFlow[]): any {
+        if (codeFlows !== undefined) {
             const returnEle = this.createElement("div", { id: "codeflowtabcontent", className: "tabcontent" });
 
             const headerEle = this.createElement("div", { className: "tabcontentheader" });
@@ -208,12 +210,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates a tree for each of the Code Flows
      * @param codeflows array of code flows that need to be displayed
      */
-    private createCodeFlowTrees(codeflows: sarif.CodeFlow[]): any {
+    private createCodeFlowTrees(codeflows: CodeFlow[]): any {
         const returnEle = this.createElement("div", { id: "codeflowtreecontainer" });
 
         for (let i = 0; i < codeflows.length; i++) {
             const rootEle = this.createElement("ul", { className: "codeflowtreeroot" });
-            this.addNodes(rootEle, codeflows[i].locations, 0, i);
+            this.addNodes(rootEle, codeflows[i].threads[0].steps, 0, i);
             returnEle.appendChild(rootEle);
             returnEle.appendChild(this.createElement("br"));
         }
@@ -248,15 +250,16 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the content that shows in the header of the Explorer window
      */
     private createExplorerHeaderContent(resultInfo: ResultInfo): any {
-        const filenameandline = resultInfo.locations[0].fileName + " (" +
-            (resultInfo.locations[0].range.start.line + 1/*Range is 0 based*/) + ")";
-
         const returnEle = this.createElement("div", { id: "title" });
 
         returnEle.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
         returnEle.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
         returnEle.appendChild(this.createElement("label", { text: " | " }));
-        returnEle.appendChild(this.createElement("label", { text: filenameandline }));
+        if (resultInfo.locations[0] !== null) {
+            const filenameandline = resultInfo.locations[0].fileName + " (" +
+                (resultInfo.locations[0].range.start.line + 1/*Range is 0 based*/) + ")";
+            returnEle.appendChild(this.createElement("label", { text: filenameandline }));
+        }
 
         return returnEle;
     }
@@ -277,33 +280,30 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
     /**
      * Creates a Node for the CodeFlow tree
-     * @param location CodeFlow location to populate the node with
-     * @param nodeId Id of the node comprised of treeId_nodeindex for use in request to display location
+     * @param cfLocation CodeFlow location to populate the node with
      */
-    private createNode(location: sarif.AnnotatedCodeLocation, nodeId: string): any {
+    private createNode(step: CodeFlowStep): any {
         let liClass: string;
         let fileNameAndLine: string;
         let message: string;
+        const tooltipText: string = `Step ${step.stepId}: ${step.message}`;
 
         liClass = "unexpandable";
-        message = location.message || location.target || "[no description]";
-        if (location.physicalLocation !== undefined) {
-            const loc = location.physicalLocation;
-            fileNameAndLine = `${loc.uri.substring(loc.uri.lastIndexOf("/") + 1)} (${loc.region.startLine})`;
+        message = step.message;
+        if (step.location !== undefined) {
+            fileNameAndLine = `${step.location.fileName} (${step.location.range.start.line + 1})`;
         } else {
             fileNameAndLine = "[no location]";
         }
 
-        if (location.kind === sarif.AnnotatedCodeLocation.kind.call) {
+        if (step.isCall) {
             liClass = "expanded";
-        } else if (location.kind === sarif.AnnotatedCodeLocation.kind.callReturn) {
-            message = "Return";
         }
 
-        liClass = liClass + ` ${location.importance || sarif.AnnotatedCodeLocation.importance.important} verbosityshow`;
+        liClass = liClass + ` ${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
 
         const node = this.createElement("li", {
-            attributes: { tabindex: "0" }, className: liClass, id: nodeId, tooltip: (location.kind || "Unknown"),
+            attributes: { tabindex: "0" }, className: liClass, id: step.traversalId, tooltip: tooltipText,
         });
 
         node.appendChild(this.createElement("span", { className: "codeflowlocation", text: fileNameAndLine }));
@@ -316,13 +316,16 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the locations content to show in the ResultInfo
      * @param locations Array of ResultLocations to be added to the Html
      */
-    private createResultInfoLocations(locations: ResultLocation[]): string {
+    private createResultInfoLocations(locations: Location[]): string {
         const element = this.createElement("div");
 
         for (const location of locations) {
-            const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
-            element.appendChild(this.createElement("label", { text: locText, tooltip: location.uri.toString(true) }));
-            element.appendChild(this.createElement("br"));
+            if (location !== null) {
+                const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
+                element.appendChild(this.createElement("label",
+                    { text: locText, tooltip: location.uri.toString(true) }));
+                element.appendChild(this.createElement("br"));
+            }
         }
 
         return element;
@@ -337,7 +340,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         const tableEle = this.createElement("table");
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
-        tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.ruleDefaultLevel));
+        tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.severityLevel));
 
         if (resultInfo.ruleHelpUri !== undefined) {
             let helpRow = this.createElement("tr");

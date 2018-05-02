@@ -217,7 +217,7 @@ export class FileMapper {
         path = this.createDirectoryInTemp(path);
         path = this.pt.join(path, this.pt.win32.basename(fileUri.fsPath));
 
-        const contents = Buffer.from(file.contents, "base64").toString();
+        const contents = Buffer.from(file.contents.binary, "base64").toString();
 
         this.createReadOnlyFile(path, contents);
         this.fileRemapping.set(fileUri.path, Uri.file(path));
