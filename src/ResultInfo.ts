@@ -7,6 +7,7 @@ import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
 import { CodeFlow } from "./Interfaces";
 import { Location } from "./Location";
+import { Utilities } from "./Utilities";
 
 /**
  * Class that holds the result information processed from the Sarif result
@@ -26,7 +27,7 @@ export class ResultInfo {
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        resultInfo.message = this.parseMessage(result.message);
+        resultInfo.message = Utilities.parseSarifMessage(result.message);
 
         let ruleKey: string;
         if (result.ruleKey !== undefined) {
@@ -46,7 +47,7 @@ export class ResultInfo {
                 }
 
                 if (rule.name !== undefined) {
-                    resultInfo.ruleName = this.parseMessage(rule.name);
+                    resultInfo.ruleName = Utilities.parseSarifMessage(rule.name);
                 }
 
                 if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
@@ -64,7 +65,7 @@ export class ResultInfo {
                         message = rule.shortDescription;
                     }
 
-                    resultInfo.message = this.parseMessage(message);
+                    resultInfo.message = Utilities.parseSarifMessage(message);
                 }
             } else {
                 resultInfo.ruleId = ruleKey;
@@ -76,23 +77,6 @@ export class ResultInfo {
         });
 
         return resultInfo;
-    }
-
-    public static parseMessage(message: sarif.Message): string {
-        let str;
-
-        if (message !== undefined) {
-            if (message.text !== undefined) {
-                str = message.text;
-                if (message.arguments !== undefined) {
-                    for (let index = 0; index < message.arguments.length; index++) {
-                        str = str.replace("{" + index + "}", message.arguments[index]);
-                    }
-                }
-            }
-        }
-
-        return str;
     }
 
     /**

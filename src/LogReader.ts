@@ -150,6 +150,11 @@ export class LogReader {
         }
     }
 
+    /**
+     * Checks if the version of the Sarif file is supported, shows an error message to the user if not supported
+     * Currently only checks major version, based on future changes this might need to be narrowed down to include minor
+     * @param version version of the Sarif file
+     */
     private isVersionSupported(version: string): boolean {
         const versionParts = version.split(".");
         const supportedVersionMajor = 2;
