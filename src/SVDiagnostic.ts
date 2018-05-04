@@ -5,6 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Diagnostic, DiagnosticSeverity } from "vscode";
+import { CodeFlows } from "./CodeFlows";
 import { ResultInfo } from "./ResultInfo";
 import { RunInfo } from "./RunInfo";
 
@@ -22,7 +23,7 @@ export class SVDiagnostic extends Diagnostic {
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
         super(resultinfo.assignedLocation.range, resultinfo.message);
-        this.severity = this.getSeverity(resultinfo.ruleDefaultLevel);
+        this.severity = this.getSeverity(resultinfo.severityLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
         this.resultInfo = resultinfo;
@@ -36,6 +37,10 @@ export class SVDiagnostic extends Diagnostic {
      * Tries to remap the locations for this diagnostic
      */
     public tryToRemapLocations(): Promise<boolean> {
+        if (this.resultInfo.codeFlows !== undefined) {
+            CodeFlows.tryRemapCodeFlows(this.resultInfo.codeFlows, this.rawResult.codeFlows);
+        }
+
         return ResultInfo.parseLocations(this.rawResult).then((locations) => {
             for (const index in locations) {
                 if (this.resultInfo.locations[index] !== locations[index]) {
@@ -45,7 +50,7 @@ export class SVDiagnostic extends Diagnostic {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation = this.resultInfo.locations[0];
-            if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
+            if (firstLocation !== null && firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
                 this.resultInfo.assignedLocation = firstLocation;
                 this.range = firstLocation.range;
                 this.updateMessage();
@@ -76,13 +81,13 @@ export class SVDiagnostic extends Diagnostic {
      * Translates the default level to a DiagnosticSeverity
      * @param defaultLvl default level for the rule in the sarif file
      */
-    private getSeverity(defaultLvl: sarif.Rule.defaultLevel): DiagnosticSeverity {
+    private getSeverity(defaultLvl: sarif.RuleConfiguration.defaultLevel): DiagnosticSeverity {
         switch (defaultLvl) {
-            case sarif.Rule.defaultLevel.warning:
+            case sarif.RuleConfiguration.defaultLevel.warning:
                 return DiagnosticSeverity.Warning;
-            case sarif.Rule.defaultLevel.error:
+            case sarif.RuleConfiguration.defaultLevel.error:
                 return DiagnosticSeverity.Error;
-            case sarif.Rule.defaultLevel.note:
+            case sarif.RuleConfiguration.defaultLevel.note:
                 return DiagnosticSeverity.Information;
             default:
                 return DiagnosticSeverity.Warning;

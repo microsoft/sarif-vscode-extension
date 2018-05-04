@@ -11,37 +11,37 @@ import { LogReader } from "./LogReader";
 /**
  * Class that holds the processed location from a results location
  */
-export class ResultLocation {
+export class Location {
 
     /**
      * Processes the passed in location and creates a new ResultLocation
-     * @param location location from result in sarif file
-     * @param snippet snippet from the result, this is only used if it can't get enough information from the location
+     * Returns undefined if location or filelocation are not defined
+     * @param sarifLocation location from result in sarif file
      */
-    public static async create(location: sarif.PhysicalLocation, snippet: string): Promise<ResultLocation> {
-        const resultLocation = new ResultLocation();
+    public static async create(sarifLocation: sarif.PhysicalLocation): Promise<Location> {
+        const location = new Location();
 
-        if (location.uri !== undefined) {
-            const fileUri = Uri.parse(location.uri);
+        if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
+            const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
             await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
-                    resultLocation.uri = uri;
-                    resultLocation.mapped = true;
+                    location.uri = uri;
+                    location.mapped = true;
                 } else {
-                    resultLocation.mapped = false;
-                    resultLocation.uri = fileUri;
+                    location.uri = fileUri;
+                    location.mapped = false;
                 }
 
-                resultLocation.fileName = resultLocation.uri.toString(true).substring(
-                    resultLocation.uri.toString(true).lastIndexOf("/") + 1);
+                location.fileName = location.uri.toString(true).substring(
+                    location.uri.toString(true).lastIndexOf("/") + 1);
             });
         } else {
-            return Promise.reject("uri undefined");
+            return Promise.resolve(undefined);
         }
 
-        resultLocation.range = ResultLocation.parseRange(location.region, snippet);
+        location.range = Location.parseRange(sarifLocation.region);
 
-        return resultLocation;
+        return location;
     }
 
     /**
@@ -50,20 +50,20 @@ export class ResultLocation {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): ResultLocation {
+    public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
         const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
         const locations = sarifMapping.data.runs[runIndex].results[resultIndex].locations;
         let resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
         if (locations !== undefined) {
-            if (locations[0].resultFile !== undefined) {
-                resultPath = resultPath + "/locations/0/resultFile";
+            if (locations[0].physicalLocation !== undefined) {
+                resultPath = resultPath + "/locations/0/physicalLocation";
             } else if (locations[0].analysisTarget !== undefined) {
                 resultPath = resultPath + "/locations/0/analysisTarget";
             }
         }
 
         const locationMapping = sarifMapping.pointers[resultPath];
-        const resultLocation = new ResultLocation();
+        const resultLocation = new Location();
 
         resultLocation.range = new Range(locationMapping.value.line, locationMapping.value.column,
             locationMapping.valueEnd.line, locationMapping.valueEnd.column);
@@ -77,9 +77,8 @@ export class ResultLocation {
     /**
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
-     * @param snippet snippet from the result
      */
-    private static parseRange(region: sarif.Region, snippet?: string): Range {
+    private static parseRange(region: sarif.Region): Range {
         let startline = 0;
         let startcol = 0;
         let endline = 0;
@@ -107,8 +106,12 @@ export class ResultLocation {
                 } else if (region.endColumn !== undefined) {
                     endcol = region.endColumn;
                     endline = startline;
-                } else if (snippet !== undefined) {
-                    endcol = snippet.length - 2;
+                } else if (region.snippet !== undefined) {
+                    if (region.snippet.text !== undefined) {
+                        endcol = region.snippet.text.length - 2;
+                    } else if (region.snippet.binary !== undefined) {
+                        endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
+                    }
                 }
 
                 // change to be zero based for the vscode editor

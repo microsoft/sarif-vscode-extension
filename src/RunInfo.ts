@@ -26,10 +26,12 @@ export class RunInfo {
             }
         }
 
-        if (run.invocation) {
-            runinfo.cmdLine = run.invocation.commandLine;
-            runinfo.fileName = run.invocation.fileName;
-            runinfo.workingDir = run.invocation.workingDirectory;
+        if (run.invocations !== undefined) {
+            runinfo.cmdLine = run.invocations[0].commandLine;
+            if (run.invocations[0].executableLocation !== undefined) {
+                runinfo.fileName = run.invocations[0].executableLocation.uri;
+            }
+            runinfo.workingDir = run.invocations[0].workingDirectory;
         }
 
         return runinfo;

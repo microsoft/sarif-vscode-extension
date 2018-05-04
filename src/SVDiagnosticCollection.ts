@@ -66,18 +66,26 @@ export class SVDiagnosticCollection {
 
     /**
      * Callback to handle whenever a mapping in the FileMapper changes
-     * Goes through all of the unmapped diagnostics and tries to remap them, if not able to it gets left in the unmapped
+     * Goes through the diagnostics and tries to remap their locations, if not able to it gets left in the unmapped
+     * Also goes through the codeflow locations, to update the locations
      */
     public async mappingChanged() {
+        for (const key of this.issuesCollection.keys()) {
+            const issues = this.issuesCollection.get(key);
+            for (const index of issues.keys()) {
+                await issues[index].tryToRemapLocations();
+            }
+        }
+
         for (const key of this.unmappedIssuesCollection.keys()) {
             const remainingUnmappedIssues = [];
             const issues = this.unmappedIssuesCollection.get(key);
-            for (const issue of issues) {
-                await issue.tryToRemapLocations().then((remapped) => {
+            for (const index of issues.keys()) {
+                await issues[index].tryToRemapLocations().then((remapped) => {
                     if (remapped) {
-                        this.add(issue);
+                        this.add(issues[index]);
                     } else {
-                        remainingUnmappedIssues.push(issue);
+                        remainingUnmappedIssues.push(issues[index]);
                     }
                 });
             }
