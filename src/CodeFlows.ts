@@ -117,7 +117,8 @@ export class CodeFlows {
         let isCallFlag = false;
         let isReturnFlag = false;
         if (nextCFLoc !== undefined) {
-            if (cFLoc.nestingLevel < nextCFLoc.nestingLevel) {
+            if ((cFLoc.nestingLevel < nextCFLoc.nestingLevel) ||
+                (cFLoc.nestingLevel === undefined && nextCFLoc.nestingLevel !== undefined)) {
                 isCallFlag = true;
             } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel) {
                 isReturnFlag = true;

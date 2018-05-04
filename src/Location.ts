@@ -15,32 +15,33 @@ export class Location {
 
     /**
      * Processes the passed in location and creates a new ResultLocation
-     * @param location location from result in sarif file
+     * Returns undefined if location or filelocation are not defined
+     * @param sarifLocation location from result in sarif file
      */
-    public static async create(location: sarif.PhysicalLocation): Promise<Location> {
-        const resultLocation = new Location();
+    public static async create(sarifLocation: sarif.PhysicalLocation): Promise<Location> {
+        const location = new Location();
 
-        if (location.fileLocation.uri !== undefined) {
-            const fileUri = Uri.parse(location.fileLocation.uri);
+        if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
+            const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
             await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
-                    resultLocation.uri = uri;
-                    resultLocation.mapped = true;
+                    location.uri = uri;
+                    location.mapped = true;
                 } else {
-                    resultLocation.mapped = false;
-                    resultLocation.uri = fileUri;
+                    location.uri = fileUri;
+                    location.mapped = false;
                 }
 
-                resultLocation.fileName = resultLocation.uri.toString(true).substring(
-                    resultLocation.uri.toString(true).lastIndexOf("/") + 1);
+                location.fileName = location.uri.toString(true).substring(
+                    location.uri.toString(true).lastIndexOf("/") + 1);
             });
         } else {
-            return Promise.reject("uri undefined");
+            return Promise.resolve(undefined);
         }
 
-        resultLocation.range = Location.parseRange(location.region);
+        location.range = Location.parseRange(sarifLocation.region);
 
-        return resultLocation;
+        return location;
     }
 
     /**

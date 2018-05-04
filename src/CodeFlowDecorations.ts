@@ -62,14 +62,15 @@ export class CodeFlowDecorations {
             location = step.location;
         } else {
             // file mapping wasn't found, try to get the user to choose file
-            const physicalLocation =
-                svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location.physicalLocation;
-            const uri = Uri.parse(physicalLocation.fileLocation.uri);
-            await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                return Location.create(physicalLocation);
-            }).then((choosenLoc) => {
-                location = choosenLoc;
-            });
+            const sarifLocation = svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location;
+            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
+                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
+                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
+                    return Location.create(sarifLocation.physicalLocation);
+                }).then((remappedLocation) => {
+                    location = remappedLocation;
+                });
+            }
         }
 
         if (location !== undefined && location.mapped) {

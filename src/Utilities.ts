@@ -21,7 +21,7 @@ export class Utilities {
                 str = message.text;
                 if (message.arguments !== undefined) {
                     for (let index = 0; index < message.arguments.length; index++) {
-                        str = str.replace("{" + index + "}", message.arguments[index]);
+                        str = str.split("{" + index + "}").join(message.arguments[index]);
                     }
                 }
             }

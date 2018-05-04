@@ -135,7 +135,7 @@ export class LogReader {
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     await ResultInfo.create(run.results[resultIndex], run.resources).then((resultInfo: ResultInfo) => {
-                        if (resultInfo.assignedLocation === null || !resultInfo.assignedLocation.mapped) {
+                        if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
                             resultInfo.assignedLocation = Location.mapToSarifFile(doc.uri, runIndex, resultIndex);
                         }
 
@@ -166,7 +166,7 @@ export class LogReader {
         let notSupportedMsg: string;
         if (versionMajor < supportedVersionMajor) {
             notSupportedMsg = `Sarif version '${version}' is no longer supported by the Sarif Viewer.
-            Please make contact the creator of the Sarif file and have them upgrade to the latest sdk.`;
+            Please contact the creator of the Sarif file and have them upgrade to the latest sdk.`;
         } else {
             notSupportedMsg = `Sarif version '${version}' is not yet supported by the Sarif Viewer.
             Please make sure you're updated to the latest version and check

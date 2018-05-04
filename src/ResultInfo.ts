@@ -81,7 +81,6 @@ export class ResultInfo {
 
     /**
      * Itterates through the locations in the result and creates ResultLocations for each
-     * If a location can't be created, it adds a null value to the array
      * @param result result file with the locations that need to be created
      */
     public static async parseLocations(result: sarif.Result): Promise<Location[]> {
@@ -89,22 +88,13 @@ export class ResultInfo {
 
         if (result.locations !== undefined) {
             for (const location of result.locations) {
-                const physicalLocation = location.physicalLocation;
-
-                if (physicalLocation !== undefined) {
-                    await Location.create(physicalLocation).then((resultLocation: Location) => {
-                        locations.push(resultLocation);
-                    }, (reason) => {
-                        // Uri wasn't provided in the physical location
-                        locations.push(null);
-                    });
-                } else { // no physicalLocation to use
-                    locations.push(null);
-                }
+                await Location.create(location.physicalLocation).then((resultLocation: Location) => {
+                    locations.push(resultLocation);
+                });
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
-            locations.push(null);
+            locations.push(undefined);
         }
 
         return Promise.resolve(locations);
