@@ -49,8 +49,8 @@ export interface ThreadFlow{
 
 export interface CodeFlowStep{
     importance: sarif.CodeFlowLocation.importance,
-    isCall: boolean;
-    isReturn: boolean;
+    isLastChild: boolean;
+    isParent: boolean;
     location: Location;
     message: string;
     state: object;

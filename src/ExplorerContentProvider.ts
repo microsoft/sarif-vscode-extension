@@ -111,12 +111,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             const node = this.createNode(steps[index]);
             parent.appendChild(node);
 
-            if (steps[index].isCall) {
+            if (steps[index].isParent) {
                 index++;
                 const childrenContainer = this.createElement("ul");
                 index = this.addNodes(childrenContainer, steps, index, treeId);
                 node.appendChild(childrenContainer);
-            } else if (steps[index].isReturn) {
+            } else if (steps[index].isLastChild) {
                 // if it's a callReturn we want to pop out of the recursion returning the index we stopped at
                 return index;
             }
@@ -296,7 +296,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             fileNameAndLine = "[no location]";
         }
 
-        if (step.isCall) {
+        if (step.isParent) {
             liClass = "expanded";
         }
 

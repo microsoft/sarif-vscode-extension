@@ -107,7 +107,11 @@ export class Location {
                     endcol = region.endColumn;
                     endline = startline;
                 } else if (region.snippet !== undefined) {
-                    endcol = region.snippet.text.length - 2;
+                    if (region.snippet.text !== undefined) {
+                        endcol = region.snippet.text.length - 2;
+                    } else if (region.snippet.binary !== undefined) {
+                        endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
+                    }
                 }
 
                 // change to be zero based for the vscode editor

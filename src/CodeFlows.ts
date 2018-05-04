@@ -114,20 +114,20 @@ export class CodeFlows {
             loc = location;
         });
 
-        let isCallFlag = false;
-        let isReturnFlag = false;
+        let isParentFlag = false;
+        let isLastChildFlag = false;
         if (nextCFLoc !== undefined) {
             if ((cFLoc.nestingLevel < nextCFLoc.nestingLevel) ||
                 (cFLoc.nestingLevel === undefined && nextCFLoc.nestingLevel !== undefined)) {
-                isCallFlag = true;
+                isParentFlag = true;
             } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel) {
-                isReturnFlag = true;
+                isLastChildFlag = true;
             }
         }
 
         let messageText = Utilities.parseSarifMessage(cFLoc.location.message) || "";
         if (messageText === "") {
-            if (isReturnFlag) {
+            if (isLastChildFlag) {
                 messageText = "[return call]";
             } else {
                 messageText = "[no description]";
@@ -136,8 +136,8 @@ export class CodeFlows {
 
         const step: CodeFlowStep = {
             importance: cFLoc.importance || sarif.CodeFlowLocation.importance.important,
-            isCall: isCallFlag,
-            isReturn: isReturnFlag,
+            isLastChild: isLastChildFlag,
+            isParent: isParentFlag,
             location: loc,
             message: messageText,
             state: cFLoc.state,
