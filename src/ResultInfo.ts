@@ -27,8 +27,6 @@ export class ResultInfo {
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        resultInfo.message = Utilities.parseSarifMessage(result.message);
-
         let ruleKey: string;
         if (result.ruleKey !== undefined) {
             ruleKey = result.ruleKey;
@@ -37,6 +35,7 @@ export class ResultInfo {
         }
 
         // Parse the rule related info
+        let ruleMessageString: string;
         if (ruleKey !== undefined) {
             if (resources !== undefined && resources.rules !== undefined && resources.rules[ruleKey] !== undefined) {
                 const rule: sarif.Rule = resources.rules[ruleKey];
@@ -54,23 +53,21 @@ export class ResultInfo {
                     resultInfo.severityLevel = rule.configuration.defaultLevel;
                 }
 
-                if (resultInfo.message === undefined) {
-                    let message: sarif.Message;
+                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription);
 
-                    if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
-                        message = { text: rule.messageStrings[result.ruleMessageId] };
-                    } else if (rule.fullDescription !== undefined) {
-                        message = rule.fullDescription;
-                    } else {
-                        message = rule.shortDescription;
-                    }
-
-                    resultInfo.message = Utilities.parseSarifMessage(message);
+                if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
+                    ruleMessageString = rule.messageStrings[result.ruleMessageId];
                 }
             } else {
                 resultInfo.ruleId = ruleKey;
             }
         }
+
+        if (result.message !== undefined && result.message.text === undefined) {
+            result.message.text = ruleMessageString;
+        }
+
+        resultInfo.message = Utilities.parseSarifMessage(result.message);
 
         await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
             resultInfo.codeFlows = codeFlows;
@@ -106,6 +103,7 @@ export class ResultInfo {
     public ruleHelpUri: string;
     public ruleId = "";
     public ruleName = "";
+    public ruleDescription = "";
     public severityLevel = sarif.RuleConfiguration.defaultLevel.warning;
     public codeFlows: CodeFlow[];
 }

@@ -126,10 +126,12 @@ export class CodeFlows {
         }
 
         let messageText = Utilities.parseSarifMessage(cFLoc.location.message) || "";
-        if (isReturnFlag) {
-            messageText = "[return call]" + messageText;
-        } else if (messageText === "") {
-            messageText = "[no description]";
+        if (messageText === "") {
+            if (isReturnFlag) {
+                messageText = "[return call]";
+            } else {
+                messageText = "[no description]";
+            }
         }
 
         const step: CodeFlowStep = {
