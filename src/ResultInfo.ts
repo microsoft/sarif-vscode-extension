@@ -27,6 +27,14 @@ export class ResultInfo {
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
+        await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
+            resultInfo.codeFlows = codeFlows;
+        });
+
+        if (result.properties !== undefined) {
+            resultInfo.additionalProperties = result.properties;
+        }
+
         let ruleKey: string;
         if (result.ruleKey !== undefined) {
             ruleKey = result.ruleKey;
@@ -69,10 +77,6 @@ export class ResultInfo {
 
         resultInfo.message = Utilities.parseSarifMessage(result.message);
 
-        await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
-            resultInfo.codeFlows = codeFlows;
-        });
-
         return resultInfo;
     }
 
@@ -97,7 +101,9 @@ export class ResultInfo {
         return Promise.resolve(locations);
     }
 
+    public additionalProperties: { [key: string]: string };
     public assignedLocation: Location;
+    public codeFlows: CodeFlow[];
     public locations: Location[];
     public message = "";
     public ruleHelpUri: string;
@@ -105,5 +111,4 @@ export class ResultInfo {
     public ruleName = "";
     public ruleDescription = "";
     public severityLevel = sarif.RuleConfiguration.defaultLevel.warning;
-    public codeFlows: CodeFlow[];
 }
