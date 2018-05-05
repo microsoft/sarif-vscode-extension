@@ -361,6 +361,11 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         locationsRow.appendChild(cell);
         tableEle.appendChild(locationsRow);
 
+        // The last item in the list should be properties if they exist
+        if (resultInfo.additionalProperties !== undefined) {
+            tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
+        }
+
         returnEle.appendChild(tableEle);
 
         return returnEle;
@@ -387,9 +392,36 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
         }
 
+        // The last item in the list should be properties if they exist
+        if (runInfo.additionalProperties !== undefined) {
+            tableEle.appendChild(this.createPropertiesRow(runInfo.additionalProperties));
+        }
+
         returnEle.appendChild(tableEle);
 
         return returnEle;
+    }
+
+    /**
+     * Creates the properties content to show
+     * @param properties the properties object that has the bag of additional properties
+     */
+    private createPropertiesRow(properties: { [key: string]: string }): any {
+        const propertiesRow = this.createElement("tr");
+        propertiesRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Properties:" }));
+        const cell = this.createElement("td", { className: "td-contentvalue" });
+        const cellContents = this.createElement("div");
+        for (const propName in properties) {
+            if (properties.hasOwnProperty(propName)) {
+                const propText = `${propName}: ${properties[propName]}`;
+                cellContents.appendChild(this.createElement("label", { text: propText, tooltip: propText }));
+                cellContents.appendChild(this.createElement("br"));
+            }
+        }
+        cell.appendChild(cellContents);
+        propertiesRow.appendChild(cell);
+
+        return propertiesRow;
     }
 
     /**

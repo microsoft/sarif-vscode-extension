@@ -34,12 +34,17 @@ export class RunInfo {
             runinfo.workingDir = run.invocations[0].workingDirectory;
         }
 
+        if (run.properties !== undefined) {
+            runinfo.additionalProperties = run.properties;
+        }
+
         return runinfo;
     }
 
-    public toolFullName: string;
-    public toolName: string;
+    public additionalProperties: { [key: string]: string };
     public cmdLine: string;
     public fileName: string;
+    public toolFullName: string;
+    public toolName: string;
     public workingDir: string;
 }
