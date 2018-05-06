@@ -22,6 +22,7 @@ export class Location {
         const location = new Location();
 
         if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
+            location.id = sarifLocation.id;
             const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
             await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
                 if (uri !== null) {
@@ -128,10 +129,11 @@ export class Location {
         return new Range(startline, startcol, endline, endcol);
     }
 
+    public id: number;
+    public fileName: string;
     public mapped: boolean;
     public range: Range;
     public uri: Uri;
-    public fileName: string;
 
     private constructor() {
         this.range = new Range(0, 0, 0, 1);
