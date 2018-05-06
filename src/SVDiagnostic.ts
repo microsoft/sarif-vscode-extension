@@ -36,14 +36,22 @@ export class SVDiagnostic extends Diagnostic {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    public tryToRemapLocations(): Promise<boolean> {
+    public async tryToRemapLocations(): Promise<boolean> {
         if (this.resultInfo.codeFlows !== undefined) {
-            CodeFlows.tryRemapCodeFlows(this.resultInfo.codeFlows, this.rawResult.codeFlows);
+            await CodeFlows.tryRemapCodeFlows(this.resultInfo.codeFlows, this.rawResult.codeFlows);
         }
 
-        return ResultInfo.parseLocations(this.rawResult).then((locations) => {
+        await ResultInfo.parseLocations(this.rawResult.relatedLocations).then((locations) => {
             for (const index in locations) {
-                if (this.resultInfo.locations[index] !== locations[index]) {
+                if (locations[index] !== undefined && this.resultInfo.relatedLocs[index] !== locations[index]) {
+                    this.resultInfo.relatedLocs[index] = locations[index];
+                }
+            }
+        });
+
+        return ResultInfo.parseLocations(this.rawResult.locations).then((locations) => {
+            for (const index in locations) {
+                if (locations[index] !== undefined && this.resultInfo.locations[index] !== locations[index]) {
                     this.resultInfo.locations[index] = locations[index];
                 }
             }

@@ -313,22 +313,29 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
-     * Creates the locations content to show in the ResultInfo
-     * @param locations Array of ResultLocations to be added to the Html
+     * Creates a row with location contents, returns undefined if no locations are displayable
+     * @param rowName name to show up on the left side of the row
+     * @param locations Array of Locations to be added to the Html
      */
-    private createResultInfoLocations(locations: Location[]): string {
-        const element = this.createElement("div");
+    private createLocationsRow(rowName: string, locations: Location[]): any {
+        const cellContents = this.createElement("div");
 
+        let locationsAdded = 0;
         for (const location of locations) {
-            if (location !== null) {
+            if (location !== undefined) {
                 const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
-                element.appendChild(this.createElement("label",
+                cellContents.appendChild(this.createElement("label",
                     { text: locText, tooltip: location.uri.toString(true) }));
-                element.appendChild(this.createElement("br"));
+                cellContents.appendChild(this.createElement("br"));
+                locationsAdded++;
             }
         }
 
-        return element;
+        if (locationsAdded === 0) {
+            return undefined;
+        }
+
+        return this.createRowWithContents(rowName, cellContents);
     }
 
     /**
@@ -343,23 +350,20 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.severityLevel));
 
         if (resultInfo.ruleHelpUri !== undefined) {
-            let helpRow = this.createElement("tr");
-            helpRow = this.createElement("tr");
-            helpRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Help:" }));
-            const helpCell = this.createElement("td", { className: "td-contentvalue" });
-            const linkEle = this.createElement("a", { text: resultInfo.ruleHelpUri });
-            linkEle.href = resultInfo.ruleHelpUri;
-            helpCell.appendChild(linkEle);
-            helpRow.appendChild(helpCell);
-            tableEle.appendChild(helpRow);
+            const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri });
+            cellContents.href = resultInfo.ruleHelpUri;
+            tableEle.appendChild(this.createRowWithContents("Help: ", cellContents));
         }
 
-        const locationsRow = this.createElement("tr");
-        locationsRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Locations:" }));
-        const cell = this.createElement("td", { className: "td-contentvalue" });
-        cell.appendChild(this.createResultInfoLocations(resultInfo.locations));
-        locationsRow.appendChild(cell);
-        tableEle.appendChild(locationsRow);
+        let row = this.createLocationsRow("Locations: ", resultInfo.locations);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
+        }
+
+        row = this.createLocationsRow("Related: ", resultInfo.relatedLocs);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
+        }
 
         // The last item in the list should be properties if they exist
         if (resultInfo.additionalProperties !== undefined) {
@@ -369,6 +373,20 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         returnEle.appendChild(tableEle);
 
         return returnEle;
+    }
+
+    /**
+     * Creates a row with an html element for it's value cell, useful for multiline values such as locations
+     * @param rowName name to show up on the left side of the row
+     * @param contents html element to add to the value cell
+     */
+    private createRowWithContents(rowName: string, contents: any): any {
+        const row = this.createElement("tr");
+        row.appendChild(this.createElement("td", { className: "td-contentname", text: rowName }));
+        const cell = this.createElement("td", { className: "td-contentvalue" });
+        cell.appendChild(contents);
+        row.appendChild(cell);
+        return row;
     }
 
     /**
@@ -407,9 +425,6 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param properties the properties object that has the bag of additional properties
      */
     private createPropertiesRow(properties: { [key: string]: string }): any {
-        const propertiesRow = this.createElement("tr");
-        propertiesRow.appendChild(this.createElement("td", { className: "td-contentname", text: "Properties:" }));
-        const cell = this.createElement("td", { className: "td-contentvalue" });
         const cellContents = this.createElement("div");
         for (const propName in properties) {
             if (properties.hasOwnProperty(propName)) {
@@ -418,10 +433,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                 cellContents.appendChild(this.createElement("br"));
             }
         }
-        cell.appendChild(cellContents);
-        propertiesRow.appendChild(cell);
 
-        return propertiesRow;
+        return this.createRowWithContents("Properties: ", cellContents);
     }
 
     /**

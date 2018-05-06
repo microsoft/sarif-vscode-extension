@@ -22,9 +22,13 @@ export class ResultInfo {
     public static async create(result: sarif.Result, resources: sarif.Resources) {
         const resultInfo = new ResultInfo();
 
-        await ResultInfo.parseLocations(result).then((locations) => {
+        await ResultInfo.parseLocations(result.locations).then((locations) => {
             resultInfo.locations = locations;
             resultInfo.assignedLocation = resultInfo.locations[0];
+        });
+
+        await ResultInfo.parseLocations(result.relatedLocations).then((locations) => {
+            resultInfo.relatedLocs = locations;
         });
 
         await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
@@ -81,16 +85,17 @@ export class ResultInfo {
     }
 
     /**
-     * Itterates through the locations in the result and creates ResultLocations for each
-     * @param result result file with the locations that need to be created
+     * Itterates through the sarif locations and creates Locations for each
+     * Sets undefined placeholders in the returned array for those that can't be mapped
+     * @param sarifLocations sarif locations that need to be procesed
      */
-    public static async parseLocations(result: sarif.Result): Promise<Location[]> {
+    public static async parseLocations(sarifLocations: sarif.Location[]): Promise<Location[]> {
         const locations = [];
 
-        if (result.locations !== undefined) {
-            for (const location of result.locations) {
-                await Location.create(location.physicalLocation).then((resultLocation: Location) => {
-                    locations.push(resultLocation);
+        if (sarifLocations !== undefined) {
+            for (const sarifLocation of sarifLocations) {
+                await Location.create(sarifLocation.physicalLocation).then((location: Location) => {
+                    locations.push(location);
                 });
             }
         } else {
@@ -105,6 +110,7 @@ export class ResultInfo {
     public assignedLocation: Location;
     public codeFlows: CodeFlow[];
     public locations: Location[];
+    public relatedLocs: Location[];
     public message = "";
     public ruleHelpUri: string;
     public ruleId = "";
