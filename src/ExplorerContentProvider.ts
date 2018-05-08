@@ -105,7 +105,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param start Starting point in the Array
      * @param treeId Id of the tree
      */
-    private addNodes(parent: any, steps: CodeFlowStep[], start: number, treeId: number): number {
+    private addNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number, treeId: number): number {
         for (let index = start; index < steps.length; index++) {
 
             const node = this.createNode(steps[index]);
@@ -113,7 +113,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
             if (steps[index].isParent) {
                 index++;
-                const childrenContainer = this.createElement("ul");
+                const childrenContainer = this.createElement("ul") as HTMLUListElement;
                 index = this.addNodes(childrenContainer, steps, index, treeId);
                 node.appendChild(childrenContainer);
             } else if (steps[index].isLastChild) {
@@ -134,19 +134,19 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             const cssMarkup = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.css")).toString();
             const scriptPath = Uri.file(this.context.asAbsolutePath("out/explorer/explorer.js")).toString();
 
-            const headElement = this.createElement("head");
-            headElement.appendChild(this.createElement("link", {
+            const head = this.createElement("head") as HTMLHeadElement;
+            head.appendChild(this.createElement("link", {
                 attributes: { rel: "stylesheet", type: "text/css", href: cssMarkup },
             }));
 
-            const bodyElement = this.createBodyContent();
+            const body = this.createBodyContent();
 
-            const scriptElement = this.createElement("script", { attributes: { src: scriptPath } });
+            const script = this.createElement("script", { attributes: { src: scriptPath } }) as HTMLScriptElement;
 
             return `
-            ${headElement.outerHTML}
-            ${bodyElement.outerHTML}
-            ${scriptElement.outerHTML}
+            ${head.outerHTML}
+            ${body.outerHTML}
+            ${script.outerHTML}
             `;
         } else {
             return `Select a Sarif result in the Problems panel`;
@@ -157,16 +157,16 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     /**
      * Creates the body element and content
      */
-    private createBodyContent() {
+    private createBodyContent(): HTMLBodyElement {
         const resultInfo = this.activeSVDiagnostic.resultInfo;
 
-        const body = this.createElement("body");
+        const body = this.createElement("body") as HTMLBodyElement;
         body.appendChild(this.createExplorerHeaderContent(resultInfo));
         body.appendChild(this.createElement("div", { id: "ruledescription", text: resultInfo.message }));
 
         const codeFlowPanel = this.createCodeFlowPanel(resultInfo.codeFlows);
 
-        const panelContainer = this.createElement("div", { id: "tabContentContainer" });
+        const panelContainer = this.createElement("div", { id: "tabContentContainer" }) as HTMLDivElement;
         panelContainer.appendChild(this.createResultInfoPanel(resultInfo));
         if (codeFlowPanel !== undefined) { panelContainer.appendChild(codeFlowPanel); }
         panelContainer.appendChild(this.createRunInfoPanel(this.activeSVDiagnostic.runinfo));
@@ -181,11 +181,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the content that shows when the user clicks the Code Flow tab
      * @param codeFlows Array of code flows to create the content from
      */
-    private createCodeFlowPanel(codeFlows: CodeFlow[]): any {
+    private createCodeFlowPanel(codeFlows: CodeFlow[]): HTMLDivElement {
         if (codeFlows !== undefined) {
-            const returnEle = this.createElement("div", { id: "codeflowtabcontent", className: "tabcontent" });
+            const panel = this.createElement("div",
+                { id: "codeflowtabcontent", className: "tabcontent" }) as HTMLDivElement;
 
-            const headerEle = this.createElement("div", { className: "tabcontentheader" });
+            const headerEle = this.createElement("div", { className: "tabcontentheader" }) as HTMLDivElement;
             headerEle.appendChild(this.createElement("div", {
                 className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
             }));
@@ -196,11 +197,11 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             headerEle.appendChild(this.createElement("input", {
                 attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
             }));
-            returnEle.appendChild(headerEle);
+            panel.appendChild(headerEle);
 
-            returnEle.appendChild(this.createCodeFlowTrees(codeFlows));
+            panel.appendChild(this.createCodeFlowTrees(codeFlows));
 
-            return returnEle;
+            return panel;
         } else {
             return undefined;
         }
@@ -210,17 +211,17 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates a tree for each of the Code Flows
      * @param codeflows array of code flows that need to be displayed
      */
-    private createCodeFlowTrees(codeflows: CodeFlow[]): any {
-        const returnEle = this.createElement("div", { id: "codeflowtreecontainer" });
+    private createCodeFlowTrees(codeflows: CodeFlow[]): HTMLDivElement {
+        const container = this.createElement("div", { id: "codeflowtreecontainer" }) as HTMLDivElement;
 
         for (let i = 0; i < codeflows.length; i++) {
-            const rootEle = this.createElement("ul", { className: "codeflowtreeroot" });
+            const rootEle = this.createElement("ul", { className: "codeflowtreeroot" }) as HTMLUListElement;
             this.addNodes(rootEle, codeflows[i].threads[0].steps, 0, i);
-            returnEle.appendChild(rootEle);
-            returnEle.appendChild(this.createElement("br"));
+            container.appendChild(rootEle);
+            container.appendChild(this.createElement("br"));
         }
 
-        return returnEle;
+        return container;
     }
 
     /**
@@ -228,7 +229,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param tagName Type of element to create(div, label, etc.)
      * @param options Additional properties to set on the new element
      */
-    private createElement(tagName: string, options?: HTMLElementOptions): any {
+    private createElement(tagName: string, options?: HTMLElementOptions): HTMLElement {
         const ele = this.document.createElement(tagName);
         if (options !== undefined) {
             if (options.text !== undefined) { ele.textContent = options.text; }
@@ -249,19 +250,19 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     /**
      * Creates the content that shows in the header of the Explorer window
      */
-    private createExplorerHeaderContent(resultInfo: ResultInfo): any {
-        const returnEle = this.createElement("div", { id: "title" });
+    private createExplorerHeaderContent(resultInfo: ResultInfo): HTMLDivElement {
+        const header = this.createElement("div", { id: "title" }) as HTMLDivElement;
 
-        returnEle.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
-        returnEle.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
-        returnEle.appendChild(this.createElement("label", { text: " | " }));
+        header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
+        header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
+        header.appendChild(this.createElement("label", { text: " | " }));
         if (resultInfo.locations[0] !== null) {
             const filenameandline = resultInfo.locations[0].fileName + " (" +
                 (resultInfo.locations[0].range.start.line + 1/*Range is 0 based*/) + ")";
-            returnEle.appendChild(this.createElement("label", { text: filenameandline }));
+            header.appendChild(this.createElement("label", { text: filenameandline }));
         }
 
-        return returnEle;
+        return header;
     }
 
     /**
@@ -271,7 +272,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param value value in the right column
      */
     private createNameValueRow(name: string, value: string) {
-        const row = this.createElement("tr");
+        const row = this.createElement("tr") as HTMLTableRowElement;
         row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
         row.appendChild(this.createElement("td", { className: "td-contentvalue", text: value }));
 
@@ -282,7 +283,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates a Node for the CodeFlow tree
      * @param cfLocation CodeFlow location to populate the node with
      */
-    private createNode(step: CodeFlowStep): any {
+    private createNode(step: CodeFlowStep): HTMLLIElement {
         let liClass: string;
         let fileNameAndLine: string;
         let message: string;
@@ -304,7 +305,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
         const node = this.createElement("li", {
             attributes: { tabindex: "0" }, className: liClass, id: step.traversalId, tooltip: tooltipText,
-        });
+        }) as HTMLLIElement;
 
         node.appendChild(this.createElement("span", { className: "codeflowlocation", text: fileNameAndLine }));
         node.appendChild(this.document.createTextNode(message));
@@ -317,8 +318,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param rowName name to show up on the left side of the row
      * @param locations Array of Locations to be added to the Html
      */
-    private createLocationsRow(rowName: string, locations: Location[]): any {
-        const cellContents = this.createElement("div");
+    private createLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement {
+        const cellContents = this.createElement("div") as HTMLDivElement;
 
         let locationsAdded = 0;
         for (const location of locations) {
@@ -342,15 +343,16 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the content that shows when the user clicks the resultinfo tab
      * @param resultInfo Result info to create the tab content from
      */
-    private createResultInfoPanel(resultInfo: ResultInfo): any {
-        const returnEle = this.createElement("div", { id: "resultinfotabcontent", className: "tabcontent" });
-        const tableEle = this.createElement("table");
+    private createResultInfoPanel(resultInfo: ResultInfo): HTMLDivElement {
+        const panel = this.createElement("div",
+            { id: "resultinfotabcontent", className: "tabcontent" }) as HTMLDivElement;
+        const tableEle = this.createElement("table") as HTMLTableElement;
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
         tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.severityLevel));
 
         if (resultInfo.ruleHelpUri !== undefined) {
-            const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri });
+            const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri }) as HTMLAnchorElement;
             cellContents.href = resultInfo.ruleHelpUri;
             tableEle.appendChild(this.createRowWithContents("Help: ", cellContents));
         }
@@ -370,9 +372,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
         }
 
-        returnEle.appendChild(tableEle);
+        panel.appendChild(tableEle);
 
-        return returnEle;
+        return panel;
     }
 
     /**
@@ -380,10 +382,10 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param rowName name to show up on the left side of the row
      * @param contents html element to add to the value cell
      */
-    private createRowWithContents(rowName: string, contents: any): any {
-        const row = this.createElement("tr");
+    private createRowWithContents(rowName: string, contents: HTMLElement): HTMLTableRowElement {
+        const row = this.createElement("tr") as HTMLTableRowElement;
         row.appendChild(this.createElement("td", { className: "td-contentname", text: rowName }));
-        const cell = this.createElement("td", { className: "td-contentvalue" });
+        const cell = this.createElement("td", { className: "td-contentvalue" }) as HTMLTableDataCellElement;
         cell.appendChild(contents);
         row.appendChild(cell);
         return row;
@@ -393,9 +395,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the content that shows when the user clicks the runinfo tab
      * @param runInfo Run info to create the tab content from
      */
-    private createRunInfoPanel(runInfo: RunInfo): any {
-        const returnEle = this.createElement("div", { id: "runinfotabcontent", className: "tabcontent" });
-        const tableEle = this.createElement("table");
+    private createRunInfoPanel(runInfo: RunInfo): HTMLDivElement {
+        const panel = this.createElement("div", { id: "runinfotabcontent", className: "tabcontent" }) as HTMLDivElement;
+        const tableEle = this.createElement("table") as HTMLTableElement;
 
         if (runInfo.toolName !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolName));
@@ -415,17 +417,17 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             tableEle.appendChild(this.createPropertiesRow(runInfo.additionalProperties));
         }
 
-        returnEle.appendChild(tableEle);
+        panel.appendChild(tableEle);
 
-        return returnEle;
+        return panel;
     }
 
     /**
      * Creates the properties content to show
      * @param properties the properties object that has the bag of additional properties
      */
-    private createPropertiesRow(properties: { [key: string]: string }): any {
-        const cellContents = this.createElement("div");
+    private createPropertiesRow(properties: { [key: string]: string }): HTMLTableRowElement {
+        const cellContents = this.createElement("div") as HTMLDivElement;
         for (const propName in properties) {
             if (properties.hasOwnProperty(propName)) {
                 const propText = `${propName}: ${properties[propName]}`;
@@ -441,16 +443,16 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * Creates the Tabs Container content, the tabs at the top of the tab container
      * @param includeCodeFlow Flag to include the CodeFlow tab in the set of tabs
      */
-    private createTabHeaderContainer(includeCodeFlow: boolean): any {
-        const element = this.createElement("div", { id: "tabcontainer" });
+    private createTabHeaderContainer(includeCodeFlow: boolean): HTMLDivElement {
+        const container = this.createElement("div", { id: "tabcontainer" }) as HTMLDivElement;
 
-        element.appendChild(this.createTabElement("resultinfotab", "Results info", "RESULT INFO"));
+        container.appendChild(this.createTabElement("resultinfotab", "Results info", "RESULT INFO"));
         if (includeCodeFlow) {
-            element.appendChild(this.createTabElement("codeflowtab", "Code flow", "CODE FLOW"));
+            container.appendChild(this.createTabElement("codeflowtab", "Code flow", "CODE FLOW"));
         }
-        element.appendChild(this.createTabElement("runinfotab", "Run info", "RUN INFO"));
+        container.appendChild(this.createTabElement("runinfotab", "Run info", "RUN INFO"));
 
-        return element;
+        return container;
     }
 
     /**
@@ -459,8 +461,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param tabTooltip tooltip of the tab
      * @param tabText text that shows on the tab
      */
-    private createTabElement(tabId: string, tabTooltip: string, tabText: string): any {
-        const returnEle = this.createElement("div", { className: "tab", id: tabId, tooltip: tabTooltip });
+    private createTabElement(tabId: string, tabTooltip: string, tabText: string): HTMLDivElement {
+        const returnEle = this.createElement("div",
+            { className: "tab", id: tabId, tooltip: tabTooltip }) as HTMLDivElement;
         returnEle.appendChild(this.createElement("label", { className: "tablabel", text: tabText }));
         return returnEle;
     }
