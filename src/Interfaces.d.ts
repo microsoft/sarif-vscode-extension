@@ -41,13 +41,13 @@ export interface CodeFlow {
     threads: ThreadFlow[];
 }
 
-export interface ThreadFlow{
+export interface ThreadFlow {
     message: string;
     id: string;
     steps: CodeFlowStep[];
 }
 
-export interface CodeFlowStep{
+export interface CodeFlowStep {
     importance: sarif.CodeFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
@@ -56,4 +56,9 @@ export interface CodeFlowStep{
     state: object;
     stepId: number;
     traversalId: string;
+}
+
+export interface Message {
+    text: string,
+    html: HTMLLabelElement
 }

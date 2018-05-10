@@ -4,6 +4,8 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { Message } from "./Interfaces";
+import { Location } from "./Location";
 
 /**
  * Class that holds utility functions for use in different classes
@@ -11,22 +13,47 @@ import * as sarif from "sarif";
 export class Utilities {
     /**
      * Parses a Sarif Message object and returns the message in string format
-     * @param message sarif message object to be parsed
+     * @param sarifMessage sarif message object to be parsed
      */
-    public static parseSarifMessage(message: sarif.Message): string {
-        let str;
+    public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
+        if (Utilities.document === undefined) {
+            const jsdom = require("jsdom");
+            Utilities.document = (new jsdom.JSDOM(``)).window.document;
+        }
 
-        if (message !== undefined) {
-            if (message.text !== undefined) {
-                str = message.text;
-                if (message.arguments !== undefined) {
-                    for (let index = 0; index < message.arguments.length; index++) {
-                        str = str.split("{" + index + "}").join(message.arguments[index]);
+        let message: Message;
+
+        if (sarifMessage !== undefined) {
+            if (sarifMessage.text !== undefined) {
+                let text = sarifMessage.text;
+                if (sarifMessage.arguments !== undefined) {
+                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
+                        text = text.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
+
+                let messageText = text;
+                const messageHTML = Utilities.document.createElement("label") as HTMLLabelElement;
+                // parse embedded locations
+                if (locations !== undefined) {
+                    const matches = messageText.match(Utilities.embeddedRegEx);
+                    for (const index of matches.keys()) {
+                        const match = matches[index];
+                        const linkText = match.split(/\[|\]/g);
+                        const linkId = match.split(/\(|\)/g);
+                        
+                    }
+                } else {
+                    messageHTML.textContent = text;
+                }
+
+                message = { text: messageText, html: messageHTML };
             }
         }
 
-        return str;
+        return message;
     }
+
+    private static document;
+    private static embeddedRegEx = /\[[^\\\]]+\]\(\d+\)/g;
 }

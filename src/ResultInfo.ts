@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
-import { CodeFlow } from "./Interfaces";
+import { CodeFlow, Message } from "./Interfaces";
 import { Location } from "./Location";
 import { Utilities } from "./Utilities";
 
@@ -46,6 +46,8 @@ export class ResultInfo {
             ruleKey = result.ruleId;
         }
 
+        const allLocations = resultInfo.locations.concat(resultInfo.relatedLocs);
+
         // Parse the rule related info
         let ruleMessageString: string;
         if (ruleKey !== undefined) {
@@ -58,14 +60,15 @@ export class ResultInfo {
                 }
 
                 if (rule.name !== undefined) {
-                    resultInfo.ruleName = Utilities.parseSarifMessage(rule.name);
+                    resultInfo.ruleName = Utilities.parseSarifMessage(rule.name).text;
                 }
 
                 if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
                     resultInfo.severityLevel = rule.configuration.defaultLevel;
                 }
 
-                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription);
+                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
+                    allLocations);
 
                 if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
                     ruleMessageString = rule.messageStrings[result.ruleMessageId];
@@ -79,7 +82,7 @@ export class ResultInfo {
             result.message.text = ruleMessageString;
         }
 
-        resultInfo.message = Utilities.parseSarifMessage(result.message);
+        resultInfo.message = Utilities.parseSarifMessage(result.message, allLocations);
 
         return resultInfo;
     }
@@ -111,10 +114,11 @@ export class ResultInfo {
     public codeFlows: CodeFlow[];
     public locations: Location[];
     public relatedLocs: Location[];
-    public message = "";
+    public message: Message;
+    public messageHTML: HTMLLabelElement;
     public ruleHelpUri: string;
     public ruleId = "";
     public ruleName = "";
-    public ruleDescription = "";
+    public ruleDescription: Message;
     public severityLevel = sarif.RuleConfiguration.defaultLevel.warning;
 }

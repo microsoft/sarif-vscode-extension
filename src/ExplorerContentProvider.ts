@@ -162,7 +162,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
         const body = this.createElement("body") as HTMLBodyElement;
         body.appendChild(this.createExplorerHeaderContent(resultInfo));
-        body.appendChild(this.createElement("div", { id: "ruledescription", text: resultInfo.message }));
+        const ruleDescription = this.createElement("div", { id: "ruledescription"});
+        ruleDescription.appendChild(resultInfo.message.html);
+        body.appendChild(ruleDescription);
 
         const codeFlowPanel = this.createCodeFlowPanel(resultInfo.codeFlows);
 

@@ -61,7 +61,7 @@ export class CodeFlows {
      */
     private static async createCodeFlow(sarifCF: sarif.CodeFlow, traversalId: string): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
-            message: Utilities.parseSarifMessage(sarifCF.message),
+            message: Utilities.parseSarifMessage(sarifCF.message).text,
             threads: [],
         };
 
@@ -83,7 +83,7 @@ export class CodeFlows {
     private static async createThreadFlow(sarifTF: sarif.ThreadFlow, traversalId: string): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
-            message: Utilities.parseSarifMessage(sarifTF.message),
+            message: Utilities.parseSarifMessage(sarifTF.message).text,
             steps: [],
         };
 
@@ -125,7 +125,12 @@ export class CodeFlows {
             }
         }
 
-        let messageText = Utilities.parseSarifMessage(cFLoc.location.message) || "";
+        const message = Utilities.parseSarifMessage(cFLoc.location.message);
+        let messageText = "";
+        if (message !== undefined) {
+            messageText = message.text;
+        }
+
         if (messageText === "") {
             if (isLastChildFlag) {
                 messageText = "[return call]";

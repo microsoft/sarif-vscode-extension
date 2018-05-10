@@ -22,7 +22,7 @@ export class SVDiagnostic extends Diagnostic {
     public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
-        super(resultinfo.assignedLocation.range, resultinfo.message);
+        super(resultinfo.assignedLocation.range, resultinfo.message.text);
         this.severity = this.getSeverity(resultinfo.severityLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
