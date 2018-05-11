@@ -74,7 +74,7 @@ export class SVDiagnostic extends Diagnostic {
      * And Unmapped if the result has not been mapped
      */
     public updateMessage(): void {
-        this.message = this.resultInfo.message;
+        this.message = this.resultInfo.message.text;
 
         if (this.resultInfo.ruleId !== "") {
             this.message = `[${this.resultInfo.ruleId}] ${this.message}`;

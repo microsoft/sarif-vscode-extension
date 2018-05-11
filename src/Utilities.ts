@@ -13,7 +13,9 @@ import { Location } from "./Location";
 export class Utilities {
     /**
      * Parses a Sarif Message object and returns the message in string format
+     * Supports Embedded links(requires locations) and placeholders
      * @param sarifMessage sarif message object to be parsed
+     * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
         if (Utilities.document === undefined) {
@@ -35,17 +37,46 @@ export class Utilities {
                 let messageText = text;
                 const messageHTML = Utilities.document.createElement("label") as HTMLLabelElement;
                 // parse embedded locations
-                if (locations !== undefined) {
-                    const matches = messageText.match(Utilities.embeddedRegEx);
-                    for (const index of matches.keys()) {
-                        const match = matches[index];
-                        const linkText = match.split(/\[|\]/g);
-                        const linkId = match.split(/\(|\)/g);
-                        
+                let match = Utilities.embeddedRegEx.exec(messageText);
+                if (locations !== undefined && match !== null) {
+                    let textForHTML = messageText;
+                    do {
+                        const embeddedLink = match[1];
+                        const linkText = match[2];
+                        const linkId = parseInt(match[3], 10);
+
+                        let link;
+                        for (const location of locations) {
+                            if (location !== undefined && location.id === linkId) {
+                                link = location.uri.toString(true);
+                                break;
+                            }
+                        }
+
+                        const replacedText = linkText + "(" + link + ")";
+                        messageText = messageText.replace(embeddedLink, replacedText);
+
+                        const splitText = textForHTML.split(embeddedLink);
+                        const preLinkText = Utilities.document.createTextNode(Utilities.unescapeBrackets(splitText[0]));
+                        messageHTML.appendChild(preLinkText);
+                        const linkElement = Utilities.document.createElement("a") as HTMLAnchorElement;
+                        linkElement.href = link;
+                        linkElement.textContent = Utilities.unescapeBrackets(linkText);
+                        messageHTML.appendChild(linkElement);
+                        splitText.splice(0, 1); /* remove the preLinkText */
+                        textForHTML = splitText.join(embeddedLink);
+
+                        match = Utilities.embeddedRegEx.exec(messageText);
+                    } while (match !== null);
+
+                    if (textForHTML !== "") {
+                        messageHTML.appendChild(Utilities.document.createTextNode(textForHTML));
                     }
                 } else {
                     messageHTML.textContent = text;
                 }
+
+                messageText = Utilities.unescapeBrackets(messageText);
 
                 message = { text: messageText, html: messageHTML };
             }
@@ -55,5 +86,13 @@ export class Utilities {
     }
 
     private static document;
-    private static embeddedRegEx = /\[[^\\\]]+\]\(\d+\)/g;
+    private static embeddedRegEx = /[^\\](\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
+
+    /**
+     * Remove the escape '\' characters from before any '[' or ']' characters in the text
+     * @param text text to remove the escape characters from
+     */
+    private static unescapeBrackets(text: string): string {
+        return text.split("\\[").join("[").split("\\]").join("]");
+    }
 }

@@ -258,7 +258,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
         header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
         header.appendChild(this.createElement("label", { text: " | " }));
-        if (resultInfo.locations[0] !== null) {
+        if (resultInfo.locations[0] !== undefined) {
             const filenameandline = resultInfo.locations[0].fileName + " (" +
                 (resultInfo.locations[0].range.start.line + 1/*Range is 0 based*/) + ")";
             header.appendChild(this.createElement("label", { text: filenameandline }));
