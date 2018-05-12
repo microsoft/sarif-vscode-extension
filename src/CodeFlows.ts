@@ -61,10 +61,13 @@ export class CodeFlows {
      */
     private static async createCodeFlow(sarifCF: sarif.CodeFlow, traversalId: string): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
-            message: Utilities.parseSarifMessage(sarifCF.message),
+            message: undefined,
             threads: [],
         };
 
+        if (sarifCF.message !== undefined) {
+            codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
+        }
         for (let tFIndex = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
             await CodeFlows.createThreadFlow(sarifCF.threadFlows[tFIndex], `${traversalId}_${tFIndex}`).then(
                 (threadFlow: ThreadFlow) => {
@@ -83,9 +86,13 @@ export class CodeFlows {
     private static async createThreadFlow(sarifTF: sarif.ThreadFlow, traversalId: string): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
-            message: Utilities.parseSarifMessage(sarifTF.message),
+            message: undefined,
             steps: [],
         };
+
+        if (sarifTF.message !== undefined) {
+            threadFlow.message = Utilities.parseSarifMessage(sarifTF.message).text;
+        }
 
         for (let stepIndex = 0; stepIndex < sarifTF.locations.length; stepIndex++) {
             await CodeFlows.createCodeFlowStep(sarifTF.locations[stepIndex], sarifTF.locations[stepIndex + 1],
@@ -125,7 +132,12 @@ export class CodeFlows {
             }
         }
 
-        let messageText = Utilities.parseSarifMessage(cFLoc.location.message) || "";
+        const message = Utilities.parseSarifMessage(cFLoc.location.message);
+        let messageText = "";
+        if (message !== undefined) {
+            messageText = message.text;
+        }
+
         if (messageText === "") {
             if (isLastChildFlag) {
                 messageText = "[return call]";
