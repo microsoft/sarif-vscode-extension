@@ -5,7 +5,8 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import {
-    Disposable, Event, EventEmitter, ExtensionContext, TextDocumentContentProvider, Uri, window, workspace,
+    Disposable, Event, EventEmitter, ExtensionContext, Range, TextDocumentContentProvider, TextEditorRevealType, Uri,
+    ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { CodeFlow, CodeFlowStep, HTMLElementOptions } from "./Interfaces";
@@ -64,6 +65,21 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      */
     public explorerCallback(request: any) {
         switch (request.request) {
+            case "sourcelinkclicked":
+                workspace.openTextDocument(Uri.parse(request.file)).then((doc) => {
+                    return window.showTextDocument(doc, ViewColumn.One, true);
+                }).then((editor) => {
+                    if (request.line !== undefined) {
+                        const line = parseInt(request.line, 10);
+                        const column = parseInt(request.col, 10);
+                        const range = new Range(line, column, line, column + 1);
+                        editor.revealRange(range, TextEditorRevealType.InCenterIfOutsideViewport);
+                    }
+                }, (reason) => {
+                    // Failed to map after asking the user, fail silently as there's no location to add the selection
+                    return Promise.resolve();
+                });
+                break;
             case "treeselectionchange":
                 const selectionId = (request.treeid_step as string).split("_");
                 if (selectionId.length === 3) {
@@ -162,7 +178,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
         const body = this.createElement("body") as HTMLBodyElement;
         body.appendChild(this.createExplorerHeaderContent(resultInfo));
-        const ruleDescription = this.createElement("div", { id: "ruledescription"});
+        const ruleDescription = this.createElement("div", { id: "ruledescription" });
         ruleDescription.appendChild(resultInfo.message.html);
         body.appendChild(ruleDescription);
 

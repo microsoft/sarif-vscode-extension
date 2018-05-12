@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { Range } from "vscode";
 import { Message } from "./Interfaces";
 import { Location } from "./Location";
 
@@ -45,9 +46,11 @@ export class Utilities {
                         const linkText = match[2];
                         const linkId = parseInt(match[3], 10);
 
-                        let link;
+                        let linkRange: Range;
+                        let link: string;
                         for (const location of locations) {
                             if (location !== undefined && location.id === linkId) {
+                                linkRange = location.range;
                                 link = location.uri.toString(true);
                                 break;
                             }
@@ -60,7 +63,12 @@ export class Utilities {
                         const preLinkText = Utilities.document.createTextNode(Utilities.unescapeBrackets(splitText[0]));
                         messageHTML.appendChild(preLinkText);
                         const linkElement = Utilities.document.createElement("a") as HTMLAnchorElement;
-                        linkElement.href = link;
+                        linkElement.setAttribute("title", link);
+                        linkElement.setAttribute("data-file", link);
+                        linkElement.setAttribute("data-line", linkRange.start.line.toString());
+                        linkElement.setAttribute("data-col", linkRange.start.character.toString());
+                        linkElement.href = "#0";
+                        linkElement.className = "sourcelink";
                         linkElement.textContent = Utilities.unescapeBrackets(linkText);
                         messageHTML.appendChild(linkElement);
                         splitText.splice(0, 1); /* remove the preLinkText */

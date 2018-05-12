@@ -29,6 +29,11 @@ function hookupEventListeners() {
         tabs[i].addEventListener("click", onTabClicked);
     }
 
+    const sourceLinks = document.getElementsByClassName("sourcelink");
+    for (let i = 0; i < sourceLinks.length; i++) {
+        sourceLinks[i].addEventListener("click", onSourceLinkClicked);
+    }
+
     if (document.getElementById("codeflowtabcontent") !== null) {
         const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
         for (let i = 0; i < codeflowtrees.length; i++) {
@@ -80,6 +85,19 @@ function onCollapseAllClicked(event) {
  */
 function onExpandAllClicked(event) {
     toggleTreeElements("collapsed", "expanded");
+}
+
+/**
+ * Callback when a source link is clicked, this sends the call back to the extension to handle opening the source file
+ * @param event event fired when a sourcelink was clicked
+ */
+function onSourceLinkClicked(event) {
+    let ele = event.srcElement;
+
+    sendExplorerCallback({
+        request: "sourcelinkclicked",
+        file: ele.dataset.file, line: ele.dataset.line, col: ele.dataset.col
+    });
 }
 
 /**
