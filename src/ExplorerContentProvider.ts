@@ -288,11 +288,14 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * For more complex values(not string) you'll need to manually create the element
      * @param name value in the left column
      * @param value value in the right column
+     * @param valueTooltip tooltip to show over the value in right column
      */
-    private createNameValueRow(name: string, value: string) {
+    private createNameValueRow(name: string, value: string, valueTooltip?: string) {
         const row = this.createElement("tr") as HTMLTableRowElement;
         row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
-        row.appendChild(this.createElement("td", { className: "td-contentvalue", text: value }));
+        const valueCell = this.createElement("td", { className: "td-contentvalue" });
+        valueCell.appendChild(this.createElement("label", { text: value, tooltip: valueTooltip }));
+        row.appendChild(valueCell);
 
         return row;
     }
@@ -367,7 +370,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
-        tableEle.appendChild(this.createNameValueRow("Default level:", resultInfo.severityLevel));
+        const severity = this.severityValueAndTooltip(resultInfo.severityLevel);
+        tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
         if (resultInfo.ruleHelpUri !== undefined) {
             const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri }) as HTMLAnchorElement;
@@ -484,5 +488,32 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             { className: "tab", id: tabId, tooltip: tabTooltip }) as HTMLDivElement;
         returnEle.appendChild(this.createElement("label", { className: "tablabel", text: tabText }));
         return returnEle;
+    }
+
+    /**
+     * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
+     * @param severity the results severity level
+     */
+    private severityValueAndTooltip(severity: sarif.Result.level) {
+        switch (severity) {
+            case sarif.Result.level.error:
+                return { text: "Error", tooltip: "The rule was evaluated, and a serious problem was found." };
+            case sarif.Result.level.warning:
+                return { text: "Warning", tooltip: "The rule was evaluated, and a problem was found." };
+            case sarif.Result.level.open:
+                return {
+                    text: "Open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
+                        "insufficient information to decide whether a problem exists.",
+                };
+            case sarif.Result.level.note:
+                return { text: "Note", tooltip: "A purely informational log entry" };
+            case sarif.Result.level.notApplicable:
+                return {
+                    text: "Not Applicable",
+                    tooltip: "The rule was not evaluated, because it does not apply to the analysis target.",
+                };
+            case sarif.Result.level.pass:
+                return { text: "Pass", tooltip: "The rule was evaluated, and no problem was found." };
+        }
     }
 }

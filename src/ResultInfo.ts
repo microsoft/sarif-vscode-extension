@@ -64,7 +64,7 @@ export class ResultInfo {
                 }
 
                 if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
-                    resultInfo.severityLevel = rule.configuration.defaultLevel;
+                    resultInfo.severityLevel = ResultInfo.defaultLvlToLvlConverter(rule.configuration.defaultLevel);
                 }
 
                 resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
@@ -77,6 +77,8 @@ export class ResultInfo {
                 resultInfo.ruleId = ruleKey;
             }
         }
+
+        resultInfo.severityLevel = result.level || resultInfo.severityLevel || sarif.Result.level.warning;
 
         if (result.message !== undefined && result.message.text === undefined) {
             result.message.text = ruleMessageString;
@@ -109,6 +111,21 @@ export class ResultInfo {
         return Promise.resolve(locations);
     }
 
+    private static defaultLvlToLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
+        switch (defaultLevel) {
+            case sarif.RuleConfiguration.defaultLevel.error:
+                return sarif.Result.level.error;
+            case sarif.RuleConfiguration.defaultLevel.warning:
+                return sarif.Result.level.warning;
+            case sarif.RuleConfiguration.defaultLevel.note:
+                return sarif.Result.level.note;
+            case sarif.RuleConfiguration.defaultLevel.open:
+                return sarif.Result.level.open;
+            default:
+                return sarif.Result.level.warning;
+        }
+    }
+
     public additionalProperties: { [key: string]: string };
     public assignedLocation: Location;
     public codeFlows: CodeFlow[];
@@ -120,5 +137,5 @@ export class ResultInfo {
     public ruleId = "";
     public ruleName = "";
     public ruleDescription: Message;
-    public severityLevel = sarif.RuleConfiguration.defaultLevel.warning;
+    public severityLevel: sarif.Result.level;
 }
