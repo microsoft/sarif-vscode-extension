@@ -86,16 +86,19 @@ export class SVDiagnostic extends Diagnostic {
     }
 
     /**
-     * Translates the default level to a DiagnosticSeverity
-     * @param defaultLvl default level for the rule in the sarif file
+     * Translates the Result level to a DiagnosticSeverity
+     * @param level severity level for the result in the sarif file
      */
-    private getSeverity(defaultLvl: sarif.RuleConfiguration.defaultLevel): DiagnosticSeverity {
-        switch (defaultLvl) {
-            case sarif.RuleConfiguration.defaultLevel.warning:
-                return DiagnosticSeverity.Warning;
-            case sarif.RuleConfiguration.defaultLevel.error:
+    private getSeverity(level: sarif.Result.level): DiagnosticSeverity {
+        switch (level) {
+            case sarif.Result.level.error:
                 return DiagnosticSeverity.Error;
-            case sarif.RuleConfiguration.defaultLevel.note:
+            case sarif.Result.level.warning:
+            case sarif.Result.level.open:
+                return DiagnosticSeverity.Warning;
+            case sarif.Result.level.note:
+            case sarif.Result.level.notApplicable:
+            case sarif.Result.level.pass:
                 return DiagnosticSeverity.Information;
             default:
                 return DiagnosticSeverity.Warning;
