@@ -76,8 +76,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                         editor.revealRange(range, TextEditorRevealType.InCenterIfOutsideViewport);
                     }
                 }, (reason) => {
-                    // Failed to map after asking the user, fail silently as there's no location to add the selection
-                    return Promise.resolve();
+                    // Failed to open, let the user know
+                    return window.showErrorMessage(reason.message, { modal: false });
                 });
                 break;
             case "treeselectionchange":
@@ -335,7 +335,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
-     * Creates a row with location contents, returns undefined if no locations are displayable
+     * Creates a row with location links, returns undefined if no locations are displayable
      * @param rowName name to show up on the left side of the row
      * @param locations Array of Locations to be added to the Html
      */
@@ -346,8 +346,17 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         for (const location of locations) {
             if (location !== undefined) {
                 const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
-                cellContents.appendChild(this.createElement("label",
-                    { text: locText, tooltip: location.uri.toString(true) }));
+                const linkElement = this.createElement("a", {
+                    attributes: {
+                        "data-col": location.range.start.character.toString(),
+                        "data-file": location.uri.toString(true),
+                        "data-line": location.range.start.line.toString(),
+                        "href": "#0",
+                    },
+                    className: "sourcelink", text: locText, tooltip: location.uri.toString(true),
+                });
+
+                cellContents.appendChild(linkElement);
                 cellContents.appendChild(this.createElement("br"));
                 locationsAdded++;
             }
