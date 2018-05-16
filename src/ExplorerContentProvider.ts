@@ -431,7 +431,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         if (runInfo.toolName !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolName));
+            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName ));
         }
         if (runInfo.cmdLine !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
