@@ -6,7 +6,9 @@
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
 import { FileMapper } from "./FileMapper";
+import { Message } from "./Interfaces";
 import { LogReader } from "./LogReader";
+import { Utilities } from "./Utilities";
 
 /**
  * Class that holds the processed location from a results location
@@ -40,7 +42,10 @@ export class Location {
             return Promise.resolve(undefined);
         }
 
-        location.range = Location.parseRange(sarifLocation.region);
+        if (sarifLocation.region !== undefined) {
+            location.range = Location.parseRange(sarifLocation.region);
+            location.message = Utilities.parseSarifMessage(sarifLocation.region.message);
+        }
 
         return location;
     }
@@ -85,44 +90,42 @@ export class Location {
         let endline = 0;
         let endcol = 1;
 
-        if (region !== undefined) {
-            if (region.startLine !== undefined) {
-                startline = region.startLine;
-                endline = startline;
-                if (region.startColumn !== undefined) {
-                    startcol = region.startColumn - 1;
-                }
+        if (region.startLine !== undefined) {
+            startline = region.startLine;
+            endline = startline;
+            if (region.startColumn !== undefined) {
+                startcol = region.startColumn - 1;
+            }
 
-                if (region.length !== undefined) {
-                    endcol = region.length + region.startColumn - 1;
-                } else if (region.endLine !== undefined) {
-                    endline = region.endLine;
-                    if (region.endColumn !== undefined) {
-                        endcol = region.endColumn;
-                    } else if (endline === startline) {
-                        endcol = startcol;
-                    } else {
-                        endcol = 1;
-                    }
-                } else if (region.endColumn !== undefined) {
+            if (region.length !== undefined) {
+                endcol = region.length + region.startColumn - 1;
+            } else if (region.endLine !== undefined) {
+                endline = region.endLine;
+                if (region.endColumn !== undefined) {
                     endcol = region.endColumn;
-                    endline = startline;
-                } else if (region.snippet !== undefined) {
-                    if (region.snippet.text !== undefined) {
-                        endcol = region.snippet.text.length - 2;
-                    } else if (region.snippet.binary !== undefined) {
-                        endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
-                    }
+                } else if (endline === startline) {
+                    endcol = startcol;
+                } else {
+                    endcol = 1;
                 }
-
-                // change to be zero based for the vscode editor
-                startline--;
-                endline--;
-
-                if (endcol < startcol && endline === startline) {
-                    endline++;
-                    endcol = 0;
+            } else if (region.endColumn !== undefined) {
+                endcol = region.endColumn;
+                endline = startline;
+            } else if (region.snippet !== undefined) {
+                if (region.snippet.text !== undefined) {
+                    endcol = region.snippet.text.length - 2;
+                } else if (region.snippet.binary !== undefined) {
+                    endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
                 }
+            }
+
+            // change to be zero based for the vscode editor
+            startline--;
+            endline--;
+
+            if (endcol < startcol && endline === startline) {
+                endline++;
+                endcol = 0;
             }
         }
 
@@ -132,6 +135,7 @@ export class Location {
     public id: number;
     public fileName: string;
     public mapped: boolean;
+    public message: Message;
     public range: Range;
     public uri: Uri;
 

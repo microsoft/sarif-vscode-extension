@@ -5,11 +5,11 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import {
-    Disposable, Event, EventEmitter, ExtensionContext, Range, TextDocumentContentProvider, TextEditorRevealType, Uri,
-    ViewColumn, window, workspace,
+    commands, Disposable, Event, EventEmitter, ExtensionContext, Range, TextDocumentContentProvider,
+    TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { CodeFlow, CodeFlowStep, HTMLElementOptions } from "./Interfaces";
+import { Attachment, CodeFlow, CodeFlowStep, HTMLElementOptions, TreeNodeOptions } from "./Interfaces";
 import { Location } from "./Location";
 import { ResultInfo } from "./ResultInfo";
 import { RunInfo } from "./RunInfo";
@@ -65,7 +65,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      */
     public explorerCallback(request: any) {
         switch (request.request) {
-            case "sourcelinkclicked":
+            case "SourceLinkClicked":
                 workspace.openTextDocument(Uri.parse(request.file)).then((doc) => {
                     return window.showTextDocument(doc, ViewColumn.One, true);
                 }).then((editor) => {
@@ -80,11 +80,22 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                     return window.showErrorMessage(reason.message, { modal: false });
                 });
                 break;
-            case "treeselectionchange":
-                const selectionId = (request.treeid_step as string).split("_");
-                if (selectionId.length === 3) {
-                    CodeFlowDecorations.updateSelectionHighlight(parseInt(selectionId[0], 10),
-                        parseInt(selectionId[1], 10), parseInt(selectionId[2], 10));
+            case "CodeFlowTreeSelectionChange":
+                const cFSelectionId = (request.treeid_step as string).split("_");
+                if (cFSelectionId.length === 3) {
+                    CodeFlowDecorations.updateCodeFlowSelection(parseInt(cFSelectionId[0], 10),
+                        parseInt(cFSelectionId[1], 10), parseInt(cFSelectionId[2], 10));
+                }
+                break;
+            case "AttachmentTreeSelectionChange":
+                const aSelectionId = (request.treeid_step as string).split("_");
+                const attachmentId = parseInt(aSelectionId[0], 10);
+                if (aSelectionId.length > 1) {
+                    CodeFlowDecorations.updateAttachmentSelection(attachmentId, parseInt(aSelectionId[1], 10));
+                } else {
+                    const resultInfo = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo;
+                    commands.executeCommand("vscode.open", resultInfo.attachments[attachmentId].file.uri,
+                        ViewColumn.One);
                 }
                 break;
             case "verbositychanged":
@@ -124,7 +135,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private addNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number, treeId: number): number {
         for (let index = start; index < steps.length; index++) {
 
-            const node = this.createNode(steps[index]);
+            const node = this.createCodeFlowNode(steps[index]);
             parent.appendChild(node);
 
             if (steps[index].isParent) {
@@ -182,47 +193,19 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         ruleDescription.appendChild(resultInfo.message.html);
         body.appendChild(ruleDescription);
 
-        const codeFlowPanel = this.createCodeFlowPanel(resultInfo.codeFlows);
+        const tabHeader = this.createTabHeaderContainer(resultInfo.codeFlows !== undefined,
+            resultInfo.attachments !== undefined);
+        body.appendChild(tabHeader);
 
+        // Create and add the panels
         const panelContainer = this.createElement("div", { id: "tabContentContainer" }) as HTMLDivElement;
-        panelContainer.appendChild(this.createResultInfoPanel(resultInfo));
-        if (codeFlowPanel !== undefined) { panelContainer.appendChild(codeFlowPanel); }
-        panelContainer.appendChild(this.createRunInfoPanel(this.activeSVDiagnostic.runinfo));
-
-        body.appendChild(this.createTabHeaderContainer(codeFlowPanel !== undefined));
+        panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
+        panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
+        panelContainer.appendChild(this.createPanelRunInfo(this.activeSVDiagnostic.runinfo));
+        panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
         body.appendChild(panelContainer);
 
         return body;
-    }
-
-    /**
-     * Creates the content that shows when the user clicks the Code Flow tab
-     * @param codeFlows Array of code flows to create the content from
-     */
-    private createCodeFlowPanel(codeFlows: CodeFlow[]): HTMLDivElement {
-        if (codeFlows !== undefined) {
-            const panel = this.createElement("div",
-                { id: "codeflowtabcontent", className: "tabcontent" }) as HTMLDivElement;
-
-            const headerEle = this.createElement("div", { className: "tabcontentheader" }) as HTMLDivElement;
-            headerEle.appendChild(this.createElement("div", {
-                className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
-            }));
-            headerEle.appendChild(this.createElement("div", {
-                className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
-            }));
-            headerEle.appendChild(this.createElement("div", { className: "tabcontentheadersperator", text: "|" }));
-            headerEle.appendChild(this.createElement("input", {
-                attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
-            }));
-            panel.appendChild(headerEle);
-
-            panel.appendChild(this.createCodeFlowTrees(codeFlows));
-
-            return panel;
-        } else {
-            return undefined;
-        }
     }
 
     /**
@@ -293,43 +276,53 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private createNameValueRow(name: string, value: string, valueTooltip?: string) {
         const row = this.createElement("tr") as HTMLTableRowElement;
         row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
-        const valueCell = this.createElement("td", { className: "td-contentvalue" });
-        valueCell.appendChild(this.createElement("label", { text: value, tooltip: valueTooltip }));
-        row.appendChild(valueCell);
+        if (valueTooltip === undefined) { valueTooltip = value; }
+        row.appendChild(this.createElement("td", { className: "td-contentvalue", text: value, tooltip: valueTooltip }));
 
         return row;
     }
 
     /**
-     * Creates a Node for the CodeFlow tree
-     * @param cfLocation CodeFlow location to populate the node with
+     * Creates a tree node for a codeflow step
+     * @param step CodeFlow step to crete a node for
      */
-    private createNode(step: CodeFlowStep): HTMLLIElement {
-        let liClass: string;
-        let fileNameAndLine: string;
-        let message: string;
-        const tooltipText: string = `Step ${step.stepId}: ${step.message}`;
+    private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
+        const tooltipText = `Step ${step.stepId}: ${step.message}`;
 
-        liClass = "unexpandable";
-        message = step.message;
+        const nodeClass = `${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
+        let fileNameAndLine: string;
         if (step.location !== undefined) {
             fileNameAndLine = `${step.location.fileName} (${step.location.range.start.line + 1})`;
+        }
+
+        const treeNodeOptions = {
+            isParent: step.isParent, liClass: nodeClass, locationText: fileNameAndLine, message: step.message,
+            requestId: step.traversalId, tooltip: tooltipText,
+        } as TreeNodeOptions;
+        return this.createNode(treeNodeOptions);
+    }
+
+    /**
+     * Creates a tree node
+     * @param options TreeNodeOptions to determine the settings for the node
+     */
+    private createNode(options: TreeNodeOptions): HTMLLIElement {
+        if (options.isParent === true) {
+            options.liClass = "expanded " + options.liClass;
         } else {
-            fileNameAndLine = "[no location]";
+            options.liClass = "unexpandable " + options.liClass;
         }
 
-        if (step.isParent) {
-            liClass = "expanded";
+        if (options.locationText === undefined) {
+            options.locationText = "[no location]";
         }
-
-        liClass = liClass + ` ${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
 
         const node = this.createElement("li", {
-            attributes: { tabindex: "0" }, className: liClass, id: step.traversalId, tooltip: tooltipText,
+            attributes: { tabindex: "0" }, className: options.liClass, id: options.requestId, tooltip: options.tooltip,
         }) as HTMLLIElement;
 
-        node.appendChild(this.createElement("span", { className: "codeflowlocation", text: fileNameAndLine }));
-        node.appendChild(this.document.createTextNode(message));
+        node.appendChild(this.createElement("span", { className: "treenodelocation", text: options.locationText }));
+        node.appendChild(this.document.createTextNode(options.message));
 
         return node;
     }
@@ -370,12 +363,90 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
+     * Creates the base panel
+     * @param name name used for the panels id
+     */
+    private createPanel(name: string): HTMLDivElement {
+        return this.createElement("div", { id: name + "tabcontent", className: "tabcontent" }) as HTMLDivElement;
+    }
+
+    /**
+     * Creates a Panel that shows the Attachments of a result
+     * @param attachments Array of Attachment objects to create the panel with
+     */
+    private createPanelAttachments(attachments: Attachment[]): HTMLDivElement {
+        const panel = this.createPanel("attachments");
+
+        if (attachments !== undefined) {
+            const rootEle = this.createElement("ul", { className: "attachmentstreeroot" }) as HTMLUListElement;
+            for (const aIndex of attachments.keys()) {
+                let isAParent = false;
+                const attachment = attachments[aIndex];
+                if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
+                let treeNodeOptions = {
+                    isParent: isAParent, locationText: attachment.file.fileName, message: attachment.description.text,
+                    requestId: `${aIndex}`, tooltip: attachment.file.uri.toString(true),
+                } as TreeNodeOptions;
+                const parent = this.createNode(treeNodeOptions);
+                if (isAParent) {
+                    const childrenContainer = this.createElement("ul") as HTMLUListElement;
+                    for (const rIndex of attachment.regionsOfInterest.keys()) {
+                        const region = attachment.regionsOfInterest[rIndex];
+                        let regionText = "No Description";
+                        if (region.message !== undefined) {
+                            regionText = region.message.text;
+                        }
+                        const locText = `(${region.range.start.line + 1},${region.range.start.character + 1})`;
+                        treeNodeOptions = {
+                            isParent: false, locationText: locText, message: regionText,
+                            requestId: `${aIndex}_${rIndex}`, tooltip: regionText,
+                        } as TreeNodeOptions;
+
+                        childrenContainer.appendChild(this.createNode(treeNodeOptions));
+                    }
+
+                    parent.appendChild(childrenContainer);
+                }
+                rootEle.appendChild(parent);
+            }
+
+            panel.appendChild(rootEle);
+        }
+        return panel;
+    }
+
+    /**
+     * Creates the content that shows when the user clicks the Code Flow tab
+     * @param codeFlows Array of code flows to create the content from
+     */
+    private createPanelCodeFlow(codeFlows: CodeFlow[]): HTMLDivElement {
+        const panel = this.createPanel("codeflow");
+        if (codeFlows !== undefined) {
+            const headerEle = this.createElement("div", { className: "tabcontentheader" }) as HTMLDivElement;
+            headerEle.appendChild(this.createElement("div", {
+                className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
+            }));
+            headerEle.appendChild(this.createElement("div", {
+                className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
+            }));
+            headerEle.appendChild(this.createElement("div", { className: "tabcontentheadersperator", text: "|" }));
+            headerEle.appendChild(this.createElement("input", {
+                attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
+            }));
+            panel.appendChild(headerEle);
+
+            panel.appendChild(this.createCodeFlowTrees(codeFlows));
+        }
+
+        return panel;
+    }
+
+    /**
      * Creates the content that shows when the user clicks the resultinfo tab
      * @param resultInfo Result info to create the tab content from
      */
-    private createResultInfoPanel(resultInfo: ResultInfo): HTMLDivElement {
-        const panel = this.createElement("div",
-            { id: "resultinfotabcontent", className: "tabcontent" }) as HTMLDivElement;
+    private createPanelResultInfo(resultInfo: ResultInfo): HTMLDivElement {
+        const panel = this.createPanel("resultinfo");
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
@@ -409,29 +480,15 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
-     * Creates a row with an html element for it's value cell, useful for multiline values such as locations
-     * @param rowName name to show up on the left side of the row
-     * @param contents html element to add to the value cell
-     */
-    private createRowWithContents(rowName: string, contents: HTMLElement): HTMLTableRowElement {
-        const row = this.createElement("tr") as HTMLTableRowElement;
-        row.appendChild(this.createElement("td", { className: "td-contentname", text: rowName }));
-        const cell = this.createElement("td", { className: "td-contentvalue" }) as HTMLTableDataCellElement;
-        cell.appendChild(contents);
-        row.appendChild(cell);
-        return row;
-    }
-
-    /**
      * Creates the content that shows when the user clicks the runinfo tab
      * @param runInfo Run info to create the tab content from
      */
-    private createRunInfoPanel(runInfo: RunInfo): HTMLDivElement {
-        const panel = this.createElement("div", { id: "runinfotabcontent", className: "tabcontent" }) as HTMLDivElement;
+    private createPanelRunInfo(runInfo: RunInfo): HTMLDivElement {
+        const panel = this.createPanel("runinfo");
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         if (runInfo.toolName !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName ));
+            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName));
         }
         if (runInfo.cmdLine !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
@@ -454,6 +511,20 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     }
 
     /**
+     * Creates a row with an html element for it's value cell, useful for multiline values such as locations
+     * @param rowName name to show up on the left side of the row
+     * @param contents html element to add to the value cell
+     */
+    private createRowWithContents(rowName: string, contents: HTMLElement): HTMLTableRowElement {
+        const row = this.createElement("tr") as HTMLTableRowElement;
+        row.appendChild(this.createElement("td", { className: "td-contentname", text: rowName }));
+        const cell = this.createElement("td", { className: "td-contentvalue" }) as HTMLTableDataCellElement;
+        cell.appendChild(contents);
+        row.appendChild(cell);
+        return row;
+    }
+
+    /**
      * Creates the properties content to show
      * @param properties the properties object that has the bag of additional properties
      */
@@ -472,16 +543,20 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
     /**
      * Creates the Tabs Container content, the tabs at the top of the tab container
-     * @param includeCodeFlow Flag to include the CodeFlow tab in the set of tabs
+     * @param hasCodeFlows Flag to include the CodeFlow tab in the set of tabs
+     * @param hasAttachments Flag to include the Attachments tab in the set of tabs
      */
-    private createTabHeaderContainer(includeCodeFlow: boolean): HTMLDivElement {
+    private createTabHeaderContainer(hasCodeFlows: boolean, hasAttachments: boolean): HTMLDivElement {
         const container = this.createElement("div", { id: "tabcontainer" }) as HTMLDivElement;
 
         container.appendChild(this.createTabElement("resultinfotab", "Results info", "RESULT INFO"));
-        if (includeCodeFlow) {
+        if (hasCodeFlows) {
             container.appendChild(this.createTabElement("codeflowtab", "Code flow", "CODE FLOW"));
         }
         container.appendChild(this.createTabElement("runinfotab", "Run info", "RUN INFO"));
+        if (hasAttachments) {
+            container.appendChild(this.createTabElement("attachmentstab", "Attachments", "ATTACHMENTS"));
+        }
 
         return container;
     }

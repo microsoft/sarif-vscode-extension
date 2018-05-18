@@ -62,3 +62,18 @@ export interface Message {
     text: string,
     html: HTMLLabelElement
 }
+
+export interface Attachment {
+    description: Message,
+    file: Location,
+    regionsOfInterest: Location[]
+}
+
+export interface TreeNodeOptions {
+    isParent: boolean,
+    liClass: string,
+    locationText: string,
+    message: string,
+    requestId: string,
+    tooltip: string,
+}
