@@ -48,21 +48,45 @@ export class CodeFlowDecorations {
     }
 
     /**
+     * Updates the selection to the selected attachment region
+     * @param attachmentId Id of the attachment selected
+     * @param regionId Id of the region selected
+     */
+    public static async updateAttachmentSelection(attachmentId: number, regionId: number) {
+        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
+        const sarifPhysicalLocation = {
+            fileLocation: svDiagnostic.rawResult.attachments[attachmentId].fileLocation,
+            region: svDiagnostic.rawResult.attachments[attachmentId].regions[regionId],
+        } as sarif.PhysicalLocation;
+        const sarifLocation = { physicalLocation: sarifPhysicalLocation } as sarif.Location;
+
+        CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+    }
+
+    /**
      * Updates the decoration that represents the currently selected Code Flow in the Explorer
      * @param cFId Id of the Code Flow tree the selection is in
      * @param tFId Id of the Thread Flow selection is in
      * @param stepId Id of the step in the tree that is selected
      */
-    public static async updateSelectionHighlight(cFId: number, tFId: number, stepId: number): Promise<void> {
+    public static async updateCodeFlowSelection(cFId: number, tFId: number, stepId: number): Promise<void> {
         const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        const step: CodeFlowStep = svDiagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps[stepId];
+        const location: Location = svDiagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps[stepId].location;
+        const sarifLocation = svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location;
 
-        let location: Location;
-        if (step.location !== undefined && step.location.mapped) {
-            location = step.location;
-        } else {
+        CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+    }
+
+    /**
+     * Updates the decoration that represents the currently selected Code Flow in the Explorer
+     * @param location processed location to put the highlight at
+     * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
+     */
+    public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
+
+        if (location === undefined || !location.mapped) {
             // file mapping wasn't found, try to get the user to choose file
-            const sarifLocation = svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location;
             if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
                 const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
                 await FileMapper.Instance.getUserToChooseFile(uri).then(() => {

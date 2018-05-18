@@ -28,21 +28,6 @@ declare module 'sarif' {
     }
 
     /**
-    * TBD
-    */
-    export interface Annotation {
-        /**
-        * A message relevant to the set of locations specified by this annotation.
-        */
-        message: Message;
-
-        /**
-        * An array of 'physicalLocation' objects associated with this annotation.
-        */
-        locations: PhysicalLocation[];
-    }
-
-    /**
     * A file relevant to a tool invocation or to a result.
     */
     export interface Attachment {
@@ -55,6 +40,11 @@ declare module 'sarif' {
         * The location of the attachment.
         */
         fileLocation: FileLocation;
+
+        /**
+         * An array of regions of interest within the attachment.
+         */
+        regions?: Region[];
     }
 
     /**
@@ -170,9 +160,9 @@ declare module 'sarif' {
         invocation?: Invocation;
 
         /**
-        * The location of the analysis tool's log file.
+        * The locations of the analysis tool's per-run log files.
         */
-        analysisToolLogFileLocation?: FileLocation;
+        analysisToolLogFiles?: FileLocation[];
     }
 
     /**
@@ -680,27 +670,14 @@ declare module 'sarif' {
         fullyQualifiedLogicalName?: string;
 
         /**
-        * A key used to retrieve the location logicalLocation from the logicalLocations dictionary, when the string
-        * specified by 'fullyQualifiedLogicalName' is not unique.
-        */
-        logicalLocationKey?: string;
-
-        /**
-        * The machine-readable fully qualified name for the logical location where the analysis tool produced the
-        * result, such as the mangled function name provided by a C++ compiler that encodes calling convention, return
-        * type and other details along with the function name.
-        */
-        decoratedName?: string;
-
-        /**
         * A message relevant to the location.
         */
         message?: Message;
 
         /**
-        * A set of messages relevant to portions of the location.
+        * A set of regions relevant to the location.
         */
-        annotations?: Annotation[];
+        annotations?: Region[];
 
         /**
         * Key/value pairs that provide additional information about the location.
@@ -727,6 +704,17 @@ declare module 'sarif' {
         * class or a method.
         */
         name?: string;
+
+        /**
+        * The human-readable fully qualified name of the logical location.
+        */
+        fullyQualifiedName?: string;
+
+        /**
+        * The machine-readable name for the logical location, such as a mangled function name provided by a C++
+        * compiler that encodes calling convention, return type and other details along with the function name.
+        */
+        decoratedName?: string;
 
         /**
         * Identifies the key of the immediate parent of the construct in which the result was detected. For example,
@@ -823,11 +811,6 @@ declare module 'sarif' {
         ruleId?: string;
 
         /**
-        * A key used to retrieve the rule metadata from the rules dictionary that is relevant to the notificationn.
-        */
-        ruleKey?: string;
-
-        /**
         * The file and region relevant to this notification.
         */
         physicalLocation?: PhysicalLocation;
@@ -894,7 +877,7 @@ declare module 'sarif' {
         /**
         * The location of the file.
         */
-        fileLocation?: FileLocation;
+        fileLocation: FileLocation;
 
         /**
         * The region within the file where the result was detected.
@@ -946,6 +929,11 @@ declare module 'sarif' {
         * The portion of the file contents within the specified region.
         */
         snippet?: FileContent;
+
+        /**
+         * A message relevant to the region.
+         */
+        message?: Message;
     }
 
     /**
@@ -1000,11 +988,6 @@ declare module 'sarif' {
         ruleId?: string;
 
         /**
-        * A key used to retrieve the rule metadata from the rules dictionary that is relevant to the notificationn.
-        */
-        ruleKey?: string;
-
-        /**
         * A value specifying the severity level of the result. If this property is not present, its implied value is
         * 'warning'.
         */
@@ -1039,9 +1022,14 @@ declare module 'sarif' {
         id?: string;
 
         /**
-        * A set of strings that contribute to the unique identity of the result.
+        * A set of strings that contribute to the stable, unique identity of the result.
         */
-        toolFingerprintContributions?: { [key: string]: string };
+        partialFingerprints?: { [key: string]: string };
+
+        /**
+        * A set of strings each of which individually defines a stable, unique identity for the result.
+        */
+        fingerprints?: { [key: string]: string };
 
         /**
         * An array of 'stack' objects relevant to the result.
@@ -1275,7 +1263,6 @@ declare module 'sarif' {
 
         /**
         * A dictionary each of whose keys is a URI and each of whose values is a file object.
-															   
         */
         files?: { [key: string]: File };
 

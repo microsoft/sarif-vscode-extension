@@ -11,16 +11,6 @@ var TreeClassNames = {
 };
 
 /**
- * Method to add tooltips to the content, currently just puts the text content into the tooltip
- */
-function addTooltips() {
-    const elements = document.getElementsByClassName("td-contentvalue");
-    for (let i = 0; i < elements.length; i++) {
-        elements[i].setAttribute("title", elements[i].textContent);
-    }
-}
-
-/**
  * Hookups all of the event listeners
  */
 function hookupEventListeners() {
@@ -35,14 +25,21 @@ function hookupEventListeners() {
     }
 
     if (document.getElementById("codeflowtabcontent") !== null) {
-        const codeflowtrees = document.getElementsByClassName("codeflowtreeroot");
-        for (let i = 0; i < codeflowtrees.length; i++) {
-            codeflowtrees[i].addEventListener("click", onCodeFlowTreeClicked);
+        const codeFlowTrees = document.getElementsByClassName("codeflowtreeroot");
+        for (let i = 0; i < codeFlowTrees.length; i++) {
+            codeFlowTrees[i].addEventListener("click", onCodeFlowTreeClicked);
         }
 
         document.getElementById("expandallcodeflow").addEventListener("click", onExpandAllClicked);
         document.getElementById("collapseallcodeflow").addEventListener("click", onCollapseAllClicked);
         document.getElementById("codeflowverbosity").addEventListener("change", onVerbosityChange);
+    }
+
+    if (document.getElementById("attachmentstabcontent") !== null) {
+        const attachmentTrees = document.getElementsByClassName("attachmentstreeroot");
+        for (let i = 0; i < attachmentTrees.length; i++) {
+            attachmentTrees[i].addEventListener("click", onAttachmentClicked);
+        }
     }
 }
 
@@ -55,19 +52,36 @@ function initializeOpenedTab() {
 }
 
 /**
- * Callback when user clicks on the CodeFlow tree
- * @param event event fired when user clicked the codeflow tree
+ * Callback when user clicks on the Attachment tree
+ * @param event event fired when user clicked the attachment tree
  */
-function onCodeFlowTreeClicked(event) {
+function onAttachmentClicked(event) {
     let ele = event.srcElement;
-    if (ele.className === "codeflowlocation") {
+    if (ele.className === "treenodelocation") {
         ele = ele.parentElement;
     }
 
     if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
         toggleTreeElement(ele);
     } else {
-        sendExplorerCallback({ request: "treeselectionchange", treeid_step: ele.id });
+        sendExplorerCallback({ request: "AttachmentTreeSelectionChange", treeid_step: ele.id });
+    }
+}
+
+/**
+ * Callback when user clicks on the CodeFlow tree
+ * @param event event fired when user clicked the codeflow tree
+ */
+function onCodeFlowTreeClicked(event) {
+    let ele = event.srcElement;
+    if (ele.className === "treenodelocation") {
+        ele = ele.parentElement;
+    }
+
+    if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+        toggleTreeElement(ele);
+    } else {
+        sendExplorerCallback({ request: "CodeFlowTreeSelectionChange", treeid_step: ele.id });
     }
 }
 
@@ -95,8 +109,8 @@ function onSourceLinkClicked(event) {
     let ele = event.srcElement;
 
     sendExplorerCallback({
-        request: "sourcelinkclicked",
-        file: ele.dataset.file, line: ele.dataset.line, col: ele.dataset.col
+        col: ele.dataset.col, file: ele.dataset.file, line: ele.dataset.line,
+        request: "SourceLinkClicked",
     });
 }
 
@@ -225,10 +239,9 @@ function updateTreeVerbosity() {
     setVerbosityShowState("unimportant", unimportantClass);
 }
 
-if (document.getElementById("codeflowtabcontent") !== null) {
+if (document.getElementById("codeflowtab") !== null) {
     updateTreeVerbosity();
 }
 
 initializeOpenedTab();
-addTooltips();
 hookupEventListeners();
