@@ -16,5 +16,6 @@
 * Added support for RuleKey
 * Added support for Results that don't have a ResultLocation
 * Various other Minor Fixes
+
 ## 0.1.0
 * Initial preview release of the extension

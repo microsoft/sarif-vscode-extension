@@ -50,4 +50,3 @@ Please post any feedback or issues you would like to report here: https://github
 ## Rollback 
 If you need Sarif V1 support follow instructions from *Q: Can I download an extension directly from the Marketplace?* in the Common Questions at the bottom of [Extension Marketplace](https://code.visualstudio.com/docs/editor/extension-gallery) page using this url for the version 1.0.0 vsix:
 * https://ms-sarifvscode.gallery.vsassets.io/_apis/public/gallery/publisher/MS-SarifVSCode/extension/sarif-viewer/1.0.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage
-
