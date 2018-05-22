@@ -4,7 +4,10 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { ResultLocation } from "./ResultLocation";
+import { CodeFlows } from "./CodeFlows";
+import { Attachment, CodeFlow, Message } from "./Interfaces";
+import { Location } from "./Location";
+import { Utilities } from "./Utilities";
 
 /**
  * Class that holds the result information processed from the Sarif result
@@ -14,112 +17,167 @@ export class ResultInfo {
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
-     * @param rules dictonary of rules in the run this result came from
+     * @param resouces resources object that is used for the rules
      */
-    public static async create(result: sarif.Result, rules: { [key: string]: sarif.Rule }) {
+    public static async create(result: sarif.Result, resources: sarif.Resources) {
         const resultInfo = new ResultInfo();
 
-        await ResultInfo.parseLocations(result).then((locations) => {
+        await ResultInfo.parseLocations(result.locations).then((locations) => {
             resultInfo.locations = locations;
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        resultInfo.message = result.message || "";
+        await ResultInfo.parseLocations(result.relatedLocations).then((locations) => {
+            resultInfo.relatedLocs = locations;
+        });
 
-        let ruleKey: string;
-        if (result.ruleKey !== undefined) {
-            ruleKey = result.ruleKey;
-        } else if (result.ruleId !== undefined) {
-            ruleKey = result.ruleId;
+        await ResultInfo.parseAttachments(result.attachments).then((attachments: Attachment[]) => {
+            if (attachments.length > 0) {
+                resultInfo.attachments = attachments;
+            }
+        });
+
+        await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
+            resultInfo.codeFlows = codeFlows;
+        });
+
+        if (result.properties !== undefined) {
+            resultInfo.additionalProperties = result.properties;
         }
 
-        // Parse the rule related info
-        // Overwrites the message if a messageFormats is provided in the rule
-        if (ruleKey !== undefined) {
-            if (rules !== undefined && rules[ruleKey] !== undefined) {
-                const rule: sarif.Rule = rules[ruleKey];
-                resultInfo.ruleId = rule.id;
-                resultInfo.message = ResultInfo.parseRuleBasedMessage(rule, result.formattedRuleMessage);
+        const ruleKey = result.ruleId;
+        resultInfo.ruleId = result.ruleId;
+        const allLocations = resultInfo.locations.concat(resultInfo.relatedLocs);
 
-                if (rule.helpUri !== undefined) {
-                    resultInfo.ruleHelpUri = rule.helpUri;
+        // Parse the rule related info
+        let ruleMessageString: string;
+        if (ruleKey !== undefined) {
+            if (resources !== undefined && resources.rules !== undefined && resources.rules[ruleKey] !== undefined) {
+                const rule: sarif.Rule = resources.rules[ruleKey];
+
+                if (rule.id !== undefined) {
+                    resultInfo.ruleId = rule.id;
+                }
+
+                if (rule.helpLocation !== undefined) {
+                    resultInfo.ruleHelpUri = rule.helpLocation;
                 }
 
                 if (rule.name !== undefined) {
-                    resultInfo.ruleName = rule.name;
+                    resultInfo.ruleName = Utilities.parseSarifMessage(rule.name).text;
                 }
 
-                resultInfo.ruleDefaultLevel = rule.defaultLevel || sarif.Rule.defaultLevel.warning;
-            } else {
-                resultInfo.ruleId = ruleKey;
+                if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
+                    resultInfo.severityLevel = ResultInfo.defaultLvlToLvlConverter(rule.configuration.defaultLevel);
+                }
+
+                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
+                    allLocations);
+
+                if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
+                    ruleMessageString = rule.messageStrings[result.ruleMessageId];
+                }
             }
         }
+
+        resultInfo.severityLevel = result.level || resultInfo.severityLevel || sarif.Result.level.warning;
+
+        if (result.message !== undefined && result.message.text === undefined) {
+            result.message.text = ruleMessageString;
+        }
+
+        resultInfo.message = Utilities.parseSarifMessage(result.message, allLocations);
 
         return resultInfo;
     }
 
     /**
-     * Itterates through the locations in the result and creates ResultLocations for each
-     * If a location can't be created, it adds a null value to the array
-     * @param result result file with the locations that need to be created
+     * Itterates through the sarif locations and creates Locations for each
+     * Sets undefined placeholders in the returned array for those that can't be mapped
+     * @param sarifLocations sarif locations that need to be procesed
      */
-    public static async parseLocations(result: sarif.Result): Promise<ResultLocation[]> {
+    public static async parseLocations(sarifLocations: sarif.Location[]): Promise<Location[]> {
         const locations = [];
 
-        if (result.locations !== undefined) {
-            for (const location of result.locations) {
-                const physicalLocation = location.resultFile || location.analysisTarget;
-
-                if (physicalLocation !== undefined) {
-                    await ResultLocation.create(physicalLocation,
-                        result.snippet).then((resultLocation: ResultLocation) => {
-                            locations.push(resultLocation);
-                        }, (reason) => {
-                            // Uri wasn't provided in the physical location
-                            locations.push(null);
-                        });
-                } else { // no physicalLocation to use
-                    locations.push(null);
-                }
+        if (sarifLocations !== undefined) {
+            for (const sarifLocation of sarifLocations) {
+                await Location.create(sarifLocation.physicalLocation).then((location: Location) => {
+                    locations.push(location);
+                });
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
-            locations.push(null);
+            locations.push(undefined);
         }
 
         return Promise.resolve(locations);
     }
 
     /**
-     * Builds a messaged for the result based on the Rule's formated message
-     * @param rule the rule associated with this result
-     * @param formattedRuleMessage the formated messaged from the result
+     * Parses the sarif attachment objects and returns and array of processed Attachments
+     * @param sarifAttachments sarif attachments to parse
      */
-    private static parseRuleBasedMessage(rule: sarif.Rule, formattedRuleMessage: sarif.FormattedRuleMessage): string {
-        let message: string;
-        if (formattedRuleMessage !== undefined &&
-            rule.messageFormats !== undefined &&
-            rule.messageFormats[formattedRuleMessage.formatId] !== undefined) {
-            message = rule.messageFormats[formattedRuleMessage.formatId];
-            if (formattedRuleMessage.arguments !== undefined) {
-                for (let index = 0; index < formattedRuleMessage.arguments.length; index++) {
-                    message = message.replace("{" + index + "}", formattedRuleMessage.arguments[index]);
+    private static async parseAttachments(sarifAttachments: sarif.Attachment[]): Promise<Attachment[]> {
+        const attachments: Attachment[] = [];
+
+        if (sarifAttachments !== undefined) {
+            for (const sarifAttachment of sarifAttachments) {
+                const attachment = {} as Attachment;
+                attachment.description = Utilities.parseSarifMessage(sarifAttachment.description);
+                await Location.create({ fileLocation: sarifAttachment.fileLocation }).then((location: Location) => {
+                    attachment.file = location;
+                });
+
+                if (sarifAttachment.regions !== undefined) {
+                    attachment.regionsOfInterest = [];
+                    for (const sarifRegion of sarifAttachment.regions) {
+                        const physicalLocation = {
+                            fileLocation: sarifAttachment.fileLocation,
+                            region: sarifRegion,
+                        } as sarif.PhysicalLocation;
+
+                        await Location.create(physicalLocation).then((location: Location) => {
+                            attachment.regionsOfInterest.push(location);
+                        });
+                    }
                 }
+                attachments.push(attachment);
             }
-        } else if (rule.fullDescription !== undefined) {
-            message = rule.fullDescription;
-        } else {
-            message = rule.shortDescription;
         }
 
-        return message;
+        return attachments;
     }
 
-    public assignedLocation: ResultLocation;
-    public locations: ResultLocation[];
-    public message = "";
+    /**
+     * Converts the rule default Level to sarif Level
+     * @param defaultLevel default level to convert
+     */
+    private static defaultLvlToLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
+        switch (defaultLevel) {
+            case sarif.RuleConfiguration.defaultLevel.error:
+                return sarif.Result.level.error;
+            case sarif.RuleConfiguration.defaultLevel.warning:
+                return sarif.Result.level.warning;
+            case sarif.RuleConfiguration.defaultLevel.note:
+                return sarif.Result.level.note;
+            case sarif.RuleConfiguration.defaultLevel.open:
+                return sarif.Result.level.open;
+            default:
+                return sarif.Result.level.warning;
+        }
+    }
+
+    public additionalProperties: { [key: string]: string };
+    public assignedLocation: Location;
+    public attachments: Attachment[];
+    public codeFlows: CodeFlow[];
+    public locations: Location[];
+    public relatedLocs: Location[];
+    public message: Message;
+    public messageHTML: HTMLLabelElement;
     public ruleHelpUri: string;
     public ruleId = "";
     public ruleName = "";
-    public ruleDefaultLevel = sarif.Rule.defaultLevel.warning;
+    public ruleDescription: Message;
+    public severityLevel: sarif.Result.level;
 }

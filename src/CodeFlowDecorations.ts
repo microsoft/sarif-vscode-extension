@@ -9,83 +9,105 @@ import {
 } from "vscode";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
-import { ResultLocation } from "./ResultLocation";
+import { CodeFlowStep } from "./Interfaces";
+import { Location } from "./Location";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
  */
 export class CodeFlowDecorations {
     /**
-     * Updates the decorations for the locations in the Code Flow tree
-     * ToDo: rusty: refactor to generate the set of highlight decorations once to itterate through later
-     *              Will need to hook into the remapping event and recreate decorations
+     * Updates the decorations for the steps in the Code Flow tree
      */
-    public static async updateLocationsHighlight() {
+    public static async updateStepsHighlight() {
         const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.rawResult.codeFlows !== undefined
-            && activeSVDiagnostic.rawResult.codeFlows.length > 0) {
-
+        if (activeSVDiagnostic !== undefined && activeSVDiagnostic.resultInfo.codeFlows !== undefined) {
             // for each visible editor add any of the codeflow locations that match it's Uri
             for (const editor of window.visibleTextEditors) {
                 const decorations: DecorationOptions[] = [];
                 const unimportantDecorations: DecorationOptions[] = [];
-                for (const codeflow of activeSVDiagnostic.rawResult.codeFlows) {
-                    for (const location of codeflow.locations) {
-                        await CodeFlowDecorations.createHighlightDecoration(location, editor).then((decoration) => {
-                            if (decoration === undefined) { return; }
-
-                            if (location.importance === sarif.AnnotatedCodeLocation.importance.unimportant) {
+                for (const codeflow of activeSVDiagnostic.resultInfo.codeFlows) {
+                    // For now we only support one threadFlow in the code flow
+                    for (const step of codeflow.threads[0].steps) {
+                        const decoration = CodeFlowDecorations.createHighlightDecoration(step, editor);
+                        if (decoration !== undefined) {
+                            if (step.importance === sarif.CodeFlowLocation.importance.unimportant) {
                                 unimportantDecorations.push(decoration);
                             } else {
                                 decorations.push(decoration);
                             }
-                        });
+                        }
                     }
                 }
 
                 editor.setDecorations(CodeFlowDecorations.LocationDecorationType, decorations);
-                editor.setDecorations(CodeFlowDecorations.UnimportantLocationDecorationType,
-                    unimportantDecorations);
+                editor.setDecorations(CodeFlowDecorations.UnimportantLocationDecorationType, unimportantDecorations);
             }
 
         }
     }
 
     /**
+     * Updates the selection to the selected attachment region
+     * @param attachmentId Id of the attachment selected
+     * @param regionId Id of the region selected
+     */
+    public static async updateAttachmentSelection(attachmentId: number, regionId: number) {
+        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
+        const sarifPhysicalLocation = {
+            fileLocation: svDiagnostic.rawResult.attachments[attachmentId].fileLocation,
+            region: svDiagnostic.rawResult.attachments[attachmentId].regions[regionId],
+        } as sarif.PhysicalLocation;
+        const sarifLocation = { physicalLocation: sarifPhysicalLocation } as sarif.Location;
+
+        CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+    }
+
+    /**
      * Updates the decoration that represents the currently selected Code Flow in the Explorer
-     * @param treeId Id of the Code Flow tree the selection is in
+     * @param cFId Id of the Code Flow tree the selection is in
+     * @param tFId Id of the Thread Flow selection is in
      * @param stepId Id of the step in the tree that is selected
      */
-    public static async updateSelectionHighlight(treeId: string, stepId: string): Promise<void> {
+    public static async updateCodeFlowSelection(cFId: number, tFId: number, stepId: number): Promise<void> {
         const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        const cfLocation: sarif.AnnotatedCodeLocation = svDiagnostic.rawResult.codeFlows[treeId].locations[stepId];
-        if (cfLocation.physicalLocation !== undefined) {
-            let resultLocation: ResultLocation;
-            await ResultLocation.create(cfLocation.physicalLocation,
-                cfLocation.snippet).then((location: ResultLocation) => {
-                    if (location.mapped) {
-                        resultLocation = location;
-                    } else {
-                        // file mapping wasn't found, try to get the user to choose file
-                        const uri = Uri.parse(cfLocation.physicalLocation.uri);
-                        return FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                            return ResultLocation.create(cfLocation.physicalLocation, cfLocation.snippet);
-                        }).then((choosenLoc) => {
-                            resultLocation = choosenLoc;
-                        });
-                    }
-                }).then(() => {
-                    return workspace.openTextDocument(resultLocation.uri);
-                }).then((doc) => {
-                    return window.showTextDocument(doc, ViewColumn.One, true);
-                }).then((editor) => {
-                    editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
-                        [{ range: resultLocation.range }]);
-                    editor.revealRange(resultLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-                }, (reason) => {
-                    // Failed to map after asking the user, fail silently as there's no location to add the selection
-                    return Promise.resolve();
+        const location: Location = svDiagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps[stepId].location;
+        const sarifLocation = svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location;
+
+        CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+    }
+
+    /**
+     * Updates the decoration that represents the currently selected Code Flow in the Explorer
+     * @param location processed location to put the highlight at
+     * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
+     */
+    public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
+
+        if (location === undefined || !location.mapped) {
+            // file mapping wasn't found, try to get the user to choose file
+            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
+                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
+                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
+                    return Location.create(sarifLocation.physicalLocation);
+                }).then((remappedLocation) => {
+                    location = remappedLocation;
                 });
+            }
+        }
+
+        if (location !== undefined && location.mapped) {
+            return workspace.openTextDocument(location.uri).then((doc) => {
+                return window.showTextDocument(doc, ViewColumn.One, true);
+            }).then((editor) => {
+                editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
+                    [{ range: location.range }]);
+                editor.revealRange(location.range, TextEditorRevealType.InCenterIfOutsideViewport);
+            }, (reason) => {
+                // Failed to map after asking the user, fail silently as there's no location to add the selection
+                return Promise.resolve();
+            });
         }
     }
 
@@ -120,32 +142,20 @@ export class CodeFlowDecorations {
 
     /**
      * Creates the decoration, if not able to determine a location returns undefined object
-     * @param location Location associated with the Code Flow step
+     * @param step the Code Flow step
      * @param editor text editor we check if the location exists in
      */
-    private static createHighlightDecoration(location: sarif.AnnotatedCodeLocation, editor: TextEditor): Promise<any> {
-        if (location.physicalLocation === undefined) {
-            // The code flow doesn't have a location so there's no highlight to create
-            return Promise.resolve();
+    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor) {
+        let decoration;
+        if (step.location !== undefined && step.location.mapped &&
+            step.location.uri.toString() === editor.document.uri.toString()) {
+            decoration = {
+                hoverMessage: `[CodeFlow] Step ${step.stepId}: ${step.message || step.importance}`,
+                range: step.location.range,
+                renderOptions: undefined,
+            };
         }
 
-        return ResultLocation.create(location.physicalLocation,
-            location.snippet).then((resultLocation: ResultLocation) => {
-                if (resultLocation.mapped && resultLocation.uri.toString() === editor.document.uri.toString()) {
-                    const decoration = {
-                        hoverMessage: `[CodeFlow] Step ${location.step}: ${location.message ||
-                            location.target || location.importance || ""}`,
-                        range: resultLocation.range,
-                        renderOptions: undefined,
-                    };
-
-                    return Promise.resolve(decoration);
-                } else {
-                    return Promise.resolve(undefined);
-                }
-            }, (reason) => {
-                // The code flow location hasn't been mapped yet so there's no highlight to add
-                return Promise.resolve(undefined);
-            });
+        return decoration;
     }
 }

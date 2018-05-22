@@ -85,20 +85,14 @@ export class SVCodeActionProvider implements CodeActionProvider {
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
     private getCodeActions(svDiagnostic: SVDiagnostic): any[] {
-        const locations = svDiagnostic.rawResult.locations;
+        const rawLocations = svDiagnostic.rawResult.locations;
         const actions = [];
 
-        if (!svDiagnostic.resultInfo.assignedLocation.mapped && locations !== undefined) {
-            let filePath: string;
-            if (locations[0].resultFile !== undefined && locations[0].resultFile.uri !== undefined) {
-                filePath = locations[0].resultFile.uri;
-            } else if (locations[0].analysisTarget !== undefined && locations[0].analysisTarget.uri !== undefined) {
-                filePath = locations[0].analysisTarget.uri;
-            }
-
-            if (filePath !== undefined) {
+        if (!svDiagnostic.resultInfo.assignedLocation.mapped && rawLocations !== undefined) {
+            const physicalLocation = rawLocations[0].physicalLocation;
+            if (physicalLocation !== undefined && physicalLocation.fileLocation !== undefined) {
                 actions.push({
-                    arguments: [filePath],
+                    arguments: [physicalLocation.fileLocation.uri],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
                 });

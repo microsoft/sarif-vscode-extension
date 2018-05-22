@@ -15,29 +15,36 @@ export class RunInfo {
      * @param run SARIF run object to process
      */
     public static Create(run: sarif.Run) {
-        const runinfo = new RunInfo();
+        const runInfo = new RunInfo();
+        const tool = run.tool;
+        runInfo.toolName = tool.name;
+        if (runInfo.toolFullName !== undefined) {
+            runInfo.toolFullName = tool.fullName;
+        } else if (run.tool.semanticVersion !== undefined) {
+            runInfo.toolFullName = `${tool.name} ${tool.semanticVersion}`;
+        } else {
+            runInfo.toolFullName = tool.name;
+        }
 
-        runinfo.toolName = run.tool.name;
-        runinfo.toolFullName = run.tool.fullName;
-        if (runinfo.toolFullName === undefined || runinfo.toolFullName === "") {
-            runinfo.toolFullName = run.tool.name;
-            if (run.tool.semanticVersion !== undefined) {
-                runinfo.toolFullName = runinfo.toolFullName + " " + run.tool.semanticVersion;
+        if (run.invocations !== undefined) {
+            runInfo.cmdLine = run.invocations[0].commandLine;
+            if (run.invocations[0].executableLocation !== undefined) {
+                runInfo.fileName = run.invocations[0].executableLocation.uri;
             }
+            runInfo.workingDir = run.invocations[0].workingDirectory;
         }
 
-        if (run.invocation) {
-            runinfo.cmdLine = run.invocation.commandLine;
-            runinfo.fileName = run.invocation.fileName;
-            runinfo.workingDir = run.invocation.workingDirectory;
+        if (run.properties !== undefined) {
+            runInfo.additionalProperties = run.properties;
         }
 
-        return runinfo;
+        return runInfo;
     }
 
-    public toolFullName: string;
-    public toolName: string;
+    public additionalProperties: { [key: string]: string };
     public cmdLine: string;
     public fileName: string;
+    public toolFullName: string;
+    public toolName: string;
     public workingDir: string;
 }

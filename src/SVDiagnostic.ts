@@ -5,6 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Diagnostic, DiagnosticSeverity } from "vscode";
+import { CodeFlows } from "./CodeFlows";
 import { ResultInfo } from "./ResultInfo";
 import { RunInfo } from "./RunInfo";
 
@@ -21,8 +22,8 @@ export class SVDiagnostic extends Diagnostic {
     public rawResult: sarif.Result;
 
     public constructor(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result) {
-        super(resultinfo.assignedLocation.range, resultinfo.message);
-        this.severity = this.getSeverity(resultinfo.ruleDefaultLevel);
+        super(resultinfo.assignedLocation.range, resultinfo.message.text);
+        this.severity = this.getSeverity(resultinfo.severityLevel);
         this.code = SVDiagnostic.Code;
         this.runinfo = runinfo;
         this.resultInfo = resultinfo;
@@ -35,17 +36,29 @@ export class SVDiagnostic extends Diagnostic {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    public tryToRemapLocations(): Promise<boolean> {
-        return ResultInfo.parseLocations(this.rawResult).then((locations) => {
+    public async tryToRemapLocations(): Promise<boolean> {
+        if (this.resultInfo.codeFlows !== undefined) {
+            await CodeFlows.tryRemapCodeFlows(this.resultInfo.codeFlows, this.rawResult.codeFlows);
+        }
+
+        await ResultInfo.parseLocations(this.rawResult.relatedLocations).then((locations) => {
             for (const index in locations) {
-                if (this.resultInfo.locations[index] !== locations[index]) {
+                if (locations[index] !== undefined && this.resultInfo.relatedLocs[index] !== locations[index]) {
+                    this.resultInfo.relatedLocs[index] = locations[index];
+                }
+            }
+        });
+
+        return ResultInfo.parseLocations(this.rawResult.locations).then((locations) => {
+            for (const index in locations) {
+                if (locations[index] !== undefined && this.resultInfo.locations[index] !== locations[index]) {
                     this.resultInfo.locations[index] = locations[index];
                 }
             }
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation = this.resultInfo.locations[0];
-            if (firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
+            if (firstLocation !== null && firstLocation.mapped && !this.resultInfo.assignedLocation.mapped) {
                 this.resultInfo.assignedLocation = firstLocation;
                 this.range = firstLocation.range;
                 this.updateMessage();
@@ -61,7 +74,7 @@ export class SVDiagnostic extends Diagnostic {
      * And Unmapped if the result has not been mapped
      */
     public updateMessage(): void {
-        this.message = this.resultInfo.message;
+        this.message = this.resultInfo.message.text;
 
         if (this.resultInfo.ruleId !== "") {
             this.message = `[${this.resultInfo.ruleId}] ${this.message}`;
@@ -73,16 +86,19 @@ export class SVDiagnostic extends Diagnostic {
     }
 
     /**
-     * Translates the default level to a DiagnosticSeverity
-     * @param defaultLvl default level for the rule in the sarif file
+     * Translates the Result level to a DiagnosticSeverity
+     * @param level severity level for the result in the sarif file
      */
-    private getSeverity(defaultLvl: sarif.Rule.defaultLevel): DiagnosticSeverity {
-        switch (defaultLvl) {
-            case sarif.Rule.defaultLevel.warning:
-                return DiagnosticSeverity.Warning;
-            case sarif.Rule.defaultLevel.error:
+    private getSeverity(level: sarif.Result.level): DiagnosticSeverity {
+        switch (level) {
+            case sarif.Result.level.error:
                 return DiagnosticSeverity.Error;
-            case sarif.Rule.defaultLevel.note:
+            case sarif.Result.level.warning:
+            case sarif.Result.level.open:
+                return DiagnosticSeverity.Warning;
+            case sarif.Result.level.note:
+            case sarif.Result.level.notApplicable:
+            case sarif.Result.level.pass:
                 return DiagnosticSeverity.Information;
             default:
                 return DiagnosticSeverity.Warning;
