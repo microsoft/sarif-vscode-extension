@@ -66,7 +66,8 @@ export class SVDiagnosticCollection {
 
     /**
      * Callback to handle whenever a mapping in the FileMapper changes
-     * Goes through the diagnostics and tries to remap their locations, if not able to it gets left in the unmapped     * Also goes through the codeflow locations, to update the locations
+     * Goes through the diagnostics and tries to remap their locations, if not able to it gets left in the unmapped
+     * Also goes through the codeflow locations, to update the locations
      */
     public async mappingChanged() {
         for (const key of this.issuesCollection.keys()) {

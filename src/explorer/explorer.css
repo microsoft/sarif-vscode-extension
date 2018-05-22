@@ -1,0 +1,179 @@
+/*********************************************************** 
+// *                                                       * 
+// *   Copyright (C) Microsoft. All rights reserved.       * 
+// *                                                       * 
+// ********************************************************/
+body {
+    padding: 0px;
+}
+
+#title {
+    padding: 5px;
+    border-bottom-style: solid;
+    border-bottom-color: var(--color);
+    border-bottom-width: thin;
+    background-color: rgba(100, 100, 100, .2);
+}
+
+#titleruleid,
+#titlerulename {
+    font-size: 130%;
+    font-weight: bold;
+}
+
+#titleruleid {
+    color: rgb(16, 109, 192);
+}
+
+#ruledescription {
+    padding: 10px;
+    max-height: 25vh;
+    overflow-x: hidden;
+}
+
+#tabcontainer {
+    display: flex;
+    padding: 10px 0px;
+}
+
+.tab {
+    color: rgba(125, 125, 125, .8);
+    border-color: var(--color);
+    padding: 5px 10px;
+    user-select: none;
+}
+
+    .tab:hover {
+        color: var(--color);
+    }
+
+.tabactive > .tablabel {
+    border-bottom-color: rgba(125, 125, 125, .4);
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    color: var(--color);
+    padding-bottom: 2px;
+}
+
+.tabcontent {
+    display: none;
+    padding: 0px 10px;
+    overflow-x: hidden;
+}
+
+.tabcontentactive {
+    display: block;
+}
+
+.tabcontentheader {
+    padding-bottom: 5px;
+    border-bottom-style: solid;
+    border-bottom-color: var(--color);
+    border-bottom-width: thin;
+    background-color: rgba(100, 100, 100, .4);
+    display: flex;
+}
+
+.tabcontentheadersperator {
+    padding: 0px 10px;
+    font-size: 150%;
+    color: rgba(200, 200, 200, 0.3);
+}
+
+.tabcontentheaderbutton {
+    padding-left: 10px;
+    user-select: none;
+    cursor: pointer;
+    font-size: 150%;
+}
+
+.td-contentname {
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+input[type=range] {
+    width: 4.75em;
+}
+
+    input[type=range]::-webkit-slider-thumb {
+        clip-path: polygon(50% 90%, 100% 60%, 100% 10%, 0 10%, 0 60%);
+    }
+
+    input[type=range]:focus {
+        outline: none;
+    }
+
+input[type='range']::-webkit-slider-runnable-track {
+    background: repeating-linear-gradient(90deg, transparent, transparent .30em, var(--color) .30em, transparent .45em, transparent 2em);
+    background-repeat: no-repeat;
+    background-origin: content-box;
+    background-size: 100% 30%, 100% 100%, 100% 100%;
+    background-position-y: 100%;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 15px;
+    background: var(--background-color);
+    color: var(--color);
+    outline: none;
+}
+
+    ul.codeflowtreeroot {
+        margin-top: 5px;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+li.collapsed::before {
+    content: "▶";
+    padding-right: 5px;
+}
+
+li.collapsed > ul {
+    display: none;
+}
+
+li.expanded::before {
+    content: "◢ ";
+    padding-right: 3px;
+}
+
+li.expanded > ul {
+    display: block;
+}
+
+li.unexpandable {
+    padding-left: 17px;
+}
+
+li.esential {
+    font-weight: bold;
+}
+
+li.unimportant {
+    font-style: italic;
+    font-weight: lighter;
+}
+
+li.verbosityshow {
+    display: block;
+}
+
+li.verbosityhide {
+    display: none;
+}
+
+li:hover {
+    background: rgba(200, 200, 200, 0.3);
+}
+
+li:focus {
+    background: rgb(16, 109, 192);
+    color: white;
+}
+
+.treenodelocation {
+    float: right;
+}
