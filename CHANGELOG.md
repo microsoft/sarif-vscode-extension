@@ -1,5 +1,8 @@
 # Change Log
 
+## 2.0.1
+* Security fix for a node module included in the dependencies [details](https://nvd.nist.gov/vuln/detail/CVE-2018-3728)
+
 ## 2.0.0
 * Updated to support Sarif V2.0.0 (we no longer support Sarif V1, a future task would be to add backwards support)
 * Added Related Locations to Result Info panel
