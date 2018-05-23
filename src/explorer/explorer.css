@@ -1,4 +1,4 @@
-/*********************************************************** 
+﻿/*********************************************************** 
 // *                                                       * 
 // *   Copyright (C) Microsoft. All rights reserved.       * 
 // *                                                       * 
@@ -127,7 +127,7 @@ ul {
     }
 
 li.collapsed::before {
-    content: "▶";
+    content: "\25b7";
     padding-right: 5px;
 }
 
@@ -136,7 +136,7 @@ li.collapsed > ul {
 }
 
 li.expanded::before {
-    content: "◢ ";
+    content: "\25e2  ";
     padding-right: 3px;
 }
 
