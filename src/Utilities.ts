@@ -88,6 +88,11 @@ export class Utilities {
         return message;
     }
 
+    /**
+     * Creates a html link element that when clicked will open the source in the VSCode Editor
+     * @param location The location object that represents where the link points to
+     * @param linkText The text to display on the link
+     */
     public static createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
         const file = location.uri.toString(true);
         const linkElement = Utilities.document.createElement("a") as HTMLAnchorElement;
