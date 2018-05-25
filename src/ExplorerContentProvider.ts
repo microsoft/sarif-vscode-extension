@@ -6,7 +6,7 @@
 import * as sarif from "sarif";
 import {
     commands, Disposable, Event, EventEmitter, ExtensionContext, Range, TextDocumentContentProvider,
-    TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { Attachment, CodeFlow, CodeFlowStep, HTMLElementOptions, TreeNodeOptions } from "./Interfaces";
@@ -14,6 +14,7 @@ import { Location } from "./Location";
 import { ResultInfo } from "./ResultInfo";
 import { RunInfo } from "./RunInfo";
 import { SVDiagnostic } from "./SVDiagnostic";
+import { Utilities } from "./Utilities";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -66,19 +67,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     public explorerCallback(request: any) {
         switch (request.request) {
             case "SourceLinkClicked":
-                workspace.openTextDocument(Uri.parse(request.file)).then((doc) => {
-                    return window.showTextDocument(doc, ViewColumn.One, true);
-                }).then((editor) => {
-                    if (request.line !== undefined) {
-                        const line = parseInt(request.line, 10);
-                        const column = parseInt(request.col, 10);
-                        const range = new Range(line, column, line, column + 1);
-                        editor.revealRange(range, TextEditorRevealType.InCenterIfOutsideViewport);
-                    }
-                }, (reason) => {
-                    // Failed to open, let the user know
-                    return window.showErrorMessage(reason.message, { modal: false });
-                });
+                const location = {} as Location;
+                location.mapped = true;
+                location.uri = Uri.parse(request.file);
+                location.range = new Range(parseInt(request.sLine, 10), parseInt(request.sCol, 10),
+                    parseInt(request.eLine, 10), parseInt(request.eCol, 10));
+                CodeFlowDecorations.updateSelectionHighlight(location, undefined);
                 break;
             case "CodeFlowTreeSelectionChange":
                 const cFSelectionId = (request.treeid_step as string).split("_");
@@ -338,18 +332,9 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         let locationsAdded = 0;
         for (const location of locations) {
             if (location !== undefined) {
-                const locText = `${location.fileName} (${(location.range.start.line + 1)})`;
-                const linkElement = this.createElement("a", {
-                    attributes: {
-                        "data-col": location.range.start.character.toString(),
-                        "data-file": location.uri.toString(true),
-                        "data-line": location.range.start.line.toString(),
-                        "href": "#0",
-                    },
-                    className: "sourcelink", text: locText, tooltip: location.uri.toString(true),
-                });
-
-                cellContents.appendChild(linkElement);
+                const text = `${location.fileName} (${(location.range.start.line + 1)})`;
+                const link = Utilities.createSourceLink(location, text);
+                cellContents.appendChild(link);
                 cellContents.appendChild(this.createElement("br"));
                 locationsAdded++;
             }

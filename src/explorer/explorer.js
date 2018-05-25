@@ -109,8 +109,8 @@ function onSourceLinkClicked(event) {
     let ele = event.srcElement;
 
     sendExplorerCallback({
-        col: ele.dataset.col, file: ele.dataset.file, line: ele.dataset.line,
-        request: "SourceLinkClicked",
+        eCol: ele.dataset.ecol, eLine: ele.dataset.eline, file: ele.dataset.file, request: "SourceLinkClicked",
+        sCol: ele.dataset.scol, sLine: ele.dataset.sline,
     });
 }
 
