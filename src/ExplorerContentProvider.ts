@@ -8,6 +8,7 @@ import {
     commands, Disposable, Event, EventEmitter, ExtensionContext, Range, TextDocumentContentProvider,
     Uri, ViewColumn, window, workspace,
 } from "vscode";
+import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { Attachment, CodeFlow, CodeFlowStep, HTMLElementOptions, TreeNodeOptions } from "./Interfaces";
 import { Location } from "./Location";
@@ -29,6 +30,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
     public context: ExtensionContext;
     public activeSVDiagnostic: SVDiagnostic;
+    public codeFlowVerbosity: sarif.CodeFlowLocation.importance;
 
     private onDidChangeEmitter = new EventEmitter<Uri>();
     private textDocContentProRegistration: Disposable;
@@ -93,6 +95,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                 }
                 break;
             case "verbositychanged":
+                ExplorerContentProvider.Instance.codeFlowVerbosity = request.verbosity;
+                CodeFlowCodeLensProvider.Instance.triggerCodeLensRefresh();
                 break;
         }
     }
@@ -281,8 +285,6 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param step CodeFlow step to crete a node for
      */
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
-        const tooltipText = `Step ${step.stepId}: ${step.message}`;
-
         const nodeClass = `${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
         let fileNameAndLine: string;
         if (step.location !== undefined) {
@@ -291,7 +293,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
 
         const treeNodeOptions = {
             isParent: step.isParent, liClass: nodeClass, locationText: fileNameAndLine, message: step.message,
-            requestId: step.traversalId, tooltip: tooltipText,
+            requestId: step.traversalId, tooltip: step.messageWithStep,
         } as TreeNodeOptions;
         return this.createNode(treeNodeOptions);
     }

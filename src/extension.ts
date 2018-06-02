@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import { commands, ExtensionContext, Uri, ViewColumn } from "vscode";
+import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
@@ -36,6 +37,8 @@ export function activate(context: ExtensionContext) {
     // Instantiate the CodeActionProvider which will register it's listeners
     const codeActionProvider = SVCodeActionProvider.Instance;
 
+    const codeFlowCodeLensProvider = CodeFlowCodeLensProvider.Instance;
+
     // Read the initial set of open SARIF files
     reader.readAll();
 
@@ -45,6 +48,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(explorerCommandDisposable);
     context.subscriptions.push(explorerRequestDisposable);
     context.subscriptions.push(codeActionProvider);
+    context.subscriptions.push(codeFlowCodeLensProvider);
     context.subscriptions.push(remapCodeActionCommandDisposable);
     context.subscriptions.push(FileMapper.Instance);
 }

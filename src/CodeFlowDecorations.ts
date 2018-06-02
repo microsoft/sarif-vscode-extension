@@ -5,7 +5,8 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import {
-    DecorationOptions, OverviewRulerLane, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    DecorationOptions, DecorationRangeBehavior, OverviewRulerLane, Position, Range, TextEditor, TextEditorRevealType,
+    Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
@@ -98,11 +99,16 @@ export class CodeFlowDecorations {
         }
 
         if (location !== undefined && location.mapped) {
+            let locRange = location.range;
+            if (location.endOfLine === true) {
+                locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
+            }
+
             return workspace.openTextDocument(location.uri).then((doc) => {
                 return window.showTextDocument(doc, ViewColumn.One, true);
             }).then((editor) => {
                 editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
-                    [{ range: location.range }]);
+                    [{ range: locRange }]);
                 editor.revealRange(location.range, TextEditorRevealType.InCenterIfOutsideViewport);
             }, (reason) => {
                 // Failed to map after asking the user, fail silently as there's no location to add the selection
@@ -120,6 +126,7 @@ export class CodeFlowDecorations {
         },
         overviewRulerColor: "blue",
         overviewRulerLane: OverviewRulerLane.Left,
+        rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static SelectionDecorationType = window.createTextEditorDecorationType({
@@ -127,6 +134,7 @@ export class CodeFlowDecorations {
         borderWidth: "1px",
         overviewRulerColor: "red",
         overviewRulerLane: OverviewRulerLane.Left,
+        rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static UnimportantLocationDecorationType = window.createTextEditorDecorationType({
@@ -138,6 +146,7 @@ export class CodeFlowDecorations {
         },
         overviewRulerColor: "grey",
         overviewRulerLane: OverviewRulerLane.Left,
+        rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     /**
@@ -149,11 +158,15 @@ export class CodeFlowDecorations {
         let decoration;
         if (step.location !== undefined && step.location.mapped &&
             step.location.uri.toString() === editor.document.uri.toString()) {
+            let stepRange = step.location.range;
+            if (step.location.endOfLine === true) {
+                stepRange = new Range(stepRange.start, new Position(stepRange.end.line - 1, Number.MAX_VALUE));
+            }
             decoration = {
-                hoverMessage: `[CodeFlow] Step ${step.stepId}: ${step.message || step.importance}`,
-                range: step.location.range,
+                hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
+                range: stepRange,
                 renderOptions: undefined,
-            };
+            } as DecorationOptions;
         }
 
         return decoration;
