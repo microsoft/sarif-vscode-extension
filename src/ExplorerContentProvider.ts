@@ -40,8 +40,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private constructor() {
         this.textDocContentProRegistration = workspace.registerTextDocumentContentProvider("sarifExplorer", this);
         this.visibleChangeDisposable = window.onDidChangeVisibleTextEditors(
-            CodeFlowDecorations.updateStepsHighlight, this);
-
+            CodeFlowDecorations.onVisibleTextEditorsChanged, this);
         const jsdom = require("jsdom");
         this.document = (new jsdom.JSDOM(``)).window.document;
     }
