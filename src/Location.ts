@@ -43,7 +43,9 @@ export class Location {
         }
 
         if (sarifLocation.region !== undefined) {
-            location.range = Location.parseRange(sarifLocation.region);
+            const parsedRange = Location.parseRange(sarifLocation.region);
+            location.range = parsedRange.range;
+            location.endOfLine = parsedRange.endOfLine;
             location.message = Utilities.parseSarifMessage(sarifLocation.region.message);
         }
 
@@ -84,11 +86,12 @@ export class Location {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    private static parseRange(region: sarif.Region): Range {
+    private static parseRange(region: sarif.Region): { range: Range, endOfLine: boolean } {
         let startline = 0;
         let startcol = 0;
         let endline = 0;
         let endcol = 1;
+        let eol = false;
 
         if (region.startLine !== undefined) {
             startline = region.startLine;
@@ -126,13 +129,15 @@ export class Location {
             if (endcol < startcol && endline === startline) {
                 endline++;
                 endcol = 0;
+                eol = true;
             }
         }
 
-        return new Range(startline, startcol, endline, endcol);
+        return { range: new Range(startline, startcol, endline, endcol), endOfLine: eol };
     }
 
     public id: number;
+    public endOfLine: boolean;
     public fileName: string;
     public mapped: boolean;
     public message: Message;
@@ -143,5 +148,6 @@ export class Location {
         this.range = new Range(0, 0, 0, 1);
         this.uri = null;
         this.fileName = "";
+        this.endOfLine = false;
     }
 }

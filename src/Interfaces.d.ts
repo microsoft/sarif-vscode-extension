@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { Command } from "vscode";
 import { Location } from "./Location";
 
 /**
@@ -48,19 +49,21 @@ export interface ThreadFlow {
 }
 
 export interface CodeFlowStep {
+    codeLensCommand: Command;
     importance: sarif.CodeFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
     location: Location;
     message: string;
+    messageWithStep: string;
     state: object;
     stepId: number;
     traversalId: string;
 }
 
 export interface Message {
+    html: HTMLLabelElement,
     text: string,
-    html: HTMLLabelElement
 }
 
 export interface Attachment {

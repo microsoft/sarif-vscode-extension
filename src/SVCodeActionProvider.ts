@@ -7,6 +7,8 @@ import {
     CancellationToken, CodeActionContext, CodeActionProvider, Command, commands, Disposable, languages, ProviderResult,
     Range, TextDocument,
 } from "vscode";
+import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
+import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnostic } from "./SVDiagnostic";
@@ -69,6 +71,8 @@ export class SVCodeActionProvider implements CodeActionProvider {
                 const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
                 if (activeSVDiagnostic === undefined || activeSVDiagnostic !== svDiagnostic) {
                     ExplorerContentProvider.Instance.update(svDiagnostic);
+                    CodeFlowCodeLensProvider.Instance.triggerCodeLensRefresh();
+                    CodeFlowDecorations.updateSelectionHighlight(svDiagnostic.resultInfo.assignedLocation, undefined);
                 }
 
                 const actions = this.getCodeActions(svDiagnostic);

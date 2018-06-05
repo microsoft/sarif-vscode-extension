@@ -4,6 +4,8 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { Command } from "vscode";
+import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { CodeFlow, CodeFlowStep, ThreadFlow } from "./Interfaces";
 import { Location } from "./Location";
 import { Utilities } from "./Utilities";
@@ -127,7 +129,8 @@ export class CodeFlows {
             if ((cFLoc.nestingLevel < nextCFLoc.nestingLevel) ||
                 (cFLoc.nestingLevel === undefined && nextCFLoc.nestingLevel !== undefined)) {
                 isParentFlag = true;
-            } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel) {
+            } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel ||
+                (cFLoc.nestingLevel !== undefined && nextCFLoc.nestingLevel === undefined)) {
                 isLastChildFlag = true;
             }
         }
@@ -146,12 +149,28 @@ export class CodeFlows {
             }
         }
 
+        let messageWithStepText = messageText;
+        if (cFLoc.step !== undefined) {
+            messageWithStepText = `Step ${cFLoc.step}: ${messageWithStepText}`;
+        }
+
+        const command = {
+            arguments: [{
+                request: "CodeFlowTreeSelectionChange",
+                treeid_step: traversalPathId,
+            }],
+            command: ExplorerContentProvider.ExplorerCallbackCommand,
+            title: messageWithStepText,
+        } as Command;
+
         const step: CodeFlowStep = {
+            codeLensCommand: command,
             importance: cFLoc.importance || sarif.CodeFlowLocation.importance.important,
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,
             message: messageText,
+            messageWithStep: messageWithStepText,
             state: cFLoc.state,
             stepId: cFLoc.step,
             traversalId: traversalPathId,
