@@ -76,10 +76,12 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                 CodeFlowDecorations.updateSelectionHighlight(location, undefined);
                 break;
             case "CodeFlowTreeSelectionChange":
-                const cFSelectionId = (request.treeid_step as string).split("_");
-                if (cFSelectionId.length === 3) {
-                    CodeFlowDecorations.updateCodeFlowSelection(parseInt(cFSelectionId[0], 10),
-                        parseInt(cFSelectionId[1], 10), parseInt(cFSelectionId[2], 10));
+                if (request.treeid_step !== "-1") {
+                    const cFSelectionId = (request.treeid_step as string).split("_");
+                    if (cFSelectionId.length === 3) {
+                        CodeFlowDecorations.updateCodeFlowSelection(parseInt(cFSelectionId[0], 10),
+                            parseInt(cFSelectionId[1], 10), parseInt(cFSelectionId[2], 10));
+                    }
                 }
                 break;
             case "AttachmentTreeSelectionChange":
@@ -126,19 +128,19 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * if a node is a "callreturn" the node will end the recursion
      * @param parent Parent html element to add the children to
      * @param steps Array of all of the locations in the tree
-     * @param start Starting point in the Array
-     * @param treeId Id of the tree
+     * @param start Starting point in the Array, if negative it will create placeholders(used when first step is nested)
      */
-    private addNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number, treeId: number): number {
+    private addNodes(
+        parent: HTMLUListElement, steps: CodeFlowStep[], start: number): number {
         for (let index = start; index < steps.length; index++) {
 
             const node = this.createCodeFlowNode(steps[index]);
             parent.appendChild(node);
 
-            if (steps[index].isParent) {
+            if (index < 0 || steps[index].isParent) {
                 index++;
                 const childrenContainer = this.createElement("ul") as HTMLUListElement;
-                index = this.addNodes(childrenContainer, steps, index, treeId);
+                index = this.addNodes(childrenContainer, steps, index);
                 node.appendChild(childrenContainer);
             } else if (steps[index].isLastChild) {
                 // if it's a callReturn we want to pop out of the recursion returning the index we stopped at
@@ -212,9 +214,10 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private createCodeFlowTrees(codeflows: CodeFlow[]): HTMLDivElement {
         const container = this.createElement("div", { id: "codeflowtreecontainer" }) as HTMLDivElement;
 
-        for (let i = 0; i < codeflows.length; i++) {
+        for (const codeflow of codeflows) {
             const rootEle = this.createElement("ul", { className: "codeflowtreeroot" }) as HTMLUListElement;
-            this.addNodes(rootEle, codeflows[i].threads[0].steps, 0, i);
+            const thread = codeflow.threads[0];
+            this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
             container.appendChild(rootEle);
             container.appendChild(this.createElement("br"));
         }
@@ -284,16 +287,27 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param step CodeFlow step to crete a node for
      */
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
-        const nodeClass = `${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
-        let fileNameAndLine: string;
-        if (step.location !== undefined) {
-            fileNameAndLine = `${step.location.fileName} (${step.location.range.start.line + 1})`;
+        let treeNodeOptions: TreeNodeOptions;
+        if (step !== undefined) {
+            const nodeClass = `${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
+            let fileNameAndLine: string;
+            if (step.location !== undefined) {
+                fileNameAndLine = `${step.location.fileName} (${step.location.range.start.line + 1})`;
+            }
+
+            treeNodeOptions = {
+                isParent: step.isParent, liClass: nodeClass, locationText: fileNameAndLine, message: step.message,
+                requestId: step.traversalId, tooltip: step.messageWithStep,
+            };
+        } else {
+            // Placeholder node
+            treeNodeOptions = {
+                isParent: true, liClass: `${sarif.CodeFlowLocation.importance.essential} verbosityshow`,
+                locationText: undefined, message: "Nested first step", requestId: "-1",
+                tooltip: "First step starts in a nested call",
+            };
         }
 
-        const treeNodeOptions = {
-            isParent: step.isParent, liClass: nodeClass, locationText: fileNameAndLine, message: step.message,
-            requestId: step.traversalId, tooltip: step.messageWithStep,
-        } as TreeNodeOptions;
         return this.createNode(treeNodeOptions);
     }
 

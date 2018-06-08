@@ -5,13 +5,14 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import {
-    DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, extensions,
-    OverviewRulerLane, Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
+    Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
 import { CodeFlowStep } from "./Interfaces";
 import { Location } from "./Location";
+import { Utilities } from "./Utilities";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
@@ -161,18 +162,15 @@ export class CodeFlowDecorations {
     }
 
     private static GutterErrorDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-            "/out/resources/error.svg",
+        gutterIconPath: Utilities.iconsPath + "error.svg",
     });
 
     private static GutterInfoDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-            "/out/resources/info.svg",
+        gutterIconPath: Utilities.iconsPath + "info.svg",
     });
 
     private static GutterWarningDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-            "/out/resources/warning.svg",
+        gutterIconPath: Utilities.iconsPath + "warning.svg",
     });
 
     private static LocationDecorationType = window.createTextEditorDecorationType({
@@ -221,28 +219,27 @@ export class CodeFlowDecorations {
                 stepRange = new Range(stepRange.start, new Position(stepRange.end.line - 1, Number.MAX_VALUE));
             }
 
-            let beforeText: string;
-            if (step.isParent === true) {
-                beforeText = "⮧";
-            } else if (step.isLastChild === true) {
-                beforeText = "⮤";
-            }
+            let beforeDecoration: DecorationInstanceRenderOptions;
+            if (step.beforeIcon !== undefined) {
+                const beforePath = step.beforeIcon;
 
-            const beforeDecoration = {
-                before: {
-                    contentText: beforeText || "",
-                },
-                dark: {
+                beforeDecoration = {
                     before: {
-                        color: "yellow",
+                        height: "16px",
+                        width: "16px",
                     },
-                },
-                light: {
-                    before: {
-                        color: "red",
+                    dark: {
+                        before: {
+                            contentIconPath: beforePath,
+                        },
                     },
-                },
-            } as DecorationInstanceRenderOptions;
+                    light: {
+                        before: {
+                            contentIconPath: beforePath,
+                        },
+                    },
+                };
+            }
 
             decoration = {
                 hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
