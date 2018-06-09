@@ -49,7 +49,7 @@ export interface ThreadFlow {
     steps: CodeFlowStep[];
 }
 
-export interface CodeFlowId {
+export interface CodeFlowStepId {
     cFId: number,
     tFId: number,
     stepId: number
