@@ -5,22 +5,67 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import {
-    DecorationOptions, DecorationRangeBehavior, OverviewRulerLane, Position, Range, TextEditor, TextEditorRevealType,
-    Uri, ViewColumn, window, workspace,
+    DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
+    Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
 import { CodeFlowStep } from "./Interfaces";
 import { Location } from "./Location";
+import { Utilities } from "./Utilities";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
  */
 export class CodeFlowDecorations {
+
+    /**
+     * Updates the decorations when there is a change in the visible text editors
+     */
+    public static onVisibleTextEditorsChanged() {
+        CodeFlowDecorations.updateStepsHighlight();
+        CodeFlowDecorations.updateResultGutterIcon();
+    }
+
+    /**
+     * Updates the GutterIcon for the current active Diagnostic
+     */
+    public static updateResultGutterIcon() {
+        const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        if (activeSVDiagnostic !== undefined) {
+            for (const editor of window.visibleTextEditors) {
+                if (activeSVDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
+                    const errorDecoration = [];
+                    const warningDecoration = [];
+                    const infoDecoration = [];
+                    const iconRange = new Range(activeSVDiagnostic.range.start, activeSVDiagnostic.range.start);
+                    switch (activeSVDiagnostic.severity) {
+                        case DiagnosticSeverity.Error:
+                            errorDecoration.push(iconRange);
+                            break;
+                        case DiagnosticSeverity.Warning:
+                            warningDecoration.push(iconRange);
+                            break;
+                        case DiagnosticSeverity.Information:
+                            infoDecoration.push(iconRange);
+                            break;
+                    }
+
+                    editor.setDecorations(CodeFlowDecorations.GutterErrorDecorationType, errorDecoration);
+                    editor.setDecorations(CodeFlowDecorations.GutterWarningDecorationType, warningDecoration);
+                    editor.setDecorations(CodeFlowDecorations.GutterInfoDecorationType, infoDecoration);
+
+                    break;
+                }
+            }
+
+        }
+    }
+
     /**
      * Updates the decorations for the steps in the Code Flow tree
      */
-    public static async updateStepsHighlight() {
+    public static updateStepsHighlight() {
         const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
         if (activeSVDiagnostic !== undefined && activeSVDiagnostic.resultInfo.codeFlows !== undefined) {
             // for each visible editor add any of the codeflow locations that match it's Uri
@@ -44,7 +89,6 @@ export class CodeFlowDecorations {
                 editor.setDecorations(CodeFlowDecorations.LocationDecorationType, decorations);
                 editor.setDecorations(CodeFlowDecorations.UnimportantLocationDecorationType, unimportantDecorations);
             }
-
         }
     }
 
@@ -117,6 +161,18 @@ export class CodeFlowDecorations {
         }
     }
 
+    private static GutterErrorDecorationType = window.createTextEditorDecorationType({
+        gutterIconPath: Utilities.iconsPath + "error.svg",
+    });
+
+    private static GutterInfoDecorationType = window.createTextEditorDecorationType({
+        gutterIconPath: Utilities.iconsPath + "info.svg",
+    });
+
+    private static GutterWarningDecorationType = window.createTextEditorDecorationType({
+        gutterIconPath: Utilities.iconsPath + "warning.svg",
+    });
+
     private static LocationDecorationType = window.createTextEditorDecorationType({
         dark: {
             backgroundColor: "rgba(50,50,200,.5)",
@@ -162,10 +218,33 @@ export class CodeFlowDecorations {
             if (step.location.endOfLine === true) {
                 stepRange = new Range(stepRange.start, new Position(stepRange.end.line - 1, Number.MAX_VALUE));
             }
+
+            let beforeDecoration: DecorationInstanceRenderOptions;
+            if (step.beforeIcon !== undefined) {
+                const beforePath = step.beforeIcon;
+
+                beforeDecoration = {
+                    before: {
+                        height: "16px",
+                        width: "16px",
+                    },
+                    dark: {
+                        before: {
+                            contentIconPath: beforePath,
+                        },
+                    },
+                    light: {
+                        before: {
+                            contentIconPath: beforePath,
+                        },
+                    },
+                };
+            }
+
             decoration = {
                 hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
                 range: stepRange,
-                renderOptions: undefined,
+                renderOptions: beforeDecoration,
             } as DecorationOptions;
         }
 

@@ -14,7 +14,6 @@ import { Utilities } from "./Utilities";
  * Class that has the functions for processing the Sarif result codeflows
  */
 export class CodeFlows {
-
     /**
      * Processes the array of Sarif codeflow objects
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
@@ -88,6 +87,7 @@ export class CodeFlows {
     private static async createThreadFlow(sarifTF: sarif.ThreadFlow, traversalId: string): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
+            lvlsFirstStepIsNested: 0,
             message: undefined,
             steps: [],
         };
@@ -102,6 +102,23 @@ export class CodeFlows {
                     threadFlow.steps.push(step);
                 });
         }
+
+        // additional processing once we have all of the steps processed
+        let hasUndefinedNestingLevel = false;
+        let hasZeroNestingLevel = false;
+        for (const index of threadFlow.steps.keys()) {
+            threadFlow.steps[index].beforeIcon = CodeFlows.getBeforeIcon(index, threadFlow);
+
+            // flag if step has undefined or 0 nestingLevel values
+            if (threadFlow.steps[index].nestingLevel === -1) {
+                hasUndefinedNestingLevel = true;
+            } else if (threadFlow.steps[index].nestingLevel === 0) {
+                hasZeroNestingLevel = true;
+            }
+        }
+
+        threadFlow.lvlsFirstStepIsNested = CodeFlows.getLevelsFirstStepIsNested(threadFlow.steps[0],
+            hasUndefinedNestingLevel, hasZeroNestingLevel);
 
         return Promise.resolve(threadFlow);
     }
@@ -163,7 +180,13 @@ export class CodeFlows {
             title: messageWithStepText,
         } as Command;
 
+        let nestingLevelValue = cFLoc.nestingLevel;
+        if (nestingLevelValue === undefined) {
+            nestingLevelValue = -1;
+        }
+
         const step: CodeFlowStep = {
+            beforeIcon: undefined,
             codeLensCommand: command,
             importance: cFLoc.importance || sarif.CodeFlowLocation.importance.important,
             isLastChild: isLastChildFlag,
@@ -171,11 +194,78 @@ export class CodeFlows {
             location: loc,
             message: messageText,
             messageWithStep: messageWithStepText,
+            nestingLevel: nestingLevelValue,
             state: cFLoc.state,
             stepId: cFLoc.step,
             traversalId: traversalPathId,
         };
 
         return Promise.resolve(step);
+    }
+
+    /**
+     * Figures out which beforeIcon to assign to this step, returns full path to icon or undefined if no icon
+     * @param index Index of the step to determine the before icon of
+     * @param threadFlow threadFlow that contains the step
+     */
+    private static getBeforeIcon(index: number, threadFlow: ThreadFlow): string {
+        let iconName: string;
+        const step = threadFlow.steps[index];
+        if (step.isParent) {
+            iconName = "call-no-return.svg";
+            for (let nextIndex = index + 1; nextIndex < threadFlow.steps.length; nextIndex++) {
+                if (threadFlow.steps[nextIndex].nestingLevel <= step.nestingLevel) {
+                    iconName = "call-with-return.svg";
+                    break;
+                }
+            }
+        } else if (step.isLastChild) {
+            iconName = "return-no-call.svg";
+            if (step.nestingLevel !== -1) {
+                for (let prevIndex = index - 1; prevIndex >= 0; prevIndex--) {
+                    if (threadFlow.steps[prevIndex].nestingLevel < step.nestingLevel) {
+                        iconName = "return-with-call.svg";
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (iconName !== undefined) {
+            iconName = Utilities.iconsPath + iconName;
+        }
+
+        return iconName;
+    }
+
+    /**
+     * Calculates the amount of nesting the first step has
+     * @param step the first step in the threadflow
+     * @param hasUndefinedNL flag for if the thread has any steps that are nested level of 0
+     * @param hasZeroNL flag for if the thread has any steps that are nested level of 0
+     */
+    private static getLevelsFirstStepIsNested(step: CodeFlowStep, hasUndefinedNL: boolean, hasZeroNL: boolean): number {
+        const firstNestingLevel = step.nestingLevel;
+        let lvlsFirstStepIsNested = 0;
+        switch (firstNestingLevel) {
+            case -1:
+                break;
+            case 0:
+                if (hasUndefinedNL === true) {
+                    lvlsFirstStepIsNested++;
+                }
+                break;
+            default:
+                if (hasUndefinedNL === true) {
+                    lvlsFirstStepIsNested++;
+                }
+                if (hasZeroNL === true) {
+                    lvlsFirstStepIsNested++;
+                }
+                lvlsFirstStepIsNested = lvlsFirstStepIsNested + (firstNestingLevel - 1);
+                break;
+        }
+
+        return lvlsFirstStepIsNested;
     }
 }

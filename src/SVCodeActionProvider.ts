@@ -73,6 +73,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
                     ExplorerContentProvider.Instance.update(svDiagnostic);
                     CodeFlowCodeLensProvider.Instance.triggerCodeLensRefresh();
                     CodeFlowDecorations.updateSelectionHighlight(svDiagnostic.resultInfo.assignedLocation, undefined);
+                    CodeFlowDecorations.updateResultGutterIcon();
                 }
 
                 const actions = this.getCodeActions(svDiagnostic);

@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { extensions } from "vscode";
 import { Message } from "./Interfaces";
 import { Location } from "./Location";
 
@@ -11,6 +12,8 @@ import { Location } from "./Location";
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
+    public static iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath + "/out/resources/";
+
     /**
      * Parses a Sarif Message object and returns the message in string format
      * Supports Embedded links(requires locations) and placeholders

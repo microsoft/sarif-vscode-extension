@@ -29,6 +29,18 @@
             }
         },
         {
+            "label": "ExportResouces",
+            "type": "shell",
+            "command": "xcopy src\\resources out\\resources /S /I /R /Y",
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
             "label": "tslint",
             "type": "npm",
             "script": "lint",

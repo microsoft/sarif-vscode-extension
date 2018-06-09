@@ -44,11 +44,13 @@ export interface CodeFlow {
 
 export interface ThreadFlow {
     message: string;
+    lvlsFirstStepIsNested: number;
     id: string;
     steps: CodeFlowStep[];
 }
 
 export interface CodeFlowStep {
+    beforeIcon: string;
     codeLensCommand: Command;
     importance: sarif.CodeFlowLocation.importance,
     isLastChild: boolean;
@@ -56,6 +58,7 @@ export interface CodeFlowStep {
     location: Location;
     message: string;
     messageWithStep: string;
+    nestingLevel: number;
     state: object;
     stepId: number;
     traversalId: string;
