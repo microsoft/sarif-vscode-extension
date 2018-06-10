@@ -8,9 +8,10 @@ import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
+import { CodeFlows } from "./CodeFlows";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
-import { CodeFlowStep } from "./Interfaces";
+import { CodeFlowStep, CodeFlowStepId } from "./Interfaces";
 import { Location } from "./Location";
 import { Utilities } from "./Utilities";
 
@@ -18,6 +19,9 @@ import { Utilities } from "./Utilities";
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
  */
 export class CodeFlowDecorations {
+
+    public static readonly selectNextCFStepCommand = "extension.sarif.nextCodeFlowStep";
+    public static readonly selectPrevCFStepCommand = "extension.sarif.previousCodeFlowStep";
 
     /**
      * Updates the decorations when there is a change in the visible text editors
@@ -110,17 +114,72 @@ export class CodeFlowDecorations {
     }
 
     /**
-     * Updates the decoration that represents the currently selected Code Flow in the Explorer
-     * @param cFId Id of the Code Flow tree the selection is in
-     * @param tFId Id of the Thread Flow selection is in
-     * @param stepId Id of the step in the tree that is selected
+     * Selects the next CodeFlow step
      */
-    public static async updateCodeFlowSelection(cFId: number, tFId: number, stepId: number): Promise<void> {
-        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
-        const location: Location = svDiagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps[stepId].location;
-        const sarifLocation = svDiagnostic.rawResult.codeFlows[cFId].threadFlows[tFId].locations[stepId].location;
+    public static selectNextCFStep() {
+        if (CodeFlowDecorations.lastCodeFlowSelected !== undefined) {
+            const nextId = CodeFlowDecorations.lastCodeFlowSelected;
+            nextId.stepId++;
+            const codeFlows = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+            if (nextId.stepId >= codeFlows[nextId.cFId].threads[nextId.tFId].steps.length) {
+                nextId.stepId = 0;
+                nextId.tFId++;
+                if (nextId.tFId >= codeFlows[nextId.cFId].threads.length) {
+                    nextId.tFId = 0;
+                    nextId.cFId++;
+                    if (nextId.cFId >= codeFlows.length) {
+                        nextId.cFId = 0;
+                    }
+                }
+            }
+            CodeFlowDecorations.updateCodeFlowSelection(nextId, undefined);
+        }
+    }
 
-        CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+    /**
+     * Selects the previous CodeFlow step
+     */
+    public static selectPrevCFStep() {
+        if (CodeFlowDecorations.lastCodeFlowSelected !== undefined) {
+            const prevId = CodeFlowDecorations.lastCodeFlowSelected;
+            prevId.stepId--;
+            const codeFlows = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+            if (prevId.stepId < 0) {
+                prevId.tFId--;
+                if (prevId.tFId < 0) {
+                    prevId.cFId--;
+                    if (prevId.cFId < 0) {
+                        prevId.cFId = codeFlows.length - 1;
+                    }
+                    prevId.tFId = codeFlows[prevId.cFId].threads.length - 1;
+                }
+                prevId.stepId = codeFlows[prevId.cFId].threads[prevId.tFId].steps.length - 1;
+            }
+
+            CodeFlowDecorations.updateCodeFlowSelection(prevId, undefined);
+        }
+    }
+
+    /**
+     * Updates the decoration that represents the currently selected Code Flow in the Explorer
+     * @param id Id object of the Code Flow, set to undefined if using idText
+     * @param idText text version of the id of the Code Flow, set to undefined if using id
+     */
+    public static updateCodeFlowSelection(id: CodeFlowStepId, idText: string) {
+        if (idText !== undefined) {
+            id = CodeFlows.parseCodeFlowId(idText);
+        }
+
+        if (id !== undefined) {
+            const diagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+
+            CodeFlowDecorations.updateSelectionHighlight(
+                diagnostic.resultInfo.codeFlows[id.cFId].threads[id.tFId].steps[id.stepId].location,
+                diagnostic.rawResult.codeFlows[id.cFId].threadFlows[id.tFId].locations[id.stepId].location,
+            );
+
+            CodeFlowDecorations.lastCodeFlowSelected = id;
+        }
     }
 
     /**
@@ -160,6 +219,8 @@ export class CodeFlowDecorations {
             });
         }
     }
+
+    private static lastCodeFlowSelected: CodeFlowStepId;
 
     private static GutterErrorDecorationType = window.createTextEditorDecorationType({
         gutterIconPath: Utilities.iconsPath + "error.svg",

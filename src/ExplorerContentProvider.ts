@@ -76,13 +76,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                 CodeFlowDecorations.updateSelectionHighlight(location, undefined);
                 break;
             case "CodeFlowTreeSelectionChange":
-                if (request.treeid_step !== "-1") {
-                    const cFSelectionId = (request.treeid_step as string).split("_");
-                    if (cFSelectionId.length === 3) {
-                        CodeFlowDecorations.updateCodeFlowSelection(parseInt(cFSelectionId[0], 10),
-                            parseInt(cFSelectionId[1], 10), parseInt(cFSelectionId[2], 10));
-                    }
-                }
+                CodeFlowDecorations.updateCodeFlowSelection(undefined, request.treeid_step);
                 break;
             case "AttachmentTreeSelectionChange":
                 const aSelectionId = (request.treeid_step as string).split("_");

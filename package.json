@@ -47,6 +47,16 @@
                 "title": "Explorer",
                 "category": "Sarif"
             }
+        ],
+        "keybindings": [
+            {
+                "command": "extension.sarif.previousCodeFlowStep",
+                "key": "f9"
+            },
+            {
+                "command": "extension.sarif.nextCodeFlowStep",
+                "key": "f10"
+            }
         ]
     },
     "scripts": {

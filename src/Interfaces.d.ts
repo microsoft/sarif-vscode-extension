@@ -49,6 +49,12 @@ export interface ThreadFlow {
     steps: CodeFlowStep[];
 }
 
+export interface CodeFlowStepId {
+    cFId: number,
+    tFId: number,
+    stepId: number
+}
+
 export interface CodeFlowStep {
     beforeIcon: string;
     codeLensCommand: Command;

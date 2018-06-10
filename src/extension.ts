@@ -5,6 +5,7 @@
 // ********************************************************/
 import { commands, ExtensionContext, Uri, ViewColumn } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
+import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
@@ -16,41 +17,44 @@ import { SVCodeActionProvider } from "./SVCodeActionProvider";
  * Process any open SARIF Files
  */
 export function activate(context: ExtensionContext) {
-    const reader = LogReader.Instance;
     const explorerProvider = ExplorerContentProvider.Instance;
+    context.subscriptions.push(explorerProvider);
     explorerProvider.context = context;
 
     // Create the launch Explorer command
-    const explorerCommandDisposable = commands.registerCommand(ExplorerContentProvider.ExplorerLaunchCommand, () => {
-        commands.executeCommand("vscode.previewHtml", ExplorerContentProvider.ExplorerUri, ViewColumn.Two,
-            ExplorerContentProvider.ExplorerTitle);
-    });
+    context.subscriptions.push(
+        commands.registerCommand(ExplorerContentProvider.ExplorerLaunchCommand, () => {
+            commands.executeCommand("vscode.previewHtml", ExplorerContentProvider.ExplorerUri, ViewColumn.Two,
+                ExplorerContentProvider.ExplorerTitle);
+        }));
 
     // Create the Explorer callback command
-    const explorerRequestDisposable = commands.registerCommand(ExplorerContentProvider.ExplorerCallbackCommand,
-        ExplorerContentProvider.Instance.explorerCallback);
+    context.subscriptions.push(
+        commands.registerCommand(ExplorerContentProvider.ExplorerCallbackCommand, explorerProvider.explorerCallback),
+    );
 
-    const remapCodeActionCommandDisposable = commands.registerCommand(FileMapper.MapCommand, (file: string) => {
-        FileMapper.Instance.getUserToChooseFile(Uri.parse(file));
-    });
+    // Create File mapper command
+    context.subscriptions.push(
+        commands.registerCommand(FileMapper.MapCommand, (file: string) => {
+            FileMapper.Instance.getUserToChooseFile(Uri.parse(file));
+        }));
 
-    // Instantiate the CodeActionProvider which will register it's listeners
-    const codeActionProvider = SVCodeActionProvider.Instance;
+    context.subscriptions.push(
+        commands.registerCommand(CodeFlowDecorations.selectNextCFStepCommand, CodeFlowDecorations.selectNextCFStep),
+    );
+    context.subscriptions.push(
+        commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
+    );
 
-    const codeFlowCodeLensProvider = CodeFlowCodeLensProvider.Instance;
+    // Instantiate the providers and filemaper which will register their listeners and register their disposables
+    context.subscriptions.push(SVCodeActionProvider.Instance);
+    context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
+    context.subscriptions.push(FileMapper.Instance);
 
     // Read the initial set of open SARIF files
-    reader.readAll();
-
-    // Add to a list of disposables which are disposed when this extension is deactivated.
+    const reader = LogReader.Instance;
     context.subscriptions.push(reader);
-    context.subscriptions.push(explorerProvider);
-    context.subscriptions.push(explorerCommandDisposable);
-    context.subscriptions.push(explorerRequestDisposable);
-    context.subscriptions.push(codeActionProvider);
-    context.subscriptions.push(codeFlowCodeLensProvider);
-    context.subscriptions.push(remapCodeActionCommandDisposable);
-    context.subscriptions.push(FileMapper.Instance);
+    reader.readAll();
 }
 
 /**

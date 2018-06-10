@@ -6,7 +6,7 @@
 import * as sarif from "sarif";
 import { Command } from "vscode";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
-import { CodeFlow, CodeFlowStep, ThreadFlow } from "./Interfaces";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, ThreadFlow } from "./Interfaces";
 import { Location } from "./Location";
 import { Utilities } from "./Utilities";
 
@@ -30,6 +30,28 @@ export class CodeFlows {
         }
 
         return Promise.resolve(codeFlows);
+    }
+
+    /**
+     * Parses a text version of the codeflow id
+     * Returns a CodeFlowStepId object or undefined if there's no valid matching id (placeholder or bad formatting)
+     * @param idText the codeflow id in text format ex: 1_1_2
+     */
+    public static parseCodeFlowId(idText: string): CodeFlowStepId {
+        let codeFlowId: CodeFlowStepId;
+
+        if (idText !== "-1") {
+            const cFSelectionId = idText.split("_");
+            if (cFSelectionId.length === 3) {
+                codeFlowId = {
+                    cFId: parseInt(cFSelectionId[0], 10),
+                    stepId: parseInt(cFSelectionId[2], 10),
+                    tFId: parseInt(cFSelectionId[1], 10),
+                };
+            }
+        }
+
+        return codeFlowId;
     }
 
     /**
