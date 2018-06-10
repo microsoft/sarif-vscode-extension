@@ -22,6 +22,7 @@ export class CodeFlowDecorations {
 
     public static readonly selectNextCFStepCommand = "extension.sarif.nextCodeFlowStep";
     public static readonly selectPrevCFStepCommand = "extension.sarif.previousCodeFlowStep";
+
     /**
      * Updates the decorations when there is a change in the visible text editors
      */
