@@ -23,7 +23,7 @@ import { Utilities } from "./Utilities";
 export class ExplorerContentProvider implements TextDocumentContentProvider {
     public static readonly ExplorerUri = Uri.parse("sarifExplorer://authority/sarifExplorer");
     public static readonly ExplorerTitle = "SARIF Explorer";
-    public static readonly ExplorerLaunchCommand = "extension.sarif.ExplorerLaunch";
+    public static readonly ExplorerLaunchCommand = "extension.sarif.LaunchExplorer";
     public static readonly ExplorerCallbackCommand = "extension.sarif.ExplorerCallback";
 
     private static instance: ExplorerContentProvider;
@@ -35,14 +35,11 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
     private onDidChangeEmitter = new EventEmitter<Uri>();
     private textDocContentProRegistration: Disposable;
     private visibleChangeDisposable: Disposable;
-    private document;
 
     private constructor() {
         this.textDocContentProRegistration = workspace.registerTextDocumentContentProvider("sarifExplorer", this);
         this.visibleChangeDisposable = window.onDidChangeVisibleTextEditors(
             CodeFlowDecorations.onVisibleTextEditorsChanged, this);
-        const jsdom = require("jsdom");
-        this.document = (new jsdom.JSDOM(``)).window.document;
     }
 
     public get onDidChange(): Event<Uri> {
@@ -169,7 +166,8 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
             ${script.outerHTML}
             `;
         } else {
-            return `Select a Sarif result in the Problems panel`;
+            return `Open a Sarif file to load results into the Problems panel.
+            Then double click a result in the Problems panel to populate the explorer.`;
         }
 
     }
@@ -225,7 +223,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
      * @param options Additional properties to set on the new element
      */
     private createElement(tagName: string, options?: HTMLElementOptions): HTMLElement {
-        const ele = this.document.createElement(tagName);
+        const ele = Utilities.Document.createElement(tagName);
         if (options !== undefined) {
             if (options.text !== undefined) { ele.textContent = options.text; }
             if (options.id !== undefined) { ele.id = options.id; }
@@ -325,7 +323,7 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
         }) as HTMLLIElement;
 
         node.appendChild(this.createElement("span", { className: "treenodelocation", text: options.locationText }));
-        node.appendChild(this.document.createTextNode(options.message));
+        node.appendChild(Utilities.Document.createTextNode(options.message));
 
         return node;
     }

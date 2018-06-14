@@ -14,6 +14,14 @@ import { Location } from "./Location";
 export class Utilities {
     public static iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath + "/out/resources/";
 
+    public static get Document() {
+        if (Utilities.document === undefined) {
+            const jsdom = require("jsdom");
+            Utilities.document = (new jsdom.JSDOM(``)).window.document;
+        }
+        return Utilities.document;
+    }
+
     /**
      * Parses a Sarif Message object and returns the message in string format
      * Supports Embedded links(requires locations) and placeholders
@@ -21,11 +29,6 @@ export class Utilities {
      * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
-        if (Utilities.document === undefined) {
-            const jsdom = require("jsdom");
-            Utilities.document = (new jsdom.JSDOM(``)).window.document;
-        }
-
         let message: Message;
 
         if (sarifMessage !== undefined) {
@@ -38,7 +41,7 @@ export class Utilities {
                 }
 
                 let messageText = text;
-                const messageHTML = Utilities.document.createElement("label") as HTMLLabelElement;
+                const messageHTML = Utilities.Document.createElement("label") as HTMLLabelElement;
                 // parse embedded locations
                 let match = Utilities.embeddedRegEx.exec(messageText);
                 if (locations !== undefined && match !== null) {
@@ -65,7 +68,7 @@ export class Utilities {
                             // Handle the HTML version
                             const splitText = textForHTML.split(embeddedLink);
                             messageHTML.appendChild(/* Add the text before the link */
-                                Utilities.document.createTextNode(Utilities.unescapeBrackets(splitText[0])));
+                                Utilities.Document.createTextNode(Utilities.unescapeBrackets(splitText[0])));
                             messageHTML.appendChild(/* Add the link */
                                 Utilities.createSourceLink(location, Utilities.unescapeBrackets(linkText)));
                             splitText.splice(0, 1); /* remove the text before the link from the remaining text */
@@ -76,7 +79,7 @@ export class Utilities {
                     } while (match !== null);
 
                     if (textForHTML !== "") {
-                        messageHTML.appendChild(Utilities.document.createTextNode(textForHTML));
+                        messageHTML.appendChild(Utilities.Document.createTextNode(textForHTML));
                     }
                 } else {
                     messageHTML.textContent = text;
@@ -98,7 +101,7 @@ export class Utilities {
      */
     public static createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
         const file = location.uri.toString(true);
-        const linkElement = Utilities.document.createElement("a") as HTMLAnchorElement;
+        const linkElement = Utilities.Document.createElement("a") as HTMLAnchorElement;
         linkElement.setAttribute("title", file);
         linkElement.setAttribute("data-eCol", location.range.end.character.toString());
         linkElement.setAttribute("data-eLine", location.range.end.line.toString());
