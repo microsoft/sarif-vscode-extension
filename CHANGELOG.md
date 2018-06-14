@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.1.0
+* Added codelenses to display the messages for the codeflow steps inline
+    * The messages show based on the verbosity switch in the Sarif Explorer CodeFlow panel
+* Added diagnostics severity gutter icons to help show the selected result's location
+* Added call and return icons
+    * These inline icons will help visually describe if a call returns or not, or if a return has a call or not
+* Added keyboard navigation through the codeflow steps
+    * After selecting a codeflow step, press ctrl+F10 for the next step or ctrl+F9 for previous step
+
 ## 2.0.1
 * Security fix for a node module included in the dependencies [details](https://nvd.nist.gov/vuln/detail/CVE-2018-3728)
 
@@ -14,7 +23,7 @@
 
 ## 1.0.0
 * Prep work to get it ready for releasing on the marketplace
-* Contributes sarif to the json language, which will allow VSCode to apply the sarif schema to the sarif file, which adds autocomplete and tooltips.
+* Contributes Sarif to the json language, which will allow VSCode to apply the Sarif schema to the Sarif file, which adds autocomplete and tooltips.
 * Reworked how we create the Explorer window
 * Added support for RuleKey
 * Added support for Results that don't have a ResultLocation

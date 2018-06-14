@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+ <defs>
+  <style>.icon-canvas-transparent,.icon-vs-out{fill:#252526;}.icon-canvas-transparent{opacity:0;}.icon-vs-bg{fill:#c5c5c5;}.icon-vs-action-blue{fill:#75beff;}.icon-vs-action-gray{fill:#ff0000;stroke-width:0.25;stroke:#000000}</style>
+ </defs>
+ <title>step-into</title>
+ <g>
+  <title>Layer 1</title>
+  <g id="canvas">
+   <path d="m16,0l0,16l-16,0l0,-16l16,0z" id="svg_1" class="icon-canvas-transparent"/>
+  </g>
+  <g display="none" id="outline">
+   <path d="m11,13a3,3 0 1 1 -4.375,-2.651l-4.069,-4.069l2.474,-2.474l0.97,0.97l0,-4.776l4,0l0,4.775l0.97,-0.97l2.474,2.475l-4.069,4.069a2.991,2.991 0 0 1 1.625,2.651z" id="svg_2" class="icon-vs-out"/>
+  </g>
+  <g id="xshape">
+   <path d="m8.91988,9.40625l1.6163,-1.90656l1.71745,2.02525l1.71722,-2.02525l1.61629,1.90656l-1.71692,2.02519l1.71692,2.02527l-1.61629,1.90653l-1.71722,-2.02528l-1.71745,2.02528l-1.6163,-1.90653l1.71683,-2.02527l-1.71683,-2.02519z" id="svg4" class="icon-vs-action-gray"/>
+  </g>
+  <path d="m5.12002,8.48994l3.8975,2.9981l-3.8975,2.99811l-1.0249,-0.78858l1.9038,-1.46558l-4.98401,0.00892l-0.00855,-10.74091l1.50405,0l0.00503,9.2441l3.48348,0l-1.9047,-1.46558l1.0258,-0.78858l0,0l0,0l0,0l0,0l0,0z" fill="black" id="svg_8" class="icon-vs-action-blue"/>
+ </g>
+</svg>

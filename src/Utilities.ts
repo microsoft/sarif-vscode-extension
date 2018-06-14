@@ -4,7 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { Range } from "vscode";
+import { extensions } from "vscode";
 import { Message } from "./Interfaces";
 import { Location } from "./Location";
 
@@ -12,6 +12,16 @@ import { Location } from "./Location";
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
+    public static iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath + "/out/resources/";
+
+    public static get Document() {
+        if (Utilities.document === undefined) {
+            const jsdom = require("jsdom");
+            Utilities.document = (new jsdom.JSDOM(``)).window.document;
+        }
+        return Utilities.document;
+    }
+
     /**
      * Parses a Sarif Message object and returns the message in string format
      * Supports Embedded links(requires locations) and placeholders
@@ -19,11 +29,6 @@ export class Utilities {
      * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
-        if (Utilities.document === undefined) {
-            const jsdom = require("jsdom");
-            Utilities.document = (new jsdom.JSDOM(``)).window.document;
-        }
-
         let message: Message;
 
         if (sarifMessage !== undefined) {
@@ -36,7 +41,7 @@ export class Utilities {
                 }
 
                 let messageText = text;
-                const messageHTML = Utilities.document.createElement("label") as HTMLLabelElement;
+                const messageHTML = Utilities.Document.createElement("label") as HTMLLabelElement;
                 // parse embedded locations
                 let match = Utilities.embeddedRegEx.exec(messageText);
                 if (locations !== undefined && match !== null) {
@@ -46,39 +51,35 @@ export class Utilities {
                         const linkText = match[2];
                         const linkId = parseInt(match[3], 10);
 
-                        let linkRange: Range;
-                        let link: string;
-                        for (const location of locations) {
-                            if (location !== undefined && location.id === linkId) {
-                                linkRange = location.range;
-                                link = location.uri.toString(true);
+                        let location;
+                        for (const loc of locations) {
+                            if (loc !== undefined && loc.id === linkId) {
+                                location = loc;
                                 break;
                             }
                         }
 
-                        const replacedText = linkText + "(" + link + ")";
-                        messageText = messageText.replace(embeddedLink, replacedText);
+                        if (location !== undefined) {
+                            const uri = location.uri;
 
-                        const splitText = textForHTML.split(embeddedLink);
-                        const preLinkText = Utilities.document.createTextNode(Utilities.unescapeBrackets(splitText[0]));
-                        messageHTML.appendChild(preLinkText);
-                        const linkElement = Utilities.document.createElement("a") as HTMLAnchorElement;
-                        linkElement.setAttribute("title", link);
-                        linkElement.setAttribute("data-file", link);
-                        linkElement.setAttribute("data-line", linkRange.start.line.toString());
-                        linkElement.setAttribute("data-col", linkRange.start.character.toString());
-                        linkElement.href = "#0";
-                        linkElement.className = "sourcelink";
-                        linkElement.textContent = Utilities.unescapeBrackets(linkText);
-                        messageHTML.appendChild(linkElement);
-                        splitText.splice(0, 1); /* remove the preLinkText */
-                        textForHTML = splitText.join(embeddedLink);
+                            // Handle the Text version
+                            messageText = messageText.replace(embeddedLink, `${linkText}(${uri.toString(true)})`);
+
+                            // Handle the HTML version
+                            const splitText = textForHTML.split(embeddedLink);
+                            messageHTML.appendChild(/* Add the text before the link */
+                                Utilities.Document.createTextNode(Utilities.unescapeBrackets(splitText[0])));
+                            messageHTML.appendChild(/* Add the link */
+                                Utilities.createSourceLink(location, Utilities.unescapeBrackets(linkText)));
+                            splitText.splice(0, 1); /* remove the text before the link from the remaining text */
+                            textForHTML = splitText.join(embeddedLink);
+                        }
 
                         match = Utilities.embeddedRegEx.exec(messageText);
                     } while (match !== null);
 
                     if (textForHTML !== "") {
-                        messageHTML.appendChild(Utilities.document.createTextNode(textForHTML));
+                        messageHTML.appendChild(Utilities.Document.createTextNode(textForHTML));
                     }
                 } else {
                     messageHTML.textContent = text;
@@ -91,6 +92,27 @@ export class Utilities {
         }
 
         return message;
+    }
+
+    /**
+     * Creates a html link element that when clicked will open the source in the VSCode Editor
+     * @param location The location object that represents where the link points to
+     * @param linkText The text to display on the link
+     */
+    public static createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
+        const file = location.uri.toString(true);
+        const linkElement = Utilities.Document.createElement("a") as HTMLAnchorElement;
+        linkElement.setAttribute("title", file);
+        linkElement.setAttribute("data-eCol", location.range.end.character.toString());
+        linkElement.setAttribute("data-eLine", location.range.end.line.toString());
+        linkElement.setAttribute("data-file", file);
+        linkElement.setAttribute("data-sCol", location.range.start.character.toString());
+        linkElement.setAttribute("data-sLine", location.range.start.line.toString());
+        linkElement.href = "#0";
+        linkElement.className = "sourcelink";
+        linkElement.textContent = linkText;
+
+        return linkElement;
     }
 
     private static document;

@@ -42,9 +42,14 @@ declare module 'sarif' {
         fileLocation: FileLocation;
 
         /**
-         * An array of regions of interest within the attachment.
-         */
+        * An array of regions of interest within the attachment.
+        */
         regions?: Region[];
+
+        /**
+        * An array of rectangles specifying areas of interest within the image.
+        */
+        rectangles?: Rectangle[];
     }
 
     /**
@@ -91,6 +96,16 @@ declare module 'sarif' {
         * The code location.
         */
         location?: Location;
+
+        /**
+        * The call stack leading to this location.
+        */
+        stack?: Stack;
+
+        /**
+        * A string describing the type of this location.
+        */
+        kind?: string;
 
         /**
         * The name of the module that contains the code that is executing.
@@ -333,6 +348,12 @@ declare module 'sarif' {
         hashes?: Hash[];
 
         /**
+        * The date and time at which the file was most recently modified. See "Date/time properties" in the SARIF spec
+        * for the required format.
+        */
+        lastModifiedTime?: string;
+
+        /**
         * Key/value pairs that provide additional information about the file.
         */
         properties?: {
@@ -354,9 +375,15 @@ declare module 'sarif' {
             attachment = "attachment",
             responseFile = "responseFile",
             resultFile = "resultFile",
-            screenshot = "screenshot",
+
             standardStream = "standardStream",
             traceFile = "traceFile",
+            unmodifiedFile = "unmodifiedFile",
+            modifiedFile = "modifiedFile",
+            addedFile = "addedFile",
+            deletedFile = "deletedFile",
+            renamedFile = "renamedFile",
+            generatedFile = "generatedFile",
         }
     }
 
@@ -724,7 +751,8 @@ declare module 'sarif' {
 
         /**
         * The type of construct this logicalLocationComponent refers to. Should be one of 'function', 'member',
-        * 'module', 'namespace', 'package', 'resource', or 'type', if any of those accurately describe the construct.
+        * 'module', 'namespace', 'package', 'parameter', 'resource', 'returnType', 'type', or 'variable', if any of
+        * those accurately describe the construct.
         */
         kind?: string;
     }
@@ -892,6 +920,36 @@ declare module 'sarif' {
     }
 
     /**
+    * An area within an image.
+    */
+    export interface Rectangle {
+        /**
+        * The Y coordinate of the top edge of the rectangle, measured in the image's natural units.
+        */
+        top?: number;
+
+        /**
+        * The X coordinate of the left edge of the rectangle, measured in the image's natural units.
+        */
+        left?: number;
+
+        /**
+        * The Y coordinate of the bottom edge of the rectangle, measured in the image's natural units.
+        */
+        bottom?: number;
+
+        /**
+        * The X coordinate of the right edge of the rectangle, measured in the image's natural units.
+        */
+        right?: number;
+
+        /**
+        * A message relevant to the rectangle.
+        */
+        message?: Message;
+    }
+
+    /**
     * A region within a file where a result was detected.
     */
     export interface Region {
@@ -931,8 +989,8 @@ declare module 'sarif' {
         snippet?: FileContent;
 
         /**
-         * A message relevant to the region.
-         */
+        * A message relevant to the region.
+        */
         message?: Message;
     }
 
@@ -943,22 +1001,22 @@ declare module 'sarif' {
     */
     export interface Replacement {
         /**
-        * A non-negative integer specifying the offset in bytes from the beginning of the file at which bytes are to be
-        * removed, inserted or both. An offset of 0 shall denote the first byte in the file.
+																													   
+																							
+		  
+					   
+
+		   
+        * The region of the file to delete.
+					  
         */
-        offset: number;
+        deletedRegion: Region;
 
         /**
-        * The number of bytes to delete, starting at the byte offset specified by offset, measured from the beginning
-        * of the file.
+        * The content to insert at the location specified by the 'deletedRegion' property.
+												  
         */
-        deletedLength?: number;
-
-        /**
-        * The MIME Base64-encoded byte sequence to be inserted at the byte offset specified by the 'offset' property,
-        * measured from the beginning of the file.
-        */
-        insertedBytes?: string;
+        insertedContent?: FileContent;
     }
 
     /**
@@ -1017,9 +1075,9 @@ declare module 'sarif' {
         locations?: Location[];
 
         /**
-        * A unique identifer for the result.
+        * A stable, unique identifer for the result in the form of a GUID.
         */
-        id?: string;
+        instanceGuid?: string;
 
         /**
         * A set of strings that contribute to the stable, unique identity of the result.
@@ -1062,14 +1120,19 @@ declare module 'sarif' {
         suppressionStates?: Result.suppressionStates[];
 
         /**
+        * The state of a result relative to a baseline of a previous run.
+        */
+        baselineState?: Result.baselineState;
+
+        /**
         * A set of files relevant to the result.
         */
         attachments?: Attachment[];
 
         /**
-        * The state of a result relative to a baseline of a previous run.
+        * The URI of the work item associated with this result
         */
-        baselineState?: Result.baselineState;
+        workItemLocation?: FileLocation;
 
         /**
         * An array of analysisToolLogFileContents objects which specify the portions of an analysis tool's output that
@@ -1288,27 +1351,32 @@ declare module 'sarif' {
         resources?: Resources;
 
         /**
-        * An identifier for the run.
+        * A stable, unique identifier for the run, in the form of a GUID.
         */
-        id?: string;
+        instanceGuid?: string;
 
         /**
-        * A stable identifier for a run, for example, 'nightly Clang analyzer run'. Multiple runs of the same type can
+        * A logical identifier for a run, for example, 'nightly Clang analyzer run'. Multiple runs of the same type can
         * have the same stableId.
         */
-        stableId?: string;
+        logicalId?: string;
+
+        /**
+        * A description of the run.
+        */
+        description?: Message;
 
         /**
         * A global identifier that allows the run to be correlated with other artifacts produced by a larger automation
         * process.
         */
-        automationId?: string;
+        automationLogicalId?: string;
 
         /**
-        * The 'id' property of a separate (potentially external) SARIF 'run' instance that comprises the baseline that
-        * was used to compute result 'baselineState' properties for the run.
+        * The 'instanceGuid' property of a previous SARIF 'run' that comprises the baseline that was used to compute
+        * result 'baselineState' properties for the run.
         */
-        baselineId?: string;
+        baselineInstanceGuid?: string;
 
         /**
         * The hardware architecture for which the run was targeted.
@@ -1492,6 +1560,11 @@ declare module 'sarif' {
         * that information).
         */
         fileVersion?: string;
+
+        /**
+        * The absolute URI from which the tool can be downloaded.
+        */
+        downloadUri?: string;
 
         /**
         * A version that uniquely identifies the SARIF logging component that generated this file, if it is versioned

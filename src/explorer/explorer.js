@@ -109,8 +109,8 @@ function onSourceLinkClicked(event) {
     let ele = event.srcElement;
 
     sendExplorerCallback({
-        col: ele.dataset.col, file: ele.dataset.file, line: ele.dataset.line,
-        request: "SourceLinkClicked",
+        eCol: ele.dataset.ecol, eLine: ele.dataset.eline, file: ele.dataset.file, request: "SourceLinkClicked",
+        sCol: ele.dataset.scol, sLine: ele.dataset.sline,
     });
 }
 
@@ -128,10 +128,6 @@ function onTabClicked(event) {
  */
 function onVerbosityChange(event) {
     updateTreeVerbosity();
-    sendExplorerCallback({
-        request: "verbositychanged",
-        verbositystate: document.getElementById("codeflowverbosity").value,
-    });
 }
 
 /**
@@ -219,24 +215,33 @@ function updateTreeVerbosity() {
     const value = document.getElementById("codeflowverbosity").value;
     let importantClass;
     let unimportantClass;
+    let verbosityRequest;
 
     switch (value) {
         case "0":
             importantClass = hide;
             unimportantClass = hide;
+            verbosityRequest = "essential";
             break;
         case "1":
             importantClass = show;
             unimportantClass = hide;
+            verbosityRequest = "important";
             break;
         case "2":
             importantClass = show;
             unimportantClass = show;
+            verbosityRequest = "unimportant";
             break;
     }
 
     setVerbosityShowState("important", importantClass);
     setVerbosityShowState("unimportant", unimportantClass);
+
+    sendExplorerCallback({
+        request: "verbositychanged",
+        verbosity: verbosityRequest,
+    });
 }
 
 if (document.getElementById("codeflowtab") !== null) {

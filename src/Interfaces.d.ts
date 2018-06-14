@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
+import { Command } from "vscode";
 import { Location } from "./Location";
 
 /**
@@ -43,24 +44,35 @@ export interface CodeFlow {
 
 export interface ThreadFlow {
     message: string;
+    lvlsFirstStepIsNested: number;
     id: string;
     steps: CodeFlowStep[];
 }
 
+export interface CodeFlowStepId {
+    cFId: number,
+    tFId: number,
+    stepId: number
+}
+
 export interface CodeFlowStep {
+    beforeIcon: string;
+    codeLensCommand: Command;
     importance: sarif.CodeFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
     location: Location;
     message: string;
+    messageWithStep: string;
+    nestingLevel: number;
     state: object;
     stepId: number;
     traversalId: string;
 }
 
 export interface Message {
+    html: HTMLLabelElement,
     text: string,
-    html: HTMLLabelElement
 }
 
 export interface Attachment {

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+ <defs>
+  <style>.icon-canvas-transparent,.icon-vs-out{fill:#252526;}.icon-canvas-transparent{opacity:0;}.icon-vs-bg{fill:#c5c5c5;}.icon-vs-action-blue{fill:#75beff;}.icon-vs-action-gray{fill:#c5c5c5;opacity:.5;}</style>
+ </defs>
+ <title>step-into</title>
+ <g>
+  <title>Layer 1</title>
+  <g transform="none" id="canvas">
+   <path d="m16,0l0,16l-16,0l0,-16l16,0z" id="svg_1" class="icon-canvas-transparent"/>
+  </g>
+  <g display="none" id="outline">
+   <path d="m11,13a3,3 0 1 1 -4.375,-2.651l-4.069,-4.069l2.474,-2.474l0.97,0.97l0,-4.776l4,0l0,4.775l0.97,-0.97l2.474,2.475l-4.069,4.069a2.991,2.991 0 0 1 1.625,2.651z" id="svg_2" class="icon-vs-out"/>
+  </g>
+  <g id="circle">
+   <path d="m12.05459,10.91553a2,2 0 1 1 -2,2a2,2 0 0 1 2,-2z" id="svg_3" class="icon-vs-bg"/>
+  </g>
+  <g transform="rotate(180 12.0218 5.5065)" id="upArrow">
+   <path d="m15.02071,6.10942l-2.99892,3.89172l-2.99891,-3.89172l0.78879,-1.02337l1.46597,1.90097l0,-5.97516l1.48829,0l0,5.97516l1.46597,-1.90194l0.78879,1.02435l0.00001,-0.00001l0.00001,0z" id="svg_4" class="icon-vs-action-gray"/>
+  </g>
+  <path d="m5.12002,8.99839l3.8975,2.9981l-3.8975,2.99811l-1.0249,-0.78858l1.9038,-1.46558l-4.98401,0.00892l-0.00855,-10.74091l1.50405,0l0.00503,9.2441l3.48348,0l-1.9047,-1.46558l1.0258,-0.78858l0,0l0,0l0,0l0,0l0,0z" fill="black" id="svg_8" class="icon-vs-action-blue"/>
+ </g>
+</svg>
