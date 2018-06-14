@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -13,7 +13,7 @@
     "bugs": {
         "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
     },
-    "icon": "icon.ico",
+    "icon": "icon.png",
     "galleryBanner": {
         "color": "#c9c2a0",
         "theme": "light"
@@ -29,7 +29,7 @@
     },
     "activationEvents": [
         "onLanguage:json",
-        "onCommand:extension.sarif.ExplorerLaunch"
+        "onCommand:extension.sarif.LaunchExplorer"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -43,19 +43,35 @@
         ],
         "commands": [
             {
-                "command": "extension.sarif.ExplorerLaunch",
-                "title": "Explorer",
+                "command": "extension.sarif.LaunchExplorer",
+                "title": "Launch the Sarif Explorer",
+                "category": "Sarif"
+            },
+            {
+                "command": "extension.sarif.nextCodeFlowStep",
+                "title": "Next Code Flow step",
+                "category": "Sarif"
+            },
+            {
+                "command": "extension.sarif.previousCodeFlowStep",
+                "title": "Previous Code Flow step",
                 "category": "Sarif"
             }
         ],
         "keybindings": [
             {
-                "command": "extension.sarif.previousCodeFlowStep",
-                "key": "f9"
+                "command": "extension.sarif.nextCodeFlowStep",
+                "key": "ctrl+f10",
+                "when": "!inDebugMode"
             },
             {
-                "command": "extension.sarif.nextCodeFlowStep",
-                "key": "f10"
+                "command": "extension.sarif.previousCodeFlowStep",
+                "key": "ctrl+f9",
+                "when": "!inDebugMode"
+            },
+            {
+                "command": "extension.sarif.LaunchExplorer",
+                "key": "ctrl+l ctrl+e"
             }
         ]
     },
@@ -70,13 +86,13 @@
     },
     "devDependencies": {
         "@types/mocha": "^2.2.42",
-        "@types/node": "^7.0.65",
+        "@types/node": "^7.0.66",
         "tslint": "^5.0.0",
-        "typescript": "^2.8.3",
-        "vscode": "^1.1.17"
+        "typescript": "^2.9.2",
+        "vscode": "^1.1.18"
     },
     "dependencies": {
-        "jsdom": "^11.10.0",
+        "jsdom": "^11.11.0",
         "json-source-map": "^0.4.0"
     }
 }
