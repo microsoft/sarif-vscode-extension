@@ -82,8 +82,12 @@ export class ResultInfo {
 
         resultInfo.severityLevel = result.level || resultInfo.severityLevel || sarif.Result.level.warning;
 
-        if (result.message !== undefined && result.message.text === undefined) {
-            result.message.text = ruleMessageString;
+        if (result.message === undefined) {
+            result.message = {};
+        }
+
+        if (result.message.text === undefined) {
+            result.message.text = ruleMessageString || "No Message Provided";
         }
 
         resultInfo.message = Utilities.parseSarifMessage(result.message, allLocations);

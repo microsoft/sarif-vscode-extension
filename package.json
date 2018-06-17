@@ -33,6 +33,16 @@
     ],
     "main": "./out/extension",
     "contributes": {
+        "configuration": {
+            "title": "Sarif Viewer configuration",
+            "properties": {
+                "sarif-viewer.rootpaths": {
+                    "type":"array",
+                    "default": ["c:\\sample\\path"],
+                    "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
+                }
+            }
+        },
         "languages": [
             {
                 "id": "json",

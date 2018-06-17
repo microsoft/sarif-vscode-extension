@@ -12,7 +12,9 @@ import { Location } from "./Location";
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
-    public static iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath + "/out/resources/";
+    public static readonly iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
+        "/out/resources/";
+    public static readonly configSection = "sarif-viewer";
 
     public static get Document() {
         if (Utilities.document === undefined) {

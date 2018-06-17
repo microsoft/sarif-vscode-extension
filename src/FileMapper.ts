@@ -4,7 +4,10 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { Event, EventEmitter, OpenDialogOptions, Uri, window } from "vscode";
+import {
+    ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, Uri, window, workspace,
+} from "vscode";
+import { Utilities } from "./Utilities";
 
 /**
  * Handles mapping file locations if the file is not in the location specified in the sarif file
@@ -13,7 +16,9 @@ import { Event, EventEmitter, OpenDialogOptions, Uri, window } from "vscode";
  */
 export class FileMapper {
     public static readonly MapCommand = "extension.sarif.Map";
-    private static readonly FilesNotFoundMsg = "Source files were not found. Would you like to map them now?";
+    private static readonly FilesNotFoundMsg = `Source files were not found. Would you like to:
+    * Map: choose the files to map them
+    * Later: Skip mapping the files`;
     private static readonly SarifViewerTempFolder = "SarifViewerExtension";
     private static instance: FileMapper;
 
@@ -25,6 +30,8 @@ export class FileMapper {
     private os;
     private pt;
     private fs;
+    private rootpaths: string[];
+    private changeConfigDisposable: Disposable;
 
     private constructor() {
         this.baseRemapping = new Map<string, string>();
@@ -34,6 +41,9 @@ export class FileMapper {
         this.pt = require("path");
         this.os = require("os");
         this.fs = require("fs");
+
+        this.updateRootPaths();
+        this.changeConfigDisposable = workspace.onDidChangeConfiguration(this.updateRootPaths, this);
     }
 
     public static get Instance(): FileMapper {
@@ -48,6 +58,7 @@ export class FileMapper {
      * For disposing on extension close
      */
     public dispose(): void {
+        this.changeConfigDisposable.dispose();
         this.removeSarifViewerTempDirectory();
     }
 
@@ -101,6 +112,10 @@ export class FileMapper {
         }
 
         if (this.tryRebaseUri(uri)) {
+            return Promise.resolve();
+        }
+
+        if (this.tryConfigRootpathsUri(uri)) {
             return Promise.resolve();
         }
 
@@ -331,5 +346,67 @@ export class FileMapper {
         }
 
         return false;
+    }
+
+    /**
+     * Tries to remapped path using any of the RootPaths in the config
+     * @param uri file uri to try to rebase
+     */
+    private tryConfigRootpathsUri(uri: Uri): boolean {
+        const originPath = this.pt.parse(uri.fsPath);
+        const dir: string = originPath.dir.replace(originPath.root, "");
+
+        for (const rootpath of this.rootpaths) {
+            const dirParts: string[] = dir.split(this.pt.sep);
+            dirParts.push(originPath.base);
+
+            while (dirParts.length !== 0) {
+                const mappedUri = Uri.file(this.pt.join(rootpath, dirParts.join(this.pt.sep)));
+                if (this.tryMapUri(mappedUri, uri.path)) {
+                    this.saveBasePath(uri, mappedUri);
+                    return true;
+                }
+
+                dirParts.shift();
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Updates the rootpaths property with the latest from the configuration
+     * @param event Optional event if this was called because the configuration change
+     */
+    private updateRootPaths(event?: ConfigurationChangeEvent) {
+        if (event === undefined || event.affectsConfiguration(Utilities.configSection)) {
+            const sarifConfig = workspace.getConfiguration(Utilities.configSection);
+            const oldRootpaths = this.rootpaths;
+            this.rootpaths = (sarifConfig.get("rootpaths") as string[]).filter((value, index, array) => {
+                return value !== "c:\\sample\\path";
+            });
+
+            if (oldRootpaths !== undefined && this.rootpaths.toString() !== oldRootpaths.toString()) {
+                this.updateMappingsWithRootPaths();
+            }
+        }
+    }
+
+    /**
+     * Goes through the filemappings and tries to remap any that aren't mapped(null) using the rootpaths
+     */
+    private updateMappingsWithRootPaths() {
+        let remapped = false;
+        this.fileRemapping.forEach((value: Uri, key: string, map: Map<string, Uri>) => {
+            if (value === null) {
+                if (this.tryConfigRootpathsUri(Uri.file(key))) {
+                    remapped = true;
+                }
+            }
+        });
+
+        if (remapped) {
+            this.onMappingChanged.fire();
+        }
     }
 }
