@@ -6,11 +6,10 @@
 import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorRevealType, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlows } from "./CodeFlows";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
-import { FileMapper } from "./FileMapper";
 import { CodeFlowStep, CodeFlowStepId } from "./Interfaces";
 import { Location } from "./Location";
 import { Utilities } from "./Utilities";
@@ -189,17 +188,9 @@ export class CodeFlowDecorations {
      */
     public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
 
-        if (location === undefined || !location.mapped) {
-            // file mapping wasn't found, try to get the user to choose file
-            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
-                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
-                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                    return Location.create(sarifLocation.physicalLocation);
-                }).then((remappedLocation) => {
-                    location = remappedLocation;
-                });
-            }
-        }
+        await Location.getOrRemap(location, sarifLocation).then((loc: Location) => {
+            location = loc;
+        });
 
         if (location !== undefined && location.mapped) {
             let locRange = location.range;

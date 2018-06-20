@@ -53,6 +53,25 @@ export class Location {
     }
 
     /**
+     * Helper function returns the passed in location if mapped, if not mapped or undefined it asks the user
+     * @param location processed Location of the file
+     * @param sarifLocation raw sarif Location of the file
+     */
+    public static async getOrRemap(location: Location, sarifLocation: sarif.Location) {
+        if (location === undefined || !location.mapped) {
+            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
+                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
+                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
+                    return Location.create(sarifLocation.physicalLocation);
+                }).then((remappedLocation) => {
+                    location = remappedLocation;
+                });
+            }
+        }
+
+        return location;
+    }
+    /**
      * Maps the result back to the location in the SARIF file
      * @param sarifUri Uri of the SARIF document the result is in
      * @param runIndex the index of the run in the SARIF file
