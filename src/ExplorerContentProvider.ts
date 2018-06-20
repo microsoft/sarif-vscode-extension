@@ -76,14 +76,22 @@ export class ExplorerContentProvider implements TextDocumentContentProvider {
                 CodeFlowDecorations.updateCodeFlowSelection(undefined, request.treeid_step);
                 break;
             case "AttachmentTreeSelectionChange":
-                const aSelectionId = (request.treeid_step as string).split("_");
-                const attachmentId = parseInt(aSelectionId[0], 10);
-                if (aSelectionId.length > 1) {
-                    CodeFlowDecorations.updateAttachmentSelection(attachmentId, parseInt(aSelectionId[1], 10));
+                const selectionId = (request.treeid_step as string).split("_");
+                const attachmentId = parseInt(selectionId[0], 10);
+                if (selectionId.length > 1) {
+                    CodeFlowDecorations.updateAttachmentSelection(attachmentId, parseInt(selectionId[1], 10));
                 } else {
-                    const resultInfo = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo;
-                    commands.executeCommand("vscode.open", resultInfo.attachments[attachmentId].file.uri,
-                        ViewColumn.One);
+                    const diagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+                    Location.getOrRemap(diagnostic.resultInfo.attachments[attachmentId].file,
+                        {
+                            physicalLocation: {
+                                fileLocation: diagnostic.rawResult.attachments[attachmentId].fileLocation,
+                            },
+                        } as sarif.Location)
+                        .then((loc: Location) => {
+                            commands.executeCommand("vscode.open", location.uri,
+                                ViewColumn.One);
+                        });
                 }
                 break;
             case "verbositychanged":

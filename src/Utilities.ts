@@ -4,7 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { extensions } from "vscode";
+import { extensions, Uri } from "vscode";
 import { Message } from "./Interfaces";
 import { Location } from "./Location";
 
@@ -16,12 +16,58 @@ export class Utilities {
         "/out/resources/";
     public static readonly configSection = "sarif-viewer";
 
+    /**
+     * jsdom document object
+     */
     public static get Document() {
         if (Utilities.document === undefined) {
             const jsdom = require("jsdom");
             Utilities.document = (new jsdom.JSDOM(``)).window.document;
         }
         return Utilities.document;
+    }
+
+    /**
+     * nodejs File System object
+     */
+    public static get Fs() {
+        if (Utilities.fs === undefined) {
+            Utilities.fs = require("fs");
+        }
+        return Utilities.fs;
+    }
+
+    /**
+     * nodejs Operating System object
+     */
+    public static get Os() {
+        if (Utilities.os === undefined) {
+            Utilities.os = require("os");
+        }
+        return Utilities.os;
+    }
+
+    /**
+     * nodejs Path object
+     */
+    public static get Path() {
+        if (Utilities.path === undefined) {
+            Utilities.path = require("path");
+        }
+        return Utilities.path;
+    }
+
+    /**
+     * This will convert the passed in uri into a common format
+     * ex: file:///d:/test/ and d:\\test will return d:\test
+     * @param uri path to a directory
+     */
+    public static getDisplayableRootpath(uri: Uri): string {
+        if (uri.scheme === "file") {
+            return uri.fsPath;
+        } else {
+            return Utilities.Path.normalize(uri.toString(true));
+        }
     }
 
     /**
@@ -117,7 +163,10 @@ export class Utilities {
         return linkElement;
     }
 
-    private static document;
+    private static document: any;
+    private static fs: any;
+    private static os: any;
+    private static path: any;
     private static embeddedRegEx = /[^\\](\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
 
     /**
