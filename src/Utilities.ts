@@ -13,7 +13,7 @@ import { Location } from "./Location";
  */
 export class Utilities {
     public static readonly iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-        "/out/resources/";
+        "/resources/icons/";
     public static readonly configSection = "sarif-viewer";
 
     /**
