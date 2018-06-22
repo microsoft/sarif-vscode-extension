@@ -21,7 +21,6 @@ export class ExplorerWebview {
         } as WebviewMessage);
     }
 
-    // window.addEventListener("message", onMessage);
 
     public onMessage(event: any) {
         const message = event.data as WebviewMessage;
