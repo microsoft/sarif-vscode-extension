@@ -6,6 +6,7 @@
 import * as sarif from "sarif";
 import { Command } from "vscode";
 import { Location } from "./Location";
+import { SVDiagnostic } from "./SVDiagnostic";
 
 /**
 * Interface for options to set while creating an html element
@@ -88,4 +89,24 @@ export interface TreeNodeOptions {
     message: string,
     requestId: string,
     tooltip: string,
+}
+
+export interface WebviewMessage {
+    type: MessageType,
+    data: DiagnosticData
+}
+
+export enum MessageType {
+    AttachmentSelectionChange,
+    CodeFlowSelectionChange,
+    NewDiagnostic,
+    SourceLinkClicked,
+    VerbosityChanged,
+}
+
+export interface DiagnosticData {
+    diagnostic: SVDiagnostic,
+    activeTab?: any,
+    selectedRow?: any,
+    selectedVerbosity?: any
 }

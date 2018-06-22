@@ -7,6 +7,7 @@ import { commands, ExtensionContext, Uri, ViewColumn } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerContentProvider } from "./ExplorerContentProvider";
+import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
@@ -24,6 +25,8 @@ export function activate(context: ExtensionContext) {
     // Create the launch Explorer command
     context.subscriptions.push(
         commands.registerCommand(ExplorerContentProvider.ExplorerLaunchCommand, () => {
+            ExplorerController.Instance.launchWebView();
+
             commands.executeCommand("vscode.previewHtml", ExplorerContentProvider.ExplorerUri, ViewColumn.Two,
                 ExplorerContentProvider.ExplorerTitle);
         }));
