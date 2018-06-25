@@ -74,7 +74,7 @@ export class FileMapper {
         return this.openFilePicker(origUri).then((path) => {
             if (path !== undefined) {
                 const uri = Uri.parse(path);
-                if (Utilities.Path.extname(path) === "") {
+                if (Utilities.Fs.lstatSync(path).isDirectory()) {
                     const config = workspace.getConfiguration(Utilities.configSection);
                     const rootpaths: string[] = config.get(this.configRootpaths);
 
