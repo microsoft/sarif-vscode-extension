@@ -3,14 +3,15 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import { commands, Disposable, TextDocument, window, workspace } from "vscode";
+import { ResultInfo, RunInfo } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
 import { FileMapper } from "./FileMapper";
-import { Location } from "./Location";
-import { ResultInfo } from "./ResultInfo";
-import { RunInfo } from "./RunInfo";
-import { SVDiagnostic } from "./SVDiagnostic";
+import { LocationFactory } from "./LocationFactory";
+import { ResultInfoFactory } from "./ResultInfoFactory";
+import { RunInfoFactory } from "./RunInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -131,15 +132,17 @@ export class LogReader {
 
             for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
                 const run = log.runs[runIndex];
-                runInfo = RunInfo.Create(run);
+                runInfo = RunInfoFactory.Create(run);
                 await FileMapper.Instance.mapFiles(run.files);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
-                    await ResultInfo.create(run.results[resultIndex], run.resources).then((resultInfo: ResultInfo) => {
+                    const sarifResult = run.results[resultIndex];
+                    await ResultInfoFactory.create(sarifResult, run.resources).then((resultInfo: ResultInfo) => {
                         if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
-                            resultInfo.assignedLocation = Location.mapToSarifFile(doc.uri, runIndex, resultIndex);
+                            resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
+                                resultIndex);
                         }
 
-                        this.resultCollection.add(new SVDiagnostic(runInfo, resultInfo, run.results[resultIndex]));
+                        this.resultCollection.add(SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult));
                     });
                 }
             }

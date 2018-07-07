@@ -3,10 +3,9 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { commands, ExtensionContext, Uri, ViewColumn } from "vscode";
+import { commands, ExtensionContext, Uri } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { ExplorerContentProvider } from "./ExplorerContentProvider";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
@@ -18,23 +17,18 @@ import { SVCodeActionProvider } from "./SVCodeActionProvider";
  * Process any open SARIF Files
  */
 export function activate(context: ExtensionContext) {
-    const explorerProvider = ExplorerContentProvider.Instance;
-    context.subscriptions.push(explorerProvider);
-    explorerProvider.context = context;
 
     // Create the launch Explorer command
     context.subscriptions.push(
-        commands.registerCommand(ExplorerContentProvider.ExplorerLaunchCommand, () => {
+        commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
             ExplorerController.Instance.launchWebView();
-
-            commands.executeCommand("vscode.previewHtml", ExplorerContentProvider.ExplorerUri, ViewColumn.Two,
-                ExplorerContentProvider.ExplorerTitle);
         }));
 
-    // Create the Explorer callback command
     context.subscriptions.push(
-        commands.registerCommand(ExplorerContentProvider.ExplorerCallbackCommand, explorerProvider.explorerCallback),
-    );
+        commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, (id: string) => {
+            CodeFlowDecorations.updateCodeFlowSelection(undefined, id);
+            ExplorerController.Instance.setSelectedCodeFlow(id);
+        }));
 
     // Create File mapper command
     context.subscriptions.push(

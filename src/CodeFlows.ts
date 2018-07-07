@@ -3,11 +3,11 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import { Command } from "vscode";
-import { ExplorerContentProvider } from "./ExplorerContentProvider";
-import { CodeFlow, CodeFlowStep, CodeFlowStepId, ThreadFlow } from "./Interfaces";
-import { Location } from "./Location";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, ThreadFlow } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
+import { ExplorerController } from "./ExplorerController";
+import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
 /**
@@ -68,7 +68,7 @@ export class CodeFlows {
                     const step = thread.steps[stepKey];
                     if (step.location !== null && step.location.mapped !== true) {
                         const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        await Location.create(sarifLoc.physicalLocation).then((location: Location) => {
+                        await LocationFactory.create(sarifLoc.physicalLocation).then((location: Location) => {
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                         });
                     }
@@ -158,7 +158,7 @@ export class CodeFlows {
     ): Promise<CodeFlowStep> {
 
         let loc: Location;
-        await Location.create(cFLoc.location.physicalLocation).then((location: Location) => {
+        await LocationFactory.create(cFLoc.location.physicalLocation).then((location: Location) => {
             loc = location;
         });
 
@@ -194,11 +194,8 @@ export class CodeFlows {
         }
 
         const command = {
-            arguments: [{
-                request: "CodeFlowTreeSelectionChange",
-                treeid_step: traversalPathId,
-            }],
-            command: ExplorerContentProvider.ExplorerCallbackCommand,
+            arguments: [traversalPathId],
+            command: ExplorerController.SendCFSelectionToExplorerCommand,
             title: messageWithStepText,
         } as Command;
 

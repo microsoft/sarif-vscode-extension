@@ -3,10 +3,10 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, InputBoxOptions, Uri, window, workspace,
 } from "vscode";
+import { sarif } from "./common/SARIFInterfaces";
 import { Utilities } from "./Utilities";
 
 /**

@@ -170,7 +170,7 @@ li:hover {
     background: rgba(200, 200, 200, 0.3);
 }
 
-li:focus {
+li.codeflowselected {
     background: rgb(16, 109, 192);
     color: white;
 }

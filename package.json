@@ -88,7 +88,7 @@
         ]
     },
     "scripts": {
-        "prevscode:prepublish": "xcopy src\\explorer out\\explorer /I /R /Y",
+        "prevscode:prepublish": "tsc -p tsconfig.explorer.json",
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
@@ -101,7 +101,7 @@
         "@types/node": "^7.0.66",
         "tslint": "^5.0.0",
         "typescript": "^2.9.2",
-        "vscode": "^1.24.0"
+        "vscode": "^1.1.18"
     },
     "dependencies": {
         "jsdom": "^11.11.0",
