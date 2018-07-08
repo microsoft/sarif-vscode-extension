@@ -21,7 +21,7 @@ export function activate(context: ExtensionContext) {
     // Create the launch Explorer command
     context.subscriptions.push(
         commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
-            ExplorerController.Instance.launchWebView();
+            ExplorerController.Instance.createWebview();
         }));
 
     context.subscriptions.push(

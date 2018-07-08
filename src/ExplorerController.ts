@@ -28,10 +28,18 @@ export class ExplorerController {
     private activeTab: string;
     private extensionPath: string;
     private selectedRow: string;
-    private webviewPanel: WebviewPanel;
+    private wvPanel: WebviewPanel;
 
     public static get Instance(): ExplorerController {
         return ExplorerController.instance || (ExplorerController.instance = new ExplorerController());
+    }
+
+    private get webviewPanel(): WebviewPanel {
+        if (this.wvPanel === undefined) {
+            this.createWebview();
+        }
+
+        return this.wvPanel;
     }
 
     private constructor() {
@@ -41,52 +49,36 @@ export class ExplorerController {
     }
 
     /**
-     * defines the default webview html content
+     * Creates the Webview panel
      */
-    public getWebviewContent(): string {
-        const cssMarkupDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "resources/explorer/explorer.css"));
-        const scriptDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "out/explorer/explorer/webview.js"));
-        const cssMarkup = cssMarkupDiskPath.with({ scheme: "vscode-resource" });
-        const scriptPath = scriptDiskPath.with({ scheme: "vscode-resource" });
+    public createWebview(): void {
+        if (this.wvPanel !== undefined) {
+            if (!this.wvPanel.visible) {
+                this.wvPanel.reveal(undefined, false);
+            }
+        } else {
+            this.wvPanel = window.createWebviewPanel("sarifExplorer", ExplorerController.ExplorerTitle,
+                { preserveFocus: true, viewColumn: ViewColumn.Two },
+                {
+                    enableScripts: true,
+                    localResourceRoots: [
+                        Uri.file(Utilities.Path.join(this.extensionPath, "resources", "explorer")),
+                        Uri.file(Utilities.Path.join(this.extensionPath, "out", "explorer")),
+                    ],
+                },
+            );
 
-        return `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Sarif Explorer</title>
-            <link rel="stylesheet" type="text/css" href = "${cssMarkup}">
-        </head>
-        <body>
-            <div>
-                Open a Sarif file to load results into the Problems panel.
-                <br/>
-                Then double click a result in the Problems panel to populate the explorer.
-            </div>
-            <script src="${scriptPath}"></script>
-        </body>
-        </html>`;
+            this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage, this);
+            this.wvPanel.onDidDispose(this.onWebviewDispose, this);
+            this.wvPanel.webview.html = this.getWebviewContent();
+        }
     }
 
     /**
-     * Creates the Webview panel
+     * Clears the webviewpanel field if the weview gets closed
      */
-    public launchWebView(): void {
-        this.webviewPanel = window.createWebviewPanel(
-            "sarifExplorer", // Identifies the type of the webview. Used internally
-            ExplorerController.ExplorerTitle, // Title of the panel displayed to the user
-            ViewColumn.Two, // Editor column to show the new webview panel in.
-            {
-                enableScripts: true,
-                localResourceRoots: [
-                    Uri.file(Utilities.Path.join(this.extensionPath, "resources", "explorer")),
-                    Uri.file(Utilities.Path.join(this.extensionPath, "out", "explorer")),
-                ],
-            }, // Webview options. More on these later.
-        );
-
-        this.webviewPanel.webview.onDidReceiveMessage(this.onReceivedMessage, this);
-        this.webviewPanel.webview.html = this.getWebviewContent();
+    public onWebviewDispose() {
+        this.wvPanel = undefined;
     }
 
     /**
@@ -146,18 +138,6 @@ export class ExplorerController {
     }
 
     /**
-     * Handles sending a message to the webview
-     * @param message Message to send, message has a type and data
-     * @param focus flag for if the webview panel should be given focus
-     */
-    public sendMessage(message: WebviewMessage, focus: boolean) {
-        if (!this.webviewPanel.visible) {
-            this.webviewPanel.reveal(undefined, !focus);
-        }
-        this.webviewPanel.webview.postMessage(message);
-    }
-
-    /**
      * Sets the active diagnostic that's showns in the Webview, resets the saved webview state(selected row, etc.)
      * @param diag diagnostic to show
      */
@@ -181,6 +161,34 @@ export class ExplorerController {
     }
 
     /**
+     * defines the default webview html content
+     */
+    private getWebviewContent(): string {
+        const cssMarkupDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "resources/explorer/explorer.css"));
+        const scriptDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "out/explorer/explorer/webview.js"));
+        const cssMarkup = cssMarkupDiskPath.with({ scheme: "vscode-resource" });
+        const scriptPath = scriptDiskPath.with({ scheme: "vscode-resource" });
+
+        return `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sarif Explorer</title>
+            <link rel="stylesheet" type="text/css" href = "${cssMarkup}">
+        </head>
+        <body>
+            <div>
+                Open a Sarif file to load results into the Problems panel.
+                <br/>
+                Then double click a result in the Problems panel to populate the explorer.
+            </div>
+            <script src="${scriptPath}"></script>
+        </body>
+        </html>`;
+    }
+
+    /**
      * Creates the webview message based on the current active dialog and saved state and sends to the webview
      * @param focus flag for setting focus to the webview
      */
@@ -195,5 +203,17 @@ export class ExplorerController {
         this.sendMessage({
             data: JSON.stringify(diagData), type: MessageType.NewDiagnostic,
         } as WebviewMessage, focus);
+    }
+
+    /**
+     * Handles sending a message to the webview
+     * @param message Message to send, message has a type and data
+     * @param focus flag for if the webview panel should be given focus
+     */
+    private sendMessage(message: WebviewMessage, focus: boolean) {
+        if (!this.webviewPanel.visible) {
+            this.webviewPanel.reveal(undefined, !focus);
+        }
+        this.webviewPanel.webview.postMessage(message);
     }
 }
