@@ -3,9 +3,9 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
-import { Command } from "vscode";
-import { Location } from "./Location";
+import { Command, Diagnostic, Range, Uri } from "vscode";
+import { sarif } from "./SARIFInterfaces";
+import { MessageType } from "./Enums";
 
 /**
 * Interface for options to set while creating an html element
@@ -35,6 +35,47 @@ export interface HTMLElementOptions {
      * object filled with any attributes to set on the element
      */
     attributes?: object;
+}
+
+export interface Location {
+    id: number;
+    endOfLine: boolean;
+    fileName: string;
+    mapped: boolean;
+    message: Message;
+    range: Range;
+    uri: Uri;
+}
+
+export interface SarifViewerDiagnostic extends Diagnostic {
+    runinfo: RunInfo;
+    resultInfo: ResultInfo;
+    rawResult: sarif.Result;
+}
+
+export interface RunInfo {
+    additionalProperties: { [key: string]: string };
+    cmdLine: string;
+    fileName: string;
+    toolFullName: string;
+    toolName: string;
+    workingDir: string;
+}
+
+export interface ResultInfo {
+    additionalProperties: { [key: string]: string };
+    assignedLocation: Location;
+    attachments: Attachment[];
+    codeFlows: CodeFlow[];
+    locations: Location[];
+    relatedLocs: Location[];
+    message: Message;
+    messageHTML: HTMLLabelElement;
+    ruleHelpUri: string;
+    ruleId: string;
+    ruleName: string;
+    ruleDescription: Message;
+    severityLevel: sarif.Result.level;
 }
 
 export interface CodeFlow {
@@ -71,7 +112,7 @@ export interface CodeFlowStep {
 }
 
 export interface Message {
-    html: HTMLLabelElement,
+    html: { text: string, locations: { text: string, loc: Location }[] },
     text: string,
 }
 
@@ -88,4 +129,25 @@ export interface TreeNodeOptions {
     message: string,
     requestId: string,
     tooltip: string,
+}
+
+export interface WebviewMessage {
+    type: MessageType,
+    data: string
+}
+
+export interface DiagnosticData {
+    activeTab?: any,
+    resultInfo: ResultInfo,
+    runInfo: RunInfo,
+    selectedRow?: string,
+    selectedVerbosity?: any
+}
+
+export interface LocationData {
+    eCol: string,
+    eLine: string,
+    file: string,
+    sCol: string,
+    sLine: string,
 }

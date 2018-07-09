@@ -3,19 +3,20 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
+import { RunInfo } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
 
 /**
  * Class that holds the run information processed from the Sarif run
  */
-export class RunInfo {
+export class RunInfoFactory {
 
     /**
      * Processes the run passed in and creates a new RunInfo object with the information processed
      * @param run SARIF run object to process
      */
-    public static Create(run: sarif.Run) {
-        const runInfo = new RunInfo();
+    public static Create(run: sarif.Run): RunInfo {
+        const runInfo = {} as RunInfo;
         const tool = run.tool;
         runInfo.toolName = tool.name;
         if (runInfo.toolFullName !== undefined) {
@@ -40,11 +41,4 @@ export class RunInfo {
 
         return runInfo;
     }
-
-    public additionalProperties: { [key: string]: string };
-    public cmdLine: string;
-    public fileName: string;
-    public toolFullName: string;
-    public toolName: string;
-    public workingDir: string;
 }

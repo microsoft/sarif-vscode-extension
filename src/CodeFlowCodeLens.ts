@@ -3,12 +3,12 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import {
     CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult,
     TextDocument,
 } from "vscode";
-import { ExplorerContentProvider } from "./ExplorerContentProvider";
+import { sarif } from "./common/SARIFInterfaces";
+import { ExplorerController } from "./ExplorerController";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
@@ -44,11 +44,11 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
 
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
         const codeLenses: CodeLens[] = [];
-        const explorerCP = ExplorerContentProvider.Instance;
-        const verbosity = explorerCP.codeFlowVerbosity || sarif.CodeFlowLocation.importance.important;
+        const explorerController = ExplorerController.Instance;
+        const verbosity = explorerController.selectedVerbosity || sarif.CodeFlowLocation.importance.important;
 
-        if (explorerCP.activeSVDiagnostic !== undefined) {
-            const codeFlows = explorerCP.activeSVDiagnostic.resultInfo.codeFlows;
+        if (explorerController.activeSVDiagnostic !== undefined) {
+            const codeFlows = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
             if (codeFlows !== undefined) {
                 for (const cFIndex of codeFlows.keys()) {
                     const codeFlow = codeFlows[cFIndex];

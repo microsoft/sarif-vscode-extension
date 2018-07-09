@@ -3,17 +3,17 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
+import { Location } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
 import { FileMapper } from "./FileMapper";
-import { Message } from "./Interfaces";
 import { LogReader } from "./LogReader";
 import { Utilities } from "./Utilities";
 
 /**
- * Class that holds the processed location from a results location
+ * Class that processes and creates a location object from a results physicallocation
  */
-export class Location {
+export class LocationFactory {
 
     /**
      * Processes the passed in location and creates a new ResultLocation
@@ -21,7 +21,12 @@ export class Location {
      * @param sarifLocation location from result in sarif file
      */
     public static async create(sarifLocation: sarif.PhysicalLocation): Promise<Location> {
-        const location = new Location();
+        const location = {
+            endOfLine: false,
+            fileName: "",
+            range: new Range(0, 0, 0, 1),
+            uri: null,
+        } as Location;
 
         if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
             location.id = sarifLocation.id;
@@ -43,7 +48,7 @@ export class Location {
         }
 
         if (sarifLocation.region !== undefined) {
-            const parsedRange = Location.parseRange(sarifLocation.region);
+            const parsedRange = LocationFactory.parseRange(sarifLocation.region);
             location.range = parsedRange.range;
             location.endOfLine = parsedRange.endOfLine;
             location.message = Utilities.parseSarifMessage(sarifLocation.region.message);
@@ -62,7 +67,7 @@ export class Location {
             if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
                 const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
                 await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                    return Location.create(sarifLocation.physicalLocation);
+                    return LocationFactory.create(sarifLocation.physicalLocation);
                 }).then((remappedLocation) => {
                     location = remappedLocation;
                 });
@@ -90,13 +95,15 @@ export class Location {
         }
 
         const locationMapping = sarifMapping.pointers[resultPath];
-        const resultLocation = new Location();
 
-        resultLocation.range = new Range(locationMapping.value.line, locationMapping.value.column,
-            locationMapping.valueEnd.line, locationMapping.valueEnd.column);
-        resultLocation.uri = sarifUri;
-        resultLocation.fileName = sarifUri.fsPath.substring(resultLocation.uri.fsPath.lastIndexOf("\\") + 1);
-        resultLocation.mapped = false;
+        const resultLocation = {
+            endOfLine: false,
+            fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
+            mapped: false,
+            range: new Range(locationMapping.value.line, locationMapping.value.column,
+                locationMapping.valueEnd.line, locationMapping.valueEnd.column),
+            uri: sarifUri,
+        } as Location;
 
         return resultLocation;
     }
@@ -153,20 +160,5 @@ export class Location {
         }
 
         return { range: new Range(startline, startcol, endline, endcol), endOfLine: eol };
-    }
-
-    public id: number;
-    public endOfLine: boolean;
-    public fileName: string;
-    public mapped: boolean;
-    public message: Message;
-    public range: Range;
-    public uri: Uri;
-
-    private constructor() {
-        this.range = new Range(0, 0, 0, 1);
-        this.uri = null;
-        this.fileName = "";
-        this.endOfLine = false;
     }
 }

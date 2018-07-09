@@ -1,4 +1,4 @@
-declare module 'sarif' {
+export namespace sarif {
 
     /**
     * Static Analysis Results Format (SARIF) Version 2.0.0 JSON Schema: a standard format for the output of static
