@@ -311,7 +311,7 @@ class ExplorerWebview {
                 if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
                 let treeNodeOptions = {
                     isParent: isAParent, locationText: attachment.file.fileName, message: attachment.description.text,
-                    requestId: `${aIndex}`, tooltip: attachment.file.uri.toString(true),
+                    requestId: `${aIndex}`, tooltip: "file://" + attachment.file.uri.path,
                 } as TreeNodeOptions;
                 const parent = this.createNode(treeNodeOptions);
                 if (isAParent) {
@@ -503,7 +503,7 @@ class ExplorerWebview {
      * @param linkText The text to display on the link
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        const file = location.uri.toString(true);
+        const file = "file://" + location.uri.path;
         const sourceLink = this.createElement("a", {
             attributes: {
                 "data-eCol": location.range[1].character.toString(),

@@ -10,10 +10,11 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Sarif Explorer shows details about the result:
     * Result info
     * Run info
-    * CodeFlow data
+    * CodeFlow steps
     * Attachments
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
+ * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
 
 ### Sarif Explorer:
  * Automatically launches when the first result is navigated to

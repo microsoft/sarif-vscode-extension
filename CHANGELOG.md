@@ -1,5 +1,15 @@
 # Change Log
 
+## 2.2.0
+* Reworked the UX of remapping a file when it can't be found
+    * Opens an input box with instructions and populated with the file that can't be found
+    * Shows the file in the instructions for reference as well
+    * Allows a user to enter a folder path(ex. the root of your enlistment), that will be added to the settings as a root path and checked in the future before asking the user for a file path
+* Changed the Sarif Explorer from a previewHTML panel to a webview panel
+* Added when you click a code lens or key navigate to a different codeflow step it will now highlight the step in the Sarif Explorer
+* Improved maintaining state of the Sarif Explorer after navigating away to a different file in the same view column and then back
+* Fixed the Sarif Explorer taking focus when you click a diagnostic in the problems panel
+
 ## 2.1.0
 * Added codelenses to display the messages for the codeflow steps inline
     * The messages show based on the verbosity switch in the Sarif Explorer CodeFlow panel
