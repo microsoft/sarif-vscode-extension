@@ -99,9 +99,9 @@ export class FileMapper {
                 } else {
                     this.fileRemapping.set(origUri.path, uri);
                     this.saveBasePath(origUri, uri);
-
-                    this.onMappingChanged.fire(origUri);
                 }
+
+                this.onMappingChanged.fire(origUri);
             } else {
                 this.userCanceledMapping = true;
                 this.fileRemapping.set(origUri.path, null);
