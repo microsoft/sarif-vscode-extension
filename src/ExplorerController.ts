@@ -101,7 +101,7 @@ export class ExplorerController {
                             },
                         } as sarif.Location)
                         .then((loc: Location) => {
-                            commands.executeCommand("vscode.open", location.uri,
+                            commands.executeCommand("vscode.open", loc.uri,
                                 ViewColumn.One);
                         });
                 }

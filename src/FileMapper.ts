@@ -74,7 +74,14 @@ export class FileMapper {
         return this.openFilePicker(origUri).then((path) => {
             if (path !== undefined) {
                 const uri = Uri.parse(path);
-                if (Utilities.Fs.lstatSync(path).isDirectory()) {
+                let filePath: string;
+                if (uri.scheme === "file") {
+                    filePath = uri.fsPath;
+                } else {
+                    filePath = uri.toString(true);
+                }
+
+                if (Utilities.Fs.statSync(filePath).isDirectory()) {
                     const config = workspace.getConfiguration(Utilities.configSection);
                     const rootpaths: string[] = config.get(this.configRootpaths);
 
@@ -242,23 +249,33 @@ export class FileMapper {
     private async openFilePicker(uri: Uri): Promise<string> {
         const inputOptions = {
             ignoreFocusOut: true,
-            prompt: "Valid path has been entered",
+            prompt: `Valid path, confirm if it maps to '${uri.toString(true)}' or its rootpath`,
             validateInput: (path: string): string => {
-                let validateMsg;
-                const validateUri = Uri.parse(path);
-                if (!this.tryMapUri(validateUri)) {
-                    validateMsg = `'${uri.toString(true)}' can not be found.
-                Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
-                rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
-                } else {
-                    const displayablePath = Utilities.getDisplayableRootpath(validateUri);
-                    if (this.rootpaths.indexOf(displayablePath) !== -1) {
-                        validateMsg = `'${displayablePath}' already exists in the settings (sarif-viewer.rootpaths),
-                        please try a different path (Press 'Escape' to cancel)`;
+                if (path !== undefined && path !== "") {
+                    const validateUri = Uri.parse(path);
+                    if (validateUri.scheme === "file") {
+                        if (this.tryMapUri(validateUri)) {
+                            return;
+                        }
+                    } else {
+                        const rootPath = Utilities.getDisplayableRootpath(validateUri);
+                        try {
+                            if (this.rootpaths.indexOf(rootPath) !== -1) {
+                                return `'${rootPath}' already exists in the settings (sarif-viewer.rootpaths), please
+                                try a different path (Press 'Escape' to cancel)`;
+                            }
+                            if (Utilities.Fs.statSync(rootPath).isDirectory()) {
+                                return;
+                            }
+                        } catch (error) {
+                            if (error.code !== "ENOENT") { throw error; }
+                        }
                     }
                 }
 
-                return validateMsg;
+                return `'${uri.toString(true)}' can not be found.
+                Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
+                rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
             },
             value: uri.toString(true),
         } as InputBoxOptions;
@@ -314,16 +331,18 @@ export class FileMapper {
 
     /**
      * Check if the file exists at the provided path, if so and a Key was provided it will be added to the mapped files
+     * returns false if uri is a directory or if the file can't be found
      * @param uri file uri to check if exists
      * @param key key used for mapping, if undefined the mapping won't be added if it exists
      */
     private tryMapUri(uri: Uri, key?: string): boolean {
         try {
-            Utilities.Fs.statSync(uri.fsPath);
-            if (key !== undefined) {
-                this.fileRemapping.set(key, uri);
+            if (!Utilities.Fs.statSync(uri.fsPath).isDirectory()) {
+                if (key !== undefined) {
+                    this.fileRemapping.set(key, uri);
+                }
+                return true;
             }
-            return true;
         } catch (error) {
             if (error.code !== "ENOENT") { throw error; }
         }
