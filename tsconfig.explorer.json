@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "target": "es6",
+        "outDir": "out\\explorer",
+        "lib": [
+            "dom",
+            "es6"
+        ],
+        "sourceMap": true
+    },
+    "files": [
+        "src\\explorer\\webview.ts",
+        "src\\common\\SARIFInterfaces.d.ts",
+        "node_modules\\vscode\\vscode.d.ts"
+    ]
+}

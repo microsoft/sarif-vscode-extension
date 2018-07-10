@@ -4,7 +4,8 @@
 // *                                                       *
 // ********************************************************/
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
-import { SVDiagnostic } from "./SVDiagnostic";
+import { SarifViewerDiagnostic } from "./common/Interfaces";
+import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 
 /**
  * Manager for the Diagnostic Collection contianing the sarif result diagnostics
@@ -15,13 +16,13 @@ export class SVDiagnosticCollection {
     private static readonly MaxDiagCollectionSize = 249;
 
     private diagnosticCollection: DiagnosticCollection;
-    private issuesCollection: Map<string, SVDiagnostic[]>;
-    private unmappedIssuesCollection: Map<string, SVDiagnostic[]>;
+    private issuesCollection: Map<string, SarifViewerDiagnostic[]>;
+    private unmappedIssuesCollection: Map<string, SarifViewerDiagnostic[]>;
 
     constructor() {
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
-        this.issuesCollection = new Map<string, SVDiagnostic[]>();
-        this.unmappedIssuesCollection = new Map<string, SVDiagnostic[]>();
+        this.issuesCollection = new Map<string, SarifViewerDiagnostic[]>();
+        this.unmappedIssuesCollection = new Map<string, SarifViewerDiagnostic[]>();
     }
 
     /**
@@ -39,7 +40,7 @@ export class SVDiagnosticCollection {
      * After you finish adding all of the new diagnostics, call syncDiagnostics to get them added to the problems panel
      * @param issue diagnostic to add to the problems panel
      */
-    public add(issue: SVDiagnostic) {
+    public add(issue: SarifViewerDiagnostic) {
         if (issue.resultInfo.assignedLocation.mapped) {
             this.addToCollection(this.issuesCollection, issue);
         } else {
@@ -73,7 +74,7 @@ export class SVDiagnosticCollection {
         for (const key of this.issuesCollection.keys()) {
             const issues = this.issuesCollection.get(key);
             for (const index of issues.keys()) {
-                await issues[index].tryToRemapLocations();
+                await SVDiagnosticFactory.tryToRemapLocations(issues[index]);
             }
         }
 
@@ -81,7 +82,7 @@ export class SVDiagnosticCollection {
             const remainingUnmappedIssues = [];
             const issues = this.unmappedIssuesCollection.get(key);
             for (const index of issues.keys()) {
-                await issues[index].tryToRemapLocations().then((remapped) => {
+                await SVDiagnosticFactory.tryToRemapLocations(issues[index]).then((remapped) => {
                     if (remapped) {
                         this.add(issues[index]);
                     } else {
@@ -105,7 +106,7 @@ export class SVDiagnosticCollection {
      * @param collection dictionary to add the diagnostic to
      * @param issue diagnostic that needs to be added to dictionary
      */
-    private addToCollection(collection: Map<string, SVDiagnostic[]>, issue: SVDiagnostic) {
+    private addToCollection(collection: Map<string, SarifViewerDiagnostic[]>, issue: SarifViewerDiagnostic) {
         const key = issue.resultInfo.assignedLocation.uri;
 
         if (collection.has(key.path)) {
@@ -120,14 +121,14 @@ export class SVDiagnosticCollection {
      * Handles if the size is larger then the max we stop 1 short and add our custom message as the final diagnostic
      * @param collection dictionary of diagnostics that need to be added to the panel
      */
-    private addToDiagnosticCollection(collection: Map<string, SVDiagnostic[]>) {
+    private addToDiagnosticCollection(collection: Map<string, SarifViewerDiagnostic[]>) {
         for (const issues of collection.values()) {
             let diags: Diagnostic[];
             const key = issues[0].resultInfo.assignedLocation.uri;
             if (issues.length > SVDiagnosticCollection.MaxDiagCollectionSize) {
                 const msg = `Only displaying 249 of the total ${issues.length} results in the SARIF log.`;
                 const maxReachedDiag = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
-                maxReachedDiag.code = SVDiagnostic.Code;
+                maxReachedDiag.code = SVDiagnosticFactory.Code;
                 maxReachedDiag.source = "SARIFViewer";
                 diags = [maxReachedDiag].concat(issues.slice(0, SVDiagnosticCollection.MaxDiagCollectionSize));
             } else {

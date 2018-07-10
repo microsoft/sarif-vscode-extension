@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -25,7 +25,7 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.21.0"
+        "vscode": "^1.24.0"
     },
     "activationEvents": [
         "onLanguage:json",
@@ -33,6 +33,18 @@
     ],
     "main": "./out/extension",
     "contributes": {
+        "configuration": {
+            "title": "Sarif Viewer configuration",
+            "properties": {
+                "sarif-viewer.rootpaths": {
+                    "type": "array",
+                    "default": [
+                        "c:\\sample\\path"
+                    ],
+                    "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
+                }
+            }
+        },
         "languages": [
             {
                 "id": "json",
@@ -76,7 +88,7 @@
         ]
     },
     "scripts": {
-        "prevscode:prepublish": "xcopy src\\explorer out\\explorer /I /R /Y",
+        "prevscode:prepublish": "tsc -p tsconfig.explorer.json",
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",

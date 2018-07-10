@@ -3,16 +3,15 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorRevealType, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { ExplorerContentProvider } from "./ExplorerContentProvider";
-import { FileMapper } from "./FileMapper";
-import { CodeFlowStep, CodeFlowStepId } from "./Interfaces";
-import { Location } from "./Location";
+import { CodeFlowStep, CodeFlowStepId, Location } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
+import { ExplorerController } from "./ExplorerController";
+import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
 /**
@@ -35,7 +34,7 @@ export class CodeFlowDecorations {
      * Updates the GutterIcon for the current active Diagnostic
      */
     public static updateResultGutterIcon() {
-        const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const activeSVDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
         if (activeSVDiagnostic !== undefined) {
             for (const editor of window.visibleTextEditors) {
                 if (activeSVDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
@@ -70,7 +69,7 @@ export class CodeFlowDecorations {
      * Updates the decorations for the steps in the Code Flow tree
      */
     public static updateStepsHighlight() {
-        const activeSVDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const activeSVDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
         if (activeSVDiagnostic !== undefined && activeSVDiagnostic.resultInfo.codeFlows !== undefined) {
             // for each visible editor add any of the codeflow locations that match it's Uri
             for (const editor of window.visibleTextEditors) {
@@ -102,7 +101,7 @@ export class CodeFlowDecorations {
      * @param regionId Id of the region selected
      */
     public static async updateAttachmentSelection(attachmentId: number, regionId: number) {
-        const svDiagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+        const svDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
         const location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
         const sarifPhysicalLocation = {
             fileLocation: svDiagnostic.rawResult.attachments[attachmentId].fileLocation,
@@ -120,7 +119,7 @@ export class CodeFlowDecorations {
         if (CodeFlowDecorations.lastCodeFlowSelected !== undefined) {
             const nextId = CodeFlowDecorations.lastCodeFlowSelected;
             nextId.stepId++;
-            const codeFlows = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+            const codeFlows = ExplorerController.Instance.activeSVDiagnostic.resultInfo.codeFlows;
             if (nextId.stepId >= codeFlows[nextId.cFId].threads[nextId.tFId].steps.length) {
                 nextId.stepId = 0;
                 nextId.tFId++;
@@ -133,6 +132,7 @@ export class CodeFlowDecorations {
                 }
             }
             CodeFlowDecorations.updateCodeFlowSelection(nextId, undefined);
+            ExplorerController.Instance.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
         }
     }
 
@@ -143,7 +143,7 @@ export class CodeFlowDecorations {
         if (CodeFlowDecorations.lastCodeFlowSelected !== undefined) {
             const prevId = CodeFlowDecorations.lastCodeFlowSelected;
             prevId.stepId--;
-            const codeFlows = ExplorerContentProvider.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+            const codeFlows = ExplorerController.Instance.activeSVDiagnostic.resultInfo.codeFlows;
             if (prevId.stepId < 0) {
                 prevId.tFId--;
                 if (prevId.tFId < 0) {
@@ -157,6 +157,7 @@ export class CodeFlowDecorations {
             }
 
             CodeFlowDecorations.updateCodeFlowSelection(prevId, undefined);
+            ExplorerController.Instance.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
         }
     }
 
@@ -171,7 +172,7 @@ export class CodeFlowDecorations {
         }
 
         if (id !== undefined) {
-            const diagnostic = ExplorerContentProvider.Instance.activeSVDiagnostic;
+            const diagnostic = ExplorerController.Instance.activeSVDiagnostic;
 
             CodeFlowDecorations.updateSelectionHighlight(
                 diagnostic.resultInfo.codeFlows[id.cFId].threads[id.tFId].steps[id.stepId].location,
@@ -189,17 +190,9 @@ export class CodeFlowDecorations {
      */
     public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
 
-        if (location === undefined || !location.mapped) {
-            // file mapping wasn't found, try to get the user to choose file
-            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
-                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
-                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                    return Location.create(sarifLocation.physicalLocation);
-                }).then((remappedLocation) => {
-                    location = remappedLocation;
-                });
-            }
-        }
+        await LocationFactory.getOrRemap(location, sarifLocation).then((loc: Location) => {
+            location = loc;
+        });
 
         if (location !== undefined && location.mapped) {
             let locRange = location.range;

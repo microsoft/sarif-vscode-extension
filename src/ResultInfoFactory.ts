@@ -3,16 +3,16 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
-import { Attachment, CodeFlow, Message } from "./Interfaces";
-import { Location } from "./Location";
+import { Attachment, CodeFlow, Location, ResultInfo } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
+import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
 /**
  * Class that holds the result information processed from the Sarif result
  */
-export class ResultInfo {
+export class ResultInfoFactory {
 
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
@@ -20,18 +20,18 @@ export class ResultInfo {
      * @param resouces resources object that is used for the rules
      */
     public static async create(result: sarif.Result, resources: sarif.Resources) {
-        const resultInfo = new ResultInfo();
+        const resultInfo = {} as ResultInfo;
 
-        await ResultInfo.parseLocations(result.locations).then((locations) => {
+        await ResultInfoFactory.parseLocations(result.locations).then((locations) => {
             resultInfo.locations = locations;
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        await ResultInfo.parseLocations(result.relatedLocations).then((locations) => {
+        await ResultInfoFactory.parseLocations(result.relatedLocations).then((locations) => {
             resultInfo.relatedLocs = locations;
         });
 
-        await ResultInfo.parseAttachments(result.attachments).then((attachments: Attachment[]) => {
+        await ResultInfoFactory.parseAttachments(result.attachments).then((attachments: Attachment[]) => {
             if (attachments.length > 0) {
                 resultInfo.attachments = attachments;
             }
@@ -68,7 +68,7 @@ export class ResultInfo {
                 }
 
                 if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
-                    resultInfo.severityLevel = ResultInfo.defaultLvlToLvlConverter(rule.configuration.defaultLevel);
+                    resultInfo.severityLevel = ResultInfoFactory.defaultLvlConverter(rule.configuration.defaultLevel);
                 }
 
                 resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
@@ -82,8 +82,12 @@ export class ResultInfo {
 
         resultInfo.severityLevel = result.level || resultInfo.severityLevel || sarif.Result.level.warning;
 
-        if (result.message !== undefined && result.message.text === undefined) {
-            result.message.text = ruleMessageString;
+        if (result.message === undefined) {
+            result.message = {};
+        }
+
+        if (result.message.text === undefined) {
+            result.message.text = ruleMessageString || "No Message Provided";
         }
 
         resultInfo.message = Utilities.parseSarifMessage(result.message, allLocations);
@@ -101,7 +105,7 @@ export class ResultInfo {
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                await Location.create(sarifLocation.physicalLocation).then((location: Location) => {
+                await LocationFactory.create(sarifLocation.physicalLocation).then((location: Location) => {
                     locations.push(location);
                 });
             }
@@ -124,8 +128,8 @@ export class ResultInfo {
             for (const sarifAttachment of sarifAttachments) {
                 const attachment = {} as Attachment;
                 attachment.description = Utilities.parseSarifMessage(sarifAttachment.description);
-                await Location.create({ fileLocation: sarifAttachment.fileLocation }).then((location: Location) => {
-                    attachment.file = location;
+                await LocationFactory.create({ fileLocation: sarifAttachment.fileLocation }).then((loc: Location) => {
+                    attachment.file = loc;
                 });
 
                 if (sarifAttachment.regions !== undefined) {
@@ -136,7 +140,7 @@ export class ResultInfo {
                             region: sarifRegion,
                         } as sarif.PhysicalLocation;
 
-                        await Location.create(physicalLocation).then((location: Location) => {
+                        await LocationFactory.create(physicalLocation).then((location: Location) => {
                             attachment.regionsOfInterest.push(location);
                         });
                     }
@@ -152,7 +156,7 @@ export class ResultInfo {
      * Converts the rule default Level to sarif Level
      * @param defaultLevel default level to convert
      */
-    private static defaultLvlToLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
+    private static defaultLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
         switch (defaultLevel) {
             case sarif.RuleConfiguration.defaultLevel.error:
                 return sarif.Result.level.error;
@@ -166,18 +170,4 @@ export class ResultInfo {
                 return sarif.Result.level.warning;
         }
     }
-
-    public additionalProperties: { [key: string]: string };
-    public assignedLocation: Location;
-    public attachments: Attachment[];
-    public codeFlows: CodeFlow[];
-    public locations: Location[];
-    public relatedLocs: Location[];
-    public message: Message;
-    public messageHTML: HTMLLabelElement;
-    public ruleHelpUri: string;
-    public ruleId = "";
-    public ruleName = "";
-    public ruleDescription: Message;
-    public severityLevel: sarif.Result.level;
 }

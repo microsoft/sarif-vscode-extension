@@ -3,23 +3,59 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
-import { extensions } from "vscode";
-import { Message } from "./Interfaces";
-import { Location } from "./Location";
+import { extensions, Uri } from "vscode";
+import { Location, Message } from "./common/Interfaces";
+import { sarif } from "./common/SARIFInterfaces";
 
 /**
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
-    public static iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath + "/out/resources/";
+    public static readonly iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
+        "/resources/icons/";
+    public static readonly configSection = "sarif-viewer";
 
-    public static get Document() {
-        if (Utilities.document === undefined) {
-            const jsdom = require("jsdom");
-            Utilities.document = (new jsdom.JSDOM(``)).window.document;
+    /**
+     * nodejs File System object
+     */
+    public static get Fs() {
+        if (Utilities.fs === undefined) {
+            Utilities.fs = require("fs");
         }
-        return Utilities.document;
+        return Utilities.fs;
+    }
+
+    /**
+     * nodejs Operating System object
+     */
+    public static get Os() {
+        if (Utilities.os === undefined) {
+            Utilities.os = require("os");
+        }
+        return Utilities.os;
+    }
+
+    /**
+     * nodejs Path object
+     */
+    public static get Path() {
+        if (Utilities.path === undefined) {
+            Utilities.path = require("path");
+        }
+        return Utilities.path;
+    }
+
+    /**
+     * This will convert the passed in uri into a common format
+     * ex: file:///d:/test/ and d:\\test will return d:\test
+     * @param uri path to a directory
+     */
+    public static getDisplayableRootpath(uri: Uri): string {
+        if (uri.scheme === "file") {
+            return uri.fsPath;
+        } else {
+            return Utilities.Path.normalize(uri.toString(true));
+        }
     }
 
     /**
@@ -33,25 +69,24 @@ export class Utilities {
 
         if (sarifMessage !== undefined) {
             if (sarifMessage.text !== undefined) {
-                let text = sarifMessage.text;
+                let sarifText = sarifMessage.text;
                 if (sarifMessage.arguments !== undefined) {
                     for (let index = 0; index < sarifMessage.arguments.length; index++) {
-                        text = text.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        sarifText = sarifText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
 
-                let messageText = text;
-                const messageHTML = Utilities.Document.createElement("label") as HTMLLabelElement;
+                let msgText = sarifText;
+                const msgHTML = { text: sarifText, locations: new Array<{ text: string, loc: Location }>() };
                 // parse embedded locations
-                let match = Utilities.embeddedRegEx.exec(messageText);
+                let match = Utilities.embeddedRegEx.exec(msgText);
                 if (locations !== undefined && match !== null) {
-                    let textForHTML = messageText;
                     do {
                         const embeddedLink = match[1];
                         const linkText = match[2];
                         const linkId = parseInt(match[3], 10);
 
-                        let location;
+                        let location: Location;
                         for (const loc of locations) {
                             if (loc !== undefined && loc.id === linkId) {
                                 location = loc;
@@ -60,62 +95,30 @@ export class Utilities {
                         }
 
                         if (location !== undefined) {
-                            const uri = location.uri;
-
                             // Handle the Text version
-                            messageText = messageText.replace(embeddedLink, `${linkText}(${uri.toString(true)})`);
+                            msgText = msgText.replace(embeddedLink, `${linkText}(${location.uri.toString(true)})`);
 
                             // Handle the HTML version
-                            const splitText = textForHTML.split(embeddedLink);
-                            messageHTML.appendChild(/* Add the text before the link */
-                                Utilities.Document.createTextNode(Utilities.unescapeBrackets(splitText[0])));
-                            messageHTML.appendChild(/* Add the link */
-                                Utilities.createSourceLink(location, Utilities.unescapeBrackets(linkText)));
-                            splitText.splice(0, 1); /* remove the text before the link from the remaining text */
-                            textForHTML = splitText.join(embeddedLink);
+                            msgHTML.text = msgHTML.text.replace(embeddedLink, `{(${msgHTML.locations.length})}`);
+                            msgHTML.locations.push({ text: Utilities.unescapeBrackets(linkText), loc: location });
                         }
 
-                        match = Utilities.embeddedRegEx.exec(messageText);
+                        match = Utilities.embeddedRegEx.exec(msgText);
                     } while (match !== null);
-
-                    if (textForHTML !== "") {
-                        messageHTML.appendChild(Utilities.Document.createTextNode(textForHTML));
-                    }
-                } else {
-                    messageHTML.textContent = text;
                 }
 
-                messageText = Utilities.unescapeBrackets(messageText);
+                msgText = Utilities.unescapeBrackets(msgText);
 
-                message = { text: messageText, html: messageHTML };
+                message = { text: msgText, html: msgHTML };
             }
         }
 
         return message;
     }
 
-    /**
-     * Creates a html link element that when clicked will open the source in the VSCode Editor
-     * @param location The location object that represents where the link points to
-     * @param linkText The text to display on the link
-     */
-    public static createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        const file = location.uri.toString(true);
-        const linkElement = Utilities.Document.createElement("a") as HTMLAnchorElement;
-        linkElement.setAttribute("title", file);
-        linkElement.setAttribute("data-eCol", location.range.end.character.toString());
-        linkElement.setAttribute("data-eLine", location.range.end.line.toString());
-        linkElement.setAttribute("data-file", file);
-        linkElement.setAttribute("data-sCol", location.range.start.character.toString());
-        linkElement.setAttribute("data-sLine", location.range.start.line.toString());
-        linkElement.href = "#0";
-        linkElement.className = "sourcelink";
-        linkElement.textContent = linkText;
-
-        return linkElement;
-    }
-
-    private static document;
+    private static fs: any;
+    private static os: any;
+    private static path: any;
     private static embeddedRegEx = /[^\\](\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
 
     /**
