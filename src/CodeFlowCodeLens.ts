@@ -45,7 +45,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
         const codeLenses: CodeLens[] = [];
         const explorerController = ExplorerController.Instance;
-        const verbosity = explorerController.selectedVerbosity || sarif.CodeFlowLocation.importance.important;
+        const verbosity = explorerController.selectedVerbosity || sarif.ThreadFlowLocation.importance.important;
 
         if (explorerController.activeSVDiagnostic !== undefined) {
             const codeFlows = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
@@ -57,8 +57,8 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
                         for (const stepIndex of threadFlow.steps.keys()) {
                             const step = threadFlow.steps[stepIndex];
                             if (step.location.uri.toString() === document.uri.toString()) {
-                                if (step.importance === sarif.CodeFlowLocation.importance.essential ||
-                                    verbosity === sarif.CodeFlowLocation.importance.unimportant ||
+                                if (step.importance === sarif.ThreadFlowLocation.importance.essential ||
+                                    verbosity === sarif.ThreadFlowLocation.importance.unimportant ||
                                     step.importance === verbosity) {
                                     const codeLens = new CodeLens(step.location.range, step.codeLensCommand);
                                     codeLenses.push(codeLens);

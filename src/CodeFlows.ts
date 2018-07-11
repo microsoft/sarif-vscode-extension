@@ -152,8 +152,8 @@ export class CodeFlows {
      * @param traversalPathId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
      */
     private static async createCodeFlowStep(
-        cFLoc: sarif.CodeFlowLocation,
-        nextCFLoc: sarif.CodeFlowLocation,
+        cFLoc: sarif.ThreadFlowLocation,
+        nextCFLoc: sarif.ThreadFlowLocation,
         traversalPathId: string,
     ): Promise<CodeFlowStep> {
 
@@ -207,7 +207,7 @@ export class CodeFlows {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: cFLoc.importance || sarif.CodeFlowLocation.importance.important,
+            importance: cFLoc.importance || sarif.ThreadFlowLocation.importance.important,
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,

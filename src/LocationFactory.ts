@@ -126,8 +126,8 @@ export class LocationFactory {
                 startcol = region.startColumn - 1;
             }
 
-            if (region.length !== undefined) {
-                endcol = region.length + region.startColumn - 1;
+            if (region.charLength !== undefined) {
+                endcol = region.charLength + region.startColumn - 1;
             } else if (region.endLine !== undefined) {
                 endline = region.endLine;
                 if (region.endColumn !== undefined) {
