@@ -108,7 +108,7 @@ export class Utilities {
                 }
 
                 msgText = Utilities.unescapeBrackets(msgText);
-
+                msgHTML.text = Utilities.unescapeBrackets(msgHTML.text);
                 message = { text: msgText, html: msgHTML };
             }
         }
