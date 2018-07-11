@@ -108,7 +108,7 @@ export class Utilities {
                 }
 
                 msgText = Utilities.unescapeBrackets(msgText);
-
+                msgHTML.text = Utilities.unescapeBrackets(msgHTML.text);
                 message = { text: msgText, html: msgHTML };
             }
         }
@@ -119,7 +119,7 @@ export class Utilities {
     private static fs: any;
     private static os: any;
     private static path: any;
-    private static embeddedRegEx = /[^\\](\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
+    private static embeddedRegEx = /(?:[^\\]|^)(\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
 
     /**
      * Remove the escape '\' characters from before any '[' or ']' characters in the text
