@@ -86,7 +86,7 @@ export namespace sarif {
     /**
     * A location visited by an analysis tool in the course of simulating or monitoring the execution of a program.
     */
-    export interface CodeFlowLocation {
+    export interface ThreadFlowLocation {
         /**
         * The 0-based sequence number of the location in the code flow within which it occurs.
         */
@@ -130,10 +130,15 @@ export namespace sarif {
         executionOrder?: number;
 
         /**
+        * The time at which this location was executed.
+        */
+        timestamp?: string;
+
+        /**
         * Specifies the importance of this location in understanding the code flow in which it occurs. The order from
         * most to least important is "essential", "important", "unimportant". Default: "important".
         */
-        importance?: CodeFlowLocation.importance;
+        importance?: ThreadFlowLocation.importance;
 
         /**
         * Key/value pairs that provide additional information about the code location.
@@ -151,7 +156,7 @@ export namespace sarif {
         };
     }
 
-    export namespace CodeFlowLocation {
+    export namespace ThreadFlowLocation {
         export const enum importance {
             important = "important",
             essential = "essential",
@@ -238,6 +243,11 @@ export namespace sarif {
         * The values of relevant expressions after the edge has been traversed.
         */
         finalState?: { [key: string]: string };
+
+        /**
+        * The number of edge traversals necessary to return from a nested graph.
+        */
+        stepOverEdgeCount?: number;
 
         /**
         * Key/value pairs that provide additional information about the edge traversal.
@@ -375,7 +385,6 @@ export namespace sarif {
             attachment = "attachment",
             responseFile = "responseFile",
             resultFile = "resultFile",
-
             standardStream = "standardStream",
             traceFile = "traceFile",
             unmodifiedFile = "unmodifiedFile",
@@ -383,7 +392,7 @@ export namespace sarif {
             addedFile = "addedFile",
             deletedFile = "deletedFile",
             renamedFile = "renamedFile",
-            generatedFile = "generatedFile",
+            uncontrolledFile = "uncontrolledFile",
         }
     }
 
@@ -479,11 +488,6 @@ export namespace sarif {
     * Represents a path through a graph.
     */
     export interface GraphTraversal {
-        /**
-        * A string that uniquely identifies this graph traversal with its containing result.
-        */
-        id?: string;
-
         /**
         * A string that uniquely identifies that graph being traversed.
         */
@@ -691,8 +695,6 @@ export namespace sarif {
 
         /**
         * The human-readable fully qualified name of the logical location where the analysis tool produced the result.
-        * If 'logicalLocationKey' is not specified, this member is can used to retrieve the location logicalLocation
-        * from the logicalLocations dictionary, if one exists.
         */
         fullyQualifiedLogicalName?: string;
 
@@ -805,6 +807,11 @@ export namespace sarif {
         * A code location associated with the node.
         */
         location?: Location;
+
+        /**
+        * Array of child nodes.
+        */
+        children?: Node[];
 
         /**
         * Key/value pairs that provide additional information about the node.
@@ -974,14 +981,24 @@ export namespace sarif {
         endColumn?: number;
 
         /**
-        * The zero-based offset from the beginning of the file of the first byte or character in the region.
+        * The zero-based offset from the beginning of the file of the first character in the region.
         */
-        offset?: number;
+        charOffset?: number;
 
         /**
-        * The length of the region in bytes or characters.
+        * The length of the region in characters.
         */
-        length?: number;
+        charLength?: number;
+
+        /**
+        * The zero-based offset from the beginning of the file of the first byte in the region.
+        */
+        byteOffset?: number;
+
+        /**
+        * The length of the region in bytes.
+        */
+        byteLength?: number;
 
         /**
         * The portion of the file contents within the specified region.
@@ -1001,20 +1018,12 @@ export namespace sarif {
     */
     export interface Replacement {
         /**
-																													   
-																							
-		  
-					   
-
-		   
         * The region of the file to delete.
-					  
         */
         deletedRegion: Region;
 
         /**
         * The content to insert at the location specified by the 'deletedRegion' property.
-												  
         */
         insertedContent?: FileContent;
     }
@@ -1046,8 +1055,7 @@ export namespace sarif {
         ruleId?: string;
 
         /**
-        * A value specifying the severity level of the result. If this property is not present, its implied value is
-        * 'warning'.
+        * A value specifying the severity level of the result.
         */
         level?: Result.level;
 
@@ -1078,6 +1086,12 @@ export namespace sarif {
         * A stable, unique identifer for the result in the form of a GUID.
         */
         instanceGuid?: string;
+
+        /**
+        * A stable, unique identifier for the equivalence class of logically identical results to which this result
+        * belongs, in the form of a GUID.
+        */
+        correlationGuid?: string;
 
         /**
         * A set of strings that contribute to the stable, unique identity of the result.
@@ -1132,7 +1146,7 @@ export namespace sarif {
         /**
         * The URI of the work item associated with this result
         */
-        workItemLocation?: FileLocation;
+        workItemUri?: string;
 
         /**
         * An array of analysisToolLogFileContents objects which specify the portions of an analysis tool's output that
@@ -1229,7 +1243,7 @@ export namespace sarif {
         /**
         * A URI where the primary documentation for the rule can be found.
         */
-        helpLocation?: string;
+        helpUri?: string;
 
         /**
         * Provides the primary documentation for the rule, useful when there is no online documentation.
@@ -1399,6 +1413,11 @@ export namespace sarif {
         defaultFileEncoding?: string;
 
         /**
+        * Specifies the unit in which the tool measures columns.
+        */
+        columnKind?: Run.columnKind;
+
+        /**
         * Key/value pairs that provide additional information about the run.
         */
         properties?: {
@@ -1412,6 +1431,13 @@ export namespace sarif {
              */
             [key: string]: any;
         };
+    }
+
+    export namespace Run {
+        export const enum columnKind {
+            utf16CodeUnits = "utf16CodeUnits",
+            unicodeCodePoints = "unicodeCodePoints",
+        }
     }
 
     /**
@@ -1510,10 +1536,10 @@ export namespace sarif {
         message?: Message;
 
         /**
-        * An array of 'codeFlowLocation' objects, each of which describes a single location visited by the tool in the
-        * course of producing the result.
+        * An array of 'threadFlowLocation' objects, each of which describes a single location visited by the tool in
+        * the course of producing the result.
         */
-        locations: CodeFlowLocation[];
+        locations: ThreadFlowLocation[];
 
         /**
         * Key/value pairs that provide additional information about the code flow.

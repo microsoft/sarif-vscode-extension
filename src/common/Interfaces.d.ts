@@ -99,7 +99,7 @@ export interface CodeFlowStepId {
 export interface CodeFlowStep {
     beforeIcon: string;
     codeLensCommand: Command;
-    importance: sarif.CodeFlowLocation.importance,
+    importance: sarif.ThreadFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
     location: Location;

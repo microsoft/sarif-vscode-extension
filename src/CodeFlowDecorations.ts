@@ -80,7 +80,7 @@ export class CodeFlowDecorations {
                     for (const step of codeflow.threads[0].steps) {
                         const decoration = CodeFlowDecorations.createHighlightDecoration(step, editor);
                         if (decoration !== undefined) {
-                            if (step.importance === sarif.CodeFlowLocation.importance.unimportant) {
+                            if (step.importance === sarif.ThreadFlowLocation.importance.unimportant) {
                                 unimportantDecorations.push(decoration);
                             } else {
                                 decorations.push(decoration);

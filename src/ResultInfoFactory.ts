@@ -59,8 +59,8 @@ export class ResultInfoFactory {
                     resultInfo.ruleId = rule.id;
                 }
 
-                if (rule.helpLocation !== undefined) {
-                    resultInfo.ruleHelpUri = rule.helpLocation;
+                if (rule.helpUri !== undefined) {
+                    resultInfo.ruleHelpUri = rule.helpUri;
                 }
 
                 if (rule.name !== undefined) {
