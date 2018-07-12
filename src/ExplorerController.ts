@@ -108,7 +108,7 @@ export class ExplorerController {
                 break;
             case MessageType.CodeFlowSelectionChange:
                 this.selectedRow = message.data;
-                CodeFlowDecorations.updateCodeFlowSelection(undefined, this.selectedRow);
+                CodeFlowDecorations.updateCodeFlowSelection(this.selectedRow);
                 break;
             case MessageType.SourceLinkClicked:
                 const locData = JSON.parse(message.data) as LocationData;

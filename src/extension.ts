@@ -26,7 +26,7 @@ export function activate(context: ExtensionContext) {
 
     context.subscriptions.push(
         commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, (id: string) => {
-            CodeFlowDecorations.updateCodeFlowSelection(undefined, id);
+            CodeFlowDecorations.updateCodeFlowSelection(id);
             ExplorerController.Instance.setSelectedCodeFlow(id);
         }));
 

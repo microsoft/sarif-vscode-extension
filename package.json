@@ -73,12 +73,12 @@
         "keybindings": [
             {
                 "command": "extension.sarif.nextCodeFlowStep",
-                "key": "ctrl+f10",
+                "key": "f6",
                 "when": "!inDebugMode"
             },
             {
                 "command": "extension.sarif.previousCodeFlowStep",
-                "key": "ctrl+f9",
+                "key": "shift+f6",
                 "when": "!inDebugMode"
             },
             {
