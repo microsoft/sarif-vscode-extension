@@ -76,6 +76,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
                     CodeFlowDecorations.updateSelectionHighlight(svDiagnostic.resultInfo.assignedLocation, undefined);
                     CodeFlowDecorations.updateStepsHighlight();
                     CodeFlowDecorations.updateResultGutterIcon();
+                    CodeFlowDecorations.updateCodeFlowSelection();
                 }
 
                 const actions = this.getCodeActions(svDiagnostic);
