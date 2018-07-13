@@ -3,7 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { Command, Diagnostic, Range, Uri } from "vscode";
+import { Command, Diagnostic, DiagnosticCollection, Range, Uri } from "vscode";
 import { sarif } from "./SARIFInterfaces";
 import { MessageType } from "./Enums";
 
@@ -48,7 +48,7 @@ export interface Location {
 }
 
 export interface SarifViewerDiagnostic extends Diagnostic {
-    runinfo: RunInfo;
+    runId: number;
     resultInfo: ResultInfo;
     rawResult: sarif.Result;
 }

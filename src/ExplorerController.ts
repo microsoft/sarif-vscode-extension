@@ -10,6 +10,7 @@ import { MessageType } from "./common/Enums";
 import { DiagnosticData, Location, LocationData, SarifViewerDiagnostic, WebviewMessage } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
 import { LocationFactory } from "./LocationFactory";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
 
 /**
@@ -196,7 +197,7 @@ export class ExplorerController {
         const diagData = {
             activeTab: this.activeTab,
             resultInfo: this.activeSVDiagnostic.resultInfo,
-            runInfo: this.activeSVDiagnostic.runinfo,
+            runInfo: SVDiagnosticCollection.Instance.getRunInfo(this.activeSVDiagnostic.runId),
             selectedRow: this.selectedRow,
             selectedVerbosity: this.selectedVerbosity,
         } as DiagnosticData;
