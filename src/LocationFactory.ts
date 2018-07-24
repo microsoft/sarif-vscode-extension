@@ -131,14 +131,14 @@ export class LocationFactory {
             } else if (region.endLine !== undefined) {
                 endline = region.endLine;
                 if (region.endColumn !== undefined) {
-                    endcol = region.endColumn;
+                    endcol = region.endColumn - 1;
                 } else if (endline === startline) {
                     endcol = startcol;
                 } else {
                     endcol = 1;
                 }
             } else if (region.endColumn !== undefined) {
-                endcol = region.endColumn;
+                endcol = region.endColumn - 1;
                 endline = startline;
             } else if (region.snippet !== undefined) {
                 if (region.snippet.text !== undefined) {
