@@ -6,6 +6,7 @@
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
 import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
+import { Utilities } from "./Utilities";
 
 /**
  * Manager for the Diagnostic Collection contianing the sarif result diagnostics
@@ -134,12 +135,11 @@ export class SVDiagnosticCollection {
      * @param issue diagnostic that needs to be added to dictionary
      */
     private addToCollection(collection: Map<string, SarifViewerDiagnostic[]>, issue: SarifViewerDiagnostic) {
-        const key = issue.resultInfo.assignedLocation.uri;
-
-        if (collection.has(key.path)) {
-            collection.get(key.path).push(issue);
+        const key = Utilities.getFsPathWithFragment(issue.resultInfo.assignedLocation.uri);
+        if (collection.has(key)) {
+            collection.get(key).push(issue);
         } else {
-            collection.set(key.path, [issue]);
+            collection.set(key, [issue]);
         }
     }
 

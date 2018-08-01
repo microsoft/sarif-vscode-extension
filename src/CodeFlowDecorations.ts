@@ -214,10 +214,10 @@ export class CodeFlowDecorations {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
-
-        await LocationFactory.getOrRemap(location, sarifLocation).then((loc: Location) => {
-            location = loc;
-        });
+        await LocationFactory.getOrRemap(location, sarifLocation,
+            ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId).then((loc: Location) => {
+                location = loc;
+            });
 
         if (location !== undefined && location.mapped) {
             let locRange = location.range;

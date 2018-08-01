@@ -100,11 +100,12 @@ export class ExplorerController {
                             physicalLocation: {
                                 fileLocation: diagnostic.rawResult.attachments[attachmentId].fileLocation,
                             },
-                        } as sarif.Location)
-                        .then((loc: Location) => {
-                            commands.executeCommand("vscode.open", loc.uri,
-                                ViewColumn.One);
-                        });
+                        } as sarif.Location,
+                        this.activeSVDiagnostic.resultInfo.runId,
+                    ).then((loc: Location) => {
+                        commands.executeCommand("vscode.open", loc.uri,
+                            ViewColumn.One);
+                    });
                 }
                 break;
             case MessageType.CodeFlowSelectionChange:
@@ -197,7 +198,7 @@ export class ExplorerController {
         const diagData = {
             activeTab: this.activeTab,
             resultInfo: this.activeSVDiagnostic.resultInfo,
-            runInfo: SVDiagnosticCollection.Instance.getRunInfo(this.activeSVDiagnostic.runId),
+            runInfo: SVDiagnosticCollection.Instance.getRunInfo(this.activeSVDiagnostic.resultInfo.runId),
             selectedRow: this.selectedRow,
             selectedVerbosity: this.selectedVerbosity,
         } as DiagnosticData;

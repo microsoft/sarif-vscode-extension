@@ -45,10 +45,10 @@ export interface Location {
     message: Message;
     range: Range;
     uri: Uri;
+    uriBase: string;
 }
 
 export interface SarifViewerDiagnostic extends Diagnostic {
-    runId: number;
     resultInfo: ResultInfo;
     rawResult: sarif.Result;
 }
@@ -59,6 +59,7 @@ export interface RunInfo {
     fileName: string;
     toolFullName: string;
     toolName: string;
+    uriBaseIds: { [key: string]: string };
     workingDir: string;
 }
 
@@ -68,13 +69,14 @@ export interface ResultInfo {
     attachments: Attachment[];
     codeFlows: CodeFlow[];
     locations: Location[];
-    relatedLocs: Location[];
     message: Message;
     messageHTML: HTMLLabelElement;
+    relatedLocs: Location[];
     ruleHelpUri: string;
     ruleId: string;
     ruleName: string;
     ruleDescription: Message;
+    runId: number;
     severityLevel: sarif.Result.level;
 }
 

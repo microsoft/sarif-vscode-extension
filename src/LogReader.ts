@@ -133,16 +133,16 @@ export class LogReader {
                 const run = log.runs[runIndex];
                 runInfo = RunInfoFactory.Create(run);
                 const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
-                await FileMapper.Instance.mapFiles(run.files);
+                await FileMapper.Instance.mapFiles(run.files, runId);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     const sarifResult = run.results[resultIndex];
-                    await ResultInfoFactory.create(sarifResult, run.resources).then((resultInfo: ResultInfo) => {
+                    await ResultInfoFactory.create(sarifResult, runId, run.resources).then((resultInfo: ResultInfo) => {
                         if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
                             resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
                                 resultIndex);
                         }
 
-                        SVDiagnosticCollection.Instance.add(SVDiagnosticFactory.create(runId, resultInfo, sarifResult));
+                        SVDiagnosticCollection.Instance.add(SVDiagnosticFactory.create(resultInfo, sarifResult));
                     });
                 }
             }
