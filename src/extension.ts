@@ -3,13 +3,15 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { commands, ExtensionContext, Uri } from "vscode";
+import { commands, ExtensionContext } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
+import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
+import { Utilities } from "./Utilities";
 
 /**
  * This method is called when the extension is activated.
@@ -32,8 +34,10 @@ export function activate(context: ExtensionContext) {
 
     // Create File mapper command
     context.subscriptions.push(
-        commands.registerCommand(FileMapper.MapCommand, (file: string) => {
-            FileMapper.Instance.getUserToChooseFile(Uri.parse(file));
+        commands.registerCommand(FileMapper.MapCommand, (fileLocation: sarif.FileLocation, runId: number) => {
+            const uriBase = Utilities.getUriBase(fileLocation, runId);
+            const uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
+            FileMapper.Instance.getUserToChooseFile(uri, uriBase);
         }));
 
     context.subscriptions.push(

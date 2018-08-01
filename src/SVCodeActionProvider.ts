@@ -100,7 +100,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
             const physicalLocation = rawLocations[0].physicalLocation;
             if (physicalLocation !== undefined && physicalLocation.fileLocation !== undefined) {
                 actions.push({
-                    arguments: [physicalLocation.fileLocation.uri],
+                    arguments: [physicalLocation.fileLocation, svDiagnostic.resultInfo.runId],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
                 });

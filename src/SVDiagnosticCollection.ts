@@ -4,8 +4,9 @@
 // *                                                       *
 // ********************************************************/
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
-import { SarifViewerDiagnostic } from "./common/Interfaces";
+import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
+import { Utilities } from "./Utilities";
 
 /**
  * Manager for the Diagnostic Collection contianing the sarif result diagnostics
@@ -15,14 +16,22 @@ import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 export class SVDiagnosticCollection {
     private static readonly MaxDiagCollectionSize = 249;
 
+    private static instance: SVDiagnosticCollection;
+
     private diagnosticCollection: DiagnosticCollection;
     private issuesCollection: Map<string, SarifViewerDiagnostic[]>;
+    private runInfoCollection: RunInfo[];
     private unmappedIssuesCollection: Map<string, SarifViewerDiagnostic[]>;
 
-    constructor() {
+    public static get Instance(): SVDiagnosticCollection {
+        return SVDiagnosticCollection.instance || (SVDiagnosticCollection.instance = new SVDiagnosticCollection());
+    }
+
+    private constructor() {
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
         this.issuesCollection = new Map<string, SarifViewerDiagnostic[]>();
         this.unmappedIssuesCollection = new Map<string, SarifViewerDiagnostic[]>();
+        this.runInfoCollection = [];
     }
 
     /**
@@ -49,6 +58,16 @@ export class SVDiagnosticCollection {
     }
 
     /**
+     * Adds a RunInfo object to the runinfo collection and returns it's id
+     * @param runInfo RunInfo object to add to the collection
+     */
+    public addRunInfo(runInfo: RunInfo): number {
+        const id = this.runInfoCollection.length;
+        this.runInfoCollection.push(runInfo);
+        return id;
+    }
+
+    /**
      * Clears the Problems panel of diagnostics associated with the SARIF Extension
      * and clears all of the Diagnostics that have been added
      */
@@ -56,6 +75,7 @@ export class SVDiagnosticCollection {
         this.diagnosticCollection.clear();
         this.issuesCollection.clear();
         this.unmappedIssuesCollection.clear();
+        this.runInfoCollection.length = 0;
     }
 
     /**
@@ -63,6 +83,14 @@ export class SVDiagnosticCollection {
      */
     public dispose(): void {
         this.diagnosticCollection.dispose();
+    }
+
+    /**
+     * Returns the runinfo from the runinfo collection corresponding to the id
+     * @param id Id of the runinfo to return
+     */
+    public getRunInfo(id: number): RunInfo {
+        return this.runInfoCollection[id];
     }
 
     /**
@@ -107,12 +135,11 @@ export class SVDiagnosticCollection {
      * @param issue diagnostic that needs to be added to dictionary
      */
     private addToCollection(collection: Map<string, SarifViewerDiagnostic[]>, issue: SarifViewerDiagnostic) {
-        const key = issue.resultInfo.assignedLocation.uri;
-
-        if (collection.has(key.path)) {
-            collection.get(key.path).push(issue);
+        const key = Utilities.getFsPathWithFragment(issue.resultInfo.assignedLocation.uri);
+        if (collection.has(key)) {
+            collection.get(key).push(issue);
         } else {
-            collection.set(key.path, [issue]);
+            collection.set(key, [issue]);
         }
     }
 

@@ -5,9 +5,10 @@
 // ********************************************************/
 import { Diagnostic, DiagnosticSeverity } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { ResultInfo, RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
+import { ResultInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * Object that is used to display a problem in the Problems panel
@@ -19,19 +20,17 @@ export class SVDiagnosticFactory {
 
     /**
      * Creates a new SarifViewerDiagnostic
-     * @param runinfo processed run info
      * @param resultinfo processed result info
      * @param result sarif result info from the sarif file
      */
-    public static create(runinfo: RunInfo, resultinfo: ResultInfo, result: sarif.Result): SarifViewerDiagnostic {
+    public static create(resultinfo: ResultInfo, result: sarif.Result): SarifViewerDiagnostic {
         const diagnostic = new Diagnostic(resultinfo.assignedLocation.range, resultinfo.message.text);
         const svDiagnostic = diagnostic as SarifViewerDiagnostic;
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultinfo.severityLevel);
         svDiagnostic.code = SVDiagnosticFactory.Code;
-        svDiagnostic.runinfo = runinfo;
         svDiagnostic.resultInfo = resultinfo;
         svDiagnostic.rawResult = result;
-        svDiagnostic.source = svDiagnostic.runinfo.toolName;
+        svDiagnostic.source = SVDiagnosticCollection.Instance.getRunInfo(resultinfo.runId).toolName;
 
         svDiagnostic.message = SVDiagnosticFactory.updateMessage(svDiagnostic);
 
@@ -42,11 +41,12 @@ export class SVDiagnosticFactory {
      * Tries to remap the locations for this diagnostic
      */
     public static async tryToRemapLocations(diagnostic: SarifViewerDiagnostic): Promise<boolean> {
+        const runId = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows !== undefined) {
-            await CodeFlows.tryRemapCodeFlows(diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows);
+            await CodeFlows.tryRemapCodeFlows(diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
         }
 
-        await ResultInfoFactory.parseLocations(diagnostic.rawResult.relatedLocations).then((locations) => {
+        await ResultInfoFactory.parseLocations(diagnostic.rawResult.relatedLocations, runId).then((locations) => {
             for (const index in locations) {
                 if (locations[index] !== undefined && diagnostic.resultInfo.relatedLocs[index] !== locations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = locations[index];
@@ -54,7 +54,7 @@ export class SVDiagnosticFactory {
             }
         });
 
-        return ResultInfoFactory.parseLocations(diagnostic.rawResult.locations).then((locations) => {
+        return ResultInfoFactory.parseLocations(diagnostic.rawResult.locations, runId).then((locations) => {
             for (const index in locations) {
                 if (locations[index] !== undefined && diagnostic.resultInfo.locations[index] !== locations[index]) {
                     diagnostic.resultInfo.locations[index] = locations[index];

@@ -35,9 +35,8 @@ export class RunInfoFactory {
             runInfo.workingDir = run.invocations[0].workingDirectory;
         }
 
-        if (run.properties !== undefined) {
-            runInfo.additionalProperties = run.properties;
-        }
+        runInfo.additionalProperties = run.properties;
+        runInfo.uriBaseIds = run.originalUriBaseIds;
 
         return runInfo;
     }
