@@ -1,5 +1,12 @@
 # Change Log
 
+## 2.3.0
+* Added support for UriBaseIds [issue #25](https://github.com/Microsoft/sarif-vscode-extension/issues/25)
+* Updated next and previous Codeflow step hotkeys to F6 and Shift+F6 [issue #55](https://github.com/Microsoft/sarif-vscode-extension/issues/55)
+* Fixed bug with embedded links not working when it's at the start of a message [issue #60](https://github.com/Microsoft/sarif-vscode-extension/issues/60)
+* Fixed bug to change region's endColumn to be exclusive to match the Sarif spec [issue #62](https://github.com/Microsoft/sarif-vscode-extension/issues/62)
+* Fixed bug with uri fragments getting dropped or ignored
+
 ## 2.2.0
 * Reworked the UX of remapping a file when it can't be found
     * Opens an input box with instructions and populated with the file that can't be found
