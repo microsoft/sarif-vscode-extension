@@ -80,7 +80,7 @@ export class CodeFlowDecorations {
                     for (const step of codeflow.threads[0].steps) {
                         const decoration = CodeFlowDecorations.createHighlightDecoration(step, editor);
                         if (decoration !== undefined) {
-                            if (step.importance === sarif.CodeFlowLocation.importance.unimportant) {
+                            if (step.importance === sarif.ThreadFlowLocation.importance.unimportant) {
                                 unimportantDecorations.push(decoration);
                             } else {
                                 decorations.push(decoration);
@@ -131,8 +131,16 @@ export class CodeFlowDecorations {
                     }
                 }
             }
-            CodeFlowDecorations.updateCodeFlowSelection(nextId, undefined);
+            CodeFlowDecorations.updateCodeFlowSelection(undefined, nextId);
             ExplorerController.Instance.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
+        } else {
+            const activeDiag = ExplorerController.Instance.activeSVDiagnostic;
+            if (activeDiag !== undefined && activeDiag.resultInfo !== undefined &&
+                activeDiag.resultInfo.codeFlows !== undefined && activeDiag.resultInfo.codeFlows.length > 0) {
+                const firstStepId = "0_0_0";
+                CodeFlowDecorations.updateCodeFlowSelection(firstStepId);
+                ExplorerController.Instance.setSelectedCodeFlow(firstStepId);
+            }
         }
     }
 
@@ -156,19 +164,36 @@ export class CodeFlowDecorations {
                 prevId.stepId = codeFlows[prevId.cFId].threads[prevId.tFId].steps.length - 1;
             }
 
-            CodeFlowDecorations.updateCodeFlowSelection(prevId, undefined);
+            CodeFlowDecorations.updateCodeFlowSelection(undefined, prevId);
             ExplorerController.Instance.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
+        } else {
+            const activeDiag = ExplorerController.Instance.activeSVDiagnostic;
+            if (activeDiag !== undefined && activeDiag.resultInfo !== undefined) {
+                const codeflows = activeDiag.resultInfo.codeFlows;
+                if (codeflows !== undefined && codeflows.length > 0) {
+                    const cFId = activeDiag.resultInfo.codeFlows.length - 1;
+                    const tFId = activeDiag.resultInfo.codeFlows[cFId].threads.length - 1;
+                    const stepId = activeDiag.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
+                    const lastStepId = `${cFId}_${tFId}_${stepId}`;
+                    CodeFlowDecorations.updateCodeFlowSelection(lastStepId);
+                    ExplorerController.Instance.setSelectedCodeFlow(lastStepId);
+                }
+            }
         }
     }
 
     /**
      * Updates the decoration that represents the currently selected Code Flow in the Explorer
-     * @param id Id object of the Code Flow, set to undefined if using idText
+     * Only pass in one value and leave the other undefined, if both values are undefined the value is cleared
      * @param idText text version of the id of the Code Flow, set to undefined if using id
+     * @param idCFStep Id object of the Code Flow, set to undefined if using idText
      */
-    public static updateCodeFlowSelection(id: CodeFlowStepId, idText: string) {
+    public static updateCodeFlowSelection(idText?: string, idCFStep?: CodeFlowStepId) {
+        let id: CodeFlowStepId;
         if (idText !== undefined) {
             id = CodeFlows.parseCodeFlowId(idText);
+        } else if (idCFStep !== undefined) {
+            id = idCFStep;
         }
 
         if (id !== undefined) {
@@ -178,9 +203,9 @@ export class CodeFlowDecorations {
                 diagnostic.resultInfo.codeFlows[id.cFId].threads[id.tFId].steps[id.stepId].location,
                 diagnostic.rawResult.codeFlows[id.cFId].threadFlows[id.tFId].locations[id.stepId].location,
             );
-
-            CodeFlowDecorations.lastCodeFlowSelected = id;
         }
+
+        CodeFlowDecorations.lastCodeFlowSelected = id;
     }
 
     /**
@@ -189,10 +214,10 @@ export class CodeFlowDecorations {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
-
-        await LocationFactory.getOrRemap(location, sarifLocation).then((loc: Location) => {
-            location = loc;
-        });
+        await LocationFactory.getOrRemap(location, sarifLocation,
+            ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId).then((loc: Location) => {
+                location = loc;
+            });
 
         if (location !== undefined && location.mapped) {
             let locRange = location.range;

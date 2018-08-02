@@ -17,15 +17,17 @@ export class CodeFlows {
     /**
      * Processes the array of Sarif codeflow objects
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
+     * @param runId id of the run this result is from
      */
-    public static async create(sarifCodeFlows: sarif.CodeFlow[]): Promise<CodeFlow[]> {
+    public static async create(sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<CodeFlow[]> {
         let codeFlows;
         if (sarifCodeFlows !== undefined && sarifCodeFlows.length !== 0) {
             codeFlows = [];
             for (let cFIndex = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-                await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`).then((codeFlow: CodeFlow) => {
-                    codeFlows.push(codeFlow);
-                });
+                await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`, runId).then(
+                    (codeFlow: CodeFlow) => {
+                        codeFlows.push(codeFlow);
+                    });
             }
         }
 
@@ -58,8 +60,9 @@ export class CodeFlows {
      * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
      * @param codeFlows array of processed codeflow objects to try to remap
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
+     * @param runId used for mapping uribaseids
      */
-    public static async tryRemapCodeFlows(codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[]): Promise<void> {
+    public static async tryRemapCodeFlows(codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number) {
         for (const cFKey of codeFlows.keys()) {
             const codeFlow = codeFlows[cFKey];
             for (const tFKey of codeFlow.threads.keys()) {
@@ -68,7 +71,7 @@ export class CodeFlows {
                     const step = thread.steps[stepKey];
                     if (step.location !== null && step.location.mapped !== true) {
                         const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        await LocationFactory.create(sarifLoc.physicalLocation).then((location: Location) => {
+                        await LocationFactory.create(sarifLoc.physicalLocation, runId).then((location: Location) => {
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                         });
                     }
@@ -80,9 +83,10 @@ export class CodeFlows {
     /**
      * Creates the CodeFlow object from the passed in sarif codeflow object
      * @param sarifCF the sarif codeflow object to be processed
-     * @param traversalId The id based on the index in the codeflow array
+     * @param indexId The id based on the index in the codeflow array
+     * @param runId id of the run this result is from
      */
-    private static async createCodeFlow(sarifCF: sarif.CodeFlow, traversalId: string): Promise<CodeFlow> {
+    private static async createCodeFlow(sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
             message: undefined,
             threads: [],
@@ -92,7 +96,7 @@ export class CodeFlows {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlows.createThreadFlow(sarifCF.threadFlows[tFIndex], `${traversalId}_${tFIndex}`).then(
+            await CodeFlows.createThreadFlow(sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -104,9 +108,11 @@ export class CodeFlows {
     /**
      * Creates the ThreadFlow object from the passed in sarif threadflow object
      * @param sarifTF the sarif threadflow object to be processed
-     * @param traversalId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
+     * @param indexId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
+     * @param runId id of the run this result is from
      */
-    private static async createThreadFlow(sarifTF: sarif.ThreadFlow, traversalId: string): Promise<ThreadFlow> {
+    private static async createThreadFlow(sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
+    ): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
             lvlsFirstStepIsNested: 0,
@@ -120,7 +126,7 @@ export class CodeFlows {
 
         for (let stepIndex = 0; stepIndex < sarifTF.locations.length; stepIndex++) {
             await CodeFlows.createCodeFlowStep(sarifTF.locations[stepIndex], sarifTF.locations[stepIndex + 1],
-                `${traversalId}_${stepIndex}`).then((step: CodeFlowStep) => {
+                `${indexId}_${stepIndex}`, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
         }
@@ -149,16 +155,18 @@ export class CodeFlows {
      * Creates the CodeFlowStep object from the passed in sarif CodeFlowLocation object
      * @param cFLoc the CodeFlowLocation object that needs to be processed
      * @param nextCFLoc the next CodeFlowLocation object, it's nesting level is used to determine if isCall or isReturn
-     * @param traversalPathId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
+     * @param indexId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
+     * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
-        cFLoc: sarif.CodeFlowLocation,
-        nextCFLoc: sarif.CodeFlowLocation,
-        traversalPathId: string,
+        cFLoc: sarif.ThreadFlowLocation,
+        nextCFLoc: sarif.ThreadFlowLocation,
+        indexId: string,
+        runId: number,
     ): Promise<CodeFlowStep> {
 
         let loc: Location;
-        await LocationFactory.create(cFLoc.location.physicalLocation).then((location: Location) => {
+        await LocationFactory.create(cFLoc.location.physicalLocation, runId).then((location: Location) => {
             loc = location;
         });
 
@@ -194,7 +202,7 @@ export class CodeFlows {
         }
 
         const command = {
-            arguments: [traversalPathId],
+            arguments: [indexId],
             command: ExplorerController.SendCFSelectionToExplorerCommand,
             title: messageWithStepText,
         } as Command;
@@ -207,7 +215,7 @@ export class CodeFlows {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: cFLoc.importance || sarif.CodeFlowLocation.importance.important,
+            importance: cFLoc.importance || sarif.ThreadFlowLocation.importance.important,
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,
@@ -216,7 +224,7 @@ export class CodeFlows {
             nestingLevel: nestingLevelValue,
             state: cFLoc.state,
             stepId: cFLoc.step,
-            traversalId: traversalPathId,
+            traversalId: indexId,
         };
 
         return Promise.resolve(step);

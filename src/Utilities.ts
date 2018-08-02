@@ -6,6 +6,7 @@
 import { extensions, Uri } from "vscode";
 import { Location, Message } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * Class that holds utility functions for use in different classes
@@ -46,16 +47,79 @@ export class Utilities {
     }
 
     /**
+     * Combines and returns the uri with it's uriBase, if uriBase is undefined just returns the original uri
+     * @param uriPath uri path from sarif file to combine with the base
+     * @param uriBase the uriBase as defined in the sarif file
+     */
+    public static combineUriWithUriBase(uriPath: string, uriBase: string) {
+        let combinedPath = uriPath;
+
+        if (uriBase !== undefined) {
+            combinedPath = uriBase + Utilities.Path.sep + uriPath;
+        }
+
+        let uri: Uri;
+        try {
+            uri = Uri.parse(combinedPath);
+        } catch (e) {
+            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+            if (e.message !== "URI malformed") { throw e; }
+        }
+
+        if (uri === undefined || uri.scheme !== "file") {
+            uri = Uri.file(combinedPath);
+        }
+
+        const path = Utilities.getFsPathWithFragment(uri);
+
+        return Uri.file(path);
+    }
+
+    /**
      * This will convert the passed in uri into a common format
      * ex: file:///d:/test/ and d:\\test will return d:\test
      * @param uri path to a directory
      */
     public static getDisplayableRootpath(uri: Uri): string {
         if (uri.scheme === "file") {
-            return uri.fsPath;
+            return Utilities.getFsPathWithFragment(uri);
         } else {
             return Utilities.Path.normalize(uri.toString(true));
         }
+    }
+
+    /**
+     * Returns the fspath include the fragment if it exists
+     * @param uri uri to pull the fspath and fragment from
+     */
+    public static getFsPathWithFragment(uri: Uri): string {
+        let fragment = "";
+        if (uri.fragment !== "") {
+            fragment = "#" + uri.fragment;
+        }
+
+        return Utilities.Path.normalize(uri.fsPath + fragment);
+    }
+
+    /**
+     * gets the uriBase from this runs uriBaseIds, if no match: returns uriBaseId, if no uriBaseId: returns undefined
+     * @param fileLocation File Location which contains the uriBaseId
+     * @param runId The run's id to pull the runUriBaseIds from
+     */
+    public static getUriBase(fileLocation: sarif.FileLocation, runId: number): string {
+        let uriBase: string;
+        if (fileLocation !== undefined && fileLocation.uriBaseId !== undefined) {
+            const runUriBaseIds = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
+            if (runUriBaseIds !== undefined) {
+                uriBase = runUriBaseIds[fileLocation.uriBaseId];
+            }
+
+            if (uriBase === undefined) {
+                uriBase = fileLocation.uriBaseId;
+            }
+        }
+
+        return uriBase;
     }
 
     /**
@@ -108,7 +172,7 @@ export class Utilities {
                 }
 
                 msgText = Utilities.unescapeBrackets(msgText);
-
+                msgHTML.text = Utilities.unescapeBrackets(msgHTML.text);
                 message = { text: msgText, html: msgHTML };
             }
         }
@@ -119,7 +183,7 @@ export class Utilities {
     private static fs: any;
     private static os: any;
     private static path: any;
-    private static embeddedRegEx = /[^\\](\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
+    private static embeddedRegEx = /(?:[^\\]|^)(\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
 
     /**
      * Remove the escape '\' characters from before any '[' or ']' characters in the text

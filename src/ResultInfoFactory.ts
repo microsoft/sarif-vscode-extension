@@ -17,27 +17,30 @@ export class ResultInfoFactory {
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
+     * @param runId id of the run this result is from
      * @param resouces resources object that is used for the rules
      */
-    public static async create(result: sarif.Result, resources: sarif.Resources) {
+    public static async create(result: sarif.Result, runId: number, resources: sarif.Resources): Promise<ResultInfo> {
         const resultInfo = {} as ResultInfo;
 
-        await ResultInfoFactory.parseLocations(result.locations).then((locations) => {
+        resultInfo.runId = runId;
+
+        await ResultInfoFactory.parseLocations(result.locations, runId).then((locations) => {
             resultInfo.locations = locations;
             resultInfo.assignedLocation = resultInfo.locations[0];
         });
 
-        await ResultInfoFactory.parseLocations(result.relatedLocations).then((locations) => {
+        await ResultInfoFactory.parseLocations(result.relatedLocations, runId).then((locations) => {
             resultInfo.relatedLocs = locations;
         });
 
-        await ResultInfoFactory.parseAttachments(result.attachments).then((attachments: Attachment[]) => {
+        await ResultInfoFactory.parseAttachments(result.attachments, runId).then((attachments: Attachment[]) => {
             if (attachments.length > 0) {
                 resultInfo.attachments = attachments;
             }
         });
 
-        await CodeFlows.create(result.codeFlows).then((codeFlows: CodeFlow[]) => {
+        await CodeFlows.create(result.codeFlows, runId).then((codeFlows: CodeFlow[]) => {
             resultInfo.codeFlows = codeFlows;
         });
 
@@ -59,8 +62,8 @@ export class ResultInfoFactory {
                     resultInfo.ruleId = rule.id;
                 }
 
-                if (rule.helpLocation !== undefined) {
-                    resultInfo.ruleHelpUri = rule.helpLocation;
+                if (rule.helpUri !== undefined) {
+                    resultInfo.ruleHelpUri = rule.helpUri;
                 }
 
                 if (rule.name !== undefined) {
@@ -99,13 +102,14 @@ export class ResultInfoFactory {
      * Itterates through the sarif locations and creates Locations for each
      * Sets undefined placeholders in the returned array for those that can't be mapped
      * @param sarifLocations sarif locations that need to be procesed
+     * @param runId id of the run this result is from
      */
-    public static async parseLocations(sarifLocations: sarif.Location[]): Promise<Location[]> {
+    public static async parseLocations(sarifLocations: sarif.Location[], runId: number): Promise<Location[]> {
         const locations = [];
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                await LocationFactory.create(sarifLocation.physicalLocation).then((location: Location) => {
+                await LocationFactory.create(sarifLocation.physicalLocation, runId).then((location: Location) => {
                     locations.push(location);
                 });
             }
@@ -120,17 +124,19 @@ export class ResultInfoFactory {
     /**
      * Parses the sarif attachment objects and returns and array of processed Attachments
      * @param sarifAttachments sarif attachments to parse
+     * @param runId id of the run this result is from
      */
-    private static async parseAttachments(sarifAttachments: sarif.Attachment[]): Promise<Attachment[]> {
+    private static async parseAttachments(sarifAttachments: sarif.Attachment[], runId: number): Promise<Attachment[]> {
         const attachments: Attachment[] = [];
 
         if (sarifAttachments !== undefined) {
             for (const sarifAttachment of sarifAttachments) {
                 const attachment = {} as Attachment;
                 attachment.description = Utilities.parseSarifMessage(sarifAttachment.description);
-                await LocationFactory.create({ fileLocation: sarifAttachment.fileLocation }).then((loc: Location) => {
-                    attachment.file = loc;
-                });
+                await LocationFactory.create({ fileLocation: sarifAttachment.fileLocation }, runId).then(
+                    (loc: Location) => {
+                        attachment.file = loc;
+                    });
 
                 if (sarifAttachment.regions !== undefined) {
                     attachment.regionsOfInterest = [];
@@ -140,7 +146,7 @@ export class ResultInfoFactory {
                             region: sarifRegion,
                         } as sarif.PhysicalLocation;
 
-                        await LocationFactory.create(physicalLocation).then((location: Location) => {
+                        await LocationFactory.create(physicalLocation, runId).then((location: Location) => {
                             attachment.regionsOfInterest.push(location);
                         });
                     }

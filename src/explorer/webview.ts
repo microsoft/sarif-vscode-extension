@@ -139,7 +139,7 @@ class ExplorerWebview {
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
-            const nodeClass = `${step.importance || sarif.CodeFlowLocation.importance.important} verbosityshow`;
+            const nodeClass = `${step.importance || sarif.ThreadFlowLocation.importance.important} verbosityshow`;
             let fileNameAndLine: string;
             if (step.location !== undefined) {
                 fileNameAndLine = `${step.location.fileName} (${step.location.range[0].line + 1})`;
@@ -152,7 +152,7 @@ class ExplorerWebview {
         } else {
             // Placeholder node
             treeNodeOptions = {
-                isParent: true, liClass: `${sarif.CodeFlowLocation.importance.essential} verbosityshow`,
+                isParent: true, liClass: `${sarif.ThreadFlowLocation.importance.essential} verbosityshow`,
                 locationText: undefined, message: "Nested first step", requestId: "-1",
                 tooltip: "First step starts in a nested call",
             };
@@ -309,9 +309,13 @@ class ExplorerWebview {
                 let isAParent = false;
                 const attachment = attachments[aIndex];
                 if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
+                let fragment = "";
+                if (attachment.file.uri.fragment !== undefined && attachment.file.uri.fragment !== "") {
+                    fragment = "#" + attachment.file.uri.fragment;
+                }
                 let treeNodeOptions = {
                     isParent: isAParent, locationText: attachment.file.fileName, message: attachment.description.text,
-                    requestId: `${aIndex}`, tooltip: "file://" + attachment.file.uri.path,
+                    requestId: `${aIndex}`, tooltip: "file://" + attachment.file.uri.path + fragment,
                 } as TreeNodeOptions;
                 const parent = this.createNode(treeNodeOptions);
                 if (isAParent) {
@@ -503,7 +507,11 @@ class ExplorerWebview {
      * @param linkText The text to display on the link
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        const file = "file://" + location.uri.path;
+        let fragment = "";
+        if (location.uri.fragment !== undefined && location.uri.fragment !== "") {
+            fragment = "#" + location.uri.fragment;
+        }
+        const file = "file://" + location.uri.path + fragment;
         const sourceLink = this.createElement("a", {
             attributes: {
                 "data-eCol": location.range[1].character.toString(),

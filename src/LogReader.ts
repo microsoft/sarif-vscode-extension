@@ -30,7 +30,6 @@ export class LogReader {
     public sarifJSONMapping: Map<string, any>;
 
     private closeListenerDisposable: Disposable;
-    private resultCollection: SVDiagnosticCollection;
     private openListenerDisposable: Disposable;
     private jsonMap;
 
@@ -43,12 +42,12 @@ export class LogReader {
     }
 
     private constructor() {
-        this.resultCollection = new SVDiagnosticCollection();
         this.sarifJSONMapping = new Map<string, any>();
 
         this.jsonMap = require("json-source-map");
 
-        FileMapper.Instance.OnMappingChanged(this.resultCollection.mappingChanged, this.resultCollection);
+        FileMapper.Instance.OnMappingChanged(SVDiagnosticCollection.Instance.mappingChanged,
+            SVDiagnosticCollection.Instance);
 
         // Listen for new sarif files to open or close
         this.openListenerDisposable = workspace.onDidOpenTextDocument(this.onDocumentOpened);
@@ -59,14 +58,14 @@ export class LogReader {
      * Clears the all of the issues that get displayed in the problems panel
      */
     public clearList(): void {
-        this.resultCollection.clear();
+        SVDiagnosticCollection.Instance.clear();
     }
 
     /**
      * For disposing on extension close
      */
     public dispose(): void {
-        this.resultCollection.dispose();
+        SVDiagnosticCollection.Instance.dispose();
         this.openListenerDisposable.dispose();
         this.closeListenerDisposable.dispose();
     }
@@ -106,7 +105,7 @@ export class LogReader {
             await this.read(doc);
         }
 
-        this.resultCollection.syncDiagnostics();
+        SVDiagnosticCollection.Instance.syncDiagnostics();
     }
 
     /**
@@ -133,22 +132,23 @@ export class LogReader {
             for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
                 const run = log.runs[runIndex];
                 runInfo = RunInfoFactory.Create(run);
-                await FileMapper.Instance.mapFiles(run.files);
+                const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
+                await FileMapper.Instance.mapFiles(run.files, runId);
                 for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
                     const sarifResult = run.results[resultIndex];
-                    await ResultInfoFactory.create(sarifResult, run.resources).then((resultInfo: ResultInfo) => {
+                    await ResultInfoFactory.create(sarifResult, runId, run.resources).then((resultInfo: ResultInfo) => {
                         if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
                             resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
                                 resultIndex);
                         }
 
-                        this.resultCollection.add(SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult));
+                        SVDiagnosticCollection.Instance.add(SVDiagnosticFactory.create(resultInfo, sarifResult));
                     });
                 }
             }
 
             if (sync) {
-                this.resultCollection.syncDiagnostics();
+                SVDiagnosticCollection.Instance.syncDiagnostics();
             }
         }
     }

@@ -3,7 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { Command, Diagnostic, Range, Uri } from "vscode";
+import { Command, Diagnostic, DiagnosticCollection, Range, Uri } from "vscode";
 import { sarif } from "./SARIFInterfaces";
 import { MessageType } from "./Enums";
 
@@ -45,10 +45,10 @@ export interface Location {
     message: Message;
     range: Range;
     uri: Uri;
+    uriBase: string;
 }
 
 export interface SarifViewerDiagnostic extends Diagnostic {
-    runinfo: RunInfo;
     resultInfo: ResultInfo;
     rawResult: sarif.Result;
 }
@@ -59,6 +59,7 @@ export interface RunInfo {
     fileName: string;
     toolFullName: string;
     toolName: string;
+    uriBaseIds: { [key: string]: string };
     workingDir: string;
 }
 
@@ -68,13 +69,14 @@ export interface ResultInfo {
     attachments: Attachment[];
     codeFlows: CodeFlow[];
     locations: Location[];
-    relatedLocs: Location[];
     message: Message;
     messageHTML: HTMLLabelElement;
+    relatedLocs: Location[];
     ruleHelpUri: string;
     ruleId: string;
     ruleName: string;
     ruleDescription: Message;
+    runId: number;
     severityLevel: sarif.Result.level;
 }
 
@@ -99,7 +101,7 @@ export interface CodeFlowStepId {
 export interface CodeFlowStep {
     beforeIcon: string;
     codeLensCommand: Command;
-    importance: sarif.CodeFlowLocation.importance,
+    importance: sarif.ThreadFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
     location: Location;

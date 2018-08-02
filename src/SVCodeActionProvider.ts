@@ -76,6 +76,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
                     CodeFlowDecorations.updateSelectionHighlight(svDiagnostic.resultInfo.assignedLocation, undefined);
                     CodeFlowDecorations.updateStepsHighlight();
                     CodeFlowDecorations.updateResultGutterIcon();
+                    CodeFlowDecorations.updateCodeFlowSelection();
                 }
 
                 const actions = this.getCodeActions(svDiagnostic);
@@ -99,7 +100,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
             const physicalLocation = rawLocations[0].physicalLocation;
             if (physicalLocation !== undefined && physicalLocation.fileLocation !== undefined) {
                 actions.push({
-                    arguments: [physicalLocation.fileLocation.uri],
+                    arguments: [physicalLocation.fileLocation, svDiagnostic.resultInfo.runId],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
                 });

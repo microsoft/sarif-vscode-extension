@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -73,12 +73,12 @@
         "keybindings": [
             {
                 "command": "extension.sarif.nextCodeFlowStep",
-                "key": "ctrl+f10",
+                "key": "f6",
                 "when": "!inDebugMode"
             },
             {
                 "command": "extension.sarif.previousCodeFlowStep",
-                "key": "ctrl+f9",
+                "key": "shift+f6",
                 "when": "!inDebugMode"
             },
             {

@@ -19,8 +19,9 @@ export class LocationFactory {
      * Processes the passed in location and creates a new ResultLocation
      * Returns undefined if location or filelocation are not defined
      * @param sarifLocation location from result in sarif file
+     * @param runId used for mapping uribaseids
      */
-    public static async create(sarifLocation: sarif.PhysicalLocation): Promise<Location> {
+    public static async create(sarifLocation: sarif.PhysicalLocation, runId: number): Promise<Location> {
         const location = {
             endOfLine: false,
             fileName: "",
@@ -31,7 +32,9 @@ export class LocationFactory {
         if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
             location.id = sarifLocation.id;
             const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
-            await FileMapper.Instance.get(fileUri).then((uri: Uri) => {
+            location.uriBase = Utilities.getUriBase(sarifLocation.fileLocation, runId);
+
+            await FileMapper.Instance.get(fileUri, location.uriBase).then((uri: Uri) => {
                 if (uri !== null) {
                     location.uri = uri;
                     location.mapped = true;
@@ -61,13 +64,15 @@ export class LocationFactory {
      * Helper function returns the passed in location if mapped, if not mapped or undefined it asks the user
      * @param location processed Location of the file
      * @param sarifLocation raw sarif Location of the file
+     * @param runId used for mapping uribaseids
      */
-    public static async getOrRemap(location: Location, sarifLocation: sarif.Location) {
+    public static async getOrRemap(location: Location, sarifLocation: sarif.Location, runId: number) {
         if (location === undefined || !location.mapped) {
             if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
-                const uri = Uri.parse(sarifLocation.physicalLocation.fileLocation.uri);
-                await FileMapper.Instance.getUserToChooseFile(uri).then(() => {
-                    return LocationFactory.create(sarifLocation.physicalLocation);
+                const physLoc = sarifLocation.physicalLocation;
+                const uri = Utilities.combineUriWithUriBase(physLoc.fileLocation.uri, location.uriBase);
+                await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
+                    return LocationFactory.create(physLoc, runId);
                 }).then((remappedLocation) => {
                     location = remappedLocation;
                 });
@@ -126,19 +131,19 @@ export class LocationFactory {
                 startcol = region.startColumn - 1;
             }
 
-            if (region.length !== undefined) {
-                endcol = region.length + region.startColumn - 1;
+            if (region.charLength !== undefined) {
+                endcol = region.charLength + region.startColumn - 1;
             } else if (region.endLine !== undefined) {
                 endline = region.endLine;
                 if (region.endColumn !== undefined) {
-                    endcol = region.endColumn;
+                    endcol = region.endColumn - 1;
                 } else if (endline === startline) {
                     endcol = startcol;
                 } else {
                     endcol = 1;
                 }
             } else if (region.endColumn !== undefined) {
-                endcol = region.endColumn;
+                endcol = region.endColumn - 1;
                 endline = startline;
             } else if (region.snippet !== undefined) {
                 if (region.snippet.text !== undefined) {
