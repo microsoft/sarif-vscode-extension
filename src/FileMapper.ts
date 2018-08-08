@@ -7,6 +7,7 @@ import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, InputBoxOptions, Uri, window, workspace,
 } from "vscode";
 import { sarif } from "./common/SARIFInterfaces";
+import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
 
 /**
@@ -76,7 +77,9 @@ export class FileMapper {
      * @param uriBase the base path of the uri
      */
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
-        return this.openFilePicker(origUri).then((path) => {
+        const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
+        await ProgressHelper.Instance.setProgressReport("Waiting for user input");
+        return this.openFilePicker(origUri).then(async (path) => {
             if (path !== undefined) {
                 const uri = Uri.parse(path);
                 let filePath: string;
@@ -112,6 +115,7 @@ export class FileMapper {
                 this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             }
 
+            await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
             return Promise.resolve();
         });
     }

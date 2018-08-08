@@ -434,8 +434,8 @@ class ExplorerWebview {
         if (runInfo.cmdLine !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
         }
-        if (runInfo.fileName !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("File name:", runInfo.fileName));
+        if (runInfo.toolFileName !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("File name:", runInfo.toolFileName));
         }
         if (runInfo.workingDir !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
