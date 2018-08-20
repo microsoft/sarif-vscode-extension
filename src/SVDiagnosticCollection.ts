@@ -14,7 +14,7 @@ import { Utilities } from "./Utilities";
  * And lets us easily try to map those that weren't mapped previously
  */
 export class SVDiagnosticCollection {
-    private static readonly MaxDiagCollectionSize = 249;
+    private static MaxDiagCollectionSize;
 
     private static instance: SVDiagnosticCollection;
 
@@ -29,6 +29,8 @@ export class SVDiagnosticCollection {
 
     private constructor() {
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
+        // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
+        SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
         this.issuesCollection = new Map<string, SarifViewerDiagnostic[]>();
         this.unmappedIssuesCollection = new Map<string, SarifViewerDiagnostic[]>();
         this.runInfoCollection = [];
@@ -62,9 +64,13 @@ export class SVDiagnosticCollection {
      * @param runInfo RunInfo object to add to the collection
      */
     public addRunInfo(runInfo: RunInfo): number {
-        const id = this.runInfoCollection.length;
+        runInfo.id = 0;
+        if (this.runInfoCollection.length !== 0) {
+            runInfo.id = this.runInfoCollection[this.runInfoCollection.length - 1].id + 1;
+        }
+
         this.runInfoCollection.push(runInfo);
-        return id;
+        return runInfo.id;
     }
 
     /**
@@ -90,7 +96,12 @@ export class SVDiagnosticCollection {
      * @param id Id of the runinfo to return
      */
     public getRunInfo(id: number): RunInfo {
-        return this.runInfoCollection[id];
+        return this.runInfoCollection.find((value: RunInfo, index: number, obj: RunInfo[]) => {
+            if (value.id === id) {
+                return true;
+            }
+            return false;
+        });
     }
 
     /**
@@ -130,6 +141,24 @@ export class SVDiagnosticCollection {
     }
 
     /**
+     * Itterates through the issue collections and removes any results that originated from the file
+     * @param fileName Name of the file that has the runs to be removed
+     */
+    public removeRuns(fileName: string) {
+        const runsToRemove = new Array<number>();
+        for (let i = SVDiagnosticCollection.Instance.runInfoCollection.length - 1; i >= 0; i--) {
+            if (SVDiagnosticCollection.Instance.runInfoCollection[i].sarifFileName === fileName) {
+                runsToRemove.push(SVDiagnosticCollection.Instance.runInfoCollection[i].id);
+                SVDiagnosticCollection.Instance.runInfoCollection.splice(i, 1);
+            }
+        }
+
+        this.removeResults(runsToRemove, SVDiagnosticCollection.Instance.issuesCollection);
+        this.removeResults(runsToRemove, SVDiagnosticCollection.Instance.unmappedIssuesCollection);
+        SVDiagnosticCollection.Instance.syncDiagnostics();
+    }
+
+    /**
      * Does the actual action of adding the passed in diagnostic into the passed in collection
      * @param collection dictionary to add the diagnostic to
      * @param issue diagnostic that needs to be added to dictionary
@@ -153,7 +182,8 @@ export class SVDiagnosticCollection {
             let diags: Diagnostic[];
             const key = issues[0].resultInfo.assignedLocation.uri;
             if (issues.length > SVDiagnosticCollection.MaxDiagCollectionSize) {
-                const msg = `Only displaying 249 of the total ${issues.length} results in the SARIF log.`;
+                const msg = `Only displaying ${SVDiagnosticCollection.MaxDiagCollectionSize} of the total
+                    ${issues.length} results in the SARIF log.`;
                 const maxReachedDiag = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
                 maxReachedDiag.code = SVDiagnosticFactory.Code;
                 maxReachedDiag.source = "SARIFViewer";
@@ -163,6 +193,31 @@ export class SVDiagnosticCollection {
             }
 
             this.diagnosticCollection.set(key, diags);
+        }
+    }
+
+    /**
+     * Removes the results associated with the runids to be removed from the collection
+     * @param runsToRemove array of runids to be removed
+     * @param collection diagnostic collection to search for matching runids
+     */
+    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerDiagnostic[]>) {
+        for (const key of collection.keys()) {
+            const diagnostics = collection.get(key);
+            for (let i = diagnostics.length - 1; i >= 0; i--) {
+                for (const runId of runsToRemove) {
+                    if (diagnostics[i].resultInfo.runId === runId) {
+                        diagnostics.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            if (diagnostics.length === 0) {
+                collection.delete(key);
+            } else {
+                collection.set(key, diagnostics);
+            }
         }
     }
 }

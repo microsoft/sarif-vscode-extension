@@ -56,7 +56,9 @@ export interface SarifViewerDiagnostic extends Diagnostic {
 export interface RunInfo {
     additionalProperties: { [key: string]: string };
     cmdLine: string;
-    fileName: string;
+    id: number;
+    sarifFileName: string;
+    toolFileName: string;
     toolFullName: string;
     toolName: string;
     uriBaseIds: { [key: string]: string };
