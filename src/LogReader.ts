@@ -3,15 +3,19 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { commands, Disposable, TextDocument, window, workspace } from "vscode";
+import {
+    commands, Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace,
+} from "vscode";
 import { ResultInfo, RunInfo } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
 import { FileMapper } from "./FileMapper";
 import { LocationFactory } from "./LocationFactory";
+import { ProgressHelper } from "./ProgressHelper";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { RunInfoFactory } from "./RunInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
+import { Utilities } from "./Utilities";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -77,8 +81,8 @@ export class LogReader {
      */
     public onDocumentClosed(doc: TextDocument): void {
         if (LogReader.isSarifFile(doc)) {
-            LogReader.Instance.clearList();
-            LogReader.Instance.readAll();
+            SVDiagnosticCollection.Instance.removeRuns(doc.fileName);
+            return;
         }
     }
 
@@ -115,41 +119,79 @@ export class LogReader {
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
         if (LogReader.isSarifFile(doc)) {
-            let runInfo: RunInfo;
-            let log: sarif.Log;
+            const pOptions = {
+                cancellable: false,
+                location: ProgressLocation.Notification,
+                title: "Processing " + Utilities.Path.basename(doc.fileName),
+            } as ProgressOptions;
 
-            try {
-                const docMapping = this.jsonMap.parse(doc.getText());
-                this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
-                log = docMapping.data;
-            } catch (error) {
-                window.showErrorMessage(`Cannot display results for '${doc.fileName}' because: ${error.message}`);
-                return;
-            }
+            return window.withProgress(pOptions,
+                async (progress: Progress<{ message?: string; increment?: number; }>, cancleToken): Promise<void> => {
+                    ProgressHelper.Instance.Progress = progress;
+                    let runInfo: RunInfo;
+                    let log: sarif.Log;
 
-            if (!this.isVersionSupported(log.version)) { return; }
+                    await ProgressHelper.Instance.setProgressReport("Parsing Sarif file");
+                    try {
+                        const docMapping = this.jsonMap.parse(doc.getText());
+                        this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
+                        log = docMapping.data;
+                    } catch (error) {
+                        window.showErrorMessage(`Sarif Viewer:
+                        Cannot display results for '${doc.fileName}' because: ${error.message}`);
+                        return;
+                    }
 
-            for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
-                const run = log.runs[runIndex];
-                runInfo = RunInfoFactory.Create(run);
-                const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
-                await FileMapper.Instance.mapFiles(run.files, runId);
-                for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
-                    const sarifResult = run.results[resultIndex];
-                    await ResultInfoFactory.create(sarifResult, runId, run.resources).then((resultInfo: ResultInfo) => {
-                        if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
-                            resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
-                                resultIndex);
+                    if (!this.isVersionSupported(log.version)) { return; }
+
+                    for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
+                        const run = log.runs[runIndex];
+                        runInfo = RunInfoFactory.Create(run, doc.fileName);
+                        const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
+
+                        await ProgressHelper.Instance.setProgressReport("Mapping Files");
+                        await FileMapper.Instance.mapFiles(run.files, runId);
+
+                        await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
+                        const showIncrement = run.results.length > 1000;
+                        let percent = 0;
+                        let interval;
+                        let nextIncrement;
+                        if (showIncrement) {
+                            interval = Math.floor(run.results.length / 10);
+                            nextIncrement = interval;
                         }
 
-                        SVDiagnosticCollection.Instance.add(SVDiagnosticFactory.create(resultInfo, sarifResult));
-                    });
-                }
-            }
+                        for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
+                            if (showIncrement && resultIndex >= nextIncrement) {
+                                nextIncrement = nextIncrement + interval;
+                                percent = percent + 10;
+                                await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results:
+                                    ${percent}% completed`, 10);
+                            }
 
-            if (sync) {
-                SVDiagnosticCollection.Instance.syncDiagnostics();
-            }
+                            const sarifResult = run.results[resultIndex];
+                            await ResultInfoFactory.create(sarifResult, runId, run.resources).then(
+                                (resultInfo: ResultInfo) => {
+                                    if (resultInfo.assignedLocation === undefined ||
+                                        !resultInfo.assignedLocation.mapped) {
+                                        resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
+                                            resultIndex);
+                                    }
+
+                                    const diagnostic = SVDiagnosticFactory.create(resultInfo, sarifResult);
+                                    SVDiagnosticCollection.Instance.add(diagnostic);
+                                });
+                        }
+                    }
+
+                    if (sync) {
+                        SVDiagnosticCollection.Instance.syncDiagnostics();
+                    }
+
+                    ProgressHelper.Instance.Progress = undefined;
+                    return Promise.resolve();
+                });
         }
     }
 
