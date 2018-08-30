@@ -4,7 +4,8 @@
 // *                                                       *
 // ********************************************************/
 import {
-    ConfigurationChangeEvent, Disposable, Event, EventEmitter, InputBoxOptions, Uri, window, workspace,
+    ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, QuickInputButton, Uri,
+    window, workspace,
 } from "vscode";
 import { sarif } from "./common/SARIFInterfaces";
 import { ProgressHelper } from "./ProgressHelper";
@@ -80,7 +81,14 @@ export class FileMapper {
         const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
         return this.openFilePicker(origUri).then(async (path) => {
-            if (path !== undefined) {
+            if (path === null) {
+                // path is null when the skip next button was pressed
+                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+            } else if (path === undefined) {
+                // path is undefined when the input was dismissed without fixing the path
+                this.userCanceledMapping = true;
+                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+            } else {
                 const uri = Uri.parse(path);
                 let filePath: string;
                 if (uri.scheme === "file") {
@@ -110,9 +118,6 @@ export class FileMapper {
                 }
 
                 this.onMappingChanged.fire(origUri);
-            } else {
-                this.userCanceledMapping = true;
-                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             }
 
             await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
@@ -275,10 +280,62 @@ export class FileMapper {
      * @param uri uri of the file that needs to be mapped
      */
     private async openFilePicker(uri: Uri): Promise<string> {
-        const inputOptions = {
-            ignoreFocusOut: true,
-            prompt: `Valid path, confirm if it maps to '${uri.toString(true)}' or its rootpath`,
-            validateInput: (path: string): string => {
+        const disposables: Disposable[] = [];
+        let resolved = false;
+        return new Promise<string>((resolve, rejected) => {
+            const input = window.createInputBox();
+            input.value = uri.toString(true);
+            input.prompt = `Valid path, confirm if it maps to '${uri.toString(true)}' or its rootpath`;
+            input.validationMessage = `'${uri.toString(true)}' can not be found.
+        Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
+        rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
+            input.ignoreFocusOut = true;
+
+            input.buttons = new Array<QuickInputButton>(
+                { iconPath: Utilities.IconsPath + "open-folder.svg", tooltip: "File picker" } as QuickInputButton,
+                { iconPath: Utilities.IconsPath + "next.svg", tooltip: "Skip to next" } as QuickInputButton,
+            );
+
+            disposables.push(input.onDidAccept(() => {
+                resolved = true;
+                input.hide();
+                resolve(input.value);
+            }));
+
+            disposables.push(input.onDidHide(() => {
+                disposables.forEach((dis: Disposable) => {
+                    dis.dispose();
+                });
+
+                if (!resolved) {
+                    resolve(undefined);
+                }
+            }));
+
+            disposables.push(input.onDidTriggerButton((button) => {
+                switch (button.iconPath) {
+                    case Utilities.IconsPath + "open-folder.svg":
+                        const openOptions: OpenDialogOptions = Object.create(null);
+                        openOptions.canSelectMany = false;
+                        openOptions.openLabel = "Map";
+
+                        window.showOpenDialog(openOptions).then((selectedUris) => {
+                            if (selectedUris !== undefined && selectedUris[0] !== undefined) {
+                                input.value = selectedUris[0].toString(true);
+                                input.validationMessage = undefined;
+                            }
+                        });
+                        break;
+                    case Utilities.IconsPath + "next.svg":
+                        resolved = true;
+                        input.hide();
+                        resolve(null);
+                        break;
+                }
+            }));
+
+            disposables.push(input.onDidChangeValue(() => {
+                const path = input.value;
                 let message = `'${uri.toString(true)}' can not be found.
                 Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
@@ -313,12 +370,11 @@ export class FileMapper {
                     }
                 }
 
-                return message;
-            },
-            value: uri.toString(true),
-        } as InputBoxOptions;
+                input.validationMessage = message;
+            }));
 
-        return window.showInputBox(inputOptions);
+            input.show();
+        });
     }
 
     /**
