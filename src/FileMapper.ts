@@ -89,13 +89,8 @@ export class FileMapper {
                 this.userCanceledMapping = true;
                 this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             } else {
-                const uri = Uri.parse(path);
-                let filePath: string;
-                if (uri.scheme === "file") {
-                    filePath = Utilities.getFsPathWithFragment(uri);
-                } else {
-                    filePath = uri.toString(true);
-                }
+                const uri = Uri.file(path);
+                const filePath: string = Utilities.getFsPathWithFragment(uri);
 
                 if (Utilities.Fs.statSync(filePath).isDirectory()) {
                     const config = workspace.getConfiguration(Utilities.configSection);
@@ -284,10 +279,10 @@ export class FileMapper {
         let resolved = false;
         return new Promise<string>((resolve, rejected) => {
             const input = window.createInputBox();
-            input.value = uri.toString(true);
-            input.prompt = `Valid path, confirm if it maps to '${uri.toString(true)}' or its rootpath`;
-            input.validationMessage = `'${uri.toString(true)}' can not be found.
-        Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
+            input.value = uri.fsPath;
+            input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
+            input.validationMessage = `'${uri.fsPath}' can not be found.
+        Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
         rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
             input.ignoreFocusOut = true;
 
@@ -321,7 +316,7 @@ export class FileMapper {
 
                         window.showOpenDialog(openOptions).then((selectedUris) => {
                             if (selectedUris !== undefined && selectedUris[0] !== undefined) {
-                                input.value = selectedUris[0].toString(true);
+                                input.value = selectedUris[0].fsPath;
                                 input.validationMessage = undefined;
                             }
                         });
@@ -336,35 +331,35 @@ export class FileMapper {
 
             disposables.push(input.onDidChangeValue(() => {
                 const path = input.value;
-                let message = `'${uri.toString(true)}' can not be found.
-                Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
+                let message = `'${uri.fsPath}' can not be found.
+                Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
 
                 if (path !== undefined && path !== "") {
                     let validateUri: Uri;
+                    let isDirectory;
                     try {
-                        validateUri = Uri.parse(path);
+                        validateUri = Uri.file(path);
                     } catch (error) {
                         if (error.message !== "URI malformed") { throw error; }
                     }
 
                     if (validateUri !== undefined) {
-                        if (validateUri.scheme === "file") {
+                        try {
+                            isDirectory = Utilities.Fs.statSync(validateUri.fsPath).isDirectory();
+                        } catch (error) {
+                            if (error.code !== "ENOENT") { throw error; }
+                        }
+
+                        if (isDirectory === true) {
+                            message = undefined;
+                            if (this.rootpaths.indexOf(validateUri.fsPath) !== -1) {
+                                message = `'${validateUri.fsPath}' already exists in the settings
+                                    (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)`;
+                            }
+                        } else if (isDirectory === false) {
                             if (this.tryMapUri(validateUri)) {
                                 message = undefined;
-                            }
-                        } else {
-                            const rootPath = Utilities.getDisplayableRootpath(validateUri);
-                            try {
-                                if (this.rootpaths.indexOf(rootPath) !== -1) {
-                                    message = `'${rootPath}' already exists in the settings (sarif-viewer.rootpaths),
-                                    please try a different path (Press 'Escape' to cancel)`;
-                                }
-                                if (Utilities.Fs.statSync(rootPath).isDirectory()) {
-                                    message = undefined;
-                                }
-                            } catch (error) {
-                                if (error.code !== "ENOENT") { throw error; }
                             }
                         }
                     }
