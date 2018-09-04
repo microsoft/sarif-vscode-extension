@@ -80,7 +80,7 @@ export class FileMapper {
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
         const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
-        return this.openFilePicker(origUri).then(async (path) => {
+        return this.openRemappingInputDialog(origUri).then(async (path) => {
             if (path === null) {
                 // path is null when the skip next button was pressed
                 this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
@@ -274,7 +274,7 @@ export class FileMapper {
      * Shows the Inputbox with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
      */
-    private async openFilePicker(uri: Uri): Promise<string> {
+    private async openRemappingInputDialog(uri: Uri): Promise<string> {
         const disposables: Disposable[] = [];
         let resolved = false;
         return new Promise<string>((resolve, rejected) => {
