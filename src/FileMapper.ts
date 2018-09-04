@@ -279,6 +279,7 @@ export class FileMapper {
         let resolved = false;
         return new Promise<string>((resolve, rejected) => {
             const input = window.createInputBox();
+            input.title = "Sarif Result Location Remapping";
             input.value = uri.fsPath;
             input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
             input.validationMessage = `'${uri.fsPath}' can not be found.
@@ -287,7 +288,7 @@ export class FileMapper {
             input.ignoreFocusOut = true;
 
             input.buttons = new Array<QuickInputButton>(
-                { iconPath: Utilities.IconsPath + "open-folder.svg", tooltip: "File picker" } as QuickInputButton,
+                { iconPath: Utilities.IconsPath + "open-folder.svg", tooltip: "Open file picker" } as QuickInputButton,
                 { iconPath: Utilities.IconsPath + "next.svg", tooltip: "Skip to next" } as QuickInputButton,
             );
 
