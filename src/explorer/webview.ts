@@ -140,20 +140,22 @@ class ExplorerWebview {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
             const nodeClass = `${step.importance || sarif.ThreadFlowLocation.importance.important} verbosityshow`;
-            let fileNameAndLine: string;
+            let fileName: string;
+            let fileLine = "";
             if (step.location !== undefined) {
-                fileNameAndLine = `${step.location.fileName} (${step.location.range[0].line + 1})`;
+                fileName = `${step.location.fileName}`;
+                fileLine = `(${step.location.range[0].line + 1})`;
             }
 
             treeNodeOptions = {
-                isParent: step.isParent, liClass: nodeClass, locationText: fileNameAndLine, message: step.message,
-                requestId: step.traversalId, tooltip: step.messageWithStep,
+                isParent: step.isParent, liClass: nodeClass, locationLine: fileLine, locationText: fileName,
+                message: step.message, requestId: step.traversalId, tooltip: step.messageWithStep,
             };
         } else {
             // Placeholder node
             treeNodeOptions = {
                 isParent: true, liClass: `${sarif.ThreadFlowLocation.importance.essential} verbosityshow`,
-                locationText: undefined, message: "Nested first step", requestId: "-1",
+                locationLine: "", locationText: undefined, message: "Nested first step", requestId: "-1",
                 tooltip: "First step starts in a nested call",
             };
         }
@@ -282,7 +284,13 @@ class ExplorerWebview {
             attributes: { tabindex: "0" }, className: options.liClass, id: options.requestId, tooltip: options.tooltip,
         }) as HTMLLIElement;
 
-        node.appendChild(this.createElement("span", { className: "treenodelocation", text: options.locationText }));
+        const locationTooltip = options.locationText + options.locationLine;
+        node.appendChild(this.createElement("span", {
+            className: "treenodeline", text: options.locationLine, tooltip: locationTooltip,
+        }));
+        node.appendChild(this.createElement("span", {
+            className: "treenodelocation", text: options.locationText, tooltip: locationTooltip,
+        }));
         node.appendChild(document.createTextNode(options.message));
 
         return node;
