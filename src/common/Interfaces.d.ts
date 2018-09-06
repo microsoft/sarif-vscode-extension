@@ -129,6 +129,7 @@ export interface Attachment {
 export interface TreeNodeOptions {
     isParent: boolean,
     liClass: string,
+    locationLine: string,
     locationText: string,
     message: string,
     requestId: string,

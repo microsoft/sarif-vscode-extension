@@ -160,6 +160,7 @@ li.unimportant {
 
 li.verbosityshow {
     display: block;
+    word-break: break-all;
 }
 
 li.verbosityhide {
@@ -175,6 +176,15 @@ li.codeflowselected {
     color: white;
 }
 
-.treenodelocation {
+.treenodeline, .treenodelocation {
     float: right;
+    font-style: italic;
+}
+
+.treenodelocation {
+    max-width: 30%;
+    overflow: hidden;
+    padding-left: 5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
