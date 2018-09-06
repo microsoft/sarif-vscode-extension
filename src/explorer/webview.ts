@@ -280,6 +280,10 @@ class ExplorerWebview {
             options.locationText = "[no location]";
         }
 
+        if (options.locationLine === undefined) {
+            options.locationLine = "";
+        }
+
         const node = this.createElement("li", {
             attributes: { tabindex: "0" }, className: options.liClass, id: options.requestId, tooltip: options.tooltip,
         }) as HTMLLIElement;
