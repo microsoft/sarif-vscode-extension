@@ -4,9 +4,11 @@
 // *                                                       *
 // ********************************************************/
 import {
-    ConfigurationChangeEvent, Disposable, Event, EventEmitter, InputBoxOptions, Uri, window, workspace,
+    ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, QuickInputButton, Uri,
+    window, workspace,
 } from "vscode";
 import { sarif } from "./common/SARIFInterfaces";
+import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
 
 /**
@@ -76,15 +78,19 @@ export class FileMapper {
      * @param uriBase the base path of the uri
      */
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
-        return this.openFilePicker(origUri).then((path) => {
-            if (path !== undefined) {
-                const uri = Uri.parse(path);
-                let filePath: string;
-                if (uri.scheme === "file") {
-                    filePath = Utilities.getFsPathWithFragment(uri);
-                } else {
-                    filePath = uri.toString(true);
-                }
+        const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
+        await ProgressHelper.Instance.setProgressReport("Waiting for user input");
+        return this.openRemappingInputDialog(origUri).then(async (path) => {
+            if (path === null) {
+                // path is null when the skip next button was pressed
+                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+            } else if (path === undefined) {
+                // path is undefined when the input was dismissed without fixing the path
+                this.userCanceledMapping = true;
+                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+            } else {
+                const uri = Uri.file(path);
+                const filePath: string = Utilities.getFsPathWithFragment(uri);
 
                 if (Utilities.Fs.statSync(filePath).isDirectory()) {
                     const config = workspace.getConfiguration(Utilities.configSection);
@@ -107,11 +113,9 @@ export class FileMapper {
                 }
 
                 this.onMappingChanged.fire(origUri);
-            } else {
-                this.userCanceledMapping = true;
-                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             }
 
+            await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
             return Promise.resolve();
         });
     }
@@ -270,51 +274,103 @@ export class FileMapper {
      * Shows the Inputbox with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
      */
-    private async openFilePicker(uri: Uri): Promise<string> {
-        const inputOptions = {
-            ignoreFocusOut: true,
-            prompt: `Valid path, confirm if it maps to '${uri.toString(true)}' or its rootpath`,
-            validateInput: (path: string): string => {
-                let message = `'${uri.toString(true)}' can not be found.
-                Correct the path to: the local file (file:///c:/example/repo1/source.js) for this session or the local
+    private async openRemappingInputDialog(uri: Uri): Promise<string> {
+        const disposables: Disposable[] = [];
+        let resolved = false;
+        return new Promise<string>((resolve, rejected) => {
+            const input = window.createInputBox();
+            input.title = "Sarif Result Location Remapping";
+            input.value = uri.fsPath;
+            input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
+            input.validationMessage = `'${uri.fsPath}' can not be found.
+        Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
+        rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
+            input.ignoreFocusOut = true;
+
+            input.buttons = new Array<QuickInputButton>(
+                { iconPath: Utilities.IconsPath + "open-folder.svg", tooltip: "Open file picker" } as QuickInputButton,
+                { iconPath: Utilities.IconsPath + "next.svg", tooltip: "Skip to next" } as QuickInputButton,
+            );
+
+            disposables.push(input.onDidAccept(() => {
+                resolved = true;
+                input.hide();
+                resolve(input.value);
+            }));
+
+            disposables.push(input.onDidHide(() => {
+                disposables.forEach((dis: Disposable) => {
+                    dis.dispose();
+                });
+
+                if (!resolved) {
+                    resolve(undefined);
+                }
+            }));
+
+            disposables.push(input.onDidTriggerButton((button) => {
+                switch (button.iconPath) {
+                    case Utilities.IconsPath + "open-folder.svg":
+                        const openOptions: OpenDialogOptions = Object.create(null);
+                        openOptions.canSelectMany = false;
+                        openOptions.openLabel = "Map";
+
+                        window.showOpenDialog(openOptions).then((selectedUris) => {
+                            if (selectedUris !== undefined && selectedUris[0] !== undefined) {
+                                input.value = selectedUris[0].fsPath;
+                                input.validationMessage = undefined;
+                            }
+                        });
+                        break;
+                    case Utilities.IconsPath + "next.svg":
+                        resolved = true;
+                        input.hide();
+                        resolve(null);
+                        break;
+                }
+            }));
+
+            disposables.push(input.onDidChangeValue(() => {
+                const path = input.value;
+                let message = `'${uri.fsPath}' can not be found.
+                Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
 
                 if (path !== undefined && path !== "") {
                     let validateUri: Uri;
+                    let isDirectory;
                     try {
-                        validateUri = Uri.parse(path);
+                        validateUri = Uri.file(path);
                     } catch (error) {
                         if (error.message !== "URI malformed") { throw error; }
                     }
 
                     if (validateUri !== undefined) {
-                        if (validateUri.scheme === "file") {
+                        try {
+                            isDirectory = Utilities.Fs.statSync(validateUri.fsPath).isDirectory();
+                        } catch (error) {
+                            if (error.code !== "ENOENT") { throw error; }
+                        }
+
+                        if (isDirectory === true) {
+                            message = undefined;
+                            if (this.rootpaths.indexOf(validateUri.fsPath) !== -1) {
+                                message = `'${validateUri.fsPath}' already exists in the settings
+                                    (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)`;
+                            }
+                        } else if (isDirectory === false) {
                             if (this.tryMapUri(validateUri)) {
                                 message = undefined;
-                            }
-                        } else {
-                            const rootPath = Utilities.getDisplayableRootpath(validateUri);
-                            try {
-                                if (this.rootpaths.indexOf(rootPath) !== -1) {
-                                    message = `'${rootPath}' already exists in the settings (sarif-viewer.rootpaths),
-                                    please try a different path (Press 'Escape' to cancel)`;
-                                }
-                                if (Utilities.Fs.statSync(rootPath).isDirectory()) {
-                                    message = undefined;
-                                }
-                            } catch (error) {
-                                if (error.code !== "ENOENT") { throw error; }
                             }
                         }
                     }
                 }
 
-                return message;
-            },
-            value: uri.toString(true),
-        } as InputBoxOptions;
+                input.validationMessage = message;
+            }));
 
-        return window.showInputBox(inputOptions);
+            input.show();
+        });
     }
 
     /**

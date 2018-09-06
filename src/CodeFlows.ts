@@ -259,7 +259,7 @@ export class CodeFlows {
         }
 
         if (iconName !== undefined) {
-            iconName = Utilities.iconsPath + iconName;
+            iconName = Utilities.IconsPath + iconName;
         }
 
         return iconName;

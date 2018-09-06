@@ -5,7 +5,7 @@
 // ********************************************************/
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorRevealType, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlows } from "./CodeFlows";
 import { CodeFlowStep, CodeFlowStepId, Location } from "./common/Interfaces";
@@ -240,17 +240,38 @@ export class CodeFlowDecorations {
 
     private static lastCodeFlowSelected: CodeFlowStepId;
 
-    private static GutterErrorDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: Utilities.iconsPath + "error.svg",
-    });
+    private static get GutterErrorDecorationType() {
+        if (CodeFlowDecorations.gutterErrorDecorationType === undefined) {
+            CodeFlowDecorations.gutterErrorDecorationType = window.createTextEditorDecorationType({
+                gutterIconPath: Utilities.IconsPath + "error.svg",
+            });
+        }
 
-    private static GutterInfoDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: Utilities.iconsPath + "info.svg",
-    });
+        return CodeFlowDecorations.gutterErrorDecorationType;
+    }
+    private static gutterErrorDecorationType: TextEditorDecorationType;
 
-    private static GutterWarningDecorationType = window.createTextEditorDecorationType({
-        gutterIconPath: Utilities.iconsPath + "warning.svg",
-    });
+    private static get GutterInfoDecorationType() {
+        if (CodeFlowDecorations.gutterInfoDecorationType === undefined) {
+            CodeFlowDecorations.gutterInfoDecorationType = window.createTextEditorDecorationType({
+                gutterIconPath: Utilities.IconsPath + "info.svg",
+            });
+        }
+
+        return CodeFlowDecorations.gutterInfoDecorationType;
+    }
+    private static gutterInfoDecorationType: TextEditorDecorationType;
+
+    private static get GutterWarningDecorationType() {
+        if (CodeFlowDecorations.gutterWarningDecorationType === undefined) {
+            CodeFlowDecorations.gutterWarningDecorationType = window.createTextEditorDecorationType({
+                gutterIconPath: Utilities.IconsPath + "warning.svg",
+            });
+        }
+
+        return CodeFlowDecorations.gutterWarningDecorationType;
+    }
+    private static gutterWarningDecorationType: TextEditorDecorationType;
 
     private static LocationDecorationType = window.createTextEditorDecorationType({
         dark: {
@@ -267,6 +288,12 @@ export class CodeFlowDecorations {
     private static SelectionDecorationType = window.createTextEditorDecorationType({
         borderStyle: "solid",
         borderWidth: "1px",
+        dark: {
+            borderColor: "white",
+        },
+        light: {
+            borderColor: "black",
+        },
         overviewRulerColor: "red",
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,

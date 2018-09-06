@@ -81,6 +81,7 @@ export class LocationFactory {
 
         return location;
     }
+
     /**
      * Maps the result back to the location in the SARIF file
      * @param sarifUri Uri of the SARIF document the result is in
@@ -124,40 +125,38 @@ export class LocationFactory {
         let endcol = 1;
         let eol = false;
 
-        if (region.startLine !== undefined) {
-            startline = region.startLine;
-            endline = startline;
-            if (region.startColumn !== undefined) {
-                startcol = region.startColumn - 1;
+        if (region !== undefined && (region.startLine !== undefined || region.charOffset !== undefined)) {
+            if (region.startLine !== undefined) {
+                startline = region.startLine - 1;
+                if (region.startColumn !== undefined) {
+                    startcol = region.startColumn - 1;
+                }
+            } else {
+                startline = 0;
+                startcol = region.charOffset - 1;
             }
 
-            if (region.charLength !== undefined) {
-                endcol = region.charLength + region.startColumn - 1;
-            } else if (region.endLine !== undefined) {
-                endline = region.endLine;
-                if (region.endColumn !== undefined) {
-                    endcol = region.endColumn - 1;
-                } else if (endline === startline) {
-                    endcol = startcol;
-                } else {
-                    endcol = 1;
-                }
-            } else if (region.endColumn !== undefined) {
-                endcol = region.endColumn - 1;
+            if (region.endLine !== undefined) {
+                endline = region.endLine - 1;
+            } else {
                 endline = startline;
+            }
+
+            if (region.endColumn !== undefined) {
+                endcol = region.endColumn - 1;
+            } else if (region.charLength !== undefined) {
+                endcol = region.charLength + region.startColumn - 1;
             } else if (region.snippet !== undefined) {
                 if (region.snippet.text !== undefined) {
                     endcol = region.snippet.text.length - 2;
                 } else if (region.snippet.binary !== undefined) {
                     endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
                 }
+            } else {
+                endcol = -1;
             }
 
-            // change to be zero based for the vscode editor
-            startline--;
-            endline--;
-
-            if (endcol < startcol && endline === startline) {
+            if (endcol <= -1) {
                 endline++;
                 endcol = 0;
                 eol = true;

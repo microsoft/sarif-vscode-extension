@@ -12,8 +12,6 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
-    public static readonly iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-        "/resources/icons/";
     public static readonly configSection = "sarif-viewer";
 
     /**
@@ -24,6 +22,14 @@ export class Utilities {
             Utilities.fs = require("fs");
         }
         return Utilities.fs;
+    }
+
+    public static get IconsPath() {
+        if (Utilities.iconsPath === undefined) {
+            Utilities.iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
+                "/resources/icons/";
+        }
+        return Utilities.iconsPath;
     }
 
     /**
@@ -51,7 +57,7 @@ export class Utilities {
      * @param uriPath uri path from sarif file to combine with the base
      * @param uriBase the uriBase as defined in the sarif file
      */
-    public static combineUriWithUriBase(uriPath: string, uriBase: string) {
+    public static combineUriWithUriBase(uriPath: string, uriBase: string): Uri {
         let combinedPath = uriPath;
 
         if (uriBase !== undefined) {
@@ -184,6 +190,7 @@ export class Utilities {
     private static os: any;
     private static path: any;
     private static embeddedRegEx = /(?:[^\\]|^)(\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
+    private static iconsPath: string;
 
     /**
      * Remove the escape '\' characters from before any '[' or ']' characters in the text
