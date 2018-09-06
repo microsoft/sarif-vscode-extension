@@ -288,6 +288,12 @@ export class CodeFlowDecorations {
     private static SelectionDecorationType = window.createTextEditorDecorationType({
         borderStyle: "solid",
         borderWidth: "1px",
+        dark: {
+            borderColor: "white",
+        },
+        light: {
+            borderColor: "black",
+        },
         overviewRulerColor: "red",
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,

@@ -10,7 +10,7 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Sarif Explorer shows details about the result:
     * Result info
     * Run info
-    * CodeFlow steps
+    * Code flow steps
     * Attachments
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
