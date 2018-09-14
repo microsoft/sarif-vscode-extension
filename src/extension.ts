@@ -8,6 +8,7 @@ import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
+import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
@@ -47,6 +48,10 @@ export function activate(context: ExtensionContext) {
         commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
     );
 
+    context.subscriptions.push(
+        commands.registerCommand(FileConverter.ConvertCommand, FileConverter.selectConverter),
+    );
+
     // Instantiate the providers and filemaper which will register their listeners and register their disposables
     context.subscriptions.push(SVCodeActionProvider.Instance);
     context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
@@ -63,5 +68,6 @@ export function activate(context: ExtensionContext) {
  */
 export function deactivate() {
     // ToDo: rusty: Close html preview, unregister events, clear diagnostic collection
+    Utilities.removeSarifViewerTempDirectory();
     return undefined;
 }
