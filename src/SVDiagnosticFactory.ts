@@ -101,7 +101,7 @@ export class SVDiagnosticFactory {
     private static updateMessage(diagnostic: SarifViewerDiagnostic): string {
         let message = diagnostic.resultInfo.message.text;
 
-        if (diagnostic.resultInfo.ruleId !== "") {
+        if (diagnostic.resultInfo.ruleId !== undefined && diagnostic.resultInfo.ruleId !== "") {
             message = `[${diagnostic.resultInfo.ruleId}] ${message}`;
         }
 
