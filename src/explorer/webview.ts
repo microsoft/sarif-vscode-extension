@@ -211,14 +211,21 @@ class ExplorerWebview {
     private createExplorerHeaderContent(resultInfo: ResultInfo): HTMLDivElement {
         const header = this.createElement("div", { id: "title" }) as HTMLDivElement;
 
-        header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
-        header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
-        header.appendChild(this.createElement("label", { text: " | " }));
-        if (resultInfo.locations[0] !== undefined) {
-            const filenameandline = resultInfo.locations[0].fileName + " (" +
-                (resultInfo.locations[0].range[0].line + 1/*Range is 0 based*/) + ")";
-            header.appendChild(this.createElement("label", { text: filenameandline }));
+        if (resultInfo.ruleId !== undefined || resultInfo.ruleName !== undefined) {
+            header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
+            header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
+        } else {
+            header.appendChild(this.createElement("label", { id: "titlerulename", text: "No Rule Info" }));
         }
+        header.appendChild(this.createElement("label", { text: " | " }));
+
+        let filenameandline = "No Location";
+        if (resultInfo.locations[0] !== null && resultInfo.locations[0] !== undefined) {
+            filenameandline = resultInfo.locations[0].fileName + " (" +
+                (resultInfo.locations[0].range[0].line + 1/*Range is 0 based*/) + ")";
+        }
+
+        header.appendChild(this.createElement("label", { text: filenameandline }));
 
         return header;
     }
