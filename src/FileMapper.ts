@@ -250,9 +250,11 @@ export class FileMapper {
             );
 
             disposables.push(input.onDidAccept(() => {
-                resolved = true;
-                input.hide();
-                resolve(input.value);
+                if (input.validationMessage === undefined) {
+                    resolved = true;
+                    input.hide();
+                    resolve(input.value);
+                }
             }));
 
             disposables.push(input.onDidHide(() => {
