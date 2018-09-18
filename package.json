@@ -29,6 +29,7 @@
     },
     "activationEvents": [
         "onLanguage:json",
+        "onCommand:extension.sarif.Convert",
         "onCommand:extension.sarif.LaunchExplorer"
     ],
     "main": "./out/extension",
@@ -54,6 +55,11 @@
             }
         ],
         "commands": [
+            {
+                "command": "extension.sarif.Convert",
+                "title": "Convert and open a non-sarif file",
+                "category": "Sarif"
+            },
             {
                 "command": "extension.sarif.LaunchExplorer",
                 "title": "Launch the Sarif Explorer",
