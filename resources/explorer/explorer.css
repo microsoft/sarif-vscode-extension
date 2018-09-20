@@ -6,14 +6,44 @@
 body {
     padding: 0px;
     box-shadow: #000000 0 8px 6px -6px inset;
+    overflow: hidden;
 }
 
-#title {
+.headercontainer {
     padding: 5px;
     border-bottom-style: solid;
     border-bottom-color: var(--color);
     border-bottom-width: thin;
     background-color: rgba(100, 100, 100, .2);
+    width: 100%;
+}
+
+.headercontainer > label:first-child::before {
+    font-size: 10px;
+    font-weight: normal;
+    color: var(--color);
+    padding-right: 5px;
+}
+
+#resultdetailsheader[class~=collapsed]{
+    bottom: 0px;
+    position: fixed;
+}
+
+#resultdetailsheader[class~=collapsed] + #resultdetailscontainer{
+    display: none;
+}
+
+#resultslistheader[class~=collapsed] + #resultslistcontainer{
+    display: none;
+}
+
+[class="headercontainer collapsed"] > label:first-child::before {
+    content: "\25b7";
+}
+
+[class="headercontainer expanded"] > label:first-child::before {
+    content: "\25e2";
 }
 
 #titleruleid,

@@ -20,10 +20,12 @@ class ExplorerWebview {
     private onCodeFlowTreeClickedBind;
     private onCollapseAllClickedBind;
     private onExpandAllClickedBind;
+    private onHeaderClickedBind;
     private onMessageBind;
     private onSourceLinkClickedBind;
     private onTabClickedBind;
     private onVerbosityChangeBind;
+    private resultList: ResultInfo[] = [];
     private vscode;
 
     public constructor() {
@@ -31,6 +33,7 @@ class ExplorerWebview {
         this.onCodeFlowTreeClickedBind = this.onCodeFlowTreeClicked.bind(this);
         this.onCollapseAllClickedBind = this.onCollapseAllClicked.bind(this);
         this.onExpandAllClickedBind = this.onExpandAllClicked.bind(this);
+        this.onHeaderClickedBind = this.onHeaderClicked.bind(this);
         this.onMessageBind = this.onMessage.bind(this);
         this.onSourceLinkClickedBind = this.onSourceLinkClicked.bind(this);
         this.onTabClickedBind = this.onTabClicked.bind(this);
@@ -206,10 +209,12 @@ class ExplorerWebview {
     }
 
     /**
-     * Creates the content that shows in the header of the Explorer window
+     * Creates the content that shows in the results details header of the Explorer window
      */
-    private createExplorerHeaderContent(resultInfo: ResultInfo): HTMLDivElement {
-        const header = this.createElement("div", { id: "title" }) as HTMLDivElement;
+    private createResultDetailsHeader(resultInfo: ResultInfo): HTMLDivElement {
+        const header = this.createElement("div", {
+            className: `headercontainer ${ToggleState.expanded}`, id: "resultdetailsheader",
+        }) as HTMLDivElement;
 
         if (resultInfo.ruleId !== undefined || resultInfo.ruleName !== undefined) {
             header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
@@ -226,7 +231,32 @@ class ExplorerWebview {
         }
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
+        header.addEventListener("click", this.onHeaderClickedBind);
 
+        return header;
+    }
+
+    /**
+     * Creates the content that shows in the results details header of the Explorer window
+     */
+    private createResultListHeader(): HTMLDivElement {
+        const header = this.createElement("div", {
+            className: `headercontainer ${ToggleState.collapsed}`, id: "resultslistheader",
+        }) as HTMLDivElement;
+
+        header.appendChild(this.createElement("label", {
+            id: "resultlistheadertitle",
+            text: `Results List: `,
+        }));
+
+        header.appendChild(this.createElement("label", {
+            id: "resultlistheadercount",
+            text: `${this.resultList.length}`,
+        }));
+
+        header.appendChild(document.createTextNode(" results"));
+
+        header.addEventListener("click", this.onHeaderClickedBind);
         return header;
     }
 
@@ -607,11 +637,19 @@ class ExplorerWebview {
         this.hasAttachments = resultInfo.attachments !== undefined;
 
         const body = document.body;
-        body.appendChild(this.createExplorerHeaderContent(resultInfo));
-        body.appendChild(this.createRuleDescription(resultInfo.message));
+
+        body.appendChild(this.createResultListHeader());
+        const resultsListContainer = this.createElement("div", {
+            attributes: { style: "display:none" }, id: "resultslistcontainer",
+        }) as HTMLDivElement;
+        body.appendChild(resultsListContainer);
+
+        body.appendChild(this.createResultDetailsHeader(resultInfo));
+        const resultDetailsContainer = this.createElement("div", { id: "resultdetailscontainer" }) as HTMLDivElement;
+        resultDetailsContainer.appendChild(this.createRuleDescription(resultInfo.message));
 
         const tabHeader = this.createTabHeaderContainer();
-        body.appendChild(tabHeader);
+        resultDetailsContainer.appendChild(tabHeader);
 
         // Create and add the panels
         const panelContainer = this.createElement("div", { id: "tabContentContainer" }) as HTMLDivElement;
@@ -619,7 +657,9 @@ class ExplorerWebview {
         panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
         panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
-        body.appendChild(panelContainer);
+        resultDetailsContainer.appendChild(panelContainer);
+
+        body.appendChild(resultDetailsContainer);
 
         // Setup any state
         if (this.hasCodeFlows) {
@@ -642,6 +682,28 @@ class ExplorerWebview {
             this.toggleTreeElement(ele);
         } else {
             this.sendMessage({ data: ele.id, type: MessageType.AttachmentSelectionChange } as WebviewMessage);
+        }
+    }
+
+    private onHeaderClicked(event: MouseEvent) {
+        let ele = event.srcElement as HTMLElement;
+        while (ele.className.indexOf("headercontainer") === -1) {
+            ele = ele.parentElement as HTMLElement;
+        }
+
+        let otherHeaderId = "resultslistheader";
+        if (ele.id === "resultslistheader") {
+            otherHeaderId = "resultdetailsheader";
+        }
+
+        const otherHeaderEle = document.getElementById(otherHeaderId);
+        // const containerId = ele.parentElement.id.replace("header", "container");
+        if (ele.className.indexOf(ToggleState.collapsed) !== -1) {
+            ele.className = ele.className.replace(ToggleState.collapsed, ToggleState.expanded);
+            otherHeaderEle.className = otherHeaderEle.className.replace(ToggleState.expanded, ToggleState.collapsed);
+        } else if (ele.className.indexOf(ToggleState.expanded) !== -1) {
+            ele.className = ele.className.replace(ToggleState.expanded, ToggleState.collapsed);
+            otherHeaderEle.className = otherHeaderEle.className.replace(ToggleState.collapsed, ToggleState.expanded);
         }
     }
 
