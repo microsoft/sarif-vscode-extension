@@ -63,7 +63,7 @@ export class SVDiagnosticFactory {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation = diagnostic.resultInfo.locations[0];
-            if (firstLocation !== null && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
+            if (firstLocation !== undefined && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
                 diagnostic.range = firstLocation.range;
                 diagnostic.message = SVDiagnosticFactory.updateMessage(diagnostic);

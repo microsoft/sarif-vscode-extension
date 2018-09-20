@@ -69,7 +69,7 @@ export class CodeFlows {
                 const thread = codeFlow.threads[tFKey];
                 for (const stepKey of thread.steps.keys()) {
                     const step = thread.steps[stepKey];
-                    if (step.location !== null && step.location.mapped !== true) {
+                    if (step.location !== undefined && step.location.mapped !== true) {
                         const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
                         await LocationFactory.create(sarifLoc.physicalLocation, runId).then((location: Location) => {
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
