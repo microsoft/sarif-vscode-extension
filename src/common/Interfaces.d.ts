@@ -3,7 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import { Command, Diagnostic, DiagnosticCollection, Range, Uri } from "vscode";
+import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
 import { sarif } from "./SARIFInterfaces";
 import { MessageType } from "./Enums";
 
@@ -155,4 +155,24 @@ export interface LocationData {
     file: string,
     sCol: string,
     sLine: string,
+}
+
+export interface ResultListData {
+    columns: string[],
+    groups: ResultListGroup[],
+}
+
+export interface ResultListGroup {
+    rows: ResultListRow[],
+}
+
+export interface ResultListRow {
+    message: Message,
+    resultFile: string,
+    resultStartPos: Position,
+    ruleId: string,
+    ruleName: string,
+    runId: string,
+    sarifFile: string,
+    severityLevel: sarif.Result.level,
 }
