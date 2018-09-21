@@ -105,6 +105,18 @@ export class SVDiagnosticCollection {
     }
 
     /**
+     * Gets a flat array of all the unmapped diagnostics
+     */
+    public getAllUnmappedDiagnostics(): SarifViewerDiagnostic[] {
+        const unmapped: SarifViewerDiagnostic[] = [];
+        this.unmappedIssuesCollection.forEach((value) => {
+            unmapped.push(...value);
+        });
+
+        return unmapped;
+    }
+
+    /**
      * Callback to handle whenever a mapping in the FileMapper changes
      * Goes through the diagnostics and tries to remap their locations, if not able to it gets left in the unmapped
      * Also goes through the codeflow locations, to update the locations

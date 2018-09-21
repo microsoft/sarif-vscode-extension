@@ -4,14 +4,15 @@
 // *                                                       *
 // ********************************************************/
 import {
-    CancellationToken, CodeActionContext, CodeActionProvider, Command, commands, Disposable, languages, ProviderResult,
-    Range, TextDocument,
+    CancellationToken, CodeAction, CodeActionContext, CodeActionKind, CodeActionProvider, Command, commands, Disposable,
+    languages, ProviderResult, Range, TextDocument,
 } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 
 /**
@@ -56,7 +57,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
         document: TextDocument,
         range: Range,
         context: CodeActionContext,
-        token: CancellationToken): ProviderResult<Command[]> {
+        token: CancellationToken): ProviderResult<CodeAction[]> {
         const index = context.diagnostics.findIndex((x) => x.code === SVDiagnosticFactory.Code);
         if (index !== -1) {
             const svDiagnostic = context.diagnostics[index] as SarifViewerDiagnostic;
@@ -92,18 +93,27 @@ export class SVCodeActionProvider implements CodeActionProvider {
      * Creates the set of code actions for the passed in Sarif Viewer Diagnostic
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
-    private getCodeActions(svDiagnostic: SarifViewerDiagnostic): any[] {
+    private getCodeActions(svDiagnostic: SarifViewerDiagnostic): CodeAction[] {
         const rawLocations = svDiagnostic.rawResult.locations;
-        const actions = [];
+        const actions: CodeAction[] = [];
 
         if (!svDiagnostic.resultInfo.assignedLocation.mapped && rawLocations !== undefined) {
             const physicalLocation = rawLocations[0].physicalLocation;
             if (physicalLocation !== undefined && physicalLocation.fileLocation !== undefined) {
-                actions.push({
+                const cmd = {
                     arguments: [physicalLocation.fileLocation, svDiagnostic.resultInfo.runId],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
-                });
+                } as Command;
+
+                const action = {
+                    command: cmd,
+                    diagnostics: SVDiagnosticCollection.Instance.getAllUnmappedDiagnostics(),
+                    kind: CodeActionKind.QuickFix,
+                    title: "Map To Source",
+                } as CodeAction;
+
+                actions.push(action);
             }
         }
 
