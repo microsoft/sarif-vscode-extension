@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.5.0
+* Added feature to open and convert non-sarif static analysis file to sarif for analysis [issue #79](https://github.com/Microsoft/sarif-vscode-extension/issues/79)
+    * New command to activate the converter is "Sarif: Convert and open a non-sarif file"
+    * Supported analysis tool files are: 
+        * AndroidStudio, ClangAnalyzer, CppCheck, Fortify, FortifyFpr, FxCop, PREfast, Pylint, SemmleQL, StaticDriverVerifier, TSLint
+* Added support for showing QuickFix light bulb and context menu in the Problems panel when a Sarif result can be remapped
+* Fixed bug where the UI dialog for remapping allowed a non valid path to be entered [issue #92](https://github.com/Microsoft/sarif-vscode-extension/issues/92)
+* Fixed bug where the Sarif Explorer showed empty when a sarif result was missing data such as rule id, rule name or location
+
 ## 2.4.0
 * Changed the remapping files input box UX: [issue #71](https://github.com/Microsoft/sarif-vscode-extension/issues/71)
     * Added a button that opens a file picker, and populates the input box with the path of the file selected
