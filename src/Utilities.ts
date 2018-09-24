@@ -82,6 +82,38 @@ export class Utilities {
     }
 
     /**
+     * Creates a readonly file at the path with the contents specified
+     * If the file already exists method will delete that file and replace it with the new one
+     * @param path path to create the file in
+     * @param contents content to add to the file after created
+     */
+    public static createReadOnlyFile(path: string, contents: string): void {
+        try {
+            Utilities.Fs.unlinkSync(path);
+        } catch (error) {
+            if (error.code !== "ENOENT") { throw error; }
+        }
+
+        Utilities.Fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
+    }
+
+    /**
+     * Generates a folder path matching original path in the temp location and returns the path with the file included
+     * @param filePath original file path, to recreate in the temp location
+     * @param hashValue optional hash value to add to the path
+     */
+    public static generateTempPath(filePath: string, hashValue?: string): string {
+        const pathObj = Utilities.Path.parse(filePath);
+        let tempPath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "",
+            pathObj.dir.replace(pathObj.root, ""));
+        tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
+        tempPath = Utilities.createDirectoryInTemp(tempPath);
+        tempPath = Utilities.Path.join(tempPath, Utilities.Path.win32.basename(filePath));
+
+        return tempPath;
+    }
+
+    /**
      * This will convert the passed in uri into a common format
      * ex: file:///d:/test/ and d:\\test will return d:\test
      * @param uri path to a directory
@@ -186,11 +218,58 @@ export class Utilities {
         return message;
     }
 
+    /**
+     * Handles cleaning up the Sarif Viewer temp directory used for temp files (embedded code, converted files, etc.)
+     */
+    public static removeSarifViewerTempDirectory(): void {
+        const path = Utilities.Path.join(Utilities.Os.tmpdir(), Utilities.SarifViewerTempDir);
+        Utilities.removeDirectoryContents(path);
+        Utilities.Fs.rmdirSync(path);
+    }
+
     private static fs: any;
     private static os: any;
     private static path: any;
     private static embeddedRegEx = /(?:[^\\]|^)(\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
     private static iconsPath: string;
+    private static readonly SarifViewerTempDir = "SarifViewerExtension";
+
+    /**
+     * Loops through the passed in path's directories and creates the directory structure
+     * @param path directory path that needs to be created in temp directory(including temp directory)
+     */
+    private static createDirectoryInTemp(path: string): string {
+        const directories = path.split(Utilities.Path.sep);
+        let createPath: string = Utilities.Os.tmpdir();
+
+        for (const directory of directories) {
+            createPath = Utilities.Path.join(createPath, directory);
+            try {
+                Utilities.Fs.mkdirSync(createPath);
+            } catch (error) {
+                if (error.code !== "EEXIST") { throw error; }
+            }
+        }
+
+        return createPath;
+    }
+
+    /**
+     * Recursivly removes all of the contents in a directory, including subfolders
+     * @param path directory to remove all contents from
+     */
+    private static removeDirectoryContents(path: string): void {
+        const contents = Utilities.Fs.readdirSync(path);
+        for (const content of contents) {
+            const contentPath = Utilities.Path.join(path, content);
+            if (Utilities.Fs.lstatSync(contentPath).isDirectory()) {
+                this.removeDirectoryContents(contentPath);
+                Utilities.Fs.rmdirSync(contentPath);
+            } else {
+                Utilities.Fs.unlinkSync(contentPath);
+            }
+        }
+    }
 
     /**
      * Remove the escape '\' characters from before any '[' or ']' characters in the text

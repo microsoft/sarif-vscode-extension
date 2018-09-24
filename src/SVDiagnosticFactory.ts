@@ -63,7 +63,7 @@ export class SVDiagnosticFactory {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation = diagnostic.resultInfo.locations[0];
-            if (firstLocation !== null && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
+            if (firstLocation !== undefined && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
                 diagnostic.range = firstLocation.range;
                 diagnostic.message = SVDiagnosticFactory.updateMessage(diagnostic);
@@ -101,7 +101,7 @@ export class SVDiagnosticFactory {
     private static updateMessage(diagnostic: SarifViewerDiagnostic): string {
         let message = diagnostic.resultInfo.message.text;
 
-        if (diagnostic.resultInfo.ruleId !== "") {
+        if (diagnostic.resultInfo.ruleId !== undefined && diagnostic.resultInfo.ruleId !== "") {
             message = `[${diagnostic.resultInfo.ruleId}] ${message}`;
         }
 

@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.4.0",
+    "version": "2.5.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -29,6 +29,7 @@
     },
     "activationEvents": [
         "onLanguage:json",
+        "onCommand:extension.sarif.Convert",
         "onCommand:extension.sarif.LaunchExplorer"
     ],
     "main": "./out/extension",
@@ -54,6 +55,11 @@
             }
         ],
         "commands": [
+            {
+                "command": "extension.sarif.Convert",
+                "title": "Convert and open a non-sarif file",
+                "category": "Sarif"
+            },
             {
                 "command": "extension.sarif.LaunchExplorer",
                 "title": "Launch the Sarif Explorer",

@@ -19,7 +19,6 @@ import { Utilities } from "./Utilities";
 export class FileMapper {
     public static readonly MapCommand = "extension.sarif.Map";
 
-    private static readonly SarifViewerTempDir = "SarifViewerExtension";
     private static instance: FileMapper;
 
     private baseRemapping: Map<string, string>;
@@ -53,7 +52,6 @@ export class FileMapper {
      */
     public dispose(): void {
         this.changeConfigDisposable.dispose();
-        this.removeSarifViewerTempDirectory();
     }
 
     /**
@@ -189,42 +187,6 @@ export class FileMapper {
     }
 
     /**
-     * Loops through the passed in path's directories and creates the directory structure
-     * @param path directory path that needs to be created in temp directory(including temp directory)
-     */
-    private createDirectoryInTemp(path: string): string {
-        const directories = path.split(Utilities.Path.sep);
-        let createPath: string = Utilities.Os.tmpdir();
-
-        for (const directory of directories) {
-            createPath = Utilities.Path.join(createPath, directory);
-            try {
-                Utilities.Fs.mkdirSync(createPath);
-            } catch (error) {
-                if (error.code !== "EEXIST") { throw error; }
-            }
-        }
-
-        return createPath;
-    }
-
-    /**
-     * Creates a readonly file at the path with the contents specified
-     * If the file already exists method will delete that file and replace it with the new one
-     * @param path path to create the file in
-     * @param contents content to add to the file after created
-     */
-    private createReadOnlyFile(path: string, contents: string): void {
-        try {
-            Utilities.Fs.unlinkSync(path);
-        } catch (error) {
-            if (error.code !== "ENOENT") { throw error; }
-        }
-
-        Utilities.Fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
-    }
-
-    /**
      * Gets the hash value for the embedded content. Preference for sha256, if not found it uses the first hash value
      * @param hashes Array of hash objects
      */
@@ -252,12 +214,7 @@ export class FileMapper {
     private mapEmbeddedContent(fileUri: Uri, file: sarif.File): void {
         const hashValue = this.getHashValue(file.hashes);
         const fileUriPath = Utilities.getFsPathWithFragment(fileUri);
-        const pathObj = Utilities.Path.parse(fileUriPath);
-        let tempPath: string = Utilities.Path.join(FileMapper.SarifViewerTempDir, hashValue,
-            pathObj.dir.replace(pathObj.root, ""));
-        tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
-        tempPath = this.createDirectoryInTemp(tempPath);
-        tempPath = Utilities.Path.join(tempPath, Utilities.Path.win32.basename(fileUriPath));
+        const tempPath = Utilities.generateTempPath(fileUriPath, hashValue);
 
         let contents: string;
         if (file.contents.text !== undefined) {
@@ -266,7 +223,7 @@ export class FileMapper {
             contents = Buffer.from(file.contents.binary, "base64").toString();
         }
 
-        this.createReadOnlyFile(tempPath, contents);
+        Utilities.createReadOnlyFile(tempPath, contents);
         this.fileRemapping.set(fileUriPath, Uri.file(tempPath));
     }
 
@@ -293,9 +250,11 @@ export class FileMapper {
             );
 
             disposables.push(input.onDidAccept(() => {
-                resolved = true;
-                input.hide();
-                resolve(input.value);
+                if (input.validationMessage === undefined) {
+                    resolved = true;
+                    input.hide();
+                    resolve(input.value);
+                }
             }));
 
             disposables.push(input.onDidHide(() => {
@@ -371,32 +330,6 @@ export class FileMapper {
 
             input.show();
         });
-    }
-
-    /**
-     * Recursivly removes all of the contents in a directory, including subfolders
-     * @param path directory to remove all contents from
-     */
-    private removeDirectoryContents(path: string): void {
-        const contents = Utilities.Fs.readdirSync(path);
-        for (const content of contents) {
-            const contentPath = Utilities.Path.join(path, content);
-            if (Utilities.Fs.lstatSync(contentPath).isDirectory()) {
-                this.removeDirectoryContents(contentPath);
-                Utilities.Fs.rmdirSync(contentPath);
-            } else {
-                Utilities.Fs.unlinkSync(contentPath);
-            }
-        }
-    }
-
-    /**
-     * Handles cleaning up the Sarif Viewer temp directory used for embeded code
-     */
-    private removeSarifViewerTempDirectory(): void {
-        const path = Utilities.Path.join(Utilities.Os.tmpdir(), FileMapper.SarifViewerTempDir);
-        this.removeDirectoryContents(path);
-        Utilities.Fs.rmdirSync(path);
     }
 
     /**
