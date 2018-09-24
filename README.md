@@ -15,6 +15,11 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
  * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
+ * *new* Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog for list of supported tools
+    * To execute the convert command via the Command window(F1 key):
+        1. Type in "Sarif: Convert and open a non-sarif file"
+        2. Select the tool that generated the file
+        3. In the file picker that opens up select the file
 
 ### Sarif Explorer:
  * Automatically launches when the first result is navigated to
