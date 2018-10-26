@@ -5,6 +5,7 @@
 // ********************************************************/
 import { RunInfo } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
+import { Utilities } from "./Utilities";
 
 /**
  * Class that holds the run information processed from the Sarif run
@@ -39,7 +40,8 @@ export class RunInfoFactory {
         runInfo.additionalProperties = run.properties;
         runInfo.uriBaseIds = run.originalUriBaseIds;
 
-        runInfo.sarifFileName = sarifFileName;
+        runInfo.sarifFileFullPath = sarifFileName;
+        runInfo.sarifFileName = Utilities.Path.basename(sarifFileName);
         return runInfo;
     }
 }

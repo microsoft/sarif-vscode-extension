@@ -13,7 +13,6 @@ import { SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes
@@ -58,11 +57,12 @@ export class SVCodeActionProvider implements CodeActionProvider {
         range: Range,
         context: CodeActionContext,
         token: CancellationToken): ProviderResult<CodeAction[]> {
-        const index = context.diagnostics.findIndex((x) => x.code === SVDiagnosticFactory.Code);
-        if (index !== -1) {
+        const index = context.diagnostics.findIndex((x) => (x as SarifViewerDiagnostic).resultInfo !== undefined);
+        let actions: CodeAction[];
+        if (context.only === undefined && index !== -1) {
             const svDiagnostic = context.diagnostics[index] as SarifViewerDiagnostic;
             if (svDiagnostic.source === "SARIFViewer") {
-                // Currently diagnostic is the place holder for the 250 limit,
+                // This diagnostic is the place holder for the problems panel limit message,
                 // can possibly put logic here to allow for showing next set of diagnostics
             } else {
                 if (this.isFirstCall) {
@@ -80,13 +80,11 @@ export class SVCodeActionProvider implements CodeActionProvider {
                     CodeFlowDecorations.updateCodeFlowSelection();
                 }
 
-                const actions = this.getCodeActions(svDiagnostic);
-
-                return actions;
+                actions = this.getCodeActions(svDiagnostic);
             }
-        } else {
-            return undefined;
         }
+
+        return actions;
     }
 
     /**

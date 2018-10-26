@@ -3,9 +3,10 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+/// <reference path="./enums.ts" />
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, HTMLElementOptions, Location, LocationData,
-    Message, ResultInfo, RunInfo, TreeNodeOptions, WebviewMessage,
+    Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
 import { sarif } from "../common/SARIFInterfaces";
 
@@ -25,8 +26,8 @@ class ExplorerWebview {
     private onSourceLinkClickedBind;
     private onTabClickedBind;
     private onVerbosityChangeBind;
-    private resultList: ResultInfo[] = [];
     private vscode;
+    private resultsList;
 
     public constructor() {
         this.onAttachmentClickedBind = this.onAttachmentClicked.bind(this);
@@ -38,6 +39,9 @@ class ExplorerWebview {
         this.onSourceLinkClickedBind = this.onSourceLinkClicked.bind(this);
         this.onTabClickedBind = this.onTabClicked.bind(this);
         this.onVerbosityChangeBind = this.onVerbosityChange.bind(this);
+
+        // @ts-ignore ResultsList is a defined class but can't import becuase it's not a module
+        this.resultsList = new ResultsList(this);
 
         window.addEventListener("message", this.onMessageBind);
         // @ts-ignore: acquireVsCodeApi function is provided real time in the webview
@@ -53,9 +57,13 @@ class ExplorerWebview {
         switch (message.type) {
             case MessageType.NewDiagnostic:
                 this.setDiagnostic(message.data);
+                this.resultsList.updateSelection();
                 break;
             case MessageType.CodeFlowSelectionChange:
                 this.showTreeNode(message.data, true);
+                break;
+            case MessageType.ResultsListDataSet:
+                this.resultsList.Data = JSON.parse(message.data) as ResultsListData;
                 break;
         }
     }
@@ -66,6 +74,29 @@ class ExplorerWebview {
      */
     public sendMessage(message: WebviewMessage) {
         this.vscode.postMessage(message);
+    }
+
+    /**
+     * Helper function for creating an element and setting some of it's properties
+     * @param tagName Type of element to create(div, label, etc.)
+     * @param options Additional properties to set on the new element
+     */
+    public createElement(tagName: string, options?: HTMLElementOptions): HTMLElement {
+        const ele = document.createElement(tagName);
+        if (options !== undefined) {
+            if (options.text !== undefined) { ele.textContent = options.text; }
+            if (options.id !== undefined) { ele.id = options.id; }
+            if (options.className !== undefined) { ele.className = options.className; }
+            if (options.tooltip !== undefined) { ele.setAttribute("title", options.tooltip); }
+
+            for (const name in options.attributes) {
+                if (options.attributes.hasOwnProperty(name)) {
+                    ele.setAttribute(name, options.attributes[name]);
+                }
+            }
+        }
+
+        return ele;
     }
 
     /**
@@ -96,43 +127,62 @@ class ExplorerWebview {
         return steps.length;
     }
 
-    private cleanUpBody() {
+    /**
+     * Cleans up the result details section, removing event handlers and elements
+     */
+    private cleanUpResultDetails() {
         // Remove event handlers
         const tabContainer = document.getElementById("tabcontainer");
         if (tabContainer !== null) {
             for (let i = 0; i < tabContainer.children.length; i++) {
-                tabContainer.children.item(i).addEventListener("click", this.onTabClickedBind);
+                tabContainer.children.item(i).removeEventListener("click", this.onTabClickedBind);
             }
         }
 
         const sourceLinks = document.getElementsByClassName("sourcelink");
         for (let i = 0; i < sourceLinks.length; i++) {
-            sourceLinks.item(i).addEventListener("click", this.onSourceLinkClickedBind);
+            sourceLinks.item(i).removeEventListener("click", this.onSourceLinkClickedBind);
         }
 
         if (this.hasCodeFlows) {
             const codeFlowTrees = document.getElementsByClassName("codeflowtreeroot");
             for (let i = 0; i < codeFlowTrees.length; i++) {
-                codeFlowTrees.item(i).addEventListener("click", this.onCodeFlowTreeClickedBind);
+                codeFlowTrees.item(i).removeEventListener("click", this.onCodeFlowTreeClickedBind);
             }
 
-            document.getElementById("expandallcodeflow").addEventListener("click", this.onExpandAllClickedBind);
-            document.getElementById("collapseallcodeflow").addEventListener("click", this.onCollapseAllClickedBind);
-            document.getElementById("codeflowverbosity").addEventListener("change", this.onVerbosityChangeBind);
+            let element = document.getElementById("expandallcodeflow");
+            if (element !== null) {
+                element.removeEventListener("click", this.onExpandAllClickedBind);
+            }
+
+            element = document.getElementById("collapseallcodeflow");
+            if (element !== null) {
+                element.removeEventListener("click", this.onCollapseAllClickedBind);
+            }
+
+            element = document.getElementById("codeflowverbosity");
+            if (element !== null) {
+                element.removeEventListener("click", this.onVerbosityChangeBind);
+            }
         }
 
         if (this.hasAttachments) {
             const attachmentTrees = document.getElementsByClassName("attachmentstreeroot");
             for (let i = 0; i < attachmentTrees.length; i++) {
-                attachmentTrees.item(i).addEventListener("click", this.onAttachmentClicked);
+                attachmentTrees.item(i).removeEventListener("click", this.onAttachmentClicked);
             }
         }
 
-        // Clear body
-        while (document.body.children.length > 0) {
-            document.body.removeChild(document.body.children.item(0));
+        // Clear Result Details
+        const header = document.getElementById("resultdetailsheader");
+        while (header.children.length > 0) {
+            header.removeChild(header.children.item(0));
         }
 
+        const container = document.getElementById("resultdetailscontainer");
+        while (container.children.length > 0) {
+            container.removeChild(container.children.item(0));
+        }
     }
 
     /**
@@ -186,35 +236,10 @@ class ExplorerWebview {
     }
 
     /**
-     * Helper function for creating an element and setting some of it's properties
-     * @param tagName Type of element to create(div, label, etc.)
-     * @param options Additional properties to set on the new element
-     */
-    private createElement(tagName: string, options?: HTMLElementOptions): HTMLElement {
-        const ele = document.createElement(tagName);
-        if (options !== undefined) {
-            if (options.text !== undefined) { ele.textContent = options.text; }
-            if (options.id !== undefined) { ele.id = options.id; }
-            if (options.className !== undefined) { ele.className = options.className; }
-            if (options.tooltip !== undefined) { ele.setAttribute("title", options.tooltip); }
-
-            for (const name in options.attributes) {
-                if (options.attributes.hasOwnProperty(name)) {
-                    ele.setAttribute(name, options.attributes[name]);
-                }
-            }
-        }
-
-        return ele;
-    }
-
-    /**
      * Creates the content that shows in the results details header of the Explorer window
      */
-    private createResultDetailsHeader(resultInfo: ResultInfo): HTMLDivElement {
-        const header = this.createElement("div", {
-            className: `headercontainer ${ToggleState.expanded}`, id: "resultdetailsheader",
-        }) as HTMLDivElement;
+    private createResultDetailsHeader(resultInfo: ResultInfo) {
+        const header = document.getElementById("resultdetailsheader");
 
         if (resultInfo.ruleId !== undefined || resultInfo.ruleName !== undefined) {
             header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
@@ -232,32 +257,6 @@ class ExplorerWebview {
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
         header.addEventListener("click", this.onHeaderClickedBind);
-
-        return header;
-    }
-
-    /**
-     * Creates the content that shows in the results details header of the Explorer window
-     */
-    private createResultListHeader(): HTMLDivElement {
-        const header = this.createElement("div", {
-            className: `headercontainer ${ToggleState.collapsed}`, id: "resultslistheader",
-        }) as HTMLDivElement;
-
-        header.appendChild(this.createElement("label", {
-            id: "resultlistheadertitle",
-            text: `Results List: `,
-        }));
-
-        header.appendChild(this.createElement("label", {
-            id: "resultlistheadercount",
-            text: `${this.resultList.length}`,
-        }));
-
-        header.appendChild(document.createTextNode(" results"));
-
-        header.addEventListener("click", this.onHeaderClickedBind);
-        return header;
     }
 
     /**
@@ -416,7 +415,7 @@ class ExplorerWebview {
             collapseAll.addEventListener("click", this.onCollapseAllClickedBind);
             headerEle.appendChild(collapseAll);
 
-            headerEle.appendChild(this.createElement("div", { className: "tabcontentheadersperator", text: "|" }));
+            headerEle.appendChild(this.createElement("div", { className: "headercontentseperator", text: "|" }));
 
             const verbosity = this.createElement("input", {
                 attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
@@ -629,23 +628,18 @@ class ExplorerWebview {
     }
 
     /**
-     * using the currently set diagnostic, this function builds the viewer of the data and adds to body
+     * builds the result details section of the viewer, using the currently set diagnostic
      */
-    private loadDiagnosticViewer() {
+    private loadResultDetails() {
         const resultInfo = this.diagnostic.resultInfo;
         this.hasCodeFlows = resultInfo.codeFlows !== undefined;
         this.hasAttachments = resultInfo.attachments !== undefined;
 
         const body = document.body;
 
-        body.appendChild(this.createResultListHeader());
-        const resultsListContainer = this.createElement("div", {
-            attributes: { style: "display:none" }, id: "resultslistcontainer",
-        }) as HTMLDivElement;
-        body.appendChild(resultsListContainer);
+        this.createResultDetailsHeader(resultInfo);
 
-        body.appendChild(this.createResultDetailsHeader(resultInfo));
-        const resultDetailsContainer = this.createElement("div", { id: "resultdetailscontainer" }) as HTMLDivElement;
+        const resultDetailsContainer = document.getElementById("resultdetailscontainer") as HTMLDivElement;
         resultDetailsContainer.appendChild(this.createRuleDescription(resultInfo.message));
 
         const tabHeader = this.createTabHeaderContainer();
@@ -658,8 +652,6 @@ class ExplorerWebview {
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
         panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
         resultDetailsContainer.appendChild(panelContainer);
-
-        body.appendChild(resultDetailsContainer);
 
         // Setup any state
         if (this.hasCodeFlows) {
@@ -674,11 +666,11 @@ class ExplorerWebview {
      */
     private onAttachmentClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
-        if (ele.className === "treenodelocation") {
+        if (ele.classList.contains("treenodelocation")) {
             ele = ele.parentElement;
         }
 
-        if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+        if (!ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
             this.toggleTreeElement(ele);
         } else {
             this.sendMessage({ data: ele.id, type: MessageType.AttachmentSelectionChange } as WebviewMessage);
@@ -687,7 +679,7 @@ class ExplorerWebview {
 
     private onHeaderClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
-        while (ele.className.indexOf("headercontainer") === -1) {
+        while (!ele.classList.contains("headercontainer")) {
             ele = ele.parentElement as HTMLElement;
         }
 
@@ -697,13 +689,21 @@ class ExplorerWebview {
         }
 
         const otherHeaderEle = document.getElementById(otherHeaderId);
-        // const containerId = ele.parentElement.id.replace("header", "container");
-        if (ele.className.indexOf(ToggleState.collapsed) !== -1) {
-            ele.className = ele.className.replace(ToggleState.collapsed, ToggleState.expanded);
-            otherHeaderEle.className = otherHeaderEle.className.replace(ToggleState.expanded, ToggleState.collapsed);
-        } else if (ele.className.indexOf(ToggleState.expanded) !== -1) {
-            ele.className = ele.className.replace(ToggleState.expanded, ToggleState.collapsed);
-            otherHeaderEle.className = otherHeaderEle.className.replace(ToggleState.collapsed, ToggleState.expanded);
+        if (ele.classList.contains(ToggleState.collapsed)) {
+            ele.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+            otherHeaderEle.classList.replace(ToggleState.expanded, ToggleState.collapsed);
+        } else if (ele.classList.contains(ToggleState.expanded)) {
+            ele.classList.replace(ToggleState.expanded, ToggleState.collapsed);
+            otherHeaderEle.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+        }
+
+        if (document.getElementById("resultslistheader").classList.contains(ToggleState.expanded)) {
+            const table = $("#resultslisttable");
+            // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+            table.colResizable({ disable: true });
+            // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+            table.colResizable(this.resultsList.colResizeObj);
+            window.dispatchEvent(new Event("resize"));
         }
     }
 
@@ -713,11 +713,11 @@ class ExplorerWebview {
      */
     private onCodeFlowTreeClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
-        if (ele.className === "treenodelocation") {
+        if (ele.classList.contains("treenodelocation")) {
             ele = ele.parentElement;
         }
 
-        if (ele.className.indexOf("unexpandable") === -1 && event.offsetX < 17 /*width of expand/collapse arrows*/) {
+        if (!ele.classList.contains("unexpandable") && event.offsetX < 17 /*width of expand/collapse arrows*/) {
             this.toggleTreeElement(ele);
         } else {
             this.selectCodeFlowNode(ele);
@@ -779,12 +779,12 @@ class ExplorerWebview {
     private openTab(id: string) {
         const activetab = document.getElementsByClassName("tab tabactive")[0];
         if (activetab !== undefined && activetab.id !== id) {
-            activetab.className = "tab";
-            document.getElementById(activetab.id + "content").className = "tabcontent";
+            activetab.classList.remove("tabactive");
+            document.getElementById(activetab.id + "content").classList.remove("tabcontentactive");
         }
 
-        document.getElementById(id).className = "tab tabactive";
-        document.getElementById(id + "content").className = "tabcontent tabcontentactive";
+        document.getElementById(id).classList.add("tabactive");
+        document.getElementById(id + "content").classList.add("tabcontentactive");
 
         this.sendMessage({ data: id, type: MessageType.TabChanged } as WebviewMessage);
     }
@@ -794,11 +794,12 @@ class ExplorerWebview {
      * @param ele the codeflow node element to select
      */
     private selectCodeFlowNode(ele: HTMLElement) {
-        const cfSelected = document.getElementsByClassName("codeflowselected");
+        const codeFlowSelectedClass = "codeflowselected";
+        const cfSelected = document.getElementsByClassName(codeFlowSelectedClass);
         while (cfSelected.length > 0) {
-            cfSelected[0].className = cfSelected[0].className.replace("codeflowselected", "");
+            cfSelected[0].classList.remove(codeFlowSelectedClass);
         }
-        ele.className = ele.className + " codeflowselected";
+        ele.classList.add(codeFlowSelectedClass);
     }
 
     /**
@@ -806,10 +807,10 @@ class ExplorerWebview {
      * @param data json stringify'd version of the diagnosticdata to be set
      */
     private setDiagnostic(data: string) {
-        this.cleanUpBody();
+        this.cleanUpResultDetails();
         const diagnosticData = JSON.parse(data) as DiagnosticData;
         this.diagnostic = diagnosticData;
-        this.loadDiagnosticViewer();
+        this.loadResultDetails();
 
         if (diagnosticData.selectedRow !== undefined) {
             this.showTreeNode(diagnosticData.selectedRow, true);
@@ -875,8 +876,8 @@ class ExplorerWebview {
         const node = document.getElementById(treeNodeId);
         if (node !== null) {
             let parent = node.parentElement;
-            while (parent.className !== "codeflowtreeroot") {
-                parent.className = parent.className.replace(ToggleState.collapsed, ToggleState.expanded);
+            while (!parent.classList.contains("codeflowtreeroot")) {
+                parent.classList.replace(ToggleState.collapsed, ToggleState.expanded);
                 parent = parent.parentElement;
             }
 
@@ -956,35 +957,6 @@ class ExplorerWebview {
         this.sendMessage({ data: verbosityRequest, type: MessageType.VerbosityChanged } as WebviewMessage);
     }
 
-}
-
-// Enums
-enum MessageType {
-    AttachmentSelectionChange,
-    CodeFlowSelectionChange,
-    ExplorerLoaded,
-    NewDiagnostic,
-    SourceLinkClicked,
-    TabChanged,
-    VerbosityChanged,
-}
-
-enum tabNames {
-    "attachments" = "attachmentstab",
-    "codeflow" = "codeflowtab",
-    "resultinfo" = "resultinfotab",
-    "runinfo" = "runinfotab",
-}
-
-enum TreeClassNames {
-    ExpandState,
-    Importance,
-    VerbosityShowState,
-}
-
-enum ToggleState {
-    "collapsed" = "collapsed",
-    "expanded" = "expanded",
 }
 
 // @ts-ignore: This is used to instantiate the main class

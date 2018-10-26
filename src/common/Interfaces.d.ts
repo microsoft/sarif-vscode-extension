@@ -5,7 +5,7 @@
 // ********************************************************/
 import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
 import { sarif } from "./SARIFInterfaces";
-import { MessageType } from "./Enums";
+import { MessageType, SeverityLevelOrder } from "./Enums";
 
 /**
 * Interface for options to set while creating an html element
@@ -57,6 +57,7 @@ export interface RunInfo {
     additionalProperties: { [key: string]: string };
     cmdLine: string;
     id: number;
+    sarifFileFullPath: string;
     sarifFileName: string;
     toolFileName: string;
     toolFullName: string;
@@ -70,6 +71,7 @@ export interface ResultInfo {
     assignedLocation: Location;
     attachments: Attachment[];
     codeFlows: CodeFlow[];
+    id: number;
     locations: Location[];
     message: Message;
     messageHTML: HTMLLabelElement;
@@ -157,22 +159,63 @@ export interface LocationData {
     sLine: string,
 }
 
-export interface ResultListData {
-    columns: string[],
-    groups: ResultListGroup[],
+export interface ResultsListData {
+    columns: { [key: string]: ResultsListColumn },
+    groupBy: string,
+    groups: ResultsListGroup[],
+    resultCount: number,
+    sortBy: ResultsListSortBy,
 }
 
-export interface ResultListGroup {
-    rows: ResultListRow[],
+export interface ResultsListGroup {
+    rows: ResultsListRow[],
+    text: string,
+    tooltip?: string,
 }
 
-export interface ResultListRow {
-    message: Message,
-    resultFile: string,
-    resultStartPos: Position,
-    ruleId: string,
-    ruleName: string,
-    runId: string,
-    sarifFile: string,
-    severityLevel: sarif.Result.level,
+export interface ResultsListRow {
+    message: ResultsListStringValue,
+    resultFile: ResultsListStringValue,
+    resultId: ResultsListNumberValue,
+    resultStartPos: ResultsListPositionValue,
+    ruleId: ResultsListStringValue,
+    ruleName: ResultsListStringValue,
+    runId: ResultsListNumberValue,
+    sarifFile: ResultsListStringValue,
+    severityLevel: ResultsListSeverityValue,
+}
+
+export interface ResultsListValue {
+    value: any,
+    tooltip?: string,
+}
+
+export interface ResultsListStringValue extends ResultsListValue {
+    value: string,
+}
+
+export interface ResultsListNumberValue extends ResultsListValue {
+    value: number
+}
+
+export interface ResultsListPositionValue extends ResultsListValue {
+    pos: Position,
+    value: string,
+}
+
+export interface ResultsListSeverityValue extends ResultsListValue {
+    isSeverity: boolean,
+    severityLevelOrder: SeverityLevelOrder,
+    value: sarif.Result.level,
+}
+
+export interface ResultsListColumn {
+    description: string,
+    hide: boolean,
+    title: string
+}
+
+export interface ResultsListSortBy {
+    column: string,
+    ascending: boolean
 }

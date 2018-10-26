@@ -1,0 +1,123 @@
+/*********************************************************** 
+// *                                                       * 
+// *   Copyright (C) Microsoft. All rights reserved.       * 
+// *                                                       * 
+// ********************************************************/
+
+#resultslistheader[class~=collapsed]+#resultslistcontainer {
+    display: none;
+    user-select: none;
+}
+
+#resultslistcontainer {
+    padding: 5px;
+}
+
+#resultslisttablecontainer {
+    height: 45vh;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+#resultslisttable {
+    border-spacing: 0px !important;
+    width: 100%;
+    user-select: none;
+}
+
+#resultslisttable>thead>tr>th:first-child {
+    width: 25px !important;
+}
+
+td,
+th {
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    vertical-align: top;
+}
+
+th>span~span {
+    font-weight: bolder;
+}
+
+th>span.ascending:before {
+    content: "▼";
+}
+
+th>span.descending:before {
+    content: "▲";
+}
+
+tr {
+    white-space: nowrap;
+}
+
+tr.resultslistrow:hover {
+    background-color: var(--vscode-editor-hoverHighlightBackground);
+}
+
+tr.resultslistrow.selected {
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+}
+
+tr.resultslistrow.selected:focus {
+    background-color: var(--vscode-editor-selectionBackground);
+}
+
+select {
+    background-color: var(--vscode-menubar-selectionBackground);
+    border-color: transparent;
+    color: var(--vscode-menubar-selectionForeground);
+}
+
+option {
+    background-color: var(--vscode-settings-dropdownBackground);
+    color: var(--vscode-settings-dropdownForeground);
+}
+
+.select-checkbox {
+    background-color: var(--color);
+    float: right;
+    height: 100%;
+    -webkit-appearance: none;
+    mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000;}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
+    -webkit-mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-size: contain;
+    -webkit-mask-size: contain;
+    mask-position: center;
+    -webkit-mask-position: center;
+    width: 24px;
+}
+
+.select-checkbox option[checked] {
+    font-weight: bold;
+}
+
+#resultslistbuttonbar {
+    background-color: var(--vscode-sideBarSectionHeader-background);
+    border-bottom-color: var(--color);
+    border-bottom-style: solid;
+    border-bottom-width: thin;
+    height: 32px;
+}
+
+.countbadge {
+    background-color: var(--vscode-badge-background);
+    border-radius: 1em;
+    color: var(--vscode-badge-foreground);
+    display: inline-block;
+    font-size: 85%;
+    font-weight: 400;
+    line-height: 1em;
+    margin-left: 10px;
+    min-width: .6em;
+    padding: .3em .5em;
+    text-align: center;
+}
+
+.resultslistrow.hidden {
+    display: none;
+}

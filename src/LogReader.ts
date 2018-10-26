@@ -173,6 +173,7 @@ export class LogReader {
                             const sarifResult = run.results[resultIndex];
                             await ResultInfoFactory.create(sarifResult, runId, run.resources).then(
                                 (resultInfo: ResultInfo) => {
+                                    resultInfo.id = resultIndex;
                                     if (resultInfo.assignedLocation === undefined ||
                                         !resultInfo.assignedLocation.mapped) {
                                         resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,

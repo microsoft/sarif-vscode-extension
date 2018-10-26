@@ -1,0 +1,514 @@
+// /********************************************************
+// *                                                       *
+// *   Copyright (C) Microsoft. All rights reserved.       *
+// *                                                       *
+// ********************************************************/
+/// <reference path="./enums.ts" />
+import {
+    ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSeverityValue, ResultsListValue, WebviewMessage,
+} from "../common/Interfaces";
+
+/**
+ * This class handles generating and providing the HTML content for the Results List in the Explorer
+ */
+class ResultsList {
+    public colResizeObj = {
+        disabledColumns: [0], headerOnly: true, liveDrag: true, minWidth: 26, partialRefresh: true, postbackSafe: true,
+    };
+    private collapsedGroups: any[];
+    private onCollapseAllGroupsBind;
+    private onExpandAllGroupsBind;
+    private onGroupByChangedBind;
+    private onRowClickedBind;
+    private onShowChangedBind;
+    private onSortClickedBind;
+    private onToggleGroupBind;
+    private data: ResultsListData;
+
+    private webview;
+
+    public constructor(explorer) {
+        this.webview = explorer;
+        this.onCollapseAllGroupsBind = this.onCollapseAllGroups.bind(this);
+        this.onExpandAllGroupsBind = this.onExpandAllGroups.bind(this);
+        this.onGroupByChangedBind = this.onGroupByChanged.bind(this);
+        this.onRowClickedBind = this.onRowClicked.bind(this);
+        this.onShowChangedBind = this.onShowChanged.bind(this);
+        this.onSortClickedBind = this.onSortClicked.bind(this);
+        this.onToggleGroupBind = this.onToggleGroup.bind(this);
+
+        this.collapsedGroups = [];
+        this.createResultsListHeader();
+        this.createResultsListPanelButtons();
+    }
+
+    public set Data(value: ResultsListData) {
+        if (this.collapsedGroups[0] !== value.groupBy || this.data.resultCount !== value.resultCount) {
+            this.collapsedGroups = [value.groupBy];
+            for (let index = 0; index < value.groups.length; index++) {
+                if (value.groups[index].rows.length > 25) {
+                    this.collapsedGroups.push(`${index}`);
+                }
+            }
+        }
+        this.data = value;
+        this.updateResultsListHeader();
+        this.updateResultsListPanelButtons();
+        this.populateResultsListTable();
+    }
+
+    /**
+     * Updates the selected row in the table
+     */
+    public updateSelection() {
+        const diag = this.webview.diagnostic;
+        const id = JSON.stringify({ resultId: diag.resultInfo.id, runId: diag.resultInfo.runId });
+        const curSelected = document.getElementsByClassName("resultslistrow selected");
+        while (curSelected.length > 0) {
+            curSelected[0].classList.remove("selected");
+        }
+
+        const rows = document.getElementsByClassName("resultslistrow") as HTMLCollectionOf<HTMLElement>;
+        // @ts-ignore: compiler complains even though results can be iterated
+        for (const row of rows) {
+            if (row.dataset.id === id) {
+                row.classList.add("selected");
+            }
+        }
+    }
+
+    /**
+     * Creates the content that shows in the results details header of the Explorer window
+     */
+    private createResultsListHeader() {
+        const header = document.getElementById("resultslistheader") as HTMLDivElement;
+
+        let resultCount = 0;
+        if (this.data !== undefined) {
+            resultCount = this.data.resultCount;
+        }
+        const countElement = document.getElementById("resultslistheadercount");
+        header.appendChild(this.webview.createElement("label", {
+            id: "resultslistheadertitle",
+            text: `Results List`,
+        }));
+
+        header.appendChild(this.webview.createElement("label", {
+            className: "countbadge",
+            id: "resultslistheadercount",
+            text: `${resultCount}`,
+        }));
+
+        header.addEventListener("click", this.webview.onHeaderClickedBind);
+    }
+
+    /**
+     * Creates the results list panel buttons for manipulating the results list table
+     */
+    private createResultsListPanelButtons() {
+        const buttons = document.getElementById("resultslistbuttonbar");
+        if (buttons.children.length === 0) {
+            const expandAllButton = this.webview.createElement("span", {
+                className: "tabcontentheaderbutton",
+                text: "+",
+                tooltip: "Expand all groups",
+            }) as HTMLSpanElement;
+            expandAllButton.addEventListener("click", this.onExpandAllGroupsBind);
+            buttons.appendChild(expandAllButton);
+
+            const collapseAllButton = expandAllButton.cloneNode() as HTMLSpanElement;
+            collapseAllButton.textContent = "-";
+            collapseAllButton.title = "Collapse all groups";
+            collapseAllButton.addEventListener("click", this.onCollapseAllGroupsBind);
+            buttons.appendChild(collapseAllButton);
+
+            buttons.appendChild(this.webview.createElement("span", { className: "headercontentseperator", text: "|" }));
+
+            buttons.appendChild(this.webview.createElement("label", {
+                attributes: { for: "resultslistgroupby" }, text: "Group by: ",
+            }));
+
+            const groupByButton = this.webview.createElement("select", {
+                id: "resultslistgroupby", tooltip: "Group by",
+            }) as HTMLSelectElement;
+            groupByButton.appendChild(this.webview.createElement("option", {
+                attributes: { disabled: null, hidden: null },
+            }));
+            groupByButton.addEventListener("change", this.onGroupByChangedBind);
+            buttons.appendChild(groupByButton);
+
+            const showColButton = this.webview.createElement("select", {
+                className: "select-checkbox", id: "resultslistshowcol", tooltip: "Show or hide Columns",
+            }) as HTMLSelectElement;
+            showColButton.appendChild(this.webview.createElement("option", {
+                attributes: { disabled: null, hidden: null, selected: null },
+            }));
+            showColButton.addEventListener("change", this.onShowChangedBind);
+            buttons.appendChild(showColButton);
+        }
+    }
+
+    /**
+     * Creates the table body or group and result rows, using the columns for order and to show or hide
+     * @param columns the tables header column elements
+     */
+    private createTableBody(columns: HTMLCollection): HTMLBodyElement {
+        const tableBody = this.webview.createElement("tbody") as HTMLBodyElement;
+        for (let groupIndex = 0; groupIndex < this.data.groups.length; groupIndex++) {
+            const group = this.data.groups[groupIndex];
+            let groupState = ToggleState.expanded;
+            if (this.collapsedGroups.indexOf(`${groupIndex}`) !== -1) {
+                groupState = ToggleState.collapsed;
+            }
+
+            const groupRow = this.createTableGroupRow(columns, groupIndex, group, groupState);
+            tableBody.appendChild(groupRow);
+
+            const rows = this.createTableResultRows(columns, group.rows, groupIndex, groupState);
+            tableBody.appendChild(rows);
+        }
+
+        return tableBody;
+    }
+
+    /**
+     * Creates a group row, which has an expand/collapse handler to control visibilty of the rows in the group
+     * @param cols the table's header column elements
+     * @param groupId group id
+     * @param group group for the row
+     * @param state expanded or collapsed state
+     */
+    private createTableGroupRow(cols: HTMLCollection, groupId: number, group: ResultsListGroup, state: ToggleState):
+        HTMLTableRowElement {
+        const groupRow = this.webview.createElement("tr", {
+            attributes: { "data-group": groupId, "tabindex": "0" },
+            className: `resultslistgroup ${state}`,
+        }) as HTMLTableRowElement;
+        groupRow.addEventListener("click", this.onToggleGroupBind);
+
+        let groupText = group.text;
+        let groupTooltip = group.tooltip || group.text;
+        if (this.data.groupBy === "severityLevel") {
+            const sevInfo = this.webview.severityValueAndTooltip(groupText);
+            groupText = sevInfo.text;
+            groupTooltip = sevInfo.tooltip;
+        }
+
+        const groupCell = this.webview.createElement("th", {
+            attributes: { colspan: `${cols.length}` },
+            text: groupText,
+            tooltip: groupTooltip,
+        }) as HTMLTableDataCellElement;
+
+        const countBadge = this.webview.createElement("div", {
+            className: "countbadge",
+            text: `${group.rows.length}`,
+        }) as HTMLDivElement;
+        groupCell.appendChild(countBadge);
+
+        groupRow.appendChild(groupCell);
+
+        return groupRow;
+    }
+
+    /**
+     * Creates the header for the resultslist table
+     */
+    private createTableHeader(): HTMLHeadElement {
+        const headerRow = this.webview.createElement("tr") as HTMLTableRowElement;
+        headerRow.appendChild(this.webview.createElement("th"));
+        for (const colName in this.data.columns) {
+            if (!this.data.columns[colName].hide && this.data.groupBy !== colName) {
+                const cell = this.webview.createElement("th", {
+                    attributes: {
+                        "data-name": colName,
+                    },
+                });
+                if (this.data.sortBy.column === colName) {
+                    let sortClass = "ascending";
+                    if (this.data.sortBy.ascending) {
+                        sortClass = "descending";
+                    }
+                    cell.appendChild(this.webview.createElement("span", {
+                        attributes: {
+                            "data-name": colName,
+                        },
+                        className: sortClass,
+                    }));
+                }
+                cell.appendChild(this.webview.createElement("span", {
+                    attributes: {
+                        "data-name": colName,
+                    },
+                    text: this.data.columns[colName].title,
+                    tooltip: this.data.columns[colName].description,
+                }) as HTMLDivElement);
+                cell.addEventListener("click", this.onSortClickedBind);
+                headerRow.appendChild(cell);
+            }
+        }
+
+        const tableHead = this.webview.createElement("thead") as HTMLHeadElement;
+        tableHead.appendChild(headerRow);
+
+        return tableHead;
+    }
+
+    /**
+     * Creates all of the table rows for a group
+     * @param cols the table's header column elements
+     * @param rows array of results for this group
+     * @param groupId group id
+     * @param state expanded or collapsed state
+     */
+    private createTableResultRows(cols: HTMLCollection, rows: ResultsListRow[], groupId: number, state: ToggleState) {
+        const frag = document.createDocumentFragment();
+        const resultRowBase = this.webview.createElement("tr", {
+            attributes: { "data-group": groupId, "tabindex": "0" },
+            className: `resultslistrow`,
+        }) as HTMLTableRowElement;
+
+        const rowCellBase = this.webview.createElement("td") as HTMLTableDataCellElement;
+
+        for (const row of rows) {
+            const resultId = JSON.stringify({ resultId: row.resultId.value, runId: row.runId.value });
+            const resultRow = resultRowBase.cloneNode() as HTMLTableRowElement;
+            resultRow.dataset.id = resultId;
+            if (state === ToggleState.collapsed) {
+                resultRow.classList.add("hidden");
+            }
+
+            const diag = this.webview.diagnostic;
+            if (diag !== undefined && diag.resultInfo.runId === row.runId.value &&
+                diag.resultInfo.id === row.resultId.value) {
+                resultRow.classList.add("selected");
+            }
+
+            rowCellBase.dataset.id = resultId;
+            resultRow.appendChild(rowCellBase.cloneNode());
+
+            for (let index = 1; index < cols.length; index++) {
+                const col = cols[index] as HTMLTableHeaderCellElement;
+                const columnName = col.dataset.name;
+                let textValue = "";
+                const colData = row[columnName] as ResultsListValue;
+                if (colData !== undefined) {
+                    textValue = colData.value;
+                }
+
+                if ((colData as ResultsListSeverityValue).isSeverity) {
+                    const sevInfo = this.webview.severityValueAndTooltip((colData as ResultsListSeverityValue).value);
+                    colData.tooltip = sevInfo.tooltip;
+                    textValue = sevInfo.text;
+                }
+
+                const rowCell = rowCellBase.cloneNode() as HTMLTableDataCellElement;
+                rowCell.textContent = textValue;
+                rowCell.title = colData.tooltip || textValue;
+                resultRow.appendChild(rowCell);
+            }
+
+            resultRow.addEventListener("click", this.onRowClickedBind, true);
+            frag.appendChild(resultRow);
+        }
+
+        return frag;
+    }
+
+    /**
+     * Handler when collapse all is clicked
+     * @param event event for click
+     */
+    private onCollapseAllGroups(event) {
+        this.toggleAllGroups(ToggleState.expanded);
+    }
+
+    /**
+     * Handler when expand all button is clicked
+     * @param event event for click
+     */
+    private onExpandAllGroups(event) {
+        this.toggleAllGroups(ToggleState.collapsed);
+    }
+
+    /**
+     * Handler when a group by is changed
+     * @param event event for change
+     */
+    private onGroupByChanged(event) {
+        const index = (event.srcElement as HTMLSelectElement).selectedIndex;
+        const col = event.srcElement.children[index].value;
+        this.webview.sendMessage({ data: col, type: MessageType.ResultsListGroupChanged } as WebviewMessage);
+    }
+
+    /**
+     * Handler when a result row is clicked, moves selection highlight and msg sends to extension
+     * @param event event for row click
+     */
+    private onRowClicked(event) {
+        const row = event.currentTarget as HTMLTableRowElement;
+        const curSelected = row.parentElement.getElementsByClassName("resultslistrow selected");
+        while (curSelected.length > 0) {
+            curSelected[0].classList.remove("selected");
+        }
+        row.classList.add("selected");
+
+        const resultId = event.srcElement.dataset.id;
+        this.webview.sendMessage({ data: resultId, type: MessageType.ResultsListResultSelected } as WebviewMessage);
+    }
+
+    /**
+     * Handler when hide/show selections is changed, resets the selection to 0 so value doesn't show over the icon
+     * @param event event for the change
+     */
+    private onShowChanged(event) {
+        const index = (event.srcElement as HTMLSelectElement).selectedIndex;
+        const option = event.srcElement.children[index] as HTMLOptionElement;
+
+        (event.srcElement as HTMLSelectElement).selectedIndex = 0;
+        this.webview.sendMessage({ data: option.value, type: MessageType.ResultsListColumnToggled } as WebviewMessage);
+    }
+
+    /**
+     * Handler when sort is changed
+     * @param event event for the header clicked
+     */
+    private onSortClicked(event) {
+        const col = event.srcElement.dataset.name;
+        this.webview.sendMessage({ data: col, type: MessageType.ResultsListSortChanged } as WebviewMessage);
+    }
+
+    /**
+     * Handler when a group row is clicked
+     * @param event event for click
+     */
+    private onToggleGroup(event: Event) {
+        this.toggleGroup(event.currentTarget as HTMLTableRowElement);
+    }
+
+    /**
+     * Populates the Results list table, removes all rows, creates the header and body
+     */
+    private populateResultsListTable() {
+        // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+        $("#resultslisttable").colResizable({ disable: true });
+
+        // remove the rows of the table
+        const table = document.getElementById("resultslisttable") as HTMLTableElement;
+        while (table.children.length > 0) {
+            table.removeChild(table.children[0]);
+        }
+
+        const tableHead = this.createTableHeader();
+        table.appendChild(tableHead);
+
+        const tableBody = this.createTableBody(tableHead.children[0].children);
+        table.appendChild(tableBody);
+
+        // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+        $("#resultslisttable").colResizable(this.colResizeObj);
+    }
+
+    /**
+     * Toggles all of the groups to either all collasped or all expaneded
+     * @param stateToToggle The state either expanded or collapsed to toggle all groups to
+     */
+    private toggleAllGroups(stateToToggle: ToggleState) {
+        const className = `resultslistgroup ${stateToToggle}`;
+        const groups = document.getElementsByClassName(className) as HTMLCollectionOf<HTMLTableRowElement>;
+
+        while (groups.length > 0) {
+            this.toggleGroup(groups[0]);
+        }
+    }
+
+    /**
+     * Toggles the group row as well as any result rows that match the group
+     * @param row Group row to toggled
+     */
+    private toggleGroup(row: HTMLTableRowElement) {
+        let hideRow = false;
+        if (row.classList.contains(`${ToggleState.expanded}`)) {
+            row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
+            this.collapsedGroups.push(row.dataset.group);
+            hideRow = true;
+        } else {
+            row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
+            this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
+        }
+
+        const results = document.getElementsByClassName("resultslistrow") as HTMLCollectionOf<HTMLElement>;
+
+        // @ts-ignore: compiler complains even though results can be iterated
+        for (const result of results) {
+            if (result.dataset.group === row.dataset.group) {
+                if (hideRow) {
+                    result.classList.add("hidden");
+                } else {
+                    result.classList.remove("hidden");
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates the Results List header's count of all results
+     */
+    private updateResultsListHeader() {
+        let resultCount = 0;
+        if (this.data !== undefined) {
+            resultCount = this.data.resultCount;
+        }
+
+        const countElement = document.getElementById("resultslistheadercount");
+        countElement.textContent = `${resultCount}`;
+    }
+
+    /**
+     * Updates the group by and sort by options selected and checked, if no options exist adds them from the columns
+     */
+    private updateResultsListPanelButtons() {
+        const groupByButton = document.getElementById("resultslistgroupby");
+        const showColButton = document.getElementById("resultslistshowcol");
+
+        if (groupByButton.children.length === 1) {
+            for (const col in this.data.columns) {
+                if (this.data.columns.hasOwnProperty(col)) {
+                    const groupOption = this.webview.createElement("option", {
+                        attributes: { value: col }, text: this.data.columns[col].title,
+                    }) as HTMLOptionElement;
+
+                    const showOption = groupOption.cloneNode(true) as HTMLOptionElement;
+                    showOption.textContent = "  " + showOption.textContent;
+
+                    groupByButton.appendChild(groupOption);
+                    showColButton.appendChild(showOption);
+                }
+            }
+        }
+
+        for (let index = 1; index < groupByButton.children.length; index++) {
+            const groupOption = groupByButton.children[index] as HTMLOptionElement;
+            const colKey = groupOption.value;
+
+            if (colKey === this.data.groupBy) {
+                groupOption.selected = true;
+            } else {
+                groupOption.selected = undefined;
+            }
+
+            const showOption = showColButton.children[index];
+            if (this.data.columns[colKey].hide === true) {
+                if (showOption.getAttribute("checked") !== null) {
+                    showOption.removeAttribute("checked");
+                    showOption.textContent = showOption.textContent.replace("✓", " ");
+                }
+            } else {
+                if (showOption.getAttribute("checked") === null) {
+                    showOption.setAttribute("checked", "");
+                    showOption.textContent = showOption.textContent.replace(" ", "✓");
+                }
+            }
+        }
+    }
+}
