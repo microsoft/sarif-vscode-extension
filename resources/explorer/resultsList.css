@@ -121,3 +121,12 @@ option {
 .resultslistrow.hidden {
     display: none;
 }
+
+.severityiconcell {
+    padding-top: 2px;
+    text-align: right;
+}
+
+.severityiconwrapper {
+    height: 16px;
+}
