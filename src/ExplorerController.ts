@@ -7,9 +7,12 @@ import { commands, extensions, Range, Uri, ViewColumn, WebviewPanel, window } fr
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { MessageType } from "./common/Enums";
-import { DiagnosticData, Location, LocationData, SarifViewerDiagnostic, WebviewMessage } from "./common/Interfaces";
+import {
+    DiagnosticData, Location, LocationData, ResultsListData, SarifViewerDiagnostic, WebviewMessage,
+} from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
 import { LocationFactory } from "./LocationFactory";
+import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
 
@@ -24,6 +27,7 @@ export class ExplorerController {
     private static instance: ExplorerController;
 
     public activeSVDiagnostic: SarifViewerDiagnostic;
+    public resultsListData: ResultsListData;
     public selectedVerbosity: string;
 
     private activeTab: string;
@@ -129,6 +133,11 @@ export class ExplorerController {
                 }
                 break;
             case MessageType.ExplorerLoaded:
+                if (this.resultsListData !== undefined) {
+                    const jsonData = JSON.stringify(this.resultsListData);
+                    this.sendMessage({ data: jsonData, type: MessageType.ResultsListDataSet } as WebviewMessage, false);
+                }
+
                 if (this.activeSVDiagnostic !== undefined) {
                     this.sendActiveDiagnostic(true);
                 }
@@ -136,21 +145,40 @@ export class ExplorerController {
             case MessageType.TabChanged:
                 this.activeTab = message.data;
                 break;
+            case MessageType.ResultsListColumnToggled:
+            case MessageType.ResultsListGroupChanged:
+            case MessageType.ResultsListResultSelected:
+            case MessageType.ResultsListSortChanged:
+                ResultsListController.Instance.onResultsListMessage(message);
+                break;
         }
     }
 
     /**
      * Sets the active diagnostic that's showns in the Webview, resets the saved webview state(selected row, etc.)
      * @param diag diagnostic to show
+     * @param mappingUpdate optional flag to indicate a mapping update and the state shouldn't be reset
      */
-    public setActiveDiagnostic(diag: SarifViewerDiagnostic) {
-        if (this.activeSVDiagnostic === undefined || this.activeSVDiagnostic !== diag) {
+    public setActiveDiagnostic(diag: SarifViewerDiagnostic, mappingUpdate?: boolean) {
+        if (this.activeSVDiagnostic === undefined || this.activeSVDiagnostic !== diag || mappingUpdate) {
             this.activeSVDiagnostic = diag;
-            this.activeTab = undefined;
-            this.selectedRow = undefined;
-            this.selectedVerbosity = undefined;
+            if (!mappingUpdate) {
+                this.activeTab = undefined;
+                this.selectedRow = undefined;
+                this.selectedVerbosity = undefined;
+            }
             this.sendActiveDiagnostic(false);
         }
+    }
+
+    /**
+     * Sets the results list data and updates the Explore's results list data
+     * @param dataSet new dataset to set
+     */
+    public setResultsListData(dataSet: ResultsListData) {
+        this.resultsListData = dataSet;
+        const jsonData = JSON.stringify(dataSet);
+        this.sendMessage({ data: jsonData, type: MessageType.ResultsListDataSet } as WebviewMessage, false);
     }
 
     /**
@@ -163,13 +191,32 @@ export class ExplorerController {
     }
 
     /**
+     * Joins the path and converts it to a vscode resource schema
+     * @param path relative path to the file from the extension folder
+     * @param file name of the file
+     */
+    private getVSCodeResourcePath(path: string, file: string): Uri {
+        const vscodeResource = "vscode-resource";
+        const diskPath: string = Utilities.Path.join(this.extensionPath, path, file);
+        const uri = Uri.file(diskPath);
+        return uri.with({ scheme: vscodeResource });
+    }
+
+    /**
      * defines the default webview html content
      */
     private getWebviewContent(): string {
-        const cssMarkupDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "resources/explorer/explorer.css"));
-        const scriptDiskPath = Uri.file(Utilities.Path.join(this.extensionPath, "out/explorer/explorer/webview.js"));
-        const cssMarkup = cssMarkupDiskPath.with({ scheme: "vscode-resource" });
-        const scriptPath = scriptDiskPath.with({ scheme: "vscode-resource" });
+        const resourcesPath = "resources/explorer/";
+        const scriptsPath = "out/explorer/explorer/";
+
+        const cssExplorerDiskPath = this.getVSCodeResourcePath(resourcesPath, "explorer.css");
+        const cssResultsListDiskPath = this.getVSCodeResourcePath(resourcesPath, "resultsList.css");
+        const jQueryDiskPath = this.getVSCodeResourcePath(resourcesPath, "jquery-3.3.1.min.js");
+        const colResizeDiskPath = this.getVSCodeResourcePath(resourcesPath, "colResizable-1.6.min.js");
+
+        const webviewDiskPath = this.getVSCodeResourcePath(scriptsPath, "webview.js");
+        const resultsListDiskPath = this.getVSCodeResourcePath(scriptsPath, "resultslist.js");
+        const enumDiskPath = this.getVSCodeResourcePath(scriptsPath, "enums.js");
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -177,15 +224,24 @@ export class ExplorerController {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Sarif Explorer</title>
-            <link rel="stylesheet" type="text/css" href = "${cssMarkup}">
+            <link rel="stylesheet" type="text/css" href = "${cssExplorerDiskPath}">
+            <link rel="stylesheet" type="text/css" href = "${cssResultsListDiskPath}">
+            <script src="${jQueryDiskPath}"></script>
+            <script src="${colResizeDiskPath}"></script>
         </head>
         <body>
-            <div>
-                Open a Sarif file to load results into the Problems panel.
-                <br/>
-                Then double click a result in the Problems panel to populate the explorer.
+            <div id="resultslistheader" class="headercontainer collapsed"></div>
+            <div id="resultslistcontainer">
+                <div id="resultslistbuttonbar"></div>
+                <div id="resultslisttablecontainer">
+                    <table id="resultslisttable"></table>
+                </div>
             </div>
-            <script src="${scriptPath}"></script>
+            <div id="resultdetailsheader" class="headercontainer expanded"></div>
+            <div id="resultdetailscontainer"></div>
+            <script src="${enumDiskPath}"></script>
+            <script src="${resultsListDiskPath}"></script>
+            <script src="${webviewDiskPath}"></script>
         </body>
         </html>`;
     }
