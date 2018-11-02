@@ -43,6 +43,64 @@
                         "c:\\sample\\path"
                     ],
                     "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
+                },
+                "sarif-viewer.resultsListHideColumns": {
+                    "default": [],
+                    "description": "The list of columns to hide from the results list",
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            "message",
+                            "resultFile",
+                            "resultStartPos",
+                            "ruleId",
+                            "ruleName",
+                            "runId",
+                            "sarifFile",
+                            "severityLevel"
+                        ]
+                    }
+                },
+                "sarif-viewer.resultsListGroupBy": {
+                    "default": "sarifFile",
+                    "description": "The column to group the results list by",
+                    "type": "string",
+                    "enum": [
+                        "message",
+                        "resultFile",
+                        "resultStartPos",
+                        "ruleId",
+                        "ruleName",
+                        "runId",
+                        "sarifFile",
+                        "severityLevel"
+                    ]
+                },
+                "sarif-viewer.resultsListSortBy": {
+                    "default": {
+                        "column": "severityLevel",
+                        "ascending": true
+                    },
+                    "description": "The column to sort the results list by per group and the order",
+                    "type": "object",
+                    "properties": {
+                        "column": {
+                            "type": "string",
+                            "enum": [
+                                "message",
+                                "resultFile",
+                                "resultStartPos",
+                                "ruleId",
+                                "ruleName",
+                                "runId",
+                                "sarifFile",
+                                "severityLevel"
+                            ]
+                        },
+                        "ascending": {
+                            "type": "boolean"
+                        }
+                    }
                 }
             }
         },
@@ -103,6 +161,7 @@
         "lint": "tslint --project ./ -t verbose"
     },
     "devDependencies": {
+        "@types/jquery": "^3.3.11",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.66",
         "tslint": "^5.0.0",

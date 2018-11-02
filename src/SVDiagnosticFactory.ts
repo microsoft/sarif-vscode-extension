@@ -27,7 +27,7 @@ export class SVDiagnosticFactory {
         const diagnostic = new Diagnostic(resultinfo.assignedLocation.range, resultinfo.message.text);
         const svDiagnostic = diagnostic as SarifViewerDiagnostic;
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultinfo.severityLevel);
-        svDiagnostic.code = SVDiagnosticFactory.Code;
+        svDiagnostic.code = resultinfo.ruleId;
         svDiagnostic.resultInfo = resultinfo;
         svDiagnostic.rawResult = result;
         svDiagnostic.source = SVDiagnosticCollection.Instance.getRunInfo(resultinfo.runId).toolName;
@@ -100,10 +100,6 @@ export class SVDiagnosticFactory {
      */
     private static updateMessage(diagnostic: SarifViewerDiagnostic): string {
         let message = diagnostic.resultInfo.message.text;
-
-        if (diagnostic.resultInfo.ruleId !== undefined && diagnostic.resultInfo.ruleId !== "") {
-            message = `[${diagnostic.resultInfo.ruleId}] ${message}`;
-        }
 
         if (!diagnostic.resultInfo.assignedLocation.mapped) {
             message = `[Unmapped] ${message}`;

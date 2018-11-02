@@ -9,7 +9,8 @@
             true,
                 "classes",
                 "methods"
-        ]
+        ],
+        "no-reference": false
     },
     "rulesDirectory": []
 }
