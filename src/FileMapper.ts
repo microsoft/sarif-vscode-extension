@@ -80,10 +80,10 @@ export class FileMapper {
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
         return this.openRemappingInputDialog(origUri).then(async (path) => {
             if (path === null) {
-                // path is null when the skip next button was pressed
+                // path is null if the skip next button was pressed
                 this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             } else if (path === undefined) {
-                // path is undefined when the input was dismissed without fixing the path
+                // path is undefined if the input was dismissed without fixing the path
                 this.userCanceledMapping = true;
                 this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
             } else {
@@ -108,6 +108,11 @@ export class FileMapper {
                 } else {
                     this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), uri);
                     this.saveBasePath(origUri, uri, uriBase);
+                    this.fileRemapping.forEach((value: Uri, key: string) => {
+                        if (value === null) {
+                            this.tryRebaseUri(Uri.file(key));
+                        }
+                    });
                 }
 
                 this.onMappingChanged.fire(origUri);
@@ -162,7 +167,7 @@ export class FileMapper {
         for (const file in files) {
             if (files.hasOwnProperty(file)) {
                 let uriPath: string;
-                let fileLocation: sarif.FileLocation;
+                let fileLocation = files[file].fileLocation;
                 // Files with uribaseids are in format #uribaseid#/folder/file.ext
                 if (file.startsWith("#")) {
                     const fileSplit = file.split("#");
@@ -344,10 +349,10 @@ export class FileMapper {
         const oPath = originalUri.toString(true);
         const rPath = remappedUri.toString(true);
         if (uriBase !== undefined) {
-            const relativePath = oPath.replace(uriBase, "");
+            const relativePath = oPath.substring(oPath.indexOf(uriBase) + uriBase.length);
             const index = rPath.indexOf(relativePath);
             if (index !== -1) {
-                this.baseRemapping.set(uriBase, rPath.replace(relativePath, ""));
+                this.baseRemapping.set(oPath.replace(relativePath, ""), rPath.replace(relativePath, ""));
                 return;
             }
         }
