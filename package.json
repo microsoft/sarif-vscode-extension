@@ -35,7 +35,7 @@
     "main": "./out/extension",
     "contributes": {
         "configuration": {
-            "title": "Sarif Viewer configuration",
+            "title": "Sarif Viewer",
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
@@ -45,7 +45,7 @@
                     "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
                 },
                 "sarif-viewer.resultsListHideColumns": {
-                    "default": [],
+                    "default": ["runId", "sarifFile"],
                     "description": "The list of columns to hide from the results list",
                     "type": "array",
                     "items": {
@@ -62,7 +62,7 @@
                     }
                 },
                 "sarif-viewer.resultsListGroupBy": {
-                    "default": "sarifFile",
+                    "default": "resultFile",
                     "description": "The column to group the results list by",
                     "type": "string",
                     "enum": [
@@ -81,7 +81,7 @@
                         "column": "severityLevel",
                         "ascending": true
                     },
-                    "description": "The column to sort the results list by per group and the order",
+                    "description": "The column to sort the results list by(per group) and the order",
                     "type": "object",
                     "properties": {
                         "column": {
