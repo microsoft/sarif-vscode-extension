@@ -27,7 +27,7 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Manually open it by typing "Sarif: Launch the Sarif Explorer" in the Command Palette(F1) or using the hotkey (Ctrl+L then Ctrl+E)
 
 #### *new* Results List:
-![Demo](https://github.com/Microsoft/sarif-vscode-extension/raw/releasePrep/resources/readmeImages/ResultsList.gif?raw=true)
+![Demo](https://github.com/Microsoft/sarif-vscode-extension/raw/ReleasePrep/resources/readmeImages/ResultsList.gif?raw=true)
  * Available columns: Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results
