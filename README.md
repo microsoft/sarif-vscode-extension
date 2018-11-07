@@ -15,7 +15,7 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
  * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
- * *new* Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog for list of supported tools
+ * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog for list of supported tools
     * To execute the convert command via the Command window(F1 key):
         1. Type in "Sarif: Convert and open a non-sarif file"
         2. Select the tool that generated the file
@@ -25,6 +25,16 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Automatically launches when the first result is navigated to
  * Updates with the details of the selected result in Problems panel
  * Manually open it by typing "Sarif: Launch the Sarif Explorer" in the Command Palette(F1) or using the hotkey (Ctrl+L then Ctrl+E)
+
+#### *new* Results List:
+![Demo](https://github.com/Microsoft/sarif-vscode-extension/raw/master/resources/readmeImages/ResultsList.gif?raw=true)
+ * Available columns: Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity
+ * Group By: Results can be grouped by a column
+    * Groups are sorted by number of results
+ * Sort By: Results are sortable by clicking the column header
+ * Hide/Show column: Visibility of each column can be toggled by clicking the Eye icon
+ * Clicking a result in the list will navigate to the source and display the details in the Sarif Explorer
+ * Persistence: Group By, Sort By, and Hidden columns are persisted in settings
 
 # Using
 ## Install
