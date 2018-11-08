@@ -5,6 +5,8 @@
 // ********************************************************/
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
 import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
+import { ExplorerController } from "./ExplorerController";
+import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { Utilities } from "./Utilities";
 
@@ -44,6 +46,8 @@ export class SVDiagnosticCollection {
 
         this.addToDiagnosticCollection(this.issuesCollection);
         this.addToDiagnosticCollection(this.unmappedIssuesCollection);
+
+        ResultsListController.Instance.postDataToExplorer();
     }
 
     /**
@@ -57,6 +61,8 @@ export class SVDiagnosticCollection {
         } else {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
+
+        ResultsListController.Instance.updateResultsListData([issue]);
     }
 
     /**
@@ -92,16 +98,19 @@ export class SVDiagnosticCollection {
     }
 
     /**
-     * Returns the runinfo from the runinfo collection corresponding to the id
-     * @param id Id of the runinfo to return
+     * Gets a flat array of all the diaganostics (includes mapped and unmapped)
      */
-    public getRunInfo(id: number): RunInfo {
-        return this.runInfoCollection.find((value: RunInfo, index: number, obj: RunInfo[]) => {
-            if (value.id === id) {
-                return true;
-            }
-            return false;
+    public getAllDiagnostics(): SarifViewerDiagnostic[] {
+        const allDiags: SarifViewerDiagnostic[] = [];
+        this.unmappedIssuesCollection.forEach((value) => {
+            allDiags.push(...value);
         });
+
+        this.issuesCollection.forEach((value) => {
+            allDiags.push(...value);
+        });
+
+        return allDiags;
     }
 
     /**
@@ -114,6 +123,51 @@ export class SVDiagnosticCollection {
         });
 
         return unmapped;
+    }
+
+    /**
+     * Gets and returns a Result based on it's run and result Id
+     * @param resultId Id of the result
+     * @param runId Id of the run the results from
+     */
+    public getResultInfo(resultId: number, runId: number): SarifViewerDiagnostic {
+        let result: SarifViewerDiagnostic;
+        this.unmappedIssuesCollection.forEach((diags: SarifViewerDiagnostic[]) => {
+            if (result === undefined) {
+                result = diags.find((diag: SarifViewerDiagnostic) => {
+                    if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
+                        return true;
+                    }
+                });
+            }
+        });
+
+        if (result === undefined) {
+            this.issuesCollection.forEach((diags: SarifViewerDiagnostic[]) => {
+                if (result === undefined) {
+                    result = diags.find((diag: SarifViewerDiagnostic) => {
+                        if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
+                            return true;
+                        }
+                    });
+                }
+            });
+        }
+
+        return result;
+    }
+
+    /**
+     * Returns the runinfo from the runinfo collection corresponding to the id
+     * @param id Id of the runinfo to return
+     */
+    public getRunInfo(id: number): RunInfo {
+        return this.runInfoCollection.find((value: RunInfo, index: number, obj: RunInfo[]) => {
+            if (value.id === id) {
+                return true;
+            }
+            return false;
+        });
     }
 
     /**
@@ -131,11 +185,18 @@ export class SVDiagnosticCollection {
 
         for (const key of this.unmappedIssuesCollection.keys()) {
             const remainingUnmappedIssues = [];
+            const explorerDiag = ExplorerController.Instance.activeSVDiagnostic;
             const issues = this.unmappedIssuesCollection.get(key);
             for (const index of issues.keys()) {
-                await SVDiagnosticFactory.tryToRemapLocations(issues[index]).then((remapped) => {
+                const diag = issues[index];
+                await SVDiagnosticFactory.tryToRemapLocations(diag).then((remapped) => {
                     if (remapped) {
-                        this.add(issues[index]);
+                        this.add(diag);
+                        ResultsListController.Instance.updateResultsListData([diag]);
+                        if (explorerDiag !== undefined && explorerDiag.resultInfo.runId === diag.resultInfo.runId &&
+                            explorerDiag.resultInfo.id === diag.resultInfo.id) {
+                            ExplorerController.Instance.setActiveDiagnostic(diag, true);
+                        }
                     } else {
                         remainingUnmappedIssues.push(issues[index]);
                     }
@@ -154,12 +215,12 @@ export class SVDiagnosticCollection {
 
     /**
      * Itterates through the issue collections and removes any results that originated from the file
-     * @param fileName Name of the file that has the runs to be removed
+     * @param path Path (including file) of the file that has the runs to be removed
      */
-    public removeRuns(fileName: string) {
+    public removeRuns(path: string) {
         const runsToRemove = new Array<number>();
         for (let i = SVDiagnosticCollection.Instance.runInfoCollection.length - 1; i >= 0; i--) {
-            if (SVDiagnosticCollection.Instance.runInfoCollection[i].sarifFileName === fileName) {
+            if (SVDiagnosticCollection.Instance.runInfoCollection[i].sarifFileFullPath === path) {
                 runsToRemove.push(SVDiagnosticCollection.Instance.runInfoCollection[i].id);
                 SVDiagnosticCollection.Instance.runInfoCollection.splice(i, 1);
             }
@@ -214,12 +275,13 @@ export class SVDiagnosticCollection {
      * @param collection diagnostic collection to search for matching runids
      */
     private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerDiagnostic[]>) {
+        let diagnosticsRemoved = [];
         for (const key of collection.keys()) {
             const diagnostics = collection.get(key);
             for (let i = diagnostics.length - 1; i >= 0; i--) {
                 for (const runId of runsToRemove) {
                     if (diagnostics[i].resultInfo.runId === runId) {
-                        diagnostics.splice(i, 1);
+                        diagnosticsRemoved = diagnosticsRemoved.concat(diagnostics.splice(i, 1));
                         break;
                     }
                 }
@@ -231,5 +293,7 @@ export class SVDiagnosticCollection {
                 collection.set(key, diagnostics);
             }
         }
+
+        ResultsListController.Instance.updateResultsListData(diagnosticsRemoved, true);
     }
 }
