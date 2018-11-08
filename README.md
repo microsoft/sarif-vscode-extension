@@ -30,9 +30,9 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
  * Available columns: Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity
  * Group By: Results can be grouped by a column
-    * Groups are sorted by number of results
+    * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
- * Hide/Show column: Visibility of each column can be toggled by clicking the Eye icon
+ * Hide/Show columns: Visibility of each column can be toggled by clicking the Eye icon
  * Clicking a result in the list will navigate to the source and display the details in the Sarif Explorer
  * Persistence: Group By, Sort By, and Hidden columns are persisted in settings
 
