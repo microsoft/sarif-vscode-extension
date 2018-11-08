@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.6.0
+* Added the Results List to the Sarif Explorer [issue #28](https://github.com/Microsoft/sarif-vscode-extension/issues/28)
+* Fixed bug with results not showing if the file has a uriBaseId not embedded in the file key [issue #102](https://github.com/Microsoft/sarif-vscode-extension/issues/102)
+* Fixed Sarif Explorer not updating the result that's displayed after a remapping [issue #96](https://github.com/Microsoft/sarif-vscode-extension/issues/96)
+
 ## 2.5.0
 * Added feature to open and convert non-sarif static analysis file to sarif for analysis [issue #79](https://github.com/Microsoft/sarif-vscode-extension/issues/79)
     * New command to activate the converter is "Sarif: Convert and open a non-sarif file"

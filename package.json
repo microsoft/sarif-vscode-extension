@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.5.0",
+    "version": "2.6.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
