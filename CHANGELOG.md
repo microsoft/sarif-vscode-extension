@@ -1,5 +1,8 @@
 # Change Log
 
+## 2.6.1
+* Fixed bug with the Sarif Explorer launching on activation of the extension [issue #109](https://github.com/Microsoft/sarif-vscode-extension/issues/109)
+
 ## 2.6.0
 * Added the Results List to the Sarif Explorer [issue #28](https://github.com/Microsoft/sarif-vscode-extension/issues/28)
 * Fixed bug with results not showing if the file has a uriBaseId not embedded in the file key [issue #102](https://github.com/Microsoft/sarif-vscode-extension/issues/102)
