@@ -105,11 +105,17 @@ export class LogReader {
         // Get all the documents and read them
         const docs = workspace.textDocuments;
 
+        let needsSync = false;
         for (const doc of docs) {
+            if (!needsSync && LogReader.isSarifFile(doc)) {
+                needsSync = true;
+            }
             await this.read(doc);
         }
 
-        SVDiagnosticCollection.Instance.syncDiagnostics();
+        if (needsSync) {
+            SVDiagnosticCollection.Instance.syncDiagnostics();
+        }
     }
 
     /**

@@ -11,7 +11,6 @@ import { ExplorerController } from "./ExplorerController";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
-import { ResultsListController } from "./ResultsListController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
 
@@ -57,8 +56,6 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(SVCodeActionProvider.Instance);
     context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
     context.subscriptions.push(FileMapper.Instance);
-
-    context.subscriptions.push(ResultsListController.Instance);
 
     // Read the initial set of open SARIF files
     const reader = LogReader.Instance;
