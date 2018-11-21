@@ -215,7 +215,7 @@ export class ExplorerController {
         const colResizeDiskPath = this.getVSCodeResourcePath(resourcesPath, "colResizable-1.6.min.js");
 
         const webviewDiskPath = this.getVSCodeResourcePath(scriptsPath, "webview.js");
-        const resultsListDiskPath = this.getVSCodeResourcePath(scriptsPath, "resultslist.js");
+        const resultsListDiskPath = this.getVSCodeResourcePath(scriptsPath, "resultsList.js");
         const enumDiskPath = this.getVSCodeResourcePath(scriptsPath, "enums.js");
 
         return `<!DOCTYPE html>
