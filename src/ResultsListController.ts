@@ -255,11 +255,11 @@ export class ResultsListController {
             const position = resultInfo.locations[0].range.start;
             row.resultStartPos = {
                 pos: position,
-                value: `(${position.line + 1},${position.character})`,
+                value: `(${position.line + 1}, ${position.character + 1})`,
             };
         } else {
             row.resultFile = { value: "No Location" };
-            row.resultStartPos = { pos: new Position(0, 0), value: `(0,0)` };
+            row.resultStartPos = { pos: new Position(0, 0), value: `(0, 0)` };
         }
 
         return row;
