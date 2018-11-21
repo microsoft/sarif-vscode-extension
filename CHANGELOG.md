@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.6.2
+* Fixed bug with Sarif Explorer opening blank on Linux OS [issue #113](https://github.com/Microsoft/sarif-vscode-extension/issues/113)
+* Fixed bug with Start Column in the ResultsList's Position column off by 1 [issue #115](https://github.com/Microsoft/sarif-vscode-extension/issues/115)
+
 ## 2.6.1
 * Fixed bug with the Sarif Explorer launching on activation of the extension [issue #109](https://github.com/Microsoft/sarif-vscode-extension/issues/109)
 
