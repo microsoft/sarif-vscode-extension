@@ -124,9 +124,9 @@ export class CodeFlows {
             threadFlow.message = Utilities.parseSarifMessage(sarifTF.message).text;
         }
 
-        for (let stepIndex = 0; stepIndex < sarifTF.locations.length; stepIndex++) {
-            await CodeFlows.createCodeFlowStep(sarifTF.locations[stepIndex], sarifTF.locations[stepIndex + 1],
-                `${indexId}_${stepIndex}`, runId).then((step: CodeFlowStep) => {
+        for (let index = 0; index < sarifTF.locations.length; index++) {
+            await CodeFlows.createCodeFlowStep(sarifTF.locations[index], sarifTF.locations[index + 1],
+                `${indexId}_${index}`, index + 1, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
         }
@@ -156,12 +156,14 @@ export class CodeFlows {
      * @param cFLoc the CodeFlowLocation object that needs to be processed
      * @param nextCFLoc the next CodeFlowLocation object, it's nesting level is used to determine if isCall or isReturn
      * @param indexId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
+     * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
         cFLoc: sarif.ThreadFlowLocation,
         nextCFLoc: sarif.ThreadFlowLocation,
         indexId: string,
+        stepNumber: number,
         runId: number,
     ): Promise<CodeFlowStep> {
 
@@ -196,10 +198,7 @@ export class CodeFlows {
             }
         }
 
-        let messageWithStepText = messageText;
-        if (cFLoc.step !== undefined) {
-            messageWithStepText = `Step ${cFLoc.step}: ${messageWithStepText}`;
-        }
+        const messageWithStepText = `Step ${stepNumber}: ${messageText}`;
 
         const command = {
             arguments: [indexId],
@@ -223,7 +222,7 @@ export class CodeFlows {
             messageWithStep: messageWithStepText,
             nestingLevel: nestingLevelValue,
             state: cFLoc.state,
-            stepId: cFLoc.step,
+            stepId: cFLoc.executionOrder,
             traversalId: indexId,
         };
 

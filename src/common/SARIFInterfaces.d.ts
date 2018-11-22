@@ -1,8 +1,8 @@
 export namespace sarif {
 
     /**
-    * Static Analysis Results Format (SARIF) Version 2.0.0 JSON Schema: a standard format for the output of static
-    * analysis and other tools.
+    * Static Analysis Results Format (SARIF) Version 2.0.0-csd.2.beta-2018-10-10 JSON Schema:
+    * a standard format for the output of static analysis tools.
     */
     export interface Log {
         /**
@@ -23,7 +23,7 @@ export namespace sarif {
 
     export namespace Log {
         export const enum version {
-            v2 = "2.0.0",
+            v2_0_0_csd_2_beta_2018_10_10   = "2.0.0-csd.2.beta.2018-10-10",
         }
     }
 
@@ -70,17 +70,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the code flow.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -102,6 +92,11 @@ export namespace sarif {
         * A tool object that describes the converter.
         */
         tool: Tool;
+
+        /**
+        * Key/value pairs that provide additional information about the conversion.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -131,17 +126,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the edge.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -171,17 +156,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the edge traversal.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -200,14 +175,19 @@ export namespace sarif {
         kind?: string;
 
         /**
-        * A plain text message that describes the exception.
+        * A message that describes the exception.
         */
-        message?: string;
+        message?: Message;
 
         /**
         * The sequence of function calls leading to the exception.
         */
         stack?: Stack;
+
+        /**
+        * Key/value pairs that provide additional information about the exception
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -230,7 +210,8 @@ export namespace sarif {
         graphs?: FileLocation;
 
         /**
-        * An array of external references to arrays of run.invocation objects to be merged with the root log file.
+        * An array of locations of files containing arrays of run.invocation objects to be merged with the root log
+        * file.
         */
         invocations?: FileLocation[];
 
@@ -245,9 +226,14 @@ export namespace sarif {
         resources?: FileLocation;
 
         /**
-        * An array of external references to arrays of run.result objects to be merged with the root log file.
+        * An array of locations of files containins arrays of run.result objects to be merged with the root log file.
         */
         results?: FileLocation[];
+
+        /**
+        * Key/value pairs that provide additional information about the external files
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -270,16 +256,16 @@ export namespace sarif {
         fileLocation?: FileLocation;
 
         /**
-        * An array of hash objects, each of which specifies a hashed value for the file, along with the name of the
-        * hash function used to compute the hash.
+        * A dictionary, each of whose keys is the name of a hash function and each of whose values is the hashed value
+        * of the file produced by the specified hash function.
         */
-        hashes?: Hash[];
+        hashes?: { [key: string]: string };
 
         /**
-        * The date and time at which the file was most recently modified. See "Date/time properties" in the SARIF spec
-        * for the required format.
+        * The Coordinated Universal Time (UTC) date and time at which the file was most recently modified. See
+        * "Date/time properties" in the SARIF spec for the required format.
         */
-        lastModifiedTime?: string;
+        lastModifiedTimeUtc?: string;
 
         /**
         * The length of the file in bytes.
@@ -309,17 +295,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the file.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace File {
@@ -353,6 +329,11 @@ export namespace sarif {
         * specified by 'fileLocation'.
         */
         replacements: Replacement[];
+
+        /**
+        * Key/value pairs that provide additional information about the file change.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -368,6 +349,11 @@ export namespace sarif {
         * UTF-8-encoded content from a text file.
         */
         text?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the external file.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -384,6 +370,11 @@ export namespace sarif {
         * property is interpreted.
         */
         uriBaseId?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the file location.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -392,8 +383,7 @@ export namespace sarif {
     */
     export interface Fix {
         /**
-        * A plain text message that describes the proposed fix, enabling viewers to present the proposed change to an
-        * end user.
+        * A message that describes the proposed fix, enabling viewers to present the proposed change to an end user.
         */
         description?: Message;
 
@@ -401,6 +391,11 @@ export namespace sarif {
         * One or more file changes that comprise a fix for a result.
         */
         fileChanges: FileChange[];
+
+        /**
+        * Key/value pairs that provide additional information about the fix.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -431,17 +426,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the graph.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -471,33 +456,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the graph traversal.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
-    }
-
-    /**
-    * A hash value of some file or collection of files, together with the hash function used to compute the hash.
-    */
-    export interface Hash {
-        /**
-        * The name of the hash function used to compute the hash value specified in the 'value' property.
-        */
-        algorithm: string;
-
-        /**
-        * The hash value of some file or collection of files, computed by the hash function named in the 'algorithm'
-        * property.
-        */
-        value: string;
+        properties?: PropertyBag;
     }
 
     /**
@@ -531,15 +490,15 @@ export namespace sarif {
         configurationNotifications?: Notification[];
 
         /**
-        * The date and time at which the run ended. See "Date/time properties" in the SARIF spec for the required
-        * format.
+        * The Coordinated Universal Time (UTC) date and time at which the run ended. See "Date/time properties" in the
+        * SARIF spec for the required format.
         */
-        endTime?: string;
+        endTimeUtc?: string;
 
         /**
         * The environment variables associated with the analysis tool process, expressed as key/value pairs.
         */
-        environmentVariables?: { [key: string]: any };
+        environmentVariables?: { [key: string]: string };
 
         /**
         * An absolute URI specifying the location of the analysis tool's executable.
@@ -587,10 +546,10 @@ export namespace sarif {
         responseFiles?: FileLocation[];
 
         /**
-        * The date and time at which the run started. See "Date/time properties" in the SARIF spec for the required
-        * format.
+        * The Coordinated Universal Time (UTC) date and time at which the run started. See "Date/time properties" in
+        * the SARIF spec for the required format.
         */
-        startTime?: string;
+        startTimeUtc?: string;
 
         /**
         * A file containing the standard error stream from the process that was invoked.
@@ -631,17 +590,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the invocation.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -673,17 +622,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the location.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -719,6 +658,11 @@ export namespace sarif {
         * this property might point to a logical location that represents the namespace that holds a type.
         */
         parentKey?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the logical location.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -749,6 +693,11 @@ export namespace sarif {
         * A plain text message string.
         */
         text?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the message.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -778,17 +727,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the node.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -833,24 +772,14 @@ export namespace sarif {
         threadId?: number;
 
         /**
-        * The date and time at which the analysis tool generated the notification.
+        * The Coordinated Universal Time (UTC) date and time at which the analysis tool generated the notification.
         */
-        time?: string;
+        timeUtc?: string;
 
         /**
         * Key/value pairs that provide additional information about the notification.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Notification {
@@ -886,6 +815,26 @@ export namespace sarif {
         * Specifies a portion of the file.
         */
         region?: Region;
+
+        /**
+        * Key/value pairs that provide additional information about the physical location.
+        */
+        properties?: PropertyBag;
+    }
+
+    /**
+    * Key/value pairs that provide additional information about the object.
+    */
+    export interface PropertyBag {
+        /**
+        * A set of distinct strings that provide additional information.
+        */
+        tags?: string[];
+
+        /**
+         * Additional Properties
+         */
+        [key: string]: any;
     }
 
     /**
@@ -916,6 +865,11 @@ export namespace sarif {
         * The Y coordinate of the top edge of the rectangle, measured in the image's natural units.
         */
         top?: number;
+
+        /**
+        * Key/value pairs that provide additional information about the rectangle.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -971,6 +925,11 @@ export namespace sarif {
         * The line number of the first character in the region.
         */
         startLine?: number;
+
+        /**
+        * Key/value pairs that provide additional information about the region.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -986,6 +945,11 @@ export namespace sarif {
         * The content to insert at the location specified by the 'deletedRegion' property.
         */
         insertedContent?: FileContent;
+
+        /**
+        * Key/value pairs that provide additional information about the replacement.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -1052,9 +1016,10 @@ export namespace sarif {
         fixes?: Fix[];
 
         /**
-        * An array of one or more unique 'graph' objects.
+        * A dictionary, each of whose keys is the id of a graph and each of whose values is a 'graph' object with that
+        * id.
         */
-        graphs?: Graph[];
+        graphs?: { [key: string]: Graph };
 
         /**
         * An array of one or more unique 'graphTraversal' objects.
@@ -1082,6 +1047,11 @@ export namespace sarif {
         * space is limited.
         */
         message?: Message;
+
+        /**
+        * A positive integer specifying the number of times this logically unique result was observed in this run.
+        */
+        occurrenceCount?: number;
 
         /**
         * A set of strings that contribute to the stable, unique identity of the result.
@@ -1117,17 +1087,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the result.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Result {
@@ -1178,7 +1138,7 @@ export namespace sarif {
         /**
         * A stable, opaque identifier for the rule.
         */
-        id: string;
+        id?: string;
 
         /**
         * A set of name/value pairs with arbitrary names. The value within each name/value pair consists of plain text
@@ -1208,17 +1168,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the rule.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1238,17 +1188,12 @@ export namespace sarif {
         /**
         * Contains configuration information specific to this rule.
         */
-        parameters?: {
-            /**
-            * A set of distinct strings that provide additional configuration information.
-            */
-            tags?: string[];
+        parameters?: PropertyBag;
 
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        /**
+        * Key/value pairs that provide additional information about the rule configuration.
+        */
+        properties?: PropertyBag;
     }
 
     export namespace RuleConfiguration {
@@ -1265,15 +1210,14 @@ export namespace sarif {
     */
     export interface Run {
         /**
+        * Automation details that describe the aggregate of runs to which this run belongs.
+        */
+        aggregateIds?: RunAutomationDetails[];
+
+        /**
         * The hardware architecture for which the run was targeted.
         */
         architecture?: string;
-
-        /**
-        * A global identifier that allows the run to be correlated with other artifacts produced by a larger automation
-        * process.
-        */
-        automationLogicalId?: string;
 
         /**
         * The 'instanceGuid' property of a previous SARIF 'run' that comprises the baseline that was used to compute
@@ -1293,19 +1237,9 @@ export namespace sarif {
         conversion?: Conversion;
 
         /**
-        * A stable, unique identifier for the class of related runs to which this run belongs, in the form of a GUID.
-        */
-        correlationGuid?: string;
-
-        /**
         * Specifies the default encoding for any file object that refers to a text file.
         */
         defaultFileEncoding?: string;
-
-        /**
-        * A description of the run.
-        */
-        description?: Message;
 
         /**
         * A dictionary, each of whose keys is a URI and each of whose values is a file object.
@@ -1313,14 +1247,15 @@ export namespace sarif {
         files?: { [key: string]: File };
 
         /**
-        * An array of one or more unique 'graph' objects.
+        * A dictionary, each of whose keys is the id of a graph and each of whose values is a 'graph' object with that
+        * id.
         */
-        graphs?: Graph[];
+        graphs?: { [key: string]: Graph };
 
         /**
-        * A stable, unique identifier for the run, in the form of a GUID.
+        * Automation details that describe this run.
         */
-        instanceGuid?: string;
+        id?: RunAutomationDetails;
 
         /**
         * Describes the invocation of the analysis tool.
@@ -1328,20 +1263,14 @@ export namespace sarif {
         invocations?: Invocation[];
 
         /**
-        * A logical identifier for a run, for example, 'nightly Clang analyzer run'. Multiple runs of the same type can
-        * have the same logical id.
-        */
-        logicalId?: string;
-
-        /**
         * A dictionary, each of whose keys specifies a logical location such as a namespace, type or function.
         */
         logicalLocations?: { [key: string]: LogicalLocation };
 
         /**
-        * The absolute URI specified by each uriBaseId symbol on the machine where the tool originally ran.
+        * The file location specified by each uriBaseId symbol on the machine where the tool originally ran.
         */
-        originalUriBaseIds?: { [key: string]: string };
+        originalUriBaseIds?: { [key: string]: FileLocation };
 
         /**
         * The string used to replace sensitive information in a redaction-aware property.
@@ -1380,17 +1309,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the run.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information about the run.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Run {
@@ -1401,11 +1320,43 @@ export namespace sarif {
     }
 
     /**
+    * Information that describes a run's identity and role within an engineering system process.
+    */
+    export interface RunAutomationDetails {
+        /**
+        * A stable, unique identifier for the equivalence class of runs to which this object's containing run object
+        * belongs in the form of a GUID.
+        */
+        correlationGuid?: string;
+
+        /**
+        * A description of the identity and role played within the engineering system by this object's containing run
+        * object.
+        */
+        description?: Message;
+
+        /**
+        * A stable, unique identifer for this object's containing run object in the form of a GUID.
+        */
+        instanceGuid?: string;
+
+        /**
+        * A hierarchical string that uniquely identifies this object's containing run object.
+        */
+        instanceId?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the run automation details.
+        */
+        properties?: PropertyBag;
+    }
+
+    /**
     * A call stack that is relevant to a result.
     */
     export interface Stack {
         /**
-        * An array of stack frames that represent a sequence of calls, rendered in reverse chronological order, that
+        * An array of stack frames that represents a sequence of calls, rendered in reverse chronological order, that
         * comprise the call stack.
         */
         frames: StackFrame[];
@@ -1418,17 +1369,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the stack.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1468,17 +1409,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the stack frame.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1504,17 +1435,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the thread flow.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1525,6 +1446,11 @@ export namespace sarif {
         * An integer representing the temporal order in which execution reached this location.
         */
         executionOrder?: number;
+
+        /**
+        * The Coordinated Universal Time (UTC) date and time at which this location was executed.
+        */
+        executionTimeUtc?: string;
 
         /**
         * Specifies the importance of this location in understanding the code flow in which it occurs. The order from
@@ -1562,32 +1488,12 @@ export namespace sarif {
         * the variable or expression value. For an annotation of kind 'continuation', for example, this dictionary
         * might hold the current assumed values of a set of global variables.
         */
-        state?: object;
+        state?: { [key: string]: string };
 
         /**
-        * The 0-based sequence number of the location in the code flow within which it occurs.
+        * Key/value pairs that provide additional information about the threadflow location.
         */
-        step?: number;
-
-        /**
-        * The time at which this location was executed.
-        */
-        timestamp?: string;
-
-        /**
-        * Key/value pairs that provide additional information about the code location.
-        */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace ThreadFlowLocation {
@@ -1648,17 +1554,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the tool.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1666,9 +1562,20 @@ export namespace sarif {
     */
     export interface VersionControlDetails {
         /**
+        * A Coordinated Universal Time (UTC) date and time that can be used to synchronize an enlistment to the state
+        * of the repository at that time.
+        */
+        asOfTimeUtc?: string;
+
+        /**
         * The name of a branch containing the revision.
         */
         branch?: string;
+
+        /**
+        * The absolute URI of the repository.
+        */
+        repositoryUri: string;
 
         /**
         * A string that uniquely and permanently identifies the revision within the repository.
@@ -1678,31 +1585,11 @@ export namespace sarif {
         /**
         * A tag that has been applied to the revision.
         */
-        tag?: string;
+        revisionTag?: string;
 
         /**
-        * The date and time at which the revision was created.
+        * Key/value pairs that provide additional information about the version control details.
         */
-        timestamp?: string;
-
-        /**
-        * The absolute URI of the repository.
-        */
-        uri: string;
-
-        /**
-        * Key/value pairs that provide additional information about the revision.
-        */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 }
