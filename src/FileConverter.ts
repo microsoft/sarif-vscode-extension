@@ -78,6 +78,11 @@ export class FileConverter {
                     ["transform", doc.uri.fsPath, "-o", output, "-p", "-f"],
                 );
 
+                let errorData;
+                proc.stdout.on("data", (data) => {
+                    errorData = data.toString();
+                });
+
                 proc.on("close", (code) => {
                     if (code === 0) {
                         if (window.activeTextEditor.document.fileName === doc.fileName) {
@@ -89,7 +94,8 @@ export class FileConverter {
                                 preserveFocus: false, preview: false, viewColumn: ViewColumn.One,
                             } as TextDocumentShowOptions);
                     } else {
-                        window.showErrorMessage(`Sarif upgrade failed with error code: ${code}`,
+                        window.showErrorMessage(`Sarif upgrade failed with error:
+                        ${errorData}`,
                             { modal: false } as MessageOptions);
                     }
                 });
