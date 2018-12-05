@@ -219,3 +219,16 @@ export interface ResultsListSortBy {
     column: string,
     ascending: boolean
 }
+
+export interface SarifVersion {
+    csd?: number,
+    csdDate?: Date,
+    major: number,
+    minor: number,
+    sub: number,
+}
+
+export interface JsonMapping {
+    data: sarif.Log,
+    pointers: any,
+}
