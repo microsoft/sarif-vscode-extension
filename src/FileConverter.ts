@@ -52,7 +52,7 @@ export class FileConverter {
             const saveTemp = "Yes (Save Temp)";
             const saveAs = "Yes (Save As)";
             const choice = await window.showInformationMessage(`Sarif version '${version}' is not supported.
-            Upgrade to the latest version '${sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10}'?`,
+            Upgrade to the latest version? '${sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10}'`,
                 { modal: false } as MessageOptions, saveTemp, saveAs, "No");
 
             let output: string;
@@ -95,8 +95,8 @@ export class FileConverter {
                 });
             }
         } else {
-            window.showErrorMessage(`Sarif version '${version}' is not yet supported by the Sarif Viewer.
-            Please make sure you're updated to the latest version and check
+            window.showErrorMessage(`Sarif version '${version}' is not yet supported by the Viewer.
+            Make sure you have the latest extension version and check
             https://github.com/Microsoft/sarif-vscode-extension for future support.`);
         }
     }
