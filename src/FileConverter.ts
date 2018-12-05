@@ -188,7 +188,7 @@ export class FileConverter {
             } else if (parsedVer.minor === currentVer.minor) {
                 if (parsedVer.sub < currentVer.sub) {
                     canUpgrade = true;
-                } else if (parsedVer.sub === currentVer.sub) {
+                } else if (parsedVer.sub === currentVer.sub && this.curVersion.csd !== undefined) {
                     if (parsedVer.csd === undefined) {
                         canUpgrade = true;
                     } else if (parsedVer.csd < currentVer.csd) {
