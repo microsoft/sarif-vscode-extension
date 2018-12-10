@@ -90,14 +90,13 @@ export class LocationFactory {
      */
     public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
         const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
-        const locations = sarifMapping.data.runs[runIndex].results[resultIndex].locations;
+        const result = sarifMapping.data.runs[runIndex].results[resultIndex];
+        const locations = result.locations;
         let resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
-        if (locations !== undefined) {
-            if (locations[0].physicalLocation !== undefined) {
-                resultPath = resultPath + "/locations/0/physicalLocation";
-            } else if (locations[0].analysisTarget !== undefined) {
-                resultPath = resultPath + "/locations/0/analysisTarget";
-            }
+        if (locations !== undefined && locations[0].physicalLocation !== undefined) {
+            resultPath = resultPath + "/locations/0/physicalLocation";
+        } else if (result.analysisTarget !== undefined) {
+            resultPath = resultPath + "/analysisTarget";
         }
 
         const locationMapping = sarifMapping.pointers[resultPath];

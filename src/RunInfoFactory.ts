@@ -29,16 +29,20 @@ export class RunInfoFactory {
             runInfo.toolFullName = tool.name;
         }
 
-        if (run.invocations !== undefined) {
-            runInfo.cmdLine = run.invocations[0].commandLine;
-            if (run.invocations[0].executableLocation !== undefined) {
-                runInfo.toolFileName = run.invocations[0].executableLocation.uri;
+        if (run.invocations !== undefined && run.invocations[0] !== undefined) {
+            const invocation = run.invocations[0];
+            runInfo.cmdLine = invocation.commandLine;
+            if (invocation.executableLocation !== undefined) {
+                runInfo.toolFileName = invocation.executableLocation.uri;
             }
-            runInfo.workingDir = run.invocations[0].workingDirectory;
+
+            if (invocation.workingDirectory !== undefined) {
+                runInfo.workingDir = invocation.workingDirectory.uri;
+            }
         }
 
         runInfo.additionalProperties = run.properties;
-        runInfo.uriBaseIds = run.originalUriBaseIds;
+        runInfo.uriBaseIds = Utilities.expandBaseIds(run.originalUriBaseIds);
 
         runInfo.sarifFileFullPath = sarifFileName;
         runInfo.sarifFileName = Utilities.Path.basename(sarifFileName);

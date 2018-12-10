@@ -6,8 +6,9 @@
 import {
     commands, Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace,
 } from "vscode";
-import { ResultInfo, RunInfo } from "./common/Interfaces";
+import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
 import { sarif } from "./common/SARIFInterfaces";
+import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
 import { LocationFactory } from "./LocationFactory";
 import { ProgressHelper } from "./ProgressHelper";
@@ -31,7 +32,7 @@ export class LogReader {
         return (doc.languageId === "json" && doc.fileName.substring(doc.fileName.lastIndexOf(".")) === ".sarif");
     }
 
-    public sarifJSONMapping: Map<string, any>;
+    public sarifJSONMapping: Map<string, JsonMapping>;
 
     private closeListenerDisposable: Disposable;
     private openListenerDisposable: Disposable;
@@ -137,18 +138,23 @@ export class LogReader {
                     let runInfo: RunInfo;
                     let log: sarif.Log;
 
+                    let docMapping: JsonMapping;
                     await ProgressHelper.Instance.setProgressReport("Parsing Sarif file");
                     try {
-                        const docMapping = this.jsonMap.parse(doc.getText());
-                        this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
-                        log = docMapping.data;
+                        docMapping = this.jsonMap.parse(doc.getText()) as JsonMapping;
                     } catch (error) {
                         window.showErrorMessage(`Sarif Viewer:
                         Cannot display results for '${doc.fileName}' because: ${error.message}`);
                         return;
                     }
 
-                    if (!this.isVersionSupported(log.version)) { return; }
+                    this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
+                    log = docMapping.data;
+
+                    if (log.version !== sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10) {
+                        FileConverter.upgradeSarif(log.version, doc);
+                        return;
+                    }
 
                     for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
                         const run = log.runs[runIndex];
@@ -200,32 +206,5 @@ export class LogReader {
                     return Promise.resolve();
                 });
         }
-    }
-
-    /**
-     * Checks if the version of the Sarif file is supported, shows an error message to the user if not supported
-     * Currently only checks major version, based on future changes this might need to be narrowed down to include minor
-     * @param version version of the Sarif file
-     */
-    private isVersionSupported(version: string): boolean {
-        const versionParts = version.split(".");
-        const supportedVersionMajor = 2;
-        const versionMajor = parseInt(versionParts[0], 10);
-        if (versionMajor === supportedVersionMajor) {
-            return true;
-        }
-
-        let notSupportedMsg: string;
-        if (versionMajor < supportedVersionMajor) {
-            notSupportedMsg = `Sarif version '${version}' is no longer supported by the Sarif Viewer.
-            Please contact the creator of the Sarif file and have them upgrade to the latest sdk.`;
-        } else {
-            notSupportedMsg = `Sarif version '${version}' is not yet supported by the Sarif Viewer.
-            Please make sure you're updated to the latest version and check
-            https://github.com/Microsoft/sarif-vscode-extension for future support.`;
-        }
-
-        window.showErrorMessage(notSupportedMsg);
-        return false;
     }
 }

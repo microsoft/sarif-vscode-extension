@@ -246,3 +246,26 @@ suite("getUirBase", () => {
         assert.equal(base, "noTest");
     });
 });
+
+suite("expandBaseIds", () => {
+    const originalUriBaseIds = {
+        file: { uri: "file.ext", uriBaseId: "folder"},
+        folder: { uri: "folder", uriBaseId: "root" },
+        root: {uri: "file:///c:/"},
+    } as { [key: string]: sarif.FileLocation };
+
+    test("Undefined originalUriBaseIds", () => {
+        const expandedBaseIds = Utilities.expandBaseIds(undefined);
+        assert.equal(expandedBaseIds, undefined);
+    });
+
+    test("basic", () => {
+        const expandedBaseIds = Utilities.expandBaseIds(originalUriBaseIds);
+        assert.notEqual(expandedBaseIds, undefined);
+        assert.deepEqual(expandedBaseIds, {
+            file: "file:\\c:\\folder\\file.ext",
+            folder: "file:\\c:\\folder",
+            root: "file:\\c:\\",
+        });
+    });
+});
