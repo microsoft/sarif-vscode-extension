@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.7.0
+* Updated the supported sarif version from '2.0.0' to '2.0.0-csd.2.beta.2018-10-10'
+* Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2018-10-10'
+* Added feature to update older sarif versions to the latest, using multitool's transform
+    * Gives the user the option to
+        * Update to a temp file location
+        * Update to a location via the save as dialog
+        * Not update, you can view the original file but the results will not be loaded
+
 ## 2.6.2
 * Fixed bug with Sarif Explorer opening blank on Linux OS [issue #113](https://github.com/Microsoft/sarif-vscode-extension/issues/113)
 * Fixed bug with Start Column in the ResultsList's Position column off by 1 [issue #115](https://github.com/Microsoft/sarif-vscode-extension/issues/115)
