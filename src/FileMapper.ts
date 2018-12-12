@@ -193,22 +193,25 @@ export class FileMapper {
 
     /**
      * Gets the hash value for the embedded content. Preference for sha256, if not found it uses the first hash value
-     * @param hashes Array of hash objects
+     * @param hashes dictionary of hashes
      */
-    private getHashValue(hashes: sarif.Hash[]): string {
+    private getHashValue(hashes: { [key: string]: string; }): string {
+        let value = "";
         if (hashes !== undefined) {
-            const sha256Hash = hashes.find((value, index) => {
-                return value.algorithm === "sha256";
-            });
-
-            if (sha256Hash !== undefined) {
-                return sha256Hash.value;
+            const sha256Key = "sha256";
+            if (hashes[sha256Key] !== undefined) {
+                value = hashes[sha256Key];
             } else {
-                return hashes[0].value;
+                for (const key in hashes) {
+                    if (hashes.hasOwnProperty(key)) {
+                        value = hashes[key];
+                        break;
+                    }
+                }
             }
-        } else {
-            return "";
         }
+
+        return value;
     }
 
     /**

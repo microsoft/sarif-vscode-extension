@@ -77,8 +77,11 @@ export class ResultInfoFactory {
                 resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
                     allLocations);
 
-                if (result.ruleMessageId !== undefined && rule.messageStrings[result.ruleMessageId] !== undefined) {
-                    ruleMessageString = rule.messageStrings[result.ruleMessageId];
+                if (result.message !== undefined && rule.messageStrings !== undefined) {
+                    const resultMsgId = result.message.messageId;
+                    if (resultMsgId !== undefined && rule.messageStrings[resultMsgId] !== undefined) {
+                        ruleMessageString = rule.messageStrings[resultMsgId];
+                    }
                 }
             }
         }

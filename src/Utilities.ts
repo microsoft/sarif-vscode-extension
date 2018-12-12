@@ -98,6 +98,26 @@ export class Utilities {
     }
 
     /**
+     * expands out all of the nested based ids to get a flat dictionary of base ids
+     * @param baseIds all of the base ids that need to be expanded out
+     */
+    public static expandBaseIds(baseIds: { [key: string]: sarif.FileLocation }): { [key: string]: string } {
+        if (baseIds === undefined) {
+            return undefined;
+        }
+
+        const expandedBaseIds: { [key: string]: string } = {};
+
+        for (const id in baseIds) {
+            if (baseIds.hasOwnProperty(id)) {
+                expandedBaseIds[id] = this.expandBaseId(id, baseIds);
+            }
+        }
+
+        return expandedBaseIds;
+    }
+
+    /**
      * Generates a folder path matching original path in the temp location and returns the path with the file included
      * @param filePath original file path, to recreate in the temp location
      * @param hashValue optional hash value to add to the path
@@ -252,6 +272,20 @@ export class Utilities {
         }
 
         return createPath;
+    }
+
+    /**
+     * Recursively expands all of the nested baseids of the base id
+     * @param id baseId that needs to be expanded
+     * @param baseIds all the base ids
+     */
+    private static expandBaseId(id: string, baseIds: { [key: string]: sarif.FileLocation }): string {
+        let base = "";
+        if (baseIds[id].uriBaseId !== undefined) {
+            base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
+        }
+
+        return this.Path.join(base, baseIds[id].uri);
     }
 
     /**

@@ -1,8 +1,8 @@
 export namespace sarif {
 
     /**
-    * Static Analysis Results Format (SARIF) Version 2.0.0 JSON Schema: a standard format for the output of static
-    * analysis and other tools.
+    * Static Analysis Results Format (SARIF) Version 2.0.0-csd.2.beta-2018-10-10 JSON Schema:
+    * a standard format for the output of static analysis tools.
     */
     export interface Log {
         /**
@@ -23,7 +23,7 @@ export namespace sarif {
 
     export namespace Log {
         export const enum version {
-            v2 = "2.0.0",
+            v2_0_0_csd_2_beta_2018_10_10   = "2.0.0-csd.2.beta.2018-10-10",
         }
     }
 
@@ -42,14 +42,14 @@ export namespace sarif {
         fileLocation: FileLocation;
 
         /**
-        * An array of regions of interest within the attachment.
-        */
-        regions?: Region[];
-
-        /**
         * An array of rectangles specifying areas of interest within the image.
         */
         rectangles?: Rectangle[];
+
+        /**
+        * An array of regions of interest within the attachment.
+        */
+        regions?: Region[];
     }
 
     /**
@@ -70,98 +70,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the code flow.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
-    }
-
-    /**
-    * A location visited by an analysis tool in the course of simulating or monitoring the execution of a program.
-    */
-    export interface ThreadFlowLocation {
-        /**
-        * The 0-based sequence number of the location in the code flow within which it occurs.
-        */
-        step?: number;
-
-        /**
-        * The code location.
-        */
-        location?: Location;
-
-        /**
-        * The call stack leading to this location.
-        */
-        stack?: Stack;
-
-        /**
-        * A string describing the type of this location.
-        */
-        kind?: string;
-
-        /**
-        * The name of the module that contains the code that is executing.
-        */
-        module?: string;
-
-        /**
-        * A dictionary, each of whose keys specifies a variable or expression, the associated value of which represents
-        * the variable or expression value. For an annotation of kind 'continuation', for example, this dictionary
-        * might hold the current assumed values of a set of global variables.
-        */
-        state?: object;
-
-        /**
-        * An integer representing a containment hierarchy within the thread flow
-        */
-        nestingLevel?: number;
-
-        /**
-        * An integer representing the temporal order in which execution reached this location.
-        */
-        executionOrder?: number;
-
-        /**
-        * The time at which this location was executed.
-        */
-        timestamp?: string;
-
-        /**
-        * Specifies the importance of this location in understanding the code flow in which it occurs. The order from
-        * most to least important is "essential", "important", "unimportant". Default: "important".
-        */
-        importance?: ThreadFlowLocation.importance;
-
-        /**
-        * Key/value pairs that provide additional information about the code location.
-        */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
-    }
-
-    export namespace ThreadFlowLocation {
-        export const enum importance {
-            important = "important",
-            essential = "essential",
-            unimportant = "unimportant",
-        }
+        properties?: PropertyBag;
     }
 
     /**
@@ -170,9 +79,9 @@ export namespace sarif {
     */
     export interface Conversion {
         /**
-        * A tool object that describes the converter.
+        * The locations of the analysis tool's per-run log files.
         */
-        tool: Tool;
+        analysisToolLogFiles?: FileLocation[];
 
         /**
         * An invocation object that describes the invocation of the converter.
@@ -180,9 +89,14 @@ export namespace sarif {
         invocation?: Invocation;
 
         /**
-        * The locations of the analysis tool's per-run log files.
+        * A tool object that describes the converter.
         */
-        analysisToolLogFiles?: FileLocation[];
+        tool: Tool;
+
+        /**
+        * Key/value pairs that provide additional information about the conversion.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -212,21 +126,11 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the edge.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
-    * Represents the traversal of a single edge in the course of a graph traversal.
+    * Represents the traversal of a single edge during a graph traversal.
     */
     export interface EdgeTraversal {
         /**
@@ -235,14 +139,14 @@ export namespace sarif {
         edgeId: string;
 
         /**
-        * A message to display to the user as the edge is traversed.
-        */
-        message?: Message;
-
-        /**
         * The values of relevant expressions after the edge has been traversed.
         */
         finalState?: { [key: string]: string };
+
+        /**
+        * A message to display to the user as the edge is traversed.
+        */
+        message?: Message;
 
         /**
         * The number of edge traversals necessary to return from a nested graph.
@@ -252,17 +156,7 @@ export namespace sarif {
         /**
         * Key/value pairs that provide additional information about the edge traversal.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -270,15 +164,20 @@ export namespace sarif {
     */
     export interface Exception {
         /**
+        * An array of exception objects each of which is considered a cause of this exception.
+        */
+        innerExceptions?: Exception[];
+
+        /**
         * A string that identifies the kind of exception, for example, the fully qualified type name of an object that
         * was thrown, or the symbolic name of a signal.
         */
         kind?: string;
 
         /**
-        * A plain text message that describes the exception.
+        * A message that describes the exception.
         */
-        message?: string;
+        message?: Message;
 
         /**
         * The sequence of function calls leading to the exception.
@@ -286,25 +185,55 @@ export namespace sarif {
         stack?: Stack;
 
         /**
-        * An array of exception objects each of which is considered a cause of this exception.
+        * Key/value pairs that provide additional information about the exception
         */
-        innerExceptions?: Exception[];
+        properties?: PropertyBag;
     }
 
     /**
-    * A change to a single file.
+    * References to external files that should be inlined with the content of a root log file.
     */
-    export interface FileChange {
+    export interface ExternalFiles {
         /**
-        * The location of the file to change.
+        * The location of a file containing a run.conversion object to be merged with the root log file.
         */
-        fileLocation?: FileLocation;
+        conversion?: FileLocation;
 
         /**
-        * An array of replacement objects, each of which represents the replacement of a single range of bytes in a
-        * single file specified by 'fileLocation'.
+        * The location of a file containing a run.files object to be merged with the root log file.
         */
-        replacements: Replacement[];
+        files?: FileLocation;
+
+        /**
+        * The location of a file containing a run.graphs object to be merged with the root log file.
+        */
+        graphs?: FileLocation;
+
+        /**
+        * An array of locations of files containing arrays of run.invocation objects to be merged with the root log
+        * file.
+        */
+        invocations?: FileLocation[];
+
+        /**
+        * The location of a file containing a run.logicalLocations object to be merged with the root log file.
+        */
+        logicalLocations?: FileLocation;
+
+        /**
+        * The location of a file containing a run.resources object to be merged with the root log file.
+        */
+        resources?: FileLocation;
+
+        /**
+        * An array of locations of files containins arrays of run.result objects to be merged with the root log file.
+        */
+        results?: FileLocation[];
+
+        /**
+        * Key/value pairs that provide additional information about the external files
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -312,37 +241,7 @@ export namespace sarif {
     */
     export interface File {
         /**
-        * The location of the file.
-        */
-        fileLocation?: FileLocation;
-
-        /**
-        * Identifies the key of the immediate parent of the file, if this file is nested.
-        */
-        parentKey?: string;
-
-        /**
-        * The offset in bytes of the file within its containing file.
-        */
-        offset?: number;
-
-        /**
-        * The length of the file in bytes.
-        */
-        length?: number;
-
-        /**
-        * The role or roles played by the file in the analysis.
-        */
-        roles?: File.roles[];
-
-        /**
-        * The MIME type (RFC 2045) of the file.
-        */
-        mimeType?: string;
-
-        /**
-        * The contents of the file, expressed as a MIME Base64-encoded byte sequence.
+        * The contents of the file.
         */
         contents?: FileContent;
 
@@ -352,31 +251,51 @@ export namespace sarif {
         encoding?: string;
 
         /**
-        * An array of hash objects, each of which specifies a hashed value for the file, along with the name of the
-        * hash function used to compute the hash.
+        * The location of the file.
         */
-        hashes?: Hash[];
+        fileLocation?: FileLocation;
 
         /**
-        * The date and time at which the file was most recently modified. See "Date/time properties" in the SARIF spec
-        * for the required format.
+        * A dictionary, each of whose keys is the name of a hash function and each of whose values is the hashed value
+        * of the file produced by the specified hash function.
         */
-        lastModifiedTime?: string;
+        hashes?: { [key: string]: string };
+
+        /**
+        * The Coordinated Universal Time (UTC) date and time at which the file was most recently modified. See
+        * "Date/time properties" in the SARIF spec for the required format.
+        */
+        lastModifiedTimeUtc?: string;
+
+        /**
+        * The length of the file in bytes.
+        */
+        length?: number;
+
+        /**
+        * The MIME type (RFC 2045) of the file.
+        */
+        mimeType?: string;
+
+        /**
+        * The offset in bytes of the file within its containing file.
+        */
+        offset?: number;
+
+        /**
+        * Identifies the key of the immediate parent of the file, if this file is nested.
+        */
+        parentKey?: string;
+
+        /**
+        * The role or roles played by the file in the analysis.
+        */
+        roles?: File.roles[];
 
         /**
         * Key/value pairs that provide additional information about the file.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace File {
@@ -397,18 +316,44 @@ export namespace sarif {
     }
 
     /**
+    * A change to a single file.
+    */
+    export interface FileChange {
+        /**
+        * The location of the file to change.
+        */
+        fileLocation: FileLocation;
+
+        /**
+        * An array of replacement objects, each of which represents the replacement of a single region in a single file
+        * specified by 'fileLocation'.
+        */
+        replacements: Replacement[];
+
+        /**
+        * Key/value pairs that provide additional information about the file change.
+        */
+        properties?: PropertyBag;
+    }
+
+    /**
     * Represents content from an external file.
     */
     export interface FileContent {
+        /**
+        * MIME Base64-encoded content from a binary file, or from a text file in its original encoding.
+        */
+        binary?: string;
+
         /**
         * UTF-8-encoded content from a text file.
         */
         text?: string;
 
         /**
-        * MIME Base64-encoded content from a binary file, or from a text file in its original encoding.
+        * Key/value pairs that provide additional information about the external file.
         */
-        binary?: string;
+        properties?: PropertyBag;
     }
 
     /**
@@ -425,6 +370,11 @@ export namespace sarif {
         * property is interpreted.
         */
         uriBaseId?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the file location.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -441,6 +391,11 @@ export namespace sarif {
         * One or more file changes that comprise a fix for a result.
         */
         fileChanges: FileChange[];
+
+        /**
+        * Key/value pairs that provide additional information about the fix.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -449,19 +404,9 @@ export namespace sarif {
     */
     export interface Graph {
         /**
-        * A string that uniquely identifies the graph within a run.graphs or result.graphs array.
-        */
-        id: string;
-
-        /**
         * A description of the graph.
         */
         description?: Message;
-
-        /**
-        * An array of node objects representing the nodes of the graph.
-        */
-        nodes: Node[];
 
         /**
         * An array of edge objects representing the edges of the graph.
@@ -469,19 +414,19 @@ export namespace sarif {
         edges: Edge[];
 
         /**
+        * A string that uniquely identifies the graph within a run.graphs or result.graphs array.
+        */
+        id: string;
+
+        /**
+        * An array of node objects representing the nodes of the graph.
+        */
+        nodes: Node[];
+
+        /**
         * Key/value pairs that provide additional information about the graph.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -489,19 +434,9 @@ export namespace sarif {
     */
     export interface GraphTraversal {
         /**
-        * A string that uniquely identifies that graph being traversed.
-        */
-        graphId: string;
-
-        /**
         * A description of this graph traversal.
         */
         description?: Message;
-
-        /**
-        * Values of relevant expressions at the start of the graph traversal.
-        */
-        initialState?: { [key: string]: string };
 
         /**
         * The sequences of edges traversed by this graph traversal.
@@ -509,41 +444,36 @@ export namespace sarif {
         edgeTraversals: EdgeTraversal[];
 
         /**
+        * A string that uniquely identifies that graph being traversed.
+        */
+        graphId: string;
+
+        /**
+        * Values of relevant expressions at the start of the graph traversal.
+        */
+        initialState?: { [key: string]: string };
+
+        /**
         * Key/value pairs that provide additional information about the graph traversal.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
-    }
-
-    /**
-    * A hash value of some file or collection of files, together with the hash function used to compute the hash.
-    */
-    export interface Hash {
-        /**
-        * The hash value of some file or collection of files, computed by the hash function named in the 'algorithm'
-        * property.
-        */
-        value: string;
-
-        /**
-        * The name of the hash function used to compute the hash value specified in the 'value' property.
-        */
-        algorithm: string;
+        properties?: PropertyBag;
     }
 
     /**
     * The runtime environment of the analysis tool run.
     */
     export interface Invocation {
+        /**
+        * The account that ran the analysis tool.
+        */
+        account?: string;
+
+        /**
+        * An array of strings, containing in order the command line arguments passed to the tool from the operating
+        * system.
+        */
+        arguments?: string[];
+
         /**
         * A set of files relevant to the invocation of the tool.
         */
@@ -555,42 +485,30 @@ export namespace sarif {
         commandLine?: string;
 
         /**
-        * An array of strings, containing in order the command line arguments passed to the tool from the operating
-        * system.
+        * A list of conditions detected by the tool that are relevant to the tool's configuration.
         */
-        arguments?: string[];
+        configurationNotifications?: Notification[];
 
         /**
-        * The locations of any response files specified on the tool's command line.
+        * The Coordinated Universal Time (UTC) date and time at which the run ended. See "Date/time properties" in the
+        * SARIF spec for the required format.
         */
-        responseFiles?: FileLocation[];
+        endTimeUtc?: string;
 
         /**
-        * The date and time at which the run started. See "Date/time properties" in the SARIF spec for the required
-        * format.
+        * The environment variables associated with the analysis tool process, expressed as key/value pairs.
         */
-        startTime?: string;
+        environmentVariables?: { [key: string]: string };
 
         /**
-        * The date and time at which the run ended. See "Date/time properties" in the  SARIF spec for the required
-        * format.
+        * An absolute URI specifying the location of the analysis tool's executable.
         */
-        endTime?: string;
+        executableLocation?: FileLocation;
 
         /**
         * The process exit code.
         */
         exitCode?: number;
-
-        /**
-        * A list of runtime conditions detected by the tool in the course of the analysis.
-        */
-        toolNotifications?: Notification[];
-
-        /**
-        * A list of conditions detected by the tool that are relevant to the tool's configuration.
-        */
-        configurationNotifications?: Notification[];
 
         /**
         * The reason for the process exit.
@@ -608,24 +526,9 @@ export namespace sarif {
         exitSignalNumber?: number;
 
         /**
-        * The reason given by the operating system that the process failed to start.
-        */
-        processStartFailureMessage?: string;
-
-        /**
-        * A value indicating whether the tool's execution completed successfully.
-        */
-        toolExecutionSuccessful?: boolean;
-
-        /**
         * The machine that hosted the analysis tool run.
         */
         machine?: string;
-
-        /**
-        * The account that ran the analysis tool.
-        */
-        account?: string;
 
         /**
         * The process id for the analysis tool run.
@@ -633,19 +536,25 @@ export namespace sarif {
         processId?: number;
 
         /**
-        * An absolute URI specifying the location of the analysis tool's executable.
+        * The reason given by the operating system that the process failed to start.
         */
-        executableLocation?: FileLocation;
+        processStartFailureMessage?: string;
 
         /**
-        * The working directory for the analysis rool run.
+        * The locations of any response files specified on the tool's command line.
         */
-        workingDirectory?: string;
+        responseFiles?: FileLocation[];
 
         /**
-        * The environment variables associated with the analysis tool process, expressed as key/value pairs.
+        * The Coordinated Universal Time (UTC) date and time at which the run started. See "Date/time properties" in
+        * the SARIF spec for the required format.
         */
-        environmentVariables?: { [key: string]: any };
+        startTimeUtc?: string;
+
+        /**
+        * A file containing the standard error stream from the process that was invoked.
+        */
+        stderr?: FileLocation;
 
         /**
         * A file containing the standard input stream to the process that was invoked.
@@ -658,43 +567,45 @@ export namespace sarif {
         stdout?: FileLocation;
 
         /**
-        * A file containing the standard error stream from the process that was invoked.
-        */
-        stderr?: FileLocation;
-
-        /**
         * A file containing the interleaved standard output and standard error stream from the process that was
         * invoked.
         */
         stdoutStderr?: FileLocation;
 
         /**
-        * Key/value pairs that provide additional information about the run.
+        * A value indicating whether the tool's execution completed successfully.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
+        toolExecutionSuccessful?: boolean;
 
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        /**
+        * A list of runtime conditions detected by the tool during the analysis.
+        */
+        toolNotifications?: Notification[];
+
+        /**
+        * The working directory for the analysis tool run.
+        */
+        workingDirectory?: FileLocation;
+
+        /**
+        * Key/value pairs that provide additional information about the invocation.
+        */
+        properties?: PropertyBag;
     }
 
     /**
-    * The location where an analysis tool produced a result.
+    * A location within a programming artifact.
     */
     export interface Location {
         /**
-        * Identifies the file where the analysis tool produced the result.
+        * A set of regions relevant to the location.
         */
-        physicalLocation?: PhysicalLocation;
+        annotations?: Region[];
 
         /**
-        * The human-readable fully qualified name of the logical location where the analysis tool produced the result.
+        * The human-readable fully qualified name of the logical location. If run.logicalLocations is present, this
+        * value matches a property name within that object, from which further information about the logical location
+        * can be obtained.
         */
         fullyQualifiedLogicalName?: string;
 
@@ -704,24 +615,14 @@ export namespace sarif {
         message?: Message;
 
         /**
-        * A set of regions relevant to the location.
+        * Identifies the file and region.
         */
-        annotations?: Region[];
+        physicalLocation?: PhysicalLocation;
 
         /**
         * Key/value pairs that provide additional information about the location.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -729,10 +630,10 @@ export namespace sarif {
     */
     export interface LogicalLocation {
         /**
-        * Identifies the construct in which the result occurred. For example, this property might contain the name of a
-        * class or a method.
+        * The machine-readable name for the logical location, such as a mangled function name provided by a C++
+        * compiler that encodes calling convention, return type and other details along with the function name.
         */
-        name?: string;
+        decoratedName?: string;
 
         /**
         * The human-readable fully qualified name of the logical location.
@@ -740,10 +641,17 @@ export namespace sarif {
         fullyQualifiedName?: string;
 
         /**
-        * The machine-readable name for the logical location, such as a mangled function name provided by a C++
-        * compiler that encodes calling convention, return type and other details along with the function name.
+        * The type of construct this logicalLocationComponent refers to. Should be one of 'function', 'member',
+        * 'module', 'namespace', 'package', 'parameter', 'resource', 'returnType', 'type', or 'variable', if any of
+        * those accurately describe the construct.
         */
-        decoratedName?: string;
+        kind?: string;
+
+        /**
+        * Identifies the construct in which the result occurred. For example, this property might contain the name of a
+        * class or a method.
+        */
+        name?: string;
 
         /**
         * Identifies the key of the immediate parent of the construct in which the result was detected. For example,
@@ -752,11 +660,9 @@ export namespace sarif {
         parentKey?: string;
 
         /**
-        * The type of construct this logicalLocationComponent refers to. Should be one of 'function', 'member',
-        * 'module', 'namespace', 'package', 'parameter', 'resource', 'returnType', 'type', or 'variable', if any of
-        * those accurately describe the construct.
+        * Key/value pairs that provide additional information about the logical location.
         */
-        kind?: string;
+        properties?: PropertyBag;
     }
 
     /**
@@ -764,9 +670,9 @@ export namespace sarif {
     */
     export interface Message {
         /**
-        * A plain text message string.
+        * An array of strings to substitute into the message string.
         */
-        text?: string;
+        arguments?: string[];
 
         /**
         * The resource id for a plain text message string.
@@ -774,25 +680,35 @@ export namespace sarif {
         messageId?: string;
 
         /**
-        * A rich text message string.
-        */
-        richText?: string;
-
-        /**
         * The resource id for a rich text message string.
         */
         richMessageId?: string;
 
         /**
-        * An array of strings to substitute into the message string.
+        * A rich text message string.
         */
-        arguments?: string[];
+        richText?: string;
+
+        /**
+        * A plain text message string.
+        */
+        text?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the message.
+        */
+        properties?: PropertyBag;
     }
 
     /**
     * Represents a node in a graph.
     */
     export interface Node {
+        /**
+        * Array of child nodes.
+        */
+        children?: Node[];
+
         /**
         * A string that uniquely identifies the node within its graph.
         */
@@ -809,24 +725,9 @@ export namespace sarif {
         location?: Location;
 
         /**
-        * Array of child nodes.
-        */
-        children?: Node[];
-
-        /**
         * Key/value pairs that provide additional information about the node.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -835,25 +736,14 @@ export namespace sarif {
     */
     export interface Notification {
         /**
+        * The runtime exception, if any, relevant to this notification.
+        */
+        exception?: Exception;
+
+        /**
         * An identifier for the condition that was encountered.
         */
         id?: string;
-
-        /**
-        * The stable, unique identifier of the rule (if any) to which this notification is relevant. If 'ruleKey' is
-        * not specified, this member can be used to retrieve rule metadata from the rules dictionary, if it exists.
-        */
-        ruleId?: string;
-
-        /**
-        * The file and region relevant to this notification.
-        */
-        physicalLocation?: PhysicalLocation;
-
-        /**
-        * A message that describes the condition that was encountered.
-        */
-        message: Message;
 
         /**
         * A value specifying the severity level of the notification.
@@ -861,34 +751,35 @@ export namespace sarif {
         level?: Notification.level;
 
         /**
+        * A message that describes the condition that was encountered.
+        */
+        message: Message;
+
+        /**
+        * The file and region relevant to this notification.
+        */
+        physicalLocation?: PhysicalLocation;
+
+        /**
+        * The stable, unique identifier of the rule (if any) to which this notification is relevant. This member can be
+        * used to retrieve rule metadata from the rules dictionary, if it exists.
+        */
+        ruleId?: string;
+
+        /**
         * The thread identifier of the code that generated the notification.
         */
         threadId?: number;
 
         /**
-        * The date and time at which the analysis tool generated the notification.
+        * The Coordinated Universal Time (UTC) date and time at which the analysis tool generated the notification.
         */
-        time?: string;
-
-        /**
-        * The runtime exception, if any, relevant to this notification.
-        */
-        exception?: Exception;
+        timeUtc?: string;
 
         /**
         * Key/value pairs that provide additional information about the notification.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Notification {
@@ -905,9 +796,10 @@ export namespace sarif {
     */
     export interface PhysicalLocation {
         /**
-        * Value that distinguishes this physical location from all other physical locations in this run object.
+        * Specifies a portion of the file that encloses the region. Allows a viewer to display additional context
+        * around the region.
         */
-        id?: number;
+        contextRegion?: Region;
 
         /**
         * The location of the file.
@@ -915,15 +807,34 @@ export namespace sarif {
         fileLocation: FileLocation;
 
         /**
-        * The region within the file where the result was detected.
+        * Value that distinguishes this physical location from all other physical locations in this run object.
+        */
+        id?: number;
+
+        /**
+        * Specifies a portion of the file.
         */
         region?: Region;
 
         /**
-        * Specifies a portion of the file that encloses the region. Allows a viewer to display additional context
-        * around the region.
+        * Key/value pairs that provide additional information about the physical location.
         */
-        contextRegion?: Region;
+        properties?: PropertyBag;
+    }
+
+    /**
+    * Key/value pairs that provide additional information about the object.
+    */
+    export interface PropertyBag {
+        /**
+        * A set of distinct strings that provide additional information.
+        */
+        tags?: string[];
+
+        /**
+         * Additional Properties
+         */
+        [key: string]: any;
     }
 
     /**
@@ -931,9 +842,9 @@ export namespace sarif {
     */
     export interface Rectangle {
         /**
-        * The Y coordinate of the top edge of the rectangle, measured in the image's natural units.
+        * The Y coordinate of the bottom edge of the rectangle, measured in the image's natural units.
         */
-        top?: number;
+        bottom?: number;
 
         /**
         * The X coordinate of the left edge of the rectangle, measured in the image's natural units.
@@ -941,9 +852,9 @@ export namespace sarif {
         left?: number;
 
         /**
-        * The Y coordinate of the bottom edge of the rectangle, measured in the image's natural units.
+        * A message relevant to the rectangle.
         */
-        bottom?: number;
+        message?: Message;
 
         /**
         * The X coordinate of the right edge of the rectangle, measured in the image's natural units.
@@ -951,9 +862,14 @@ export namespace sarif {
         right?: number;
 
         /**
-        * A message relevant to the rectangle.
+        * The Y coordinate of the top edge of the rectangle, measured in the image's natural units.
         */
-        message?: Message;
+        top?: number;
+
+        /**
+        * Key/value pairs that provide additional information about the rectangle.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -961,34 +877,9 @@ export namespace sarif {
     */
     export interface Region {
         /**
-        * The line number of the first character in the region.
+        * The length of the region in bytes.
         */
-        startLine?: number;
-
-        /**
-        * The column number of the first character in the region.
-        */
-        startColumn?: number;
-
-        /**
-        * The line number of the last character in the region.
-        */
-        endLine?: number;
-
-        /**
-        * The column number of the last character in the region.
-        */
-        endColumn?: number;
-
-        /**
-        * The zero-based offset from the beginning of the file of the first character in the region.
-        */
-        charOffset?: number;
-
-        /**
-        * The length of the region in characters.
-        */
-        charLength?: number;
+        byteLength?: number;
 
         /**
         * The zero-based offset from the beginning of the file of the first byte in the region.
@@ -996,9 +887,29 @@ export namespace sarif {
         byteOffset?: number;
 
         /**
-        * The length of the region in bytes.
+        * The length of the region in characters.
         */
-        byteLength?: number;
+        charLength?: number;
+
+        /**
+        * The zero-based offset from the beginning of the file of the first character in the region.
+        */
+        charOffset?: number;
+
+        /**
+        * The column number of the character following the end of the region.
+        */
+        endColumn?: number;
+
+        /**
+        * The line number of the last character in the region.
+        */
+        endLine?: number;
+
+        /**
+        * A message relevant to the region.
+        */
+        message?: Message;
 
         /**
         * The portion of the file contents within the specified region.
@@ -1006,15 +917,23 @@ export namespace sarif {
         snippet?: FileContent;
 
         /**
-        * A message relevant to the region.
+        * The column number of the first character in the region.
         */
-        message?: Message;
+        startColumn?: number;
+
+        /**
+        * The line number of the first character in the region.
+        */
+        startLine?: number;
+
+        /**
+        * Key/value pairs that provide additional information about the region.
+        */
+        properties?: PropertyBag;
     }
 
     /**
-    * The replacement of a single range of bytes in a file. Specifies the location within the file where the
-    * replacement is to be made, the number of bytes to remove at that location, and a sequence of bytes to insert at
-    * that location.
+    * The replacement of a single region of a file.
     */
     export interface Replacement {
         /**
@@ -1026,6 +945,11 @@ export namespace sarif {
         * The content to insert at the location specified by the 'deletedRegion' property.
         */
         insertedContent?: FileContent;
+
+        /**
+        * Key/value pairs that provide additional information about the replacement.
+        */
+        properties?: PropertyBag;
     }
 
     /**
@@ -1049,43 +973,31 @@ export namespace sarif {
     */
     export interface Result {
         /**
-        * The stable, unique identifier of the rule (if any) to which this notification is relevant. If 'ruleKey' is
-        * not specified, this member can be used to retrieve rule metadata from the rules dictionary, if it exists.
-        */
-        ruleId?: string;
-
-        /**
-        * A value specifying the severity level of the result.
-        */
-        level?: Result.level;
-
-        /**
-        * A message that describes the result. The first sentence of the message only will be displayed when visible
-        * space is limited.
-        */
-        message?: Message;
-
-        /**
-        * A string that identifies the message within the metadata for the rule used in this result.
-        */
-        ruleMessageId?: string;
-
-        /**
         * Identifies the file that the analysis tool was instructed to scan. This need not be the same as the file
         * where the result actually occurred.
         */
         analysisTarget?: FileLocation;
 
         /**
-        * One or more locations where the result occurred. Specify only one location unless the problem indicated by
-        * the result can only be corrected by making a change at every specified location.
+        * A set of files relevant to the result.
         */
-        locations?: Location[];
+        attachments?: Attachment[];
 
         /**
-        * A stable, unique identifer for the result in the form of a GUID.
+        * The state of a result relative to a baseline of a previous run.
         */
-        instanceGuid?: string;
+        baselineState?: Result.baselineState;
+
+        /**
+        * An array of 'codeFlow' objects relevant to the result.
+        */
+        codeFlows?: CodeFlow[];
+
+        /**
+        * An array of physicalLocation objects which specify the portions of an analysis tool's output that a converter
+        * transformed into the result object.
+        */
+        conversionProvenance?: PhysicalLocation[];
 
         /**
         * A stable, unique identifier for the equivalence class of logically identical results to which this result
@@ -1094,65 +1006,9 @@ export namespace sarif {
         correlationGuid?: string;
 
         /**
-        * A set of strings that contribute to the stable, unique identity of the result.
-        */
-        partialFingerprints?: { [key: string]: string };
-
-        /**
         * A set of strings each of which individually defines a stable, unique identity for the result.
         */
         fingerprints?: { [key: string]: string };
-
-        /**
-        * An array of 'stack' objects relevant to the result.
-        */
-        stacks?: Stack[];
-
-        /**
-        * An array of 'codeFlow' objects relevant to the result.
-        */
-        codeFlows?: CodeFlow[];
-
-        /**
-        * An array of one or more unique 'graph' objects.
-        */
-        graphs?: Graph[];
-
-        /**
-        * An array of one or more unique 'graphTraversal' objects.
-        */
-        graphTraversals?: GraphTraversal[];
-
-        /**
-        * A set of locations relevant to this result.
-        */
-        relatedLocations?: Location[];
-
-        /**
-        * TBD
-        */
-        suppressionStates?: Result.suppressionStates[];
-
-        /**
-        * The state of a result relative to a baseline of a previous run.
-        */
-        baselineState?: Result.baselineState;
-
-        /**
-        * A set of files relevant to the result.
-        */
-        attachments?: Attachment[];
-
-        /**
-        * The URI of the work item associated with this result
-        */
-        workItemUri?: string;
-
-        /**
-        * An array of analysisToolLogFileContents objects which specify the portions of an analysis tool's output that
-        * a converter transformed into the result object.
-        */
-        conversionProvenance?: PhysicalLocation[];
 
         /**
         * An array of 'fix' objects, each of which represents a proposed fix to the problem indicated by the result.
@@ -1160,19 +1016,78 @@ export namespace sarif {
         fixes?: Fix[];
 
         /**
+        * A dictionary, each of whose keys is the id of a graph and each of whose values is a 'graph' object with that
+        * id.
+        */
+        graphs?: { [key: string]: Graph };
+
+        /**
+        * An array of one or more unique 'graphTraversal' objects.
+        */
+        graphTraversals?: GraphTraversal[];
+
+        /**
+        * A stable, unique identifer for the result in the form of a GUID.
+        */
+        instanceGuid?: string;
+
+        /**
+        * A value specifying the severity level of the result.
+        */
+        level?: Result.level;
+
+        /**
+        * One or more locations where the result occurred. Specify only one location unless the problem indicated by
+        * the result can only be corrected by making a change at every specified location.
+        */
+        locations?: Location[];
+
+        /**
+        * A message that describes the result. The first sentence of the message only will be displayed when visible
+        * space is limited.
+        */
+        message?: Message;
+
+        /**
+        * A positive integer specifying the number of times this logically unique result was observed in this run.
+        */
+        occurrenceCount?: number;
+
+        /**
+        * A set of strings that contribute to the stable, unique identity of the result.
+        */
+        partialFingerprints?: { [key: string]: string };
+
+        /**
+        * A set of locations relevant to this result.
+        */
+        relatedLocations?: Location[];
+
+        /**
+        * The stable, unique identifier of the rule (if any) to which this notification is relevant. This member can be
+        * used to retrieve rule metadata from the rules dictionary, if it exists.
+        */
+        ruleId?: string;
+
+        /**
+        * An array of 'stack' objects relevant to the result.
+        */
+        stacks?: Stack[];
+
+        /**
+        * A set of flags indicating one or more suppression conditions.
+        */
+        suppressionStates?: Result.suppressionStates[];
+
+        /**
+        * The URIs of the work items associated with this result
+        */
+        workItemUris?: string[];
+
+        /**
         * Key/value pairs that provide additional information about the result.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Result {
@@ -1200,26 +1115,30 @@ export namespace sarif {
     */
     export interface Rule {
         /**
-        * A stable, opaque identifier for the rule.
+        * Information about the rule that can be configured at runtime.
         */
-        id: string;
-
-        /**
-        * A rule identifier that is understandable to an end user.
-        */
-        name?: Message;
-
-        /**
-        * A concise description of the rule. Should be a single sentence that is understandable when visible space is
-        * limited to a single line of text.
-        */
-        shortDescription?: Message;
+        configuration?: RuleConfiguration;
 
         /**
         * A description of the rule. Should, as far as possible, provide details sufficient to enable resolution of any
         * problem indicated by the result.
         */
         fullDescription?: Message;
+
+        /**
+        * Provides the primary documentation for the rule, useful when there is no online documentation.
+        */
+        help?: Message;
+
+        /**
+        * A URI where the primary documentation for the rule can be found.
+        */
+        helpUri?: string;
+
+        /**
+        * A stable, opaque identifier for the rule.
+        */
+        id?: string;
 
         /**
         * A set of name/value pairs with arbitrary names. The value within each name/value pair consists of plain text
@@ -1229,6 +1148,11 @@ export namespace sarif {
         messageStrings?: { [key: string]: string };
 
         /**
+        * A rule identifier that is understandable to an end user.
+        */
+        name?: Message;
+
+        /**
         * A set of name/value pairs with arbitrary names. The value within each name/value pair consists of rich text
         * interspersed with placeholders, which can be used to construct a message in combination with an arbitrary
         * number of additional string arguments.
@@ -1236,34 +1160,15 @@ export namespace sarif {
         richMessageStrings?: { [key: string]: string };
 
         /**
-        * Information about the rule that can be configured at runtime.
+        * A concise description of the rule. Should be a single sentence that is understandable when visible space is
+        * limited to a single line of text.
         */
-        configuration?: RuleConfiguration;
-
-        /**
-        * A URI where the primary documentation for the rule can be found.
-        */
-        helpUri?: string;
-
-        /**
-        * Provides the primary documentation for the rule, useful when there is no online documentation.
-        */
-        help?: Message;
+        shortDescription?: Message;
 
         /**
         * Key/value pairs that provide additional information about the rule.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1271,29 +1176,24 @@ export namespace sarif {
     */
     export interface RuleConfiguration {
         /**
-        * Specifies whether the rule will be evaluated during the scan.
-        */
-        enabled?: boolean;
-
-        /**
         * Specifies the default severity level of the result.
         */
         defaultLevel?: RuleConfiguration.defaultLevel;
 
         /**
+        * Specifies whether the rule will be evaluated during the scan.
+        */
+        enabled?: boolean;
+
+        /**
         * Contains configuration information specific to this rule.
         */
-        parameters?: {
-            /**
-            * A set of distinct strings that provide additional configuration information.
-            */
-            tags?: string[];
+        parameters?: PropertyBag;
 
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        /**
+        * Key/value pairs that provide additional information about the rule configuration.
+        */
+        properties?: PropertyBag;
     }
 
     export namespace RuleConfiguration {
@@ -1310,81 +1210,14 @@ export namespace sarif {
     */
     export interface Run {
         /**
-        * Information about the tool or tool pipeline that generated the results in this run. A run can only contain
-        * results produced by a single tool or tool pipeline. A run can aggregate results from multiple log files, as
-        * long as context around the tool run (tool command-line arguments and the like) is identical for all
-        * aggregated files.
+        * Automation details that describe the aggregate of runs to which this run belongs.
         */
-        tool: Tool;
+        aggregateIds?: RunAutomationDetails[];
 
         /**
-        * Describes the invocation of the analysis tool.
+        * The hardware architecture for which the run was targeted.
         */
-        invocations?: Invocation[];
-
-        /**
-        * A conversion object that describes how a converter transformed an analysis tool's native output format into
-        * the SARIF format.
-        */
-        conversion?: Conversion;
-
-        /**
-        * Specifies the revision in version control of the files that were scanned.
-        */
-        versionControlProvenance?: VersionControlDetails[];
-
-        /**
-        * The absolute URI specified by each uriBaseId symbol on the machine where the tool originally ran.
-        */
-        originalUriBaseIds?: { [key: string]: string };
-
-        /**
-        * A dictionary each of whose keys is a URI and each of whose values is a file object.
-        */
-        files?: { [key: string]: File };
-
-        /**
-        * A dictionary, each of whose keys specifies a logical location such as a namespace, type or function.
-        */
-        logicalLocations?: { [key: string]: LogicalLocation };
-
-        /**
-        * An array of one or more unique 'graph' objects.
-        */
-        graphs?: Graph[];
-
-        /**
-        * The set of results contained in an SARIF log. The results array can be omitted when a run is solely exporting
-        * rules metadata. It must be present (but may be empty) in the event that a log file represents an actual scan.
-        */
-        results?: Result[];
-
-        /**
-        * Items that can be localized, such as message strings and rule metadata.
-        */
-        resources?: Resources;
-
-        /**
-        * A stable, unique identifier for the run, in the form of a GUID.
-        */
-        instanceGuid?: string;
-
-        /**
-        * A logical identifier for a run, for example, 'nightly Clang analyzer run'. Multiple runs of the same type can
-        * have the same stableId.
-        */
-        logicalId?: string;
-
-        /**
-        * A description of the run.
-        */
-        description?: Message;
-
-        /**
-        * A global identifier that allows the run to be correlated with other artifacts produced by a larger automation
-        * process.
-        */
-        automationLogicalId?: string;
+        architecture?: string;
 
         /**
         * The 'instanceGuid' property of a previous SARIF 'run' that comprises the baseline that was used to compute
@@ -1393,19 +1226,15 @@ export namespace sarif {
         baselineInstanceGuid?: string;
 
         /**
-        * The hardware architecture for which the run was targeted.
+        * Specifies the unit in which the tool measures columns.
         */
-        architecture?: string;
+        columnKind?: Run.columnKind;
 
         /**
-        * The MIME type of all rich text message properties in the run. Default: "text/markdown;variant=GFM"
+        * A conversion object that describes how a converter transformed an analysis tool's native output format into
+        * the SARIF format.
         */
-        richMessageMimeType?: string;
-
-        /**
-        * The string used to replace sensitive information in a redaction-aware property.
-        */
-        redactionToken?: string;
+        conversion?: Conversion;
 
         /**
         * Specifies the default encoding for any file object that refers to a text file.
@@ -1413,24 +1242,74 @@ export namespace sarif {
         defaultFileEncoding?: string;
 
         /**
-        * Specifies the unit in which the tool measures columns.
+        * A dictionary, each of whose keys is a URI and each of whose values is a file object.
         */
-        columnKind?: Run.columnKind;
+        files?: { [key: string]: File };
+
+        /**
+        * A dictionary, each of whose keys is the id of a graph and each of whose values is a 'graph' object with that
+        * id.
+        */
+        graphs?: { [key: string]: Graph };
+
+        /**
+        * Automation details that describe this run.
+        */
+        id?: RunAutomationDetails;
+
+        /**
+        * Describes the invocation of the analysis tool.
+        */
+        invocations?: Invocation[];
+
+        /**
+        * A dictionary, each of whose keys specifies a logical location such as a namespace, type or function.
+        */
+        logicalLocations?: { [key: string]: LogicalLocation };
+
+        /**
+        * The file location specified by each uriBaseId symbol on the machine where the tool originally ran.
+        */
+        originalUriBaseIds?: { [key: string]: FileLocation };
+
+        /**
+        * The string used to replace sensitive information in a redaction-aware property.
+        */
+        redactionToken?: string;
+
+        /**
+        * Items that can be localized, such as message strings and rule metadata.
+        */
+        resources?: Resources;
+
+        /**
+        * The set of results contained in an SARIF log. The results array can be omitted when a run is solely exporting
+        * rules metadata. It must be present (but may be empty) if a log file represents an actual scan.
+        */
+        results?: Result[];
+
+        /**
+        * The MIME type of all rich text message properties in the run. Default: "text/markdown;variant=GFM"
+        */
+        richMessageMimeType?: string;
+
+        /**
+        * Information about the tool or tool pipeline that generated the results in this run. A run can only contain
+        * results produced by a single tool or tool pipeline. A run can aggregate results from multiple log files, as
+        * long as context around the tool run (tool command-line arguments and the like) is identical for all
+        * aggregated files.
+        */
+        tool: Tool;
+
+        /**
+        * Specifies the revision in version control of the files that were scanned.
+        */
+        versionControlProvenance?: VersionControlDetails[];
 
         /**
         * Key/value pairs that provide additional information about the run.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information about the run.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     export namespace Run {
@@ -1441,40 +1320,67 @@ export namespace sarif {
     }
 
     /**
+    * Information that describes a run's identity and role within an engineering system process.
+    */
+    export interface RunAutomationDetails {
+        /**
+        * A stable, unique identifier for the equivalence class of runs to which this object's containing run object
+        * belongs in the form of a GUID.
+        */
+        correlationGuid?: string;
+
+        /**
+        * A description of the identity and role played within the engineering system by this object's containing run
+        * object.
+        */
+        description?: Message;
+
+        /**
+        * A stable, unique identifer for this object's containing run object in the form of a GUID.
+        */
+        instanceGuid?: string;
+
+        /**
+        * A hierarchical string that uniquely identifies this object's containing run object.
+        */
+        instanceId?: string;
+
+        /**
+        * Key/value pairs that provide additional information about the run automation details.
+        */
+        properties?: PropertyBag;
+    }
+
+    /**
     * A call stack that is relevant to a result.
     */
     export interface Stack {
+        /**
+        * An array of stack frames that represents a sequence of calls, rendered in reverse chronological order, that
+        * comprise the call stack.
+        */
+        frames: StackFrame[];
+
         /**
         * A message relevant to this call stack.
         */
         message?: Message;
 
         /**
-        * An array of stack frames that represent a sequence of calls, rendered in reverse chronological order, that
-        * comprise the call stack.
-        */
-        frames: StackFrame[];
-
-        /**
         * Key/value pairs that provide additional information about the stack.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
     * A function call within a stack trace.
     */
     export interface StackFrame {
+        /**
+        * The address of the method or function that is executing.
+        */
+        address?: number;
+
         /**
         * The location to which this stack frame refers.
         */
@@ -1484,16 +1390,6 @@ export namespace sarif {
         * The name of the module that contains the code of this stack frame.
         */
         module?: string;
-
-        /**
-        * The thread identifier of the stack frame.
-        */
-        threadId?: number;
-
-        /**
-        * The address of the method or function that is executing.
-        */
-        address?: number;
 
         /**
         * The offset from the method or function that is executing.
@@ -1506,19 +1402,14 @@ export namespace sarif {
         parameters?: string[];
 
         /**
+        * The thread identifier of the stack frame.
+        */
+        threadId?: number;
+
+        /**
         * Key/value pairs that provide additional information about the stack frame.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1531,30 +1422,86 @@ export namespace sarif {
         id?: string;
 
         /**
-        * A message relevant to the code flow.
-        */
-        message?: Message;
-
-        /**
-        * An array of 'threadFlowLocation' objects, each of which describes a single location visited by the tool in
-        * the course of producing the result.
+        * A temporally ordered array of 'threadFlowLocation' objects, each of which describes a location visited by the
+        * tool while producing the result.
         */
         locations: ThreadFlowLocation[];
 
         /**
-        * Key/value pairs that provide additional information about the code flow.
+        * A message relevant to the thread flow.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
+        message?: Message;
 
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        /**
+        * Key/value pairs that provide additional information about the thread flow.
+        */
+        properties?: PropertyBag;
+    }
+
+    /**
+    * A location visited by an analysis tool while simulating or monitoring the execution of a program.
+    */
+    export interface ThreadFlowLocation {
+        /**
+        * An integer representing the temporal order in which execution reached this location.
+        */
+        executionOrder?: number;
+
+        /**
+        * The Coordinated Universal Time (UTC) date and time at which this location was executed.
+        */
+        executionTimeUtc?: string;
+
+        /**
+        * Specifies the importance of this location in understanding the code flow in which it occurs. The order from
+        * most to least important is "essential", "important", "unimportant". Default: "important".
+        */
+        importance?: ThreadFlowLocation.importance;
+
+        /**
+        * A string describing the type of this location.
+        */
+        kind?: string;
+
+        /**
+        * The code location.
+        */
+        location?: Location;
+
+        /**
+        * The name of the module that contains the code that is executing.
+        */
+        module?: string;
+
+        /**
+        * An integer representing a containment hierarchy within the thread flow
+        */
+        nestingLevel?: number;
+
+        /**
+        * The call stack leading to this location.
+        */
+        stack?: Stack;
+
+        /**
+        * A dictionary, each of whose keys specifies a variable or expression, the associated value of which represents
+        * the variable or expression value. For an annotation of kind 'continuation', for example, this dictionary
+        * might hold the current assumed values of a set of global variables.
+        */
+        state?: { [key: string]: string };
+
+        /**
+        * Key/value pairs that provide additional information about the threadflow location.
+        */
+        properties?: PropertyBag;
+    }
+
+    export namespace ThreadFlowLocation {
+        export const enum importance {
+            important = "important",
+            essential = "essential",
+            unimportant = "unimportant",
+        }
     }
 
     /**
@@ -1562,24 +1509,9 @@ export namespace sarif {
     */
     export interface Tool {
         /**
-        * The name of the tool.
+        * The absolute URI from which the tool can be downloaded.
         */
-        name: string;
-
-        /**
-        * The name of the tool along with its version and any other useful identifying information, such as its locale.
-        */
-        fullName?: string;
-
-        /**
-        * The tool version, in whatever format the tool natively provides.
-        */
-        version?: string;
-
-        /**
-        * The tool version in the format specified by Semantic Versioning 2.0.
-        */
-        semanticVersion?: string;
+        downloadUri?: string;
 
         /**
         * The binary version of the tool's primary executable file (for operating systems such as Windows that provide
@@ -1588,15 +1520,9 @@ export namespace sarif {
         fileVersion?: string;
 
         /**
-        * The absolute URI from which the tool can be downloaded.
+        * The name of the tool along with its version and any other useful identifying information, such as its locale.
         */
-        downloadUri?: string;
-
-        /**
-        * A version that uniquely identifies the SARIF logging component that generated this file, if it is versioned
-        * separately from the tool.
-        */
-        sarifLoggerVersion?: string;
+        fullName?: string;
 
         /**
         * The tool language (expressed as an ISO 649 two-letter lowercase culture code) and region (expressed as an ISO
@@ -1605,19 +1531,30 @@ export namespace sarif {
         language?: string;
 
         /**
+        * The name of the tool.
+        */
+        name: string;
+
+        /**
+        * A version that uniquely identifies the SARIF logging component that generated this file, if it is versioned
+        * separately from the tool.
+        */
+        sarifLoggerVersion?: string;
+
+        /**
+        * The tool version in the format specified by Semantic Versioning 2.0.
+        */
+        semanticVersion?: string;
+
+        /**
+        * The tool version, in whatever format the tool natively provides.
+        */
+        version?: string;
+
+        /**
         * Key/value pairs that provide additional information about the tool.
         */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 
     /**
@@ -1625,14 +1562,10 @@ export namespace sarif {
     */
     export interface VersionControlDetails {
         /**
-        * The absolute URI of the repository.
+        * A Coordinated Universal Time (UTC) date and time that can be used to synchronize an enlistment to the state
+        * of the repository at that time.
         */
-        uri: string;
-
-        /**
-        * A string that uniquely and permanently identifies the revision within the repository.
-        */
-        revisionId?: string;
+        asOfTimeUtc?: string;
 
         /**
         * The name of a branch containing the revision.
@@ -1640,28 +1573,23 @@ export namespace sarif {
         branch?: string;
 
         /**
+        * The absolute URI of the repository.
+        */
+        repositoryUri: string;
+
+        /**
+        * A string that uniquely and permanently identifies the revision within the repository.
+        */
+        revisionId?: string;
+
+        /**
         * A tag that has been applied to the revision.
         */
-        tag?: string;
+        revisionTag?: string;
 
         /**
-        * The date and time at which the revision was created.
+        * Key/value pairs that provide additional information about the version control details.
         */
-        timestamp?: string;
-
-        /**
-        * Key/value pairs that provide additional information about the revision.
-        */
-        properties?: {
-            /**
-            * A set of distinct strings that provide additional information.
-            */
-            tags?: string[];
-
-            /**
-             * Additional Properties
-             */
-            [key: string]: any;
-        };
+        properties?: PropertyBag;
     }
 }
