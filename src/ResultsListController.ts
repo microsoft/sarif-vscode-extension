@@ -28,7 +28,7 @@ export class ResultsListController {
     private groupBy: string;
     private sortBy: ResultsListSortBy;
 
-    private resultsListRows: ResultsListRow[];
+    private resultsListRows: Map<string, ResultsListRow>;
 
     private readonly configHideColumns = "resultsListHideColumns";
     private readonly configGroupBy = "resultsListGroupBy";
@@ -37,7 +37,7 @@ export class ResultsListController {
     private changeSettingsDisposable: Disposable;
 
     private constructor() {
-        this.resultsListRows = [];
+        this.resultsListRows = new Map<string, ResultsListRow>();
         this.initializeColumns();
         this.onSettingsChanged(undefined);
         this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
@@ -62,24 +62,12 @@ export class ResultsListController {
     public updateResultsListData(diags: SarifViewerDiagnostic[], remove?: boolean) {
         if (remove === true) {
             for (const key of diags.keys()) {
-                const rowIndex = this.findMatchingRow(diags[key].resultInfo.runId, diags[key].resultInfo.id);
-
-                if (rowIndex !== -1) {
-                    this.resultsListRows.splice(rowIndex, 1);
-                }
+                this.resultsListRows.delete(`${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`);
             }
         } else {
             for (const key of diags.keys()) {
-                const resultInfo = diags[key].resultInfo;
-
-                const row = this.createResultsListRow(resultInfo);
-                const rowIndex = this.findMatchingRow(resultInfo.runId, resultInfo.id);
-
-                if (rowIndex === -1) {
-                    this.resultsListRows.push(row);
-                } else {
-                    this.resultsListRows.splice(rowIndex, 1, row);
-                }
+                const row = this.createResultsListRow(diags[key].resultInfo);
+                this.resultsListRows.set(`${row.runId.value}_${row.resultId.value}`, row);
             }
         }
     }
@@ -266,21 +254,6 @@ export class ResultsListController {
     }
 
     /**
-     * Finds the result row in the resultslistrows that matches the ids(result and run id)
-     * @param runId Run id, corresponding to the result info in the diagnostic
-     * @param resultId Result id, corresponding to the result info in the diagnostic
-     */
-    private findMatchingRow(runId: number, resultId: number): number {
-        return this.resultsListRows.findIndex((row, index) => {
-            if (row.runId.value === runId && row.resultId.value === resultId) {
-                return true;
-            }
-
-            return false;
-        });
-    }
-
-    /**
      * Gets a set of the Resultslist data grouped and sorted based on the settings values
      */
     private getResultData(): ResultsListData {
@@ -288,12 +261,12 @@ export class ResultsListController {
             columns: this.columns,
             groupBy: this.groupBy,
             groups: [],
-            resultCount: this.resultsListRows.length,
+            resultCount: this.resultsListRows.size,
             sortBy: this.sortBy,
         } as ResultsListData;
 
         const groups = new Map<string, ResultsListGroup>();
-        for (const row of this.resultsListRows) {
+        for (const row of this.resultsListRows.values()) {
             const resultsListValue = (row[this.groupBy] as ResultsListValue);
             let key = resultsListValue.value;
 
