@@ -19,10 +19,13 @@ class ResultsList {
     private collapsedGroups: any[];
     private onCollapseAllGroupsBind;
     private onExpandAllGroupsBind;
+    private onFilterInputBind;
     private onGroupByChangedBind;
     private onRowClickedBind;
     private onShowChangedBind;
     private onSortClickedBind;
+    private onToggleFilterCaseMatchBind;
+    private onToggleFilterInputBind;
     private onToggleGroupBind;
     private data: ResultsListData;
 
@@ -32,10 +35,13 @@ class ResultsList {
         this.webview = explorer;
         this.onCollapseAllGroupsBind = this.onCollapseAllGroups.bind(this);
         this.onExpandAllGroupsBind = this.onExpandAllGroups.bind(this);
+        this.onFilterInputBind = this.onFilterInput.bind(this);
         this.onGroupByChangedBind = this.onGroupByChanged.bind(this);
         this.onRowClickedBind = this.onRowClicked.bind(this);
         this.onShowChangedBind = this.onShowChanged.bind(this);
         this.onSortClickedBind = this.onSortClicked.bind(this);
+        this.onToggleFilterCaseMatchBind = this.onToggleFilterCaseMatch.bind(this);
+        this.onToggleFilterInputBind = this.onToggleFilterInput.bind(this);
         this.onToggleGroupBind = this.onToggleGroup.bind(this);
 
         this.collapsedGroups = [];
@@ -109,6 +115,30 @@ class ResultsList {
     private createResultsListPanelButtons() {
         const buttons = document.getElementById("resultslistbuttonbar");
         if (buttons.children.length === 0) {
+            // Show/Hide column button
+            const showColButton = this.webview.createElement("select", {
+                className: "svgIconMasking", id: "resultslistshowcol", tooltip: "Show or hide Columns",
+            }) as HTMLSelectElement;
+            showColButton.appendChild(this.webview.createElement("option", {
+                attributes: { disabled: null, hidden: null, selected: null },
+            }));
+            showColButton.addEventListener("change", this.onShowChangedBind);
+            buttons.appendChild(showColButton);
+
+            // Toggle Filter button
+            const toggleFilterButtonCont = this.webview.createElement("span", {
+                id: "resultslistfilterbuttoncontainer",
+                tooltip: "Filter Results List",
+            }) as HTMLSpanElement;
+            toggleFilterButtonCont.addEventListener("click", this.onToggleFilterInputBind);
+            const toggleFilterButtonIcon = this.webview.createElement("span", {
+                className: "svgIconMasking",
+                id: "resultslistfilterbuttonsvg",
+            });
+            toggleFilterButtonCont.appendChild(toggleFilterButtonIcon);
+            buttons.appendChild(toggleFilterButtonCont);
+
+            // Expand All button
             const expandAllButton = this.webview.createElement("span", {
                 className: "tabcontentheaderbutton",
                 text: "+",
@@ -117,6 +147,7 @@ class ResultsList {
             expandAllButton.addEventListener("click", this.onExpandAllGroupsBind);
             buttons.appendChild(expandAllButton);
 
+            // Collapse All button
             const collapseAllButton = expandAllButton.cloneNode() as HTMLSpanElement;
             collapseAllButton.textContent = "-";
             collapseAllButton.title = "Collapse all groups";
@@ -125,10 +156,10 @@ class ResultsList {
 
             buttons.appendChild(this.webview.createElement("span", { className: "headercontentseperator", text: "|" }));
 
+            // Group By label and button
             buttons.appendChild(this.webview.createElement("label", {
-                attributes: { for: "resultslistgroupby" }, text: "Group by: ",
+                attributes: { for: "resultslistgroupby" }, id: "resultslistgroupbylabel", text: "Group by: ",
             }));
-
             const groupByButton = this.webview.createElement("select", {
                 id: "resultslistgroupby", tooltip: "Group by",
             }) as HTMLSelectElement;
@@ -138,14 +169,40 @@ class ResultsList {
             groupByButton.addEventListener("change", this.onGroupByChangedBind);
             buttons.appendChild(groupByButton);
 
-            const showColButton = this.webview.createElement("select", {
-                className: "select-checkbox", id: "resultslistshowcol", tooltip: "Show or hide Columns",
-            }) as HTMLSelectElement;
-            showColButton.appendChild(this.webview.createElement("option", {
-                attributes: { disabled: null, hidden: null, selected: null },
-            }));
-            showColButton.addEventListener("change", this.onShowChangedBind);
-            buttons.appendChild(showColButton);
+            // Filter Input container
+            const filterInputContainer = this.webview.createElement("form", {
+                className: "hidden",
+                id: "resultslistfilterinputcontainer",
+            });
+
+            const filterInput = this.webview.createElement("input", {
+                attributes: { placeholder: "Filter. Eg: text", required: "", type: "text" },
+                id: "resultslistfilterinput",
+            });
+            filterInput.addEventListener("input", this.onFilterInputBind);
+            filterInputContainer.appendChild(filterInput);
+
+            filterInputContainer.addEventListener("reset", () => {
+                (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
+                setTimeout(this.onFilterInputBind, 0);
+            });
+
+            const filterInputClear = this.webview.createElement("button", {
+                attributes: { type: "reset" },
+                id: "filterinputclearbutton",
+                tooltip: "Clear filter",
+            });
+            filterInputContainer.appendChild(filterInputClear);
+
+            const filterInputCaseMatchButton = this.webview.createElement("button", {
+                attributes: {},
+                id: "filterinputcasebutton",
+                tooltip: "Match Case",
+            });
+            filterInputCaseMatchButton.addEventListener("click", this.onToggleFilterCaseMatchBind);
+            filterInputContainer.appendChild(filterInputCaseMatchButton);
+
+            buttons.appendChild(filterInputContainer);
         }
     }
 
@@ -375,6 +432,28 @@ class ResultsList {
     }
 
     /**
+     * Handler when value is changed in the filter input
+     * @param event event for value changed in input
+     */
+    private onFilterInput(event) {
+        const filterText = (document.getElementById("resultslistfilterinput") as HTMLInputElement).value;
+        this.webview.sendMessage({ data: filterText, type: MessageType.ResultsListFilterApplied } as WebviewMessage);
+
+        const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
+        const activatedClass = "activated";
+        const activeTooltip = ": Active";
+        if (filterText !== "") {
+            if (filterIconContainer.classList.contains(activatedClass) !== true) {
+                filterIconContainer.classList.add(activatedClass);
+                filterIconContainer.title = filterIconContainer.title + activeTooltip;
+            }
+        } else if (filterIconContainer.classList.contains(activatedClass) === true) {
+            filterIconContainer.classList.remove(activatedClass);
+            filterIconContainer.title = filterIconContainer.title.replace(activeTooltip, "");
+        }
+    }
+
+    /**
      * Handler when a group by is changed
      * @param event event for change
      */
@@ -410,6 +489,30 @@ class ResultsList {
 
         (event.srcElement as HTMLSelectElement).selectedIndex = 0;
         this.webview.sendMessage({ data: option.value, type: MessageType.ResultsListColumnToggled } as WebviewMessage);
+    }
+
+    /**
+     * Handles toggling case match
+     * @param event event for the toggle
+     */
+    private onToggleFilterCaseMatch(event) {
+        (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
+        this.webview.sendMessage({ data: "", type: MessageType.ResultsListFilterCaseToggled } as WebviewMessage);
+    }
+
+    /**
+     * Handles toggling visibility of the filter input
+     * @param event event for the toggle
+     */
+    private onToggleFilterInput(event) {
+        const hiddenClass = "hidden";
+        const filterInput = document.getElementById("resultslistfilterinputcontainer") as HTMLInputElement;
+        if (filterInput.classList.contains(hiddenClass) === true) {
+            filterInput.classList.remove(hiddenClass);
+            document.getElementById("resultslistfilterinput").focus();
+        } else {
+            filterInput.classList.add(hiddenClass);
+        }
     }
 
     /**
@@ -528,6 +631,16 @@ class ResultsList {
                     showColButton.appendChild(showOption);
                 }
             }
+
+            if (this.data.filterText !== "") {
+                (document.getElementById("resultslistfilterinput") as HTMLInputElement).value = this.data.filterText;
+
+                const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
+                if (filterIconContainer.classList.contains("activated") !== true) {
+                    filterIconContainer.classList.add("activated");
+                    filterIconContainer.title = filterIconContainer.title + ": Activated";
+                }
+            }
         }
 
         for (let index = 1; index < groupByButton.children.length; index++) {
@@ -552,6 +665,13 @@ class ResultsList {
                     showOption.textContent = showOption.textContent.replace(" ", "✓");
                 }
             }
+        }
+
+        const caseButton = document.getElementById("filterinputcasebutton") as HTMLButtonElement;
+        if (this.data.filterCaseMatch === true) {
+            caseButton.classList.add("active");
+        } else {
+            caseButton.classList.remove("active");
         }
     }
 }

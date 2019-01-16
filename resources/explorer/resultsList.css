@@ -21,6 +21,7 @@
 
 #resultslisttable {
     border-spacing: 0px !important;
+    cursor: pointer;
     width: 100%;
     user-select: none;
 }
@@ -65,10 +66,14 @@ tr.resultslistrow.selected:focus {
     background-color: var(--vscode-editor-selectionBackground);
 }
 
-select {
+select#resultslistgroupby {
     background-color: var(--vscode-menubar-selectionBackground);
-    border-color: transparent;
+    border-style: none;
     color: var(--vscode-menubar-selectionForeground);
+}
+
+select#resultslistgroupby:focus {
+    outline-color: var(--vscode-inputOption-activeBorder);
 }
 
 option {
@@ -76,24 +81,109 @@ option {
     color: var(--vscode-settings-dropdownForeground);
 }
 
-.select-checkbox {
+.svgIconMasking {
     background-color: var(--color);
-    float: right;
-    height: 100%;
+    cursor: pointer;
+    height: 32px;
     -webkit-appearance: none;
-    mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000;}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
-    -webkit-mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
     mask-repeat: no-repeat;
     -webkit-mask-repeat: no-repeat;
     mask-size: contain;
     -webkit-mask-size: contain;
     mask-position: center;
     -webkit-mask-position: center;
-    width: 24px;
+    width: 18px;
 }
 
-.select-checkbox option[checked] {
+#resultslistshowcol {
+    float: right;
+    margin: 0px 7px 0px 2px;
+    mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000;}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
+    -webkit-mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="32" height="20" xmlns="http://www.w3.org/2000/svg"><style>.visibilityLine{fill-opacity:0;fill:#000;stroke:#000}</style><path class="visibilityLine" d="m16 2.1c8 0 15 8 15 9 0 1-7 7-15 7 -8 0-15-6-15-7 0-1 7-9 15-9Z" stroke-width="2"/><circle class="visibilityLine" cx="16" cy="10.1" r="5.5" stroke-width="3"/></svg>');
+}
+
+#resultslistshowcol option[checked] {
     font-weight: bold;
+}
+
+span#resultslistfilterbuttoncontainer {
+    float: right;
+    height: 22px;
+    margin-top: 4px;
+    width: 22px;
+}
+
+span#resultslistfilterbuttoncontainer.activated,
+form input#resultslistfilterinput:focus,
+form input#resultslistfilterinput:focus ~ button,
+button#filterinputcasebutton.active:before {
+    border-color: var(--vscode-inputOption-activeBorder);
+}
+
+#resultslistfilterbuttonsvg {
+    display: block;
+    margin: -5px 2px 0px;
+    mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="34" height="34" xmlns="http://www.w3.org/2000/svg"><path d="m4.1 4l11.1 13 0 8.7 3.7 4.3 0-13 11.1-13 -25.9 0 0 0Z" stroke="#000000" stroke-width="2.5" fill-opacity="0" /></svg>');
+    -webkit-mask-image: url('data:image/svg+xml;charset=UTF-8,<svg width="34" height="34" xmlns="http://www.w3.org/2000/svg"><path d="m4.1 4l11.1 13 0 8.7 3.7 4.3 0-13 11.1-13 -25.9 0 0 0Z" stroke="#000000" stroke-width="2.5" fill-opacity="0" /></svg>');
+}
+
+form#resultslistfilterinputcontainer {
+    width: 100%;
+    display: flex;
+}
+
+form#resultslistfilterinputcontainer.hidden {
+    display: none;
+}
+
+form input#resultslistfilterinput, 
+form input#resultslistfilterinput ~ button{
+    background-color: var(--vscode-input-background);
+}
+
+span#resultslistfilterbuttoncontainer,
+form input#resultslistfilterinput, 
+form input#resultslistfilterinput ~ button,
+button#filterinputcasebutton:before {
+    border-color: transparent;
+    border-style: solid;
+    border-width: thin;
+}
+
+form input#resultslistfilterinput {
+    margin-left: 10px;
+    width: 100%;
+    color: var(--vscode-input-foreground);
+    border-right-style: none;
+    outline-style: none;
+    padding: 4px;
+}
+
+form input#resultslistfilterinput::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+form input#resultslistfilterinput ~ button {
+    color: var(--vscode-input-placeholderForeground);
+    border-left-style: none;
+    border-right-style: none;
+}
+
+form input#resultslistfilterinput ~ button:last-child {
+    margin-right: 10px;
+    border-right-style: solid;
+}
+
+form input#resultslistfilterinput:not(:valid) + button#filterinputclearbutton {
+    display: none;
+}
+
+button#filterinputclearbutton:before {
+    content: "x";
+}
+
+button#filterinputcasebutton:before {
+    content: "Aa";
 }
 
 #resultslistbuttonbar {
@@ -101,7 +191,7 @@ option {
     border-bottom-color: var(--color);
     border-bottom-style: solid;
     border-bottom-width: thin;
-    height: 32px;
+    padding-bottom: 7px;
 }
 
 .countbadge {
@@ -129,4 +219,10 @@ option {
 
 .severityiconwrapper {
     height: 16px;
+}
+
+@media screen and (max-width:285px) {
+    #resultslistgroupbylabel {
+        display: none;
+    }
 }

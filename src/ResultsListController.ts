@@ -30,6 +30,10 @@ export class ResultsListController {
 
     private resultsListRows: Map<string, ResultsListRow>;
 
+    private filterCaseMatch: boolean;
+    private filterText: string;
+    private postFilterListRows: string[];
+
     private readonly configHideColumns = "resultsListHideColumns";
     private readonly configGroupBy = "resultsListGroupBy";
     private readonly configSortBy = "resultsListSortBy";
@@ -38,6 +42,9 @@ export class ResultsListController {
 
     private constructor() {
         this.resultsListRows = new Map<string, ResultsListRow>();
+        this.postFilterListRows = [];
+        this.filterCaseMatch = false;
+        this.filterText = "";
         this.initializeColumns();
         this.onSettingsChanged(undefined);
         this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
@@ -62,12 +69,28 @@ export class ResultsListController {
     public updateResultsListData(diags: SarifViewerDiagnostic[], remove?: boolean) {
         if (remove === true) {
             for (const key of diags.keys()) {
-                this.resultsListRows.delete(`${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`);
+                const id = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
+                this.resultsListRows.delete(id);
+                const index = this.postFilterListRows.indexOf(id);
+                if (index !== -1) {
+                    this.postFilterListRows.splice(index);
+                }
             }
         } else {
+            const regEx = this.generateFilterRegExp();
             for (const key of diags.keys()) {
                 const row = this.createResultsListRow(diags[key].resultInfo);
-                this.resultsListRows.set(`${row.runId.value}_${row.resultId.value}`, row);
+                const id = `${row.runId.value}_${row.resultId.value}`;
+                this.resultsListRows.set(id, row);
+
+                const index = this.postFilterListRows.indexOf(id);
+                if (this.applyFilterToRow(row, regEx) === true) {
+                    if (index === -1) {
+                        this.postFilterListRows.push(id);
+                    }
+                } else if (index !== -1) {
+                    this.postFilterListRows.splice(index);
+                }
             }
         }
     }
@@ -88,6 +111,19 @@ export class ResultsListController {
                     hideColsConfig.push(msg.data);
                 }
                 sarifConfig.update(this.configHideColumns, hideColsConfig, true);
+                break;
+            case MessageType.ResultsListFilterApplied:
+                const input = msg.data.trim();
+                if (input !== this.filterText) {
+                    this.filterText = input;
+                    this.updateFilteredRowsList();
+                    this.postDataToExplorer();
+                }
+                break;
+            case MessageType.ResultsListFilterCaseToggled:
+                this.filterCaseMatch = !this.filterCaseMatch;
+                this.updateFilteredRowsList();
+                this.postDataToExplorer();
                 break;
             case MessageType.ResultsListGroupChanged:
                 let groupByConfig = sarifConfig.get(this.configGroupBy) as string;
@@ -254,11 +290,63 @@ export class ResultsListController {
     }
 
     /**
+     * Applies the latest filter text and settings to the resultslistrows and adds any matching rows to filteredlistrows
+     */
+    private updateFilteredRowsList() {
+        this.postFilterListRows = [];
+
+        const regEx = this.generateFilterRegExp();
+
+        this.resultsListRows.forEach((row: ResultsListRow, key: string) => {
+            if (this.filterText === "" || this.applyFilterToRow(row, regEx) === true) {
+                this.postFilterListRows.push(key);
+            }
+        });
+    }
+
+    /**
+     * Applies the filter regexp to certian columns in the passed in row, if any match returns true
+     * @param row Row that is being checked for a filter match
+     * @param regExp RegExp based on the filter settings, use generateFilterRegex() to create
+     */
+    private applyFilterToRow(row: ResultsListRow, regExp: RegExp): boolean {
+        if (regExp.test(row.message.value) ||
+            regExp.test(row.ruleId.value) ||
+            regExp.test(row.ruleName.value) ||
+            regExp.test(row.severityLevel.value) ||
+            regExp.test(row.resultFile.value) ||
+            regExp.test(row.sarifFile.value)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * generates the filter regexp based on the filter settings and text
+     */
+    private generateFilterRegExp(): RegExp {
+        let flags: string;
+        if (!this.filterCaseMatch) {
+            flags = "i";
+        }
+
+        let pattern: string;
+        if (this.filterText !== "") {
+            pattern = this.filterText;
+        }
+
+        return new RegExp(pattern, flags);
+    }
+
+    /**
      * Gets a set of the Resultslist data grouped and sorted based on the settings values
      */
     private getResultData(): ResultsListData {
         const data = {
             columns: this.columns,
+            filterCaseMatch: this.filterCaseMatch,
+            filterText: this.filterText,
             groupBy: this.groupBy,
             groups: [],
             resultCount: this.resultsListRows.size,
@@ -266,7 +354,8 @@ export class ResultsListController {
         } as ResultsListData;
 
         const groups = new Map<string, ResultsListGroup>();
-        for (const row of this.resultsListRows.values()) {
+        this.postFilterListRows.forEach((id: string) => {
+            const row = this.resultsListRows.get(id);
             const resultsListValue = (row[this.groupBy] as ResultsListValue);
             let key = resultsListValue.value;
 
@@ -282,7 +371,7 @@ export class ResultsListController {
                     rows: [row], text: resultsListValue.value, tooltip: resultsListValue.tooltip,
                 } as ResultsListGroup);
             }
-        }
+        });
 
         data.groups = Array.from(groups.values());
 

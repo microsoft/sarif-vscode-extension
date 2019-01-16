@@ -847,23 +847,23 @@ class ExplorerWebview {
     private severityValueAndTooltip(severity: sarif.Result.level) {
         switch (severity) {
             case sarif.Result.level.error:
-                return { text: "Error", tooltip: "The rule was evaluated, and a serious problem was found." };
+                return { text: "error", tooltip: "The rule was evaluated, and a serious problem was found." };
             case sarif.Result.level.warning:
-                return { text: "Warning", tooltip: "The rule was evaluated, and a problem was found." };
+                return { text: "warning", tooltip: "The rule was evaluated, and a problem was found." };
             case sarif.Result.level.open:
                 return {
-                    text: "Open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
+                    text: "open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
                         "insufficient information to decide whether a problem exists.",
                 };
             case sarif.Result.level.note:
-                return { text: "Note", tooltip: "A purely informational log entry" };
+                return { text: "note", tooltip: "A purely informational log entry" };
             case sarif.Result.level.notApplicable:
                 return {
-                    text: "Not Applicable",
+                    text: "not applicable",
                     tooltip: "The rule was not evaluated, because it does not apply to the analysis target.",
                 };
             case sarif.Result.level.pass:
-                return { text: "Pass", tooltip: "The rule was evaluated, and no problem was found." };
+                return { text: "pass", tooltip: "The rule was evaluated, and no problem was found." };
         }
     }
 
