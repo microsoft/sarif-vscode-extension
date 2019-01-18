@@ -161,6 +161,8 @@ export interface LocationData {
 
 export interface ResultsListData {
     columns: { [key: string]: ResultsListColumn },
+    filterCaseMatch: boolean,
+    filterText: string,
     groupBy: string,
     groups: ResultsListGroup[],
     resultCount: number,

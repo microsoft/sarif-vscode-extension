@@ -146,6 +146,8 @@ export class ExplorerController {
                 this.activeTab = message.data;
                 break;
             case MessageType.ResultsListColumnToggled:
+            case MessageType.ResultsListFilterApplied:
+            case MessageType.ResultsListFilterCaseToggled:
             case MessageType.ResultsListGroupChanged:
             case MessageType.ResultsListResultSelected:
             case MessageType.ResultsListSortChanged:
