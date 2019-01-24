@@ -3,10 +3,10 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { Diagnostic, DiagnosticSeverity } from "vscode";
 import { CodeFlows } from "./CodeFlows";
 import { ResultInfo, SarifViewerDiagnostic } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
@@ -80,14 +80,14 @@ export class SVDiagnosticFactory {
      */
     private static getSeverity(level: sarif.Result.level): DiagnosticSeverity {
         switch (level) {
-            case sarif.Result.level.error:
+            case "error":
                 return DiagnosticSeverity.Error;
-            case sarif.Result.level.warning:
-            case sarif.Result.level.open:
+            case "warning":
+            case "open":
                 return DiagnosticSeverity.Warning;
-            case sarif.Result.level.note:
-            case sarif.Result.level.notApplicable:
-            case sarif.Result.level.pass:
+            case "note":
+            case "notApplicable":
+            case "pass":
                 return DiagnosticSeverity.Information;
             default:
                 return DiagnosticSeverity.Warning;

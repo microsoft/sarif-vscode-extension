@@ -4,11 +4,11 @@
 // *                                                       *
 // ********************************************************/
 /// <reference path="./enums.ts" />
+import * as sarif from "sarif";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, HTMLElementOptions, Location, LocationData,
     Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
-import { sarif } from "../common/SARIFInterfaces";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -192,7 +192,7 @@ class ExplorerWebview {
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
-            const nodeClass = `${step.importance || sarif.ThreadFlowLocation.importance.important} verbosityshow`;
+            const nodeClass = `${step.importance || "important"} verbosityshow`;
             let fileName: string;
             let fileLine = "";
             if (step.location !== undefined) {
@@ -207,7 +207,7 @@ class ExplorerWebview {
         } else {
             // Placeholder node
             treeNodeOptions = {
-                isParent: true, liClass: `${sarif.ThreadFlowLocation.importance.essential} verbosityshow`,
+                isParent: true, liClass: `${"essential"} verbosityshow`,
                 locationLine: "", locationText: undefined, message: "Nested first step", requestId: "-1",
                 tooltip: "First step starts in a nested call",
             };
@@ -846,23 +846,23 @@ class ExplorerWebview {
      */
     private severityValueAndTooltip(severity: sarif.Result.level) {
         switch (severity) {
-            case sarif.Result.level.error:
+            case "error":
                 return { text: "error", tooltip: "The rule was evaluated, and a serious problem was found." };
-            case sarif.Result.level.warning:
+            case "warning":
                 return { text: "warning", tooltip: "The rule was evaluated, and a problem was found." };
-            case sarif.Result.level.open:
+            case "open":
                 return {
                     text: "open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
                         "insufficient information to decide whether a problem exists.",
                 };
-            case sarif.Result.level.note:
+            case "note":
                 return { text: "note", tooltip: "A purely informational log entry" };
-            case sarif.Result.level.notApplicable:
+            case "notApplicable":
                 return {
                     text: "not applicable",
                     tooltip: "The rule was not evaluated, because it does not apply to the analysis target.",
                 };
-            case sarif.Result.level.pass:
+            case "pass":
                 return { text: "pass", tooltip: "The rule was evaluated, and no problem was found." };
         }
     }

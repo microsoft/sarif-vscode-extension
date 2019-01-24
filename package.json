@@ -45,7 +45,10 @@
                     "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
                 },
                 "sarif-viewer.resultsListHideColumns": {
-                    "default": ["runId", "sarifFile"],
+                    "default": [
+                        "runId",
+                        "sarifFile"
+                    ],
                     "description": "The list of columns to hide from the results list",
                     "type": "array",
                     "items": {
@@ -169,6 +172,7 @@
         "vscode": "^1.1.21"
     },
     "dependencies": {
+        "@types/sarif": "^2.0.0",
         "jsdom": "^11.11.0",
         "json-source-map": "^0.4.0"
     }

@@ -3,9 +3,9 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
 import { Attachment, CodeFlow, Location, ResultInfo } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
@@ -86,7 +86,7 @@ export class ResultInfoFactory {
             }
         }
 
-        resultInfo.severityLevel = result.level || resultInfo.severityLevel || sarif.Result.level.warning;
+        resultInfo.severityLevel = result.level || resultInfo.severityLevel || "warning";
 
         if (result.message === undefined) {
             result.message = {};
@@ -167,16 +167,13 @@ export class ResultInfoFactory {
      */
     private static defaultLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
         switch (defaultLevel) {
-            case sarif.RuleConfiguration.defaultLevel.error:
-                return sarif.Result.level.error;
-            case sarif.RuleConfiguration.defaultLevel.warning:
-                return sarif.Result.level.warning;
-            case sarif.RuleConfiguration.defaultLevel.note:
-                return sarif.Result.level.note;
-            case sarif.RuleConfiguration.defaultLevel.open:
-                return sarif.Result.level.open;
+            case "error":
+            case "warning":
+            case "note":
+            case "open":
+                return defaultLevel;
             default:
-                return sarif.Result.level.warning;
+                return "warning";
         }
     }
 }

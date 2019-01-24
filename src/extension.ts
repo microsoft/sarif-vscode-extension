@@ -3,10 +3,10 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { commands, ExtensionContext } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
@@ -20,7 +20,6 @@ import { Utilities } from "./Utilities";
  * Process any open SARIF Files
  */
 export function activate(context: ExtensionContext) {
-
     // Create the launch Explorer command
     context.subscriptions.push(
         commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
