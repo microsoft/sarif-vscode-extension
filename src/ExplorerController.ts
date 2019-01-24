@@ -3,6 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { commands, extensions, Range, Uri, ViewColumn, WebviewPanel, window } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
@@ -10,7 +11,6 @@ import { MessageType } from "./common/Enums";
 import {
     DiagnosticData, Location, LocationData, ResultsListData, SarifViewerDiagnostic, WebviewMessage,
 } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { LocationFactory } from "./LocationFactory";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";

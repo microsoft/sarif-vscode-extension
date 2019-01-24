@@ -3,12 +3,12 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import {
     commands, extensions, MessageOptions, OpenDialogOptions, SaveDialogOptions, TextDocument, TextDocumentShowOptions,
     Uri, ViewColumn, window,
 } from "vscode";
 import { SarifVersion } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { Utilities } from "./Utilities";
 
 /**
@@ -51,8 +51,9 @@ export class FileConverter {
         if (FileConverter.canUpgradeVersion(version) === true) {
             const saveTemp = "Yes (Save Temp)";
             const saveAs = "Yes (Save As)";
+            const supportedVersion: sarif.Log.version = "2.0.0-csd.2.beta.2018-10-10";
             const choice = await window.showInformationMessage(`Sarif version '${version}' is not supported.
-            Upgrade to the latest version? '${sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10}'`,
+            Upgrade to the latest version? '${supportedVersion}'`,
                 { modal: false } as MessageOptions, saveTemp, saveAs, "No");
 
             let output: string;
@@ -122,7 +123,7 @@ export class FileConverter {
 
     private static get CurrentVersion() {
         if (FileConverter.curVersion === undefined) {
-            FileConverter.curVersion = FileConverter.parseVersion(sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10);
+            FileConverter.curVersion = FileConverter.parseVersion("2.0.0-csd.2.beta.2018-10-10");
         }
 
         return FileConverter.curVersion;

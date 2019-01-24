@@ -6,9 +6,9 @@
 
 // The module 'assert' provides assertion methods from node
 import * as assert from "assert";
+import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
 import { Location, RunInfo } from "../common/Interfaces";
-import { sarif } from "../common/SARIFInterfaces";
 import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { Utilities } from "../Utilities";
 

@@ -12,7 +12,6 @@ import {
     ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListPositionValue, ResultsListRow,
     ResultsListSeverityValue, ResultsListSortBy, ResultsListValue, SarifViewerDiagnostic, WebviewMessage,
 } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
@@ -265,12 +264,12 @@ export class ResultsListController {
         row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
         let sevOrder: SeverityLevelOrder;
         switch (resultInfo.severityLevel) {
-            case sarif.Result.level.error: sevOrder = SeverityLevelOrder.error; break;
-            case sarif.Result.level.warning: sevOrder = SeverityLevelOrder.warning; break;
-            case sarif.Result.level.open: sevOrder = SeverityLevelOrder.open; break;
-            case sarif.Result.level.pass: sevOrder = SeverityLevelOrder.pass; break;
-            case sarif.Result.level.notApplicable: sevOrder = SeverityLevelOrder.notApplicable; break;
-            case sarif.Result.level.note: sevOrder = SeverityLevelOrder.note; break;
+            case  "error": sevOrder = SeverityLevelOrder.error; break;
+            case "warning": sevOrder = SeverityLevelOrder.warning; break;
+            case "open": sevOrder = SeverityLevelOrder.open; break;
+            case "pass": sevOrder = SeverityLevelOrder.pass; break;
+            case "notApplicable": sevOrder = SeverityLevelOrder.notApplicable; break;
+            case "note": sevOrder = SeverityLevelOrder.note; break;
         }
         row.severityLevel = { isSeverity: true, severityLevelOrder: sevOrder, value: resultInfo.severityLevel };
 

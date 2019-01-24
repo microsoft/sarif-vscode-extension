@@ -7,7 +7,6 @@
 import {
     ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSeverityValue, ResultsListValue, WebviewMessage,
 } from "../common/Interfaces";
-import { sarif } from "../common/SARIFInterfaces";
 
 /**
  * This class handles generating and providing the HTML content for the Results List in the Explorer
@@ -213,7 +212,7 @@ class ResultsList {
     private createSevIcon(severity: ResultsListSeverityValue): HTMLDivElement {
         let svg: string;
         switch (severity.value) {
-            case sarif.Result.level.error:
+            case "error":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8" cy="8" r="6" fill="#1e1e1e"/>
                 <path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5 -2.2-5-5-5Zm3 7l-1 1 -2-2 -2 2 -1-1 2-2L5
@@ -221,17 +220,17 @@ class ResultsList {
                 <path d="M11 6l-1-1 -2 2 -2-2 -1 1 2 2L5 10l1 1 2-2 2 2 1-1 -2-2Z" fill="#252526"/>
                 </svg>`;
                 break;
-            case sarif.Result.level.warning:
-            case sarif.Result.level.open:
+            case "warning":
+            case "open":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
                 <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
                 <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
                 </svg>`;
                 break;
-            case sarif.Result.level.notApplicable:
-            case sarif.Result.level.note:
-            case sarif.Result.level.pass:
+            case "notApplicable":
+            case "note":
+            case "pass":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
                 <path d="M8.5 3C6 3 4 5 4 7.5S6 12 8.5 12 13 10 13 7.5 11 3 8.5 3Zm0.5 8H8V6h1v5Zm0-6H8V4h1v1Z"

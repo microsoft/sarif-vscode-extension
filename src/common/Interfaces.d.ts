@@ -3,8 +3,8 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
-import { sarif } from "./SARIFInterfaces";
 import { MessageType, SeverityLevelOrder } from "./Enums";
 
 /**

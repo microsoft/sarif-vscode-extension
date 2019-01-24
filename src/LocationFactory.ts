@@ -3,9 +3,9 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
 import { Location } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { Utilities } from "./Utilities";
