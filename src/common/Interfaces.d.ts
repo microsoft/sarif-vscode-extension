@@ -70,6 +70,7 @@ export interface ResultInfo {
     additionalProperties: { [key: string]: string };
     assignedLocation: Location;
     attachments: Attachment[];
+    baselineState: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
     id: number;
     locations: Location[];
@@ -176,6 +177,7 @@ export interface ResultsListGroup {
 }
 
 export interface ResultsListRow {
+    baselineState: ResultsListBaselineValue,
     message: ResultsListStringValue,
     resultFile: ResultsListStringValue,
     resultId: ResultsListNumberValue,
@@ -185,6 +187,7 @@ export interface ResultsListRow {
     runId: ResultsListNumberValue,
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
+    tool: ResultsListStringValue,
 }
 
 export interface ResultsListValue {
@@ -209,6 +212,11 @@ export interface ResultsListSeverityValue extends ResultsListValue {
     isSeverity: boolean,
     severityLevelOrder: SeverityLevelOrder,
     value: sarif.Result.level,
+}
+
+export interface ResultsListBaselineValue extends ResultsListValue {
+    isBaseLine: boolean,
+    value: sarif.Result.baselineState,
 }
 
 export interface ResultsListColumn {

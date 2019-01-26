@@ -442,6 +442,11 @@ class ExplorerWebview {
         const severity = this.severityValueAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
+        if (resultInfo.baselineState !== undefined) {
+            const baselineState = this.baselineStateValueAndTooltip(resultInfo.baselineState);
+            tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
+        }
+
         if (resultInfo.ruleHelpUri !== undefined) {
             const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri }) as HTMLAnchorElement;
             cellContents.href = resultInfo.ruleHelpUri;
@@ -864,6 +869,30 @@ class ExplorerWebview {
                 };
             case "pass":
                 return { text: "pass", tooltip: "The rule was evaluated, and no problem was found." };
+        }
+    }
+
+    /**
+     * Gets the text and tooltip(from the specs description) based on the result's baselineState
+     * @param baselineState the results severity level
+     */
+    private baselineStateValueAndTooltip(baselineState: sarif.Result.baselineState) {
+        switch (baselineState) {
+            case "new":
+                return {
+                    text: baselineState,
+                    tooltip: "This result was detected in the current run but was not detected in the baseline run.",
+                };
+            case "existing":
+                return {
+                    text: baselineState,
+                    tooltip: "This result was detected both in the current run and in the baseline run.",
+                };
+            case "absent":
+                return {
+                    text: baselineState,
+                    tooltip: "This result was detected in the baseline run but was not detected in the current run.",
+                };
         }
     }
 
