@@ -6,7 +6,7 @@
 import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlows } from "./CodeFlows";
 import { CodeFlowStep, CodeFlowStepId, Location } from "./common/Interfaces";
@@ -316,7 +316,7 @@ export class CodeFlowDecorations {
      * @param step the Code Flow step
      * @param editor text editor we check if the location exists in
      */
-    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor) {
+    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions {
         let decoration;
         if (step.location !== undefined && step.location.mapped &&
             step.location.uri.toString() === editor.document.uri.toString()) {
@@ -327,7 +327,7 @@ export class CodeFlowDecorations {
 
             let beforeDecoration: DecorationInstanceRenderOptions;
             if (step.beforeIcon !== undefined) {
-                const beforePath = step.beforeIcon;
+                const beforePath = Uri.file(step.beforeIcon);
 
                 beforeDecoration = {
                     before: {
