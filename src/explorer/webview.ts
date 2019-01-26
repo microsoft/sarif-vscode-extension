@@ -444,7 +444,7 @@ class ExplorerWebview {
 
         if (resultInfo.baselineState !== undefined) {
             const baselineState = this.baselineStateValueAndTooltip(resultInfo.baselineState);
-            tableEle.appendChild(this.createNameValueRow("Baseline State:", baselineState.text, baselineState.tooltip));
+            tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
         }
 
         if (resultInfo.ruleHelpUri !== undefined) {
