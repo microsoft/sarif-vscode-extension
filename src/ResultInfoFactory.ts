@@ -86,6 +86,7 @@ export class ResultInfoFactory {
             }
         }
 
+        resultInfo.baselineState = result.baselineState;
         resultInfo.severityLevel = result.level || resultInfo.severityLevel || "warning";
 
         if (result.message === undefined) {

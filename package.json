@@ -46,6 +46,7 @@
                 },
                 "sarif-viewer.resultsListHideColumns": {
                     "default": [
+                        "baselineState",
                         "runId",
                         "sarifFile"
                     ],
@@ -53,6 +54,7 @@
                     "type": "array",
                     "items": {
                         "enum": [
+                            "baselineState",
                             "message",
                             "resultFile",
                             "resultStartPos",
@@ -60,7 +62,8 @@
                             "ruleName",
                             "runId",
                             "sarifFile",
-                            "severityLevel"
+                            "severityLevel",
+                            "tool"
                         ]
                     }
                 },
@@ -69,6 +72,7 @@
                     "description": "The column to group the results list by",
                     "type": "string",
                     "enum": [
+                        "baselineState",
                         "message",
                         "resultFile",
                         "resultStartPos",
@@ -76,7 +80,8 @@
                         "ruleName",
                         "runId",
                         "sarifFile",
-                        "severityLevel"
+                        "severityLevel",
+                        "tool"
                     ]
                 },
                 "sarif-viewer.resultsListSortBy": {
@@ -90,6 +95,7 @@
                         "column": {
                             "type": "string",
                             "enum": [
+                                "baselineState",
                                 "message",
                                 "resultFile",
                                 "resultStartPos",
@@ -97,7 +103,8 @@
                                 "ruleName",
                                 "runId",
                                 "sarifFile",
-                                "severityLevel"
+                                "severityLevel",
+                                "tool"
                             ]
                         },
                         "ascending": {

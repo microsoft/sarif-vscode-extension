@@ -255,16 +255,20 @@ export class ResultsListController {
      */
     private createResultsListRow(resultInfo: ResultInfo): ResultsListRow {
         const row = {} as ResultsListRow;
+        row.baselineState = { isBaseLine: true, value: resultInfo.baselineState };
         row.message = { value: resultInfo.message.text };
         row.resultId = { value: resultInfo.id };
         row.ruleId = { value: resultInfo.ruleId };
         row.ruleName = { value: resultInfo.ruleName };
         row.runId = { value: resultInfo.runId };
+
         const run = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
         row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
+        row.tool = { value: run.toolName, tooltip: run.toolFullName };
+
         let sevOrder: SeverityLevelOrder;
         switch (resultInfo.severityLevel) {
-            case  "error": sevOrder = SeverityLevelOrder.error; break;
+            case "error": sevOrder = SeverityLevelOrder.error; break;
             case "warning": sevOrder = SeverityLevelOrder.warning; break;
             case "open": sevOrder = SeverityLevelOrder.open; break;
             case "pass": sevOrder = SeverityLevelOrder.pass; break;
@@ -309,12 +313,14 @@ export class ResultsListController {
      * @param regExp RegExp based on the filter settings, use generateFilterRegex() to create
      */
     private applyFilterToRow(row: ResultsListRow, regExp: RegExp): boolean {
-        if (regExp.test(row.message.value) ||
+        if (regExp.test(row.baselineState.value) ||
+            regExp.test(row.message.value) ||
             regExp.test(row.ruleId.value) ||
             regExp.test(row.ruleName.value) ||
             regExp.test(row.severityLevel.value) ||
             regExp.test(row.resultFile.value) ||
-            regExp.test(row.sarifFile.value)) {
+            regExp.test(row.sarifFile.value) ||
+            regExp.test(row.tool.value)) {
             return true;
         }
 
@@ -426,6 +432,10 @@ export class ResultsListController {
      */
     private initializeColumns() {
         this.columns = {
+            baselineState: {
+                description: "The state of a result relative to a baseline of a previous run.",
+                hide: false, title: "Baseline",
+            } as ResultsListColumn,
             message: { description: "Result message", hide: false, title: "Message" } as ResultsListColumn,
             resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
             resultStartPos: {
@@ -440,6 +450,9 @@ export class ResultsListController {
                 description: "Sarif file the result data is from", hide: false, title: "Sarif File",
             } as ResultsListColumn,
             severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
+            tool: {
+                description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
+            } as ResultsListColumn,
         };
     }
 }
