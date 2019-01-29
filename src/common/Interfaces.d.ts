@@ -3,8 +3,8 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
-import { sarif } from "./SARIFInterfaces";
 import { MessageType, SeverityLevelOrder } from "./Enums";
 
 /**
@@ -70,6 +70,7 @@ export interface ResultInfo {
     additionalProperties: { [key: string]: string };
     assignedLocation: Location;
     attachments: Attachment[];
+    baselineState: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
     id: number;
     locations: Location[];
@@ -161,6 +162,8 @@ export interface LocationData {
 
 export interface ResultsListData {
     columns: { [key: string]: ResultsListColumn },
+    filterCaseMatch: boolean,
+    filterText: string,
     groupBy: string,
     groups: ResultsListGroup[],
     resultCount: number,
@@ -174,6 +177,7 @@ export interface ResultsListGroup {
 }
 
 export interface ResultsListRow {
+    baselineState: ResultsListBaselineValue,
     message: ResultsListStringValue,
     resultFile: ResultsListStringValue,
     resultId: ResultsListNumberValue,
@@ -183,6 +187,7 @@ export interface ResultsListRow {
     runId: ResultsListNumberValue,
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
+    tool: ResultsListStringValue,
 }
 
 export interface ResultsListValue {
@@ -207,6 +212,11 @@ export interface ResultsListSeverityValue extends ResultsListValue {
     isSeverity: boolean,
     severityLevelOrder: SeverityLevelOrder,
     value: sarif.Result.level,
+}
+
+export interface ResultsListBaselineValue extends ResultsListValue {
+    isBaseLine: boolean,
+    value: sarif.Result.baselineState,
 }
 
 export interface ResultsListColumn {

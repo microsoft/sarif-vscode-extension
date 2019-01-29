@@ -7,7 +7,6 @@ import {
     CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult,
     TextDocument,
 } from "vscode";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 
 /**
@@ -45,7 +44,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
         const codeLenses: CodeLens[] = [];
         const explorerController = ExplorerController.Instance;
-        const verbosity = explorerController.selectedVerbosity || sarif.ThreadFlowLocation.importance.important;
+        const verbosity = explorerController.selectedVerbosity || "important";
 
         if (explorerController.activeSVDiagnostic !== undefined) {
             const codeFlows = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
@@ -57,8 +56,8 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
                         for (const stepIndex of threadFlow.steps.keys()) {
                             const step = threadFlow.steps[stepIndex];
                             if (step.location.uri.toString() === document.uri.toString()) {
-                                if (step.importance === sarif.ThreadFlowLocation.importance.essential ||
-                                    verbosity === sarif.ThreadFlowLocation.importance.unimportant ||
+                                if (step.importance === "essential" ||
+                                    verbosity === "unimportant" ||
                                     step.importance === verbosity) {
                                     const codeLens = new CodeLens(step.location.range, step.codeLensCommand);
                                     codeLenses.push(codeLens);

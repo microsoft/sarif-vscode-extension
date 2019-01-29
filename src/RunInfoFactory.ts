@@ -3,8 +3,8 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { RunInfo } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { Utilities } from "./Utilities";
 
 /**

@@ -3,13 +3,13 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace,
 } from "vscode";
 import { CodeFlows } from "./CodeFlows";
 import { CodeFlowStep, CodeFlowStepId, Location } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
@@ -80,7 +80,7 @@ export class CodeFlowDecorations {
                     for (const step of codeflow.threads[0].steps) {
                         const decoration = CodeFlowDecorations.createHighlightDecoration(step, editor);
                         if (decoration !== undefined) {
-                            if (step.importance === sarif.ThreadFlowLocation.importance.unimportant) {
+                            if (step.importance === "unimportant") {
                                 unimportantDecorations.push(decoration);
                             } else {
                                 decorations.push(decoration);
@@ -316,7 +316,7 @@ export class CodeFlowDecorations {
      * @param step the Code Flow step
      * @param editor text editor we check if the location exists in
      */
-    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor) {
+    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions {
         let decoration;
         if (step.location !== undefined && step.location.mapped &&
             step.location.uri.toString() === editor.document.uri.toString()) {
@@ -327,7 +327,7 @@ export class CodeFlowDecorations {
 
             let beforeDecoration: DecorationInstanceRenderOptions;
             if (step.beforeIcon !== undefined) {
-                const beforePath = step.beforeIcon;
+                const beforePath = Uri.file(step.beforeIcon);
 
                 beforeDecoration = {
                     before: {

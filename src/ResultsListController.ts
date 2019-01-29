@@ -12,7 +12,6 @@ import {
     ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListPositionValue, ResultsListRow,
     ResultsListSeverityValue, ResultsListSortBy, ResultsListValue, SarifViewerDiagnostic, WebviewMessage,
 } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
@@ -28,7 +27,11 @@ export class ResultsListController {
     private groupBy: string;
     private sortBy: ResultsListSortBy;
 
-    private resultsListRows: ResultsListRow[];
+    private resultsListRows: Map<string, ResultsListRow>;
+
+    private filterCaseMatch: boolean;
+    private filterText: string;
+    private postFilterListRows: string[];
 
     private readonly configHideColumns = "resultsListHideColumns";
     private readonly configGroupBy = "resultsListGroupBy";
@@ -37,7 +40,10 @@ export class ResultsListController {
     private changeSettingsDisposable: Disposable;
 
     private constructor() {
-        this.resultsListRows = [];
+        this.resultsListRows = new Map<string, ResultsListRow>();
+        this.postFilterListRows = [];
+        this.filterCaseMatch = false;
+        this.filterText = "";
         this.initializeColumns();
         this.onSettingsChanged(undefined);
         this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
@@ -62,23 +68,27 @@ export class ResultsListController {
     public updateResultsListData(diags: SarifViewerDiagnostic[], remove?: boolean) {
         if (remove === true) {
             for (const key of diags.keys()) {
-                const rowIndex = this.findMatchingRow(diags[key].resultInfo.runId, diags[key].resultInfo.id);
-
-                if (rowIndex !== -1) {
-                    this.resultsListRows.splice(rowIndex, 1);
+                const id = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
+                this.resultsListRows.delete(id);
+                const index = this.postFilterListRows.indexOf(id);
+                if (index !== -1) {
+                    this.postFilterListRows.splice(index);
                 }
             }
         } else {
+            const regEx = this.generateFilterRegExp();
             for (const key of diags.keys()) {
-                const resultInfo = diags[key].resultInfo;
+                const row = this.createResultsListRow(diags[key].resultInfo);
+                const id = `${row.runId.value}_${row.resultId.value}`;
+                this.resultsListRows.set(id, row);
 
-                const row = this.createResultsListRow(resultInfo);
-                const rowIndex = this.findMatchingRow(resultInfo.runId, resultInfo.id);
-
-                if (rowIndex === -1) {
-                    this.resultsListRows.push(row);
-                } else {
-                    this.resultsListRows.splice(rowIndex, 1, row);
+                const index = this.postFilterListRows.indexOf(id);
+                if (this.applyFilterToRow(row, regEx) === true) {
+                    if (index === -1) {
+                        this.postFilterListRows.push(id);
+                    }
+                } else if (index !== -1) {
+                    this.postFilterListRows.splice(index);
                 }
             }
         }
@@ -100,6 +110,19 @@ export class ResultsListController {
                     hideColsConfig.push(msg.data);
                 }
                 sarifConfig.update(this.configHideColumns, hideColsConfig, true);
+                break;
+            case MessageType.ResultsListFilterApplied:
+                const input = msg.data.trim();
+                if (input !== this.filterText) {
+                    this.filterText = input;
+                    this.updateFilteredRowsList();
+                    this.postDataToExplorer();
+                }
+                break;
+            case MessageType.ResultsListFilterCaseToggled:
+                this.filterCaseMatch = !this.filterCaseMatch;
+                this.updateFilteredRowsList();
+                this.postDataToExplorer();
                 break;
             case MessageType.ResultsListGroupChanged:
                 let groupByConfig = sarifConfig.get(this.configGroupBy) as string;
@@ -232,21 +255,25 @@ export class ResultsListController {
      */
     private createResultsListRow(resultInfo: ResultInfo): ResultsListRow {
         const row = {} as ResultsListRow;
+        row.baselineState = { isBaseLine: true, value: resultInfo.baselineState };
         row.message = { value: resultInfo.message.text };
         row.resultId = { value: resultInfo.id };
         row.ruleId = { value: resultInfo.ruleId };
         row.ruleName = { value: resultInfo.ruleName };
         row.runId = { value: resultInfo.runId };
+
         const run = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
         row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
+        row.tool = { value: run.toolName, tooltip: run.toolFullName };
+
         let sevOrder: SeverityLevelOrder;
         switch (resultInfo.severityLevel) {
-            case sarif.Result.level.error: sevOrder = SeverityLevelOrder.error; break;
-            case sarif.Result.level.warning: sevOrder = SeverityLevelOrder.warning; break;
-            case sarif.Result.level.open: sevOrder = SeverityLevelOrder.open; break;
-            case sarif.Result.level.pass: sevOrder = SeverityLevelOrder.pass; break;
-            case sarif.Result.level.notApplicable: sevOrder = SeverityLevelOrder.notApplicable; break;
-            case sarif.Result.level.note: sevOrder = SeverityLevelOrder.note; break;
+            case "error": sevOrder = SeverityLevelOrder.error; break;
+            case "warning": sevOrder = SeverityLevelOrder.warning; break;
+            case "open": sevOrder = SeverityLevelOrder.open; break;
+            case "pass": sevOrder = SeverityLevelOrder.pass; break;
+            case "notApplicable": sevOrder = SeverityLevelOrder.notApplicable; break;
+            case "note": sevOrder = SeverityLevelOrder.note; break;
         }
         row.severityLevel = { isSeverity: true, severityLevelOrder: sevOrder, value: resultInfo.severityLevel };
 
@@ -266,18 +293,55 @@ export class ResultsListController {
     }
 
     /**
-     * Finds the result row in the resultslistrows that matches the ids(result and run id)
-     * @param runId Run id, corresponding to the result info in the diagnostic
-     * @param resultId Result id, corresponding to the result info in the diagnostic
+     * Applies the latest filter text and settings to the resultslistrows and adds any matching rows to filteredlistrows
      */
-    private findMatchingRow(runId: number, resultId: number): number {
-        return this.resultsListRows.findIndex((row, index) => {
-            if (row.runId.value === runId && row.resultId.value === resultId) {
-                return true;
-            }
+    private updateFilteredRowsList() {
+        this.postFilterListRows = [];
 
-            return false;
+        const regEx = this.generateFilterRegExp();
+
+        this.resultsListRows.forEach((row: ResultsListRow, key: string) => {
+            if (this.filterText === "" || this.applyFilterToRow(row, regEx) === true) {
+                this.postFilterListRows.push(key);
+            }
         });
+    }
+
+    /**
+     * Applies the filter regexp to certian columns in the passed in row, if any match returns true
+     * @param row Row that is being checked for a filter match
+     * @param regExp RegExp based on the filter settings, use generateFilterRegex() to create
+     */
+    private applyFilterToRow(row: ResultsListRow, regExp: RegExp): boolean {
+        if (regExp.test(row.baselineState.value) ||
+            regExp.test(row.message.value) ||
+            regExp.test(row.ruleId.value) ||
+            regExp.test(row.ruleName.value) ||
+            regExp.test(row.severityLevel.value) ||
+            regExp.test(row.resultFile.value) ||
+            regExp.test(row.sarifFile.value) ||
+            regExp.test(row.tool.value)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * generates the filter regexp based on the filter settings and text
+     */
+    private generateFilterRegExp(): RegExp {
+        let flags: string;
+        if (!this.filterCaseMatch) {
+            flags = "i";
+        }
+
+        let pattern: string;
+        if (this.filterText !== "") {
+            pattern = this.filterText;
+        }
+
+        return new RegExp(pattern, flags);
     }
 
     /**
@@ -286,14 +350,17 @@ export class ResultsListController {
     private getResultData(): ResultsListData {
         const data = {
             columns: this.columns,
+            filterCaseMatch: this.filterCaseMatch,
+            filterText: this.filterText,
             groupBy: this.groupBy,
             groups: [],
-            resultCount: this.resultsListRows.length,
+            resultCount: this.resultsListRows.size,
             sortBy: this.sortBy,
         } as ResultsListData;
 
         const groups = new Map<string, ResultsListGroup>();
-        for (const row of this.resultsListRows) {
+        this.postFilterListRows.forEach((id: string) => {
+            const row = this.resultsListRows.get(id);
             const resultsListValue = (row[this.groupBy] as ResultsListValue);
             let key = resultsListValue.value;
 
@@ -309,7 +376,7 @@ export class ResultsListController {
                     rows: [row], text: resultsListValue.value, tooltip: resultsListValue.tooltip,
                 } as ResultsListGroup);
             }
-        }
+        });
 
         data.groups = Array.from(groups.values());
 
@@ -365,6 +432,10 @@ export class ResultsListController {
      */
     private initializeColumns() {
         this.columns = {
+            baselineState: {
+                description: "The state of a result relative to a baseline of a previous run.",
+                hide: false, title: "Baseline",
+            } as ResultsListColumn,
             message: { description: "Result message", hide: false, title: "Message" } as ResultsListColumn,
             resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
             resultStartPos: {
@@ -379,6 +450,9 @@ export class ResultsListController {
                 description: "Sarif file the result data is from", hide: false, title: "Sarif File",
             } as ResultsListColumn,
             severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
+            tool: {
+                description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
+            } as ResultsListColumn,
         };
     }
 }

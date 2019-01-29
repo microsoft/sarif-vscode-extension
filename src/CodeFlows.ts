@@ -3,9 +3,9 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, ThreadFlow } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { ExplorerController } from "./ExplorerController";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
@@ -214,7 +214,7 @@ export class CodeFlows {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: cFLoc.importance || sarif.ThreadFlowLocation.importance.important,
+            importance: cFLoc.importance || "important",
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,

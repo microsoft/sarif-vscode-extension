@@ -3,11 +3,11 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as sarif from "sarif";
 import {
     commands, Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace,
 } from "vscode";
 import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
-import { sarif } from "./common/SARIFInterfaces";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
 import { LocationFactory } from "./LocationFactory";
@@ -151,7 +151,7 @@ export class LogReader {
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                     log = docMapping.data;
 
-                    if (log.version !== sarif.Log.version.v2_0_0_csd_2_beta_2018_10_10) {
+                    if (log.version !== "2.0.0-csd.2.beta.2018-10-10") {
                         FileConverter.upgradeSarif(log.version, doc);
                         return;
                     }

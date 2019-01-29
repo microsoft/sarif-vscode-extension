@@ -6,8 +6,8 @@
 
 // The module 'assert' provides assertion methods from node
 import * as assert from "assert";
+import * as sarif from "sarif";
 import { Range } from "vscode";
-import { sarif } from "../common/SARIFInterfaces";
 import { LocationFactory } from "../LocationFactory";
 
 suite("parseRange", () => {

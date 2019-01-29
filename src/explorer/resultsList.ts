@@ -5,9 +5,9 @@
 // ********************************************************/
 /// <reference path="./enums.ts" />
 import {
-    ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSeverityValue, ResultsListValue, WebviewMessage,
+    ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSeverityValue,
+    ResultsListValue, WebviewMessage,
 } from "../common/Interfaces";
-import { sarif } from "../common/SARIFInterfaces";
 
 /**
  * This class handles generating and providing the HTML content for the Results List in the Explorer
@@ -19,10 +19,13 @@ class ResultsList {
     private collapsedGroups: any[];
     private onCollapseAllGroupsBind;
     private onExpandAllGroupsBind;
+    private onFilterInputBind;
     private onGroupByChangedBind;
     private onRowClickedBind;
     private onShowChangedBind;
     private onSortClickedBind;
+    private onToggleFilterCaseMatchBind;
+    private onToggleFilterInputBind;
     private onToggleGroupBind;
     private data: ResultsListData;
 
@@ -32,10 +35,13 @@ class ResultsList {
         this.webview = explorer;
         this.onCollapseAllGroupsBind = this.onCollapseAllGroups.bind(this);
         this.onExpandAllGroupsBind = this.onExpandAllGroups.bind(this);
+        this.onFilterInputBind = this.onFilterInput.bind(this);
         this.onGroupByChangedBind = this.onGroupByChanged.bind(this);
         this.onRowClickedBind = this.onRowClicked.bind(this);
         this.onShowChangedBind = this.onShowChanged.bind(this);
         this.onSortClickedBind = this.onSortClicked.bind(this);
+        this.onToggleFilterCaseMatchBind = this.onToggleFilterCaseMatch.bind(this);
+        this.onToggleFilterInputBind = this.onToggleFilterInput.bind(this);
         this.onToggleGroupBind = this.onToggleGroup.bind(this);
 
         this.collapsedGroups = [];
@@ -109,6 +115,30 @@ class ResultsList {
     private createResultsListPanelButtons() {
         const buttons = document.getElementById("resultslistbuttonbar");
         if (buttons.children.length === 0) {
+            // Show/Hide column button
+            const showColButton = this.webview.createElement("select", {
+                className: "svgIconMasking", id: "resultslistshowcol", tooltip: "Show or hide Columns",
+            }) as HTMLSelectElement;
+            showColButton.appendChild(this.webview.createElement("option", {
+                attributes: { disabled: null, hidden: null, selected: null },
+            }));
+            showColButton.addEventListener("change", this.onShowChangedBind);
+            buttons.appendChild(showColButton);
+
+            // Toggle Filter button
+            const toggleFilterButtonCont = this.webview.createElement("span", {
+                id: "resultslistfilterbuttoncontainer",
+                tooltip: "Filter Results List",
+            }) as HTMLSpanElement;
+            toggleFilterButtonCont.addEventListener("click", this.onToggleFilterInputBind);
+            const toggleFilterButtonIcon = this.webview.createElement("span", {
+                className: "svgIconMasking",
+                id: "resultslistfilterbuttonsvg",
+            });
+            toggleFilterButtonCont.appendChild(toggleFilterButtonIcon);
+            buttons.appendChild(toggleFilterButtonCont);
+
+            // Expand All button
             const expandAllButton = this.webview.createElement("span", {
                 className: "tabcontentheaderbutton",
                 text: "+",
@@ -117,6 +147,7 @@ class ResultsList {
             expandAllButton.addEventListener("click", this.onExpandAllGroupsBind);
             buttons.appendChild(expandAllButton);
 
+            // Collapse All button
             const collapseAllButton = expandAllButton.cloneNode() as HTMLSpanElement;
             collapseAllButton.textContent = "-";
             collapseAllButton.title = "Collapse all groups";
@@ -125,10 +156,10 @@ class ResultsList {
 
             buttons.appendChild(this.webview.createElement("span", { className: "headercontentseperator", text: "|" }));
 
+            // Group By label and button
             buttons.appendChild(this.webview.createElement("label", {
-                attributes: { for: "resultslistgroupby" }, text: "Group by: ",
+                attributes: { for: "resultslistgroupby" }, id: "resultslistgroupbylabel", text: "Group by: ",
             }));
-
             const groupByButton = this.webview.createElement("select", {
                 id: "resultslistgroupby", tooltip: "Group by",
             }) as HTMLSelectElement;
@@ -138,14 +169,40 @@ class ResultsList {
             groupByButton.addEventListener("change", this.onGroupByChangedBind);
             buttons.appendChild(groupByButton);
 
-            const showColButton = this.webview.createElement("select", {
-                className: "select-checkbox", id: "resultslistshowcol", tooltip: "Show or hide Columns",
-            }) as HTMLSelectElement;
-            showColButton.appendChild(this.webview.createElement("option", {
-                attributes: { disabled: null, hidden: null, selected: null },
-            }));
-            showColButton.addEventListener("change", this.onShowChangedBind);
-            buttons.appendChild(showColButton);
+            // Filter Input container
+            const filterInputContainer = this.webview.createElement("form", {
+                className: "hidden",
+                id: "resultslistfilterinputcontainer",
+            });
+
+            const filterInput = this.webview.createElement("input", {
+                attributes: { placeholder: "Filter. Eg: text", required: "", type: "text" },
+                id: "resultslistfilterinput",
+            });
+            filterInput.addEventListener("input", this.onFilterInputBind);
+            filterInputContainer.appendChild(filterInput);
+
+            filterInputContainer.addEventListener("reset", () => {
+                (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
+                setTimeout(this.onFilterInputBind, 0);
+            });
+
+            const filterInputClear = this.webview.createElement("button", {
+                attributes: { type: "reset" },
+                id: "filterinputclearbutton",
+                tooltip: "Clear filter",
+            });
+            filterInputContainer.appendChild(filterInputClear);
+
+            const filterInputCaseMatchButton = this.webview.createElement("button", {
+                attributes: {},
+                id: "filterinputcasebutton",
+                tooltip: "Match Case",
+            });
+            filterInputCaseMatchButton.addEventListener("click", this.onToggleFilterCaseMatchBind);
+            filterInputContainer.appendChild(filterInputCaseMatchButton);
+
+            buttons.appendChild(filterInputContainer);
         }
     }
 
@@ -156,7 +213,7 @@ class ResultsList {
     private createSevIcon(severity: ResultsListSeverityValue): HTMLDivElement {
         let svg: string;
         switch (severity.value) {
-            case sarif.Result.level.error:
+            case "error":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8" cy="8" r="6" fill="#1e1e1e"/>
                 <path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5 -2.2-5-5-5Zm3 7l-1 1 -2-2 -2 2 -1-1 2-2L5
@@ -164,17 +221,17 @@ class ResultsList {
                 <path d="M11 6l-1-1 -2 2 -2-2 -1 1 2 2L5 10l1 1 2-2 2 2 1-1 -2-2Z" fill="#252526"/>
                 </svg>`;
                 break;
-            case sarif.Result.level.warning:
-            case sarif.Result.level.open:
+            case "warning":
+            case "open":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
                 <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
                 <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
                 </svg>`;
                 break;
-            case sarif.Result.level.notApplicable:
-            case sarif.Result.level.note:
-            case sarif.Result.level.pass:
+            case "notApplicable":
+            case "note":
+            case "pass":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
                 <path d="M8.5 3C6 3 4 5 4 7.5S6 12 8.5 12 13 10 13 7.5 11 3 8.5 3Zm0.5 8H8V6h1v5Zm0-6H8V4h1v1Z"
@@ -231,9 +288,13 @@ class ResultsList {
         let groupText = group.text;
         let groupTooltip = group.tooltip || group.text;
         if (this.data.groupBy === "severityLevel") {
-            const sevInfo = this.webview.severityValueAndTooltip(groupText);
+            const sevInfo = this.webview.severityTextAndTooltip(groupText);
             groupText = sevInfo.text;
             groupTooltip = sevInfo.tooltip;
+        } else if (this.data.groupBy === "baselineState") {
+            const baselineState = this.webview.baselineStateTextAndTooltip(groupText);
+            groupText = baselineState.text;
+            groupTooltip = baselineState.tooltip;
         }
 
         const groupCell = this.webview.createElement("th", {
@@ -333,21 +394,23 @@ class ResultsList {
             for (let index = 1; index < cols.length; index++) {
                 const col = cols[index] as HTMLTableHeaderCellElement;
                 const columnName = col.dataset.name;
-                let textValue = "";
                 const colData = row[columnName] as ResultsListValue;
-                if (colData !== undefined) {
-                    textValue = colData.value;
-                }
+                let textAndTooltip = { text: "", tooltip: "" };
 
-                if ((colData as ResultsListSeverityValue).isSeverity) {
-                    const sevInfo = this.webview.severityValueAndTooltip((colData as ResultsListSeverityValue).value);
-                    colData.tooltip = sevInfo.tooltip;
-                    textValue = sevInfo.text;
+                if (colData !== undefined) {
+                    textAndTooltip.text = colData.value || "";
+                    textAndTooltip.tooltip = colData.tooltip || textAndTooltip.text;
+
+                    if ((colData as ResultsListSeverityValue).isSeverity && colData.value !== undefined) {
+                        textAndTooltip = this.webview.severityTextAndTooltip(colData.value);
+                    } else if ((colData as ResultsListBaselineValue).isBaseLine && colData.value !== undefined) {
+                        textAndTooltip = this.webview.baselineStateTextAndTooltip(colData.value);
+                    }
                 }
 
                 const rowCell = rowCellBase.cloneNode() as HTMLTableDataCellElement;
-                rowCell.textContent = textValue;
-                rowCell.title = colData.tooltip || textValue;
+                rowCell.textContent = textAndTooltip.text;
+                rowCell.title = textAndTooltip.tooltip;
                 resultRow.appendChild(rowCell);
             }
 
@@ -372,6 +435,28 @@ class ResultsList {
      */
     private onExpandAllGroups(event) {
         this.toggleAllGroups(ToggleState.collapsed);
+    }
+
+    /**
+     * Handler when value is changed in the filter input
+     * @param event event for value changed in input
+     */
+    private onFilterInput(event) {
+        const filterText = (document.getElementById("resultslistfilterinput") as HTMLInputElement).value;
+        this.webview.sendMessage({ data: filterText, type: MessageType.ResultsListFilterApplied } as WebviewMessage);
+
+        const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
+        const activatedClass = "activated";
+        const activeTooltip = ": Active";
+        if (filterText !== "") {
+            if (filterIconContainer.classList.contains(activatedClass) !== true) {
+                filterIconContainer.classList.add(activatedClass);
+                filterIconContainer.title = filterIconContainer.title + activeTooltip;
+            }
+        } else if (filterIconContainer.classList.contains(activatedClass) === true) {
+            filterIconContainer.classList.remove(activatedClass);
+            filterIconContainer.title = filterIconContainer.title.replace(activeTooltip, "");
+        }
     }
 
     /**
@@ -410,6 +495,30 @@ class ResultsList {
 
         (event.srcElement as HTMLSelectElement).selectedIndex = 0;
         this.webview.sendMessage({ data: option.value, type: MessageType.ResultsListColumnToggled } as WebviewMessage);
+    }
+
+    /**
+     * Handles toggling case match
+     * @param event event for the toggle
+     */
+    private onToggleFilterCaseMatch(event) {
+        (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
+        this.webview.sendMessage({ data: "", type: MessageType.ResultsListFilterCaseToggled } as WebviewMessage);
+    }
+
+    /**
+     * Handles toggling visibility of the filter input
+     * @param event event for the toggle
+     */
+    private onToggleFilterInput(event) {
+        const hiddenClass = "hidden";
+        const filterInput = document.getElementById("resultslistfilterinputcontainer") as HTMLInputElement;
+        if (filterInput.classList.contains(hiddenClass) === true) {
+            filterInput.classList.remove(hiddenClass);
+            document.getElementById("resultslistfilterinput").focus();
+        } else {
+            filterInput.classList.add(hiddenClass);
+        }
     }
 
     /**
@@ -528,6 +637,16 @@ class ResultsList {
                     showColButton.appendChild(showOption);
                 }
             }
+
+            if (this.data.filterText !== "") {
+                (document.getElementById("resultslistfilterinput") as HTMLInputElement).value = this.data.filterText;
+
+                const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
+                if (filterIconContainer.classList.contains("activated") !== true) {
+                    filterIconContainer.classList.add("activated");
+                    filterIconContainer.title = filterIconContainer.title + ": Activated";
+                }
+            }
         }
 
         for (let index = 1; index < groupByButton.children.length; index++) {
@@ -552,6 +671,13 @@ class ResultsList {
                     showOption.textContent = showOption.textContent.replace(" ", "✓");
                 }
             }
+        }
+
+        const caseButton = document.getElementById("filterinputcasebutton") as HTMLButtonElement;
+        if (this.data.filterCaseMatch === true) {
+            caseButton.classList.add("active");
+        } else {
+            caseButton.classList.remove("active");
         }
     }
 }

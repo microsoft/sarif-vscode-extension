@@ -4,11 +4,11 @@
 // *                                                       *
 // ********************************************************/
 /// <reference path="./enums.ts" />
+import * as sarif from "sarif";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, HTMLElementOptions, Location, LocationData,
     Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
-import { sarif } from "../common/SARIFInterfaces";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -192,7 +192,7 @@ class ExplorerWebview {
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
-            const nodeClass = `${step.importance || sarif.ThreadFlowLocation.importance.important} verbosityshow`;
+            const nodeClass = `${step.importance || "important"} verbosityshow`;
             let fileName: string;
             let fileLine = "";
             if (step.location !== undefined) {
@@ -207,7 +207,7 @@ class ExplorerWebview {
         } else {
             // Placeholder node
             treeNodeOptions = {
-                isParent: true, liClass: `${sarif.ThreadFlowLocation.importance.essential} verbosityshow`,
+                isParent: true, liClass: `${"essential"} verbosityshow`,
                 locationLine: "", locationText: undefined, message: "Nested first step", requestId: "-1",
                 tooltip: "First step starts in a nested call",
             };
@@ -439,8 +439,13 @@ class ExplorerWebview {
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
-        const severity = this.severityValueAndTooltip(resultInfo.severityLevel);
+        const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
+
+        if (resultInfo.baselineState !== undefined) {
+            const baselineState = this.baselineStateTextAndTooltip(resultInfo.baselineState);
+            tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
+        }
 
         if (resultInfo.ruleHelpUri !== undefined) {
             const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri }) as HTMLAnchorElement;
@@ -844,27 +849,53 @@ class ExplorerWebview {
      * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
      * @param severity the results severity level
      */
-    private severityValueAndTooltip(severity: sarif.Result.level) {
+    private severityTextAndTooltip(severity: sarif.Result.level) {
+        const value = { text: severity || "", tooltip: "" };
         switch (severity) {
-            case sarif.Result.level.error:
-                return { text: "Error", tooltip: "The rule was evaluated, and a serious problem was found." };
-            case sarif.Result.level.warning:
-                return { text: "Warning", tooltip: "The rule was evaluated, and a problem was found." };
-            case sarif.Result.level.open:
-                return {
-                    text: "Open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
-                        "insufficient information to decide whether a problem exists.",
-                };
-            case sarif.Result.level.note:
-                return { text: "Note", tooltip: "A purely informational log entry" };
-            case sarif.Result.level.notApplicable:
-                return {
-                    text: "Not Applicable",
-                    tooltip: "The rule was not evaluated, because it does not apply to the analysis target.",
-                };
-            case sarif.Result.level.pass:
-                return { text: "Pass", tooltip: "The rule was evaluated, and no problem was found." };
+            case "error":
+                value.tooltip = "The rule was evaluated, and a serious problem was found.";
+                break;
+            case "warning":
+                value.tooltip = "The rule was evaluated, and a problem was found.";
+                break;
+            case "open":
+                value.tooltip = "The rule was evaluated, and the tool concluded that there was " +
+                    "insufficient information to decide whether a problem exists.";
+                break;
+            case "note":
+                value.tooltip = "A purely informational log entry";
+                break;
+            case "notApplicable":
+                value.text = "not applicable";
+                value.tooltip = "The rule was not evaluated, because it does not apply to the analysis target.";
+                break;
+            case "pass":
+                value.tooltip = "The rule was evaluated, and no problem was found.";
+                break;
         }
+
+        return value;
+    }
+
+    /**
+     * Gets the text and tooltip(from the specs description) based on the result's baselineState
+     * @param baselineState the results severity level
+     */
+    private baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState) {
+        const value = { text: baselineState || "", tooltip: "" };
+        switch (baselineState) {
+            case "new":
+                value.tooltip = "This result was detected in the current run but was not detected in the baseline run.";
+                break;
+            case "existing":
+                value.tooltip = "This result was detected both in the current run and in the baseline run.";
+                break;
+            case "absent":
+                value.tooltip = "This result was detected in the baseline run but was not detected in the current run.";
+                break;
+        }
+
+        return value;
     }
 
     /**
