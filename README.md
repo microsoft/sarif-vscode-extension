@@ -21,7 +21,7 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
         2. Select the tool that generated the file
         3. In the file picker that opens up select the file
 
-### **_new_** Update Sarif Version
+### Update Sarif Version
  * Can update older Sarif Versions to the latest version, on opening an older version a dialog lets you choose to:
     * Update to a temp file location
     * Update to a location via the save as dialog
@@ -34,10 +34,13 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity
+ * Available columns: **_new_** Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, **_new_** Tool
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
+ * **_new_** Filter: Show/Hide the Filter input area by clicking the Filter icon
+    * Toggle button for toggling Match Case
+    * No wildcard support yet
  * Hide/Show columns: Visibility of each column can be toggled by clicking the Eye icon
  * Clicking a result in the list will navigate to the source and display the details in the Sarif Explorer
  * Persistence: Group By, Sort By, and Hidden columns are persisted in settings

@@ -288,11 +288,11 @@ class ResultsList {
         let groupText = group.text;
         let groupTooltip = group.tooltip || group.text;
         if (this.data.groupBy === "severityLevel") {
-            const sevInfo = this.webview.severityValueAndTooltip(groupText);
+            const sevInfo = this.webview.severityTextAndTooltip(groupText);
             groupText = sevInfo.text;
             groupTooltip = sevInfo.tooltip;
         } else if (this.data.groupBy === "baselineState") {
-            const baselineState = this.webview.baselineStateValueAndTooltip(groupText);
+            const baselineState = this.webview.baselineStateTextAndTooltip(groupText);
             groupText = baselineState.text;
             groupTooltip = baselineState.tooltip;
         }
@@ -395,22 +395,22 @@ class ResultsList {
                 const col = cols[index] as HTMLTableHeaderCellElement;
                 const columnName = col.dataset.name;
                 const colData = row[columnName] as ResultsListValue;
-                let valueAndTooltip = { text: "", tooltip: "" };
+                let textAndTooltip = { text: "", tooltip: "" };
 
                 if (colData !== undefined) {
-                    valueAndTooltip.text = colData.value || "";
-                    valueAndTooltip.tooltip = colData.tooltip || valueAndTooltip.text;
+                    textAndTooltip.text = colData.value || "";
+                    textAndTooltip.tooltip = colData.tooltip || textAndTooltip.text;
 
                     if ((colData as ResultsListSeverityValue).isSeverity && colData.value !== undefined) {
-                        valueAndTooltip = this.webview.severityValueAndTooltip(colData.value);
+                        textAndTooltip = this.webview.severityTextAndTooltip(colData.value);
                     } else if ((colData as ResultsListBaselineValue).isBaseLine && colData.value !== undefined) {
-                        valueAndTooltip = this.webview.baselineStateValueAndTooltip(colData.value);
+                        textAndTooltip = this.webview.baselineStateTextAndTooltip(colData.value);
                     }
                 }
 
                 const rowCell = rowCellBase.cloneNode() as HTMLTableDataCellElement;
-                rowCell.textContent = valueAndTooltip.text;
-                rowCell.title = valueAndTooltip.tooltip;
+                rowCell.textContent = textAndTooltip.text;
+                rowCell.title = textAndTooltip.tooltip;
                 resultRow.appendChild(rowCell);
             }
 

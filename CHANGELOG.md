@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.8.0
+* Added a Filter to the Results List [issue #107](https://github.com/Microsoft/sarif-vscode-extension/issues/107)
+    * Allows searching text (no wildcard support yet)
+    * Allows toggling Match Case
+* Added 2 columns to the Results List: Baseline State and Tool
+* Added Baseline State to the ResultInfo tab in the Result Details Panel
+* Fixed bug with the Codeflow step highlights not showing
+* Switched to using the new Sarif NPM for the sarif schema (still on version 2.0.0-csd.2.beta.2018-10-10)
+
 ## 2.7.0
 * Updated the supported sarif version from '2.0.0' to '2.0.0-csd.2.beta.2018-10-10'
 * Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2018-10-10'
