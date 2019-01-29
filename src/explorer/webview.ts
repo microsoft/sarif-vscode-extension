@@ -439,11 +439,11 @@ class ExplorerWebview {
         const tableEle = this.createElement("table") as HTMLTableElement;
 
         tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
-        const severity = this.severityValueAndTooltip(resultInfo.severityLevel);
+        const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
         if (resultInfo.baselineState !== undefined) {
-            const baselineState = this.baselineStateValueAndTooltip(resultInfo.baselineState);
+            const baselineState = this.baselineStateTextAndTooltip(resultInfo.baselineState);
             tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
         }
 
@@ -849,51 +849,53 @@ class ExplorerWebview {
      * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
      * @param severity the results severity level
      */
-    private severityValueAndTooltip(severity: sarif.Result.level) {
+    private severityTextAndTooltip(severity: sarif.Result.level) {
+        const value = { text: severity || "", tooltip: "" };
         switch (severity) {
             case "error":
-                return { text: "error", tooltip: "The rule was evaluated, and a serious problem was found." };
+                value.tooltip = "The rule was evaluated, and a serious problem was found.";
+                break;
             case "warning":
-                return { text: "warning", tooltip: "The rule was evaluated, and a problem was found." };
+                value.tooltip = "The rule was evaluated, and a problem was found.";
+                break;
             case "open":
-                return {
-                    text: "open", tooltip: "The rule was evaluated, and the tool concluded that there was " +
-                        "insufficient information to decide whether a problem exists.",
-                };
+                value.tooltip = "The rule was evaluated, and the tool concluded that there was " +
+                    "insufficient information to decide whether a problem exists.";
+                break;
             case "note":
-                return { text: "note", tooltip: "A purely informational log entry" };
+                value.tooltip = "A purely informational log entry";
+                break;
             case "notApplicable":
-                return {
-                    text: "not applicable",
-                    tooltip: "The rule was not evaluated, because it does not apply to the analysis target.",
-                };
+                value.text = "not applicable";
+                value.tooltip = "The rule was not evaluated, because it does not apply to the analysis target.";
+                break;
             case "pass":
-                return { text: "pass", tooltip: "The rule was evaluated, and no problem was found." };
+                value.tooltip = "The rule was evaluated, and no problem was found.";
+                break;
         }
+
+        return value;
     }
 
     /**
      * Gets the text and tooltip(from the specs description) based on the result's baselineState
      * @param baselineState the results severity level
      */
-    private baselineStateValueAndTooltip(baselineState: sarif.Result.baselineState) {
+    private baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState) {
+        const value = { text: baselineState || "", tooltip: "" };
         switch (baselineState) {
             case "new":
-                return {
-                    text: baselineState,
-                    tooltip: "This result was detected in the current run but was not detected in the baseline run.",
-                };
+                value.tooltip = "This result was detected in the current run but was not detected in the baseline run.";
+                break;
             case "existing":
-                return {
-                    text: baselineState,
-                    tooltip: "This result was detected both in the current run and in the baseline run.",
-                };
+                value.tooltip = "This result was detected both in the current run and in the baseline run.";
+                break;
             case "absent":
-                return {
-                    text: baselineState,
-                    tooltip: "This result was detected in the baseline run but was not detected in the current run.",
-                };
+                value.tooltip = "This result was detected in the baseline run but was not detected in the current run.";
+                break;
         }
+
+        return value;
     }
 
     /**
