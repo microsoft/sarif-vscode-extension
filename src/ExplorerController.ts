@@ -67,8 +67,8 @@ export class ExplorerController {
                 {
                     enableScripts: true,
                     localResourceRoots: [
-                        Uri.file(Utilities.Path.join(this.extensionPath, "resources", "explorer")),
-                        Uri.file(Utilities.Path.join(this.extensionPath, "out", "explorer")),
+                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "resources", "explorer")),
+                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "out", "explorer")),
                     ],
                 },
             );
@@ -199,7 +199,7 @@ export class ExplorerController {
      */
     private getVSCodeResourcePath(path: string, file: string): Uri {
         const vscodeResource = "vscode-resource";
-        const diskPath: string = Utilities.Path.join(this.extensionPath, path, file);
+        const diskPath: string = Utilities.Path.posix.join(this.extensionPath, path, file);
         const uri = Uri.file(diskPath);
         return uri.with({ scheme: vscodeResource });
     }

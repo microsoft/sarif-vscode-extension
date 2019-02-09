@@ -21,6 +21,7 @@ enum MessageType {
 enum tabNames {
     "attachments" = "attachmentstab",
     "codeflow" = "codeflowtab",
+    "fixes" = "fixestab",
     "resultinfo" = "resultinfotab",
     "runinfo" = "runinfotab",
 }

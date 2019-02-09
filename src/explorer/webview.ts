@@ -5,9 +5,10 @@
 // ********************************************************/
 /// <reference path="./enums.ts" />
 import * as sarif from "sarif";
+import { Position } from "vscode";
 import {
-    Attachment, CodeFlow, CodeFlowStep, DiagnosticData, HTMLElementOptions, Location, LocationData,
-    Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
+    Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location,
+    LocationData, Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
 
 /**
@@ -17,10 +18,12 @@ class ExplorerWebview {
     private diagnostic: DiagnosticData;
     private hasCodeFlows: boolean;
     private hasAttachments: boolean;
+    private hasFixes: boolean;
     private onAttachmentClickedBind;
     private onCodeFlowTreeClickedBind;
     private onCollapseAllClickedBind;
     private onExpandAllClickedBind;
+    private onFixClickedBind;
     private onHeaderClickedBind;
     private onMessageBind;
     private onSourceLinkClickedBind;
@@ -34,6 +37,7 @@ class ExplorerWebview {
         this.onCodeFlowTreeClickedBind = this.onCodeFlowTreeClicked.bind(this);
         this.onCollapseAllClickedBind = this.onCollapseAllClicked.bind(this);
         this.onExpandAllClickedBind = this.onExpandAllClicked.bind(this);
+        this.onFixClickedBind = this.onFixClicked.bind(this);
         this.onHeaderClickedBind = this.onHeaderClicked.bind(this);
         this.onMessageBind = this.onMessage.bind(this);
         this.onSourceLinkClickedBind = this.onSourceLinkClicked.bind(this);
@@ -431,6 +435,96 @@ class ExplorerWebview {
     }
 
     /**
+     * Creates a Panel that shows the Fixes of a result
+     * @param fixes Array of Fixes objects to create the panel with
+     */
+    private createPanelFixes(fixes: Fix[]): HTMLDivElement {
+        const panel = this.createPanel(tabNames.fixes);
+
+        if (fixes !== undefined) {
+            const rootEle = this.createElement("ul", { className: "fixestreeroot" }) as HTMLUListElement;
+            for (const index of fixes.keys()) {
+                const fix = fixes[index];
+                const hasFiles = fix.files !== undefined && fix.files.length > 0;
+                let fixMsg = "No Description";
+                if (fix.description !== undefined) {
+                    fixMsg = fix.description.text;
+                }
+                const fixRootNodeOptions = {
+                    isParent: hasFiles, locationText: "", message: fixMsg,
+                    requestId: `${index}`, tooltip: fixMsg,
+                } as TreeNodeOptions;
+                const fixRootNode = this.createNode(fixRootNodeOptions);
+                rootEle.appendChild(fixRootNode);
+
+                if (hasFiles) {
+                    const filesContainer = this.createElement("ul") as HTMLUListElement;
+                    fixRootNode.appendChild(filesContainer);
+                    for (const filesIndex of fix.files.keys()) {
+                        const file = fix.files[filesIndex];
+                        const hasChanges = file.changes !== undefined && file.changes.length > 0;
+                        const fileNodeOptions = {
+                            isParent: true, locationText: "", message: file.location.fileName,
+                            requestId: `${index}`, tooltip: file.location.uri.fsPath,
+                        } as TreeNodeOptions;
+                        const fileNode = this.createNode(fileNodeOptions);
+                        filesContainer.appendChild(fileNode);
+
+                        if (hasChanges) {
+                            const changesContainer = this.createElement("ul") as HTMLUListElement;
+                            fileNode.appendChild(changesContainer);
+                            for (const changeIndex of file.changes.keys()) {
+                                const change = file.changes[changeIndex];
+                                const changeMsg = `Change ${changeIndex + 1}`;
+                                const changeNodeOptions = {
+                                    isParent: true, locationText: "", message: changeMsg,
+                                    requestId: `${index}`, tooltip: changeMsg,
+                                } as TreeNodeOptions;
+                                const changeNode = this.createNode(changeNodeOptions);
+                                changesContainer.appendChild(changeNode);
+
+                                const changeDetailsContainer = this.createElement("ul") as HTMLUListElement;
+                                changeNode.appendChild(changeDetailsContainer);
+
+                                const start = change.delete[0] as Position;
+                                const end = change.delete[1] as Position;
+                                if (start.line !== end.line || start.character !== end.character) {
+                                    let delMsg = `Delete Ln ${start.line + 1}, Col ${start.character + 1}`;
+                                    if (start.line !== end.line) {
+                                        delMsg = `${delMsg} - Ln ${end.line + 1}, Col ${end.character + 1}`;
+                                    } else {
+                                        delMsg = delMsg + `-${end.character + 1}`;
+                                    }
+
+                                    const deleteNodeOptions = {
+                                        isParent: false, locationText: "", message: delMsg,
+                                        requestId: `${index}`, tooltip: delMsg,
+                                    } as TreeNodeOptions;
+                                    changeDetailsContainer.appendChild(this.createNode(deleteNodeOptions));
+                                }
+
+                                if (change.insert !== undefined) {
+                                    const msg = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
+                                        `"${change.insert}"`;
+                                    const insertNodeOptions = {
+                                        isParent: false, locationText: "", message: msg, requestId: `${index}`,
+                                        tooltip: msg,
+                                    } as TreeNodeOptions;
+                                    changeDetailsContainer.appendChild(this.createNode(insertNodeOptions));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            rootEle.addEventListener("click", this.onFixClickedBind);
+            panel.appendChild(rootEle);
+        }
+        return panel;
+    }
+
+    /**
      * Creates the content that shows when the user clicks the resultinfo tab
      * @param resultInfo Result info to create the tab content from
      */
@@ -611,6 +705,9 @@ class ExplorerWebview {
         if (this.hasAttachments) {
             container.appendChild(this.createTabElement(tabNames.attachments, "Attachments", "ATTACHMENTS"));
         }
+        if (this.hasFixes) {
+            container.appendChild(this.createTabElement(tabNames.fixes, "Fixes", "FIXES"));
+        }
 
         return container;
     }
@@ -639,6 +736,7 @@ class ExplorerWebview {
         const resultInfo = this.diagnostic.resultInfo;
         this.hasCodeFlows = resultInfo.codeFlows !== undefined;
         this.hasAttachments = resultInfo.attachments !== undefined;
+        this.hasFixes = resultInfo.fixes !== undefined;
 
         const body = document.body;
 
@@ -656,6 +754,7 @@ class ExplorerWebview {
         panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
         panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
+        panelContainer.appendChild(this.createPanelFixes(resultInfo.fixes));
         resultDetailsContainer.appendChild(panelContainer);
 
         // Setup any state
@@ -744,6 +843,21 @@ class ExplorerWebview {
      */
     private onExpandAllClicked() {
         this.toggleTreeElements(ToggleState.collapsed, ToggleState.expanded);
+    }
+
+    /**
+     * Callback when user clicks on the Fix tree
+     * @param event event fired when user clicked the fix tree
+     */
+    private onFixClicked(event: MouseEvent) {
+        let ele = event.srcElement as HTMLElement;
+        if (ele.classList.contains("treenodelocation")) {
+            ele = ele.parentElement;
+        }
+
+        if (!ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+            this.toggleTreeElement(ele);
+        }
     }
 
     /**

@@ -39,7 +39,7 @@ suite("parseRange", () => {
     });
 
     test("Basic using charLength", async () => {
-        const region = { charLength: 2, startLine: 1, startColumn: 2, endLine: 1 } as sarif.Region;
+        const region = { charLength: 2, charOffset: 2} as sarif.Region;
         const expected = new Range(0, 1, 0, 3);
         // @ts-ignore parseRange is a private static method on LocationFactory
         const result: { range: Range, endOfLine: boolean } = await LocationFactory.parseRange(region);

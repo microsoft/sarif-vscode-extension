@@ -183,7 +183,7 @@ export class FileMapper {
                 const uriWithBase = Utilities.combineUriWithUriBase(uriPath, uriBase);
 
                 if (files[file].contents !== undefined) {
-                    this.mapEmbeddedContent(Uri.parse(uriPath), files[file]);
+                    this.mapEmbeddedContent(uriWithBase, files[file]);
                 } else {
                     await this.map(uriWithBase, uriBase);
                 }
@@ -423,7 +423,7 @@ export class FileMapper {
             dirParts.push(originPath.base);
 
             while (dirParts.length !== 0) {
-                const mappedUri = Uri.file(Utilities.Path.join(rootpath, dirParts.join(Utilities.Path.sep)));
+                const mappedUri = Uri.file(Utilities.Path.posix.join(rootpath, dirParts.join(Utilities.Path.sep)));
                 if (this.tryMapUri(mappedUri, Utilities.getFsPathWithFragment(uri))) {
                     this.saveBasePath(uri, mappedUri, uriBase);
                     return true;
