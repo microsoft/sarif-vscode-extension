@@ -159,10 +159,10 @@ export class FileMapper {
 
     /**
      * Call to map the files in the Sarif run files object
-     * @param files dictionary of sarif.Files that needs to be mapped
+     * @param files array of sarif.Files that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: { [key: string]: sarif.File }, runId: number) {
+    public async mapFiles(files: sarif.File[], runId: number) {
         this.userCanceledMapping = false;
         for (const file in files) {
             if (files.hasOwnProperty(file)) {

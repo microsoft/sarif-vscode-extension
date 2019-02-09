@@ -219,7 +219,6 @@ export class ResultInfoFactory {
             case "error":
             case "warning":
             case "note":
-            case "open":
                 return defaultLevel;
             default:
                 return "warning";
