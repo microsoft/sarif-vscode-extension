@@ -11,7 +11,8 @@
 body {
     padding: 0px;
     box-shadow: #000000 0 8px 6px -6px inset;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .headercontainer {
