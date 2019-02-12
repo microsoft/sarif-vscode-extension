@@ -159,28 +159,17 @@ export class FileMapper {
 
     /**
      * Call to map the files in the Sarif run files object
-     * @param files dictionary of sarif.Files that needs to be mapped
+     * @param files array of sarif.Files that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: { [key: string]: sarif.File }, runId: number) {
+    public async mapFiles(files: sarif.File[], runId: number) {
         this.userCanceledMapping = false;
         for (const file in files) {
             if (files.hasOwnProperty(file)) {
-                let uriPath: string;
-                let fileLocation = files[file].fileLocation;
-                // Files with uribaseids are in format #uribaseid#/folder/file.ext
-                if (file.startsWith("#")) {
-                    const fileSplit = file.split("#");
-                    fileSplit.shift(); // because the first character is the seperator # the first item is ""
-                    fileLocation = { uriBaseId: fileSplit[0] } as sarif.FileLocation;
-                    fileSplit.shift();
-                    uriPath = fileSplit.join("#");
-                } else {
-                    uriPath = file;
-                }
+                const fileLocation = files[file].fileLocation;
 
                 const uriBase = Utilities.getUriBase(fileLocation, runId);
-                const uriWithBase = Utilities.combineUriWithUriBase(uriPath, uriBase);
+                const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
                 if (files[file].contents !== undefined) {
                     this.mapEmbeddedContent(uriWithBase, files[file]);
