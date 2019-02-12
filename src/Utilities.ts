@@ -124,7 +124,7 @@ export class Utilities {
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
         const pathObj = Utilities.Path.parse(filePath);
-        let tempPath: string = Utilities.Path.posix.join(Utilities.SarifViewerTempDir, hashValue || "",
+        let tempPath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "",
             pathObj.dir.replace(pathObj.root, ""));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         tempPath = Utilities.createDirectoryInTemp(tempPath);

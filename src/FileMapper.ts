@@ -166,21 +166,10 @@ export class FileMapper {
         this.userCanceledMapping = false;
         for (const file in files) {
             if (files.hasOwnProperty(file)) {
-                let uriPath: string;
-                let fileLocation = files[file].fileLocation;
-                // Files with uribaseids are in format #uribaseid#/folder/file.ext
-                if (file.startsWith("#")) {
-                    const fileSplit = file.split("#");
-                    fileSplit.shift(); // because the first character is the seperator # the first item is ""
-                    fileLocation = { uriBaseId: fileSplit[0] } as sarif.FileLocation;
-                    fileSplit.shift();
-                    uriPath = fileSplit.join("#");
-                } else {
-                    uriPath = file;
-                }
+                const fileLocation = files[file].fileLocation;
 
                 const uriBase = Utilities.getUriBase(fileLocation, runId);
-                const uriWithBase = Utilities.combineUriWithUriBase(uriPath, uriBase);
+                const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
                 if (files[file].contents !== undefined) {
                     this.mapEmbeddedContent(uriWithBase, files[file]);
