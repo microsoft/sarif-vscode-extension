@@ -61,7 +61,7 @@ export class Utilities {
         let combinedPath = uriPath;
 
         if (uriBase !== undefined) {
-            combinedPath = uriBase + Utilities.Path.sep + uriPath;
+            combinedPath = Utilities.Path.posix.join(uriBase, uriPath);
         }
 
         let uri: Uri;
@@ -128,7 +128,7 @@ export class Utilities {
             pathObj.dir.replace(pathObj.root, ""));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         tempPath = Utilities.createDirectoryInTemp(tempPath);
-        tempPath = Utilities.Path.join(tempPath, Utilities.Path.win32.basename(filePath));
+        tempPath = Utilities.Path.posix.join(tempPath, Utilities.Path.win32.basename(filePath));
 
         return tempPath;
     }
@@ -285,7 +285,7 @@ export class Utilities {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
         }
 
-        return this.Path.join(base, baseIds[id].uri);
+        return this.Path.posix.join(base, baseIds[id].uri);
     }
 
     /**

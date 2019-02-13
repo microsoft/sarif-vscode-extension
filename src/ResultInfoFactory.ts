@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
-import { Attachment, CodeFlow, Location, ResultInfo } from "./common/Interfaces";
+import { Attachment, CodeFlow, Fix, FixChange, FixFile, Location, ResultInfo } from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
@@ -37,6 +37,12 @@ export class ResultInfoFactory {
         await ResultInfoFactory.parseAttachments(result.attachments, runId).then((attachments: Attachment[]) => {
             if (attachments.length > 0) {
                 resultInfo.attachments = attachments;
+            }
+        });
+
+        await ResultInfoFactory.parseFixes(result.fixes, runId).then((fixes: Fix[]) => {
+            if (fixes.length > 0) {
+                resultInfo.fixes = fixes;
             }
         });
 
@@ -163,6 +169,48 @@ export class ResultInfoFactory {
     }
 
     /**
+     * Parses the sarif fixes objects and returns and array of processed Fixes
+     * @param sarifFixes sarif fixes to parse
+     * @param runId id of the run this result is from
+     */
+    private static async parseFixes(sarifFixes: sarif.Fix[], runId: number): Promise<Fix[]> {
+        const fixes: Fix[] = [];
+
+        if (sarifFixes !== undefined) {
+            for (const sarifFix of sarifFixes) {
+                const fix = {} as Fix;
+                fix.description = Utilities.parseSarifMessage(sarifFix.description);
+                if (sarifFix.fileChanges !== undefined) {
+                    fix.files = [];
+                    for (const sarifFileChange of sarifFix.fileChanges) {
+                        const fixFile = {} as FixFile;
+                        await LocationFactory.create({ fileLocation: sarifFileChange.fileLocation }, runId).then(
+                            (loc: Location) => {
+                                fixFile.location = loc;
+                            });
+
+                        if (sarifFileChange.replacements !== undefined) {
+                            fixFile.changes = [];
+                            for (const sarifReplacement of sarifFileChange.replacements) {
+                                const fixChange = {} as FixChange;
+                                if (sarifReplacement.insertedContent !== undefined) {
+                                    fixChange.insert = sarifReplacement.insertedContent.text;
+                                }
+                                fixChange.delete = LocationFactory.parseRange(sarifReplacement.deletedRegion).range;
+                                fixFile.changes.push(fixChange);
+                            }
+                        }
+                        fix.files.push(fixFile);
+                    }
+                }
+                fixes.push(fix);
+            }
+        }
+
+        return fixes;
+    }
+
+    /**
      * Converts the rule default Level to sarif Level
      * @param defaultLevel default level to convert
      */
@@ -171,7 +219,6 @@ export class ResultInfoFactory {
             case "error":
             case "warning":
             case "note":
-            case "open":
                 return defaultLevel;
             default:
                 return "warning";

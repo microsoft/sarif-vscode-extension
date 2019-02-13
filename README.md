@@ -10,6 +10,7 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
     * Run info
     * Code flow steps
     * Attachments
+    * **_new_** Fixes
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
  * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
@@ -34,11 +35,11 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: **_new_** Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, **_new_** Tool
+ * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Tool
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
- * **_new_** Filter: Show/Hide the Filter input area by clicking the Filter icon
+ * Filter: Show/Hide the Filter input area by clicking the Filter icon
     * Toggle button for toggling Match Case
     * No wildcard support yet
  * Hide/Show columns: Visibility of each column can be toggled by clicking the Eye icon

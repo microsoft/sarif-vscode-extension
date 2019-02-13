@@ -72,6 +72,7 @@ export interface ResultInfo {
     attachments: Attachment[];
     baselineState: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
+    fixes: Fix[];
     id: number;
     locations: Location[];
     message: Message;
@@ -127,6 +128,21 @@ export interface Attachment {
     description: Message,
     file: Location,
     regionsOfInterest: Location[]
+}
+
+export interface Fix {
+    description: Message,
+    files: FixFile[]
+}
+
+export interface FixFile {
+    location: Location,
+    changes: FixChange[]
+}
+
+export interface FixChange {
+    delete: Range,
+    insert: string
 }
 
 export interface TreeNodeOptions {

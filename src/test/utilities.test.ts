@@ -263,9 +263,9 @@ suite("expandBaseIds", () => {
         const expandedBaseIds = Utilities.expandBaseIds(originalUriBaseIds);
         assert.notEqual(expandedBaseIds, undefined);
         assert.deepEqual(expandedBaseIds, {
-            file: "file:\\c:\\folder\\file.ext",
-            folder: "file:\\c:\\folder",
-            root: "file:\\c:\\",
+            file: "file:/c:/folder/file.ext",
+            folder: "file:/c:/folder",
+            root: "file:/c:/",
         });
     });
 });

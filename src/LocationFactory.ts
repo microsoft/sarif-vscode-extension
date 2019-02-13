@@ -117,48 +117,48 @@ export class LocationFactory {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    private static parseRange(region: sarif.Region): { range: Range, endOfLine: boolean } {
+    public static parseRange(region: sarif.Region): { range: Range, endOfLine: boolean } {
         let startline = 0;
         let startcol = 0;
         let endline = 0;
         let endcol = 1;
         let eol = false;
 
-        if (region !== undefined && (region.startLine !== undefined || region.charOffset !== undefined)) {
+        if (region !== undefined) {
             if (region.startLine !== undefined) {
                 startline = region.startLine - 1;
                 if (region.startColumn !== undefined) {
                     startcol = region.startColumn - 1;
                 }
-            } else {
+
+                if (region.endLine !== undefined) {
+                    endline = region.endLine - 1;
+                } else {
+                    endline = startline;
+                }
+
+                if (region.endColumn !== undefined) {
+                    endcol = region.endColumn - 1;
+                } else if (region.snippet !== undefined) {
+                    if (region.snippet.text !== undefined) {
+                        endcol = region.snippet.text.length - 2;
+                    } else if (region.snippet.binary !== undefined) {
+                        endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
+                    }
+                } else {
+                    endline++;
+                    endcol = 0;
+                    eol = true;
+                }
+            } else if (region.charOffset !== undefined) {
                 startline = 0;
                 startcol = region.charOffset - 1;
-            }
 
-            if (region.endLine !== undefined) {
-                endline = region.endLine - 1;
-            } else {
-                endline = startline;
-            }
-
-            if (region.endColumn !== undefined) {
-                endcol = region.endColumn - 1;
-            } else if (region.charLength !== undefined) {
-                endcol = region.charLength + region.startColumn - 1;
-            } else if (region.snippet !== undefined) {
-                if (region.snippet.text !== undefined) {
-                    endcol = region.snippet.text.length - 2;
-                } else if (region.snippet.binary !== undefined) {
-                    endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
+                if (region.charLength !== undefined) {
+                    endcol = region.charLength + region.charOffset - 1;
+                } else {
+                    endcol = startcol;
                 }
-            } else {
-                endcol = -1;
-            }
-
-            if (endcol <= -1) {
-                endline++;
-                endcol = 0;
-                eol = true;
             }
         }
 
