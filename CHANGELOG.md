@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.9.0
+* Updated the supported sarif version '2.0.0-csd.2.beta.2019-01-09' [issue #129](https://github.com/Microsoft/sarif-vscode-extension/issues/129)
+* Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-01-09' [issue #129](https://github.com/Microsoft/sarif-vscode-extension/issues/129)
+* Added a Fixes panel to the Results Details section in the Sarif Explorer [issue #10](https://github.com/Microsoft/sarif-vscode-extension/issues/10)
+
 ## 2.8.0
 * Added a Filter to the Results List [issue #107](https://github.com/Microsoft/sarif-vscode-extension/issues/107)
     * Allows searching text (no wildcard support yet)
