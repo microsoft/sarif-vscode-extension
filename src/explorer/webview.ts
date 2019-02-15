@@ -233,7 +233,6 @@ class ExplorerWebview {
             this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
             rootEle.addEventListener("click", this.onCodeFlowTreeClickedBind);
             container.appendChild(rootEle);
-            container.appendChild(this.createElement("br"));
         }
 
         return container;
@@ -749,7 +748,7 @@ class ExplorerWebview {
         resultDetailsContainer.appendChild(tabHeader);
 
         // Create and add the panels
-        const panelContainer = this.createElement("div", { id: "tabContentContainer" }) as HTMLDivElement;
+        const panelContainer = this.createElement("div", { id: "tabcontentcontainer" }) as HTMLDivElement;
         panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
         panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));

@@ -10,11 +10,13 @@
 }
 
 #resultslistcontainer {
+    display: flex;
+    flex: 1 1 50vh;
+    flex-flow: column nowrap;
     padding: 5px;
 }
 
 #resultslisttablecontainer {
-    height: 45vh;
     overflow-x: hidden;
     overflow-y: scroll;
 }
@@ -22,8 +24,8 @@
 #resultslisttable {
     border-spacing: 0px !important;
     cursor: pointer;
-    width: 100%;
     user-select: none;
+    width: 100%;
 }
 
 #resultslisttable>thead>tr>th:first-child {
@@ -128,8 +130,9 @@ button#filterinputcasebutton.active:before {
 }
 
 form#resultslistfilterinputcontainer {
-    width: 100%;
     display: flex;
+    padding-bottom: 5px;
+    width: 100%;
 }
 
 form#resultslistfilterinputcontainer.hidden {
@@ -151,12 +154,12 @@ button#filterinputcasebutton:before {
 }
 
 form input#resultslistfilterinput {
-    margin-left: 10px;
-    width: 100%;
     color: var(--vscode-input-foreground);
     border-right-style: none;
+    margin-left: 10px;
     outline-style: none;
     padding: 4px;
+    width: 100%;
 }
 
 form input#resultslistfilterinput::placeholder {
@@ -191,7 +194,6 @@ button#filterinputcasebutton:before {
     border-bottom-color: var(--color);
     border-bottom-style: solid;
     border-bottom-width: thin;
-    padding-bottom: 7px;
 }
 
 .countbadge {

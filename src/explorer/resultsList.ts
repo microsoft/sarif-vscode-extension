@@ -52,9 +52,11 @@ class ResultsList {
     public set Data(value: ResultsListData) {
         if (this.collapsedGroups[0] !== value.groupBy || this.data.resultCount !== value.resultCount) {
             this.collapsedGroups = [value.groupBy];
-            for (let index = 0; index < value.groups.length; index++) {
-                if (value.groups[index].rows.length > 25) {
-                    this.collapsedGroups.push(`${index}`);
+            if (value.groups.length > 1) {
+                for (let index = 0; index < value.groups.length; index++) {
+                    if (value.groups[index].rows.length > 25) {
+                        this.collapsedGroups.push(`${index}`);
+                    }
                 }
             }
         }
