@@ -9,10 +9,14 @@
 }
 
 body {
-    padding: 0px;
     box-shadow: #000000 0 8px 6px -6px inset;
+    display: flex;
+    flex-flow: column nowrap;
+    height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
+    padding: 0px;
+
 }
 
 .headercontainer {
@@ -46,9 +50,9 @@ li.expanded::before,
 }
 
 .headercontentseperator {
-    padding: 0px 10px;
-    font-size: 150%;
     color: rgba(200, 200, 200, 0.3);
+    font-size: 150%;
+    padding: 0px 9px;
 }
 
 #titleruleid,
@@ -61,22 +65,36 @@ li.expanded::before,
     color: rgb(16, 109, 192);
 }
 
+#resultdetailscontainer {
+    display: flex;
+    flex-flow: column nowrap;
+    flex: 1 1 50vh;
+}
+
+div#resultdetailscontainer:empty {
+    display: none;
+}
+
 #ruledescription {
-    padding: 10px;
-    max-height: 25vh;
+    flex: 0 0 auto;
+    max-height: 25%;
     overflow-x: hidden;
+    overflow-wrap: break-word;
+    padding: 2px 10px;
 }
 
 #tabcontainer {
     display: flex;
-    padding: 10px 0px;
+    flex: 0 0 auto;
+    overflow-x: scroll;
 }
 
 .tab {
     color: var(--vscode-tab-inactiveForeground);
     border-color: var(--color);
-    padding: 5px 10px;
+    padding: 5px 7px;
     user-select: none;
+    white-space: nowrap;
 }
 
 .tab:hover {
@@ -85,41 +103,50 @@ li.expanded::before,
 
 .tabactive>.tablabel {
     border-bottom-color: var(--vscode-tab-activeForeground);
-    border-bottom-width: 1px;
     border-bottom-style: solid;
+    border-bottom-width: 1px;
     color: var(--color);
     padding-bottom: 2px;
 }
 
 .tabcontent {
     display: none;
-    padding: 0px 10px;
     overflow-x: hidden;
+    overflow-y: scroll;
+    padding: 0px 10px;
 }
 
 .tabcontentactive {
-    display: block;
+    display: flex;
+    flex-flow: column nowrap;
 }
 
 .tabcontentheader {
-    padding-bottom: 5px;
-    border-bottom-style: solid;
-    border-bottom-color: var(--color);
-    border-bottom-width: thin;
     background-color: var(--vscode-sideBarSectionHeader-background);
+    border-bottom-color: var(--color);
+    border-bottom-style: solid;
+    border-bottom-width: thin;
     display: flex;
+    flex: 0 0 auto;
+    padding-bottom: 5px;
 }
 
 .tabcontentheaderbutton {
-    padding-left: 10px;
-    user-select: none;
     cursor: pointer;
     font-size: 150%;
+    padding-left: 10px;
+    user-select: none;
+}
+
+#tabcontentcontainer {
+    display: flex;
+    flex: 1 1 auto;
+    flex-flow: column nowrap;
 }
 
 .td-contentname {
-    white-space: nowrap;
     vertical-align: top;
+    white-space: nowrap;
 }
 
 input[type=range] {
@@ -136,21 +163,22 @@ input[type=range]:focus {
 
 input[type='range']::-webkit-slider-runnable-track {
     background: repeating-linear-gradient(90deg, transparent, transparent .30em, var(--color) .30em, transparent .45em, transparent 2em);
-    background-repeat: no-repeat;
     background-origin: content-box;
-    background-size: 100% 30%, 100% 100%, 100% 100%;
     background-position-y: 100%;
+    background-repeat: no-repeat;
+    background-size: 100% 30%, 100% 100%, 100% 100%;
 }
 
 ul {
-    list-style-type: none;
-    padding-left: 15px;
     background: var(--background-color);
     color: var(--color);
+    list-style-type: none;
     outline: none;
+    padding-left: 15px;
 }
 
-ul.codeflowtreeroot {
+ul.codeflowtreeroot, ul.attachmentstreeroot, ul.fixestreeroot {
+    margin-bottom: 5px;
     margin-top: 5px;
     padding-left: 5px;
     padding-right: 5px;
@@ -211,4 +239,8 @@ li.codeflowselected:focus {
     padding-left: 5px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+#codeflowtreecontainer {
+    overflow-y: scroll;
 }

@@ -232,7 +232,7 @@ export class ExplorerController {
             <script src="${colResizeDiskPath}"></script>
         </head>
         <body>
-            <div id="resultslistheader" class="headercontainer collapsed"></div>
+            <div id="resultslistheader" class="headercontainer expanded"></div>
             <div id="resultslistcontainer">
                 <div id="resultslistbuttonbar"></div>
                 <div id="resultslisttablecontainer">

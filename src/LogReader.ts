@@ -4,9 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import {
-    commands, Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace,
-} from "vscode";
+import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace } from "vscode";
 import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
@@ -101,8 +99,6 @@ export class LogReader {
      * Reads through all of the text documents open in the workspace, syncs the issues with problem panel after
      */
     public async readAll(): Promise<void> {
-        commands.executeCommand("workbench.action.problems.focus");
-
         // Get all the documents and read them
         const docs = workspace.textDocuments;
 
