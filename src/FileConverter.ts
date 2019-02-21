@@ -86,7 +86,9 @@ export class FileConverter {
 
                 proc.on("close", (code) => {
                     if (code === 0) {
-                        if (window.activeTextEditor.document.fileName === doc.fileName) {
+                        const textEditor = window.activeTextEditor;
+                        // try to close the editor
+                        if (textEditor !== undefined && textEditor.document.fileName === doc.fileName) {
                             commands.executeCommand("workbench.action.closeActiveEditor");
                         }
 

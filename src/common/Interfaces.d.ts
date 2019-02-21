@@ -74,6 +74,7 @@ export interface ResultInfo {
     codeFlows: CodeFlow[];
     fixes: Fix[];
     id: number;
+    locationInSarifFile: Location;
     locations: Location[];
     message: Message;
     messageHTML: HTMLLabelElement;

@@ -556,9 +556,13 @@ class ExplorerWebview {
             tableEle.appendChild(row);
         }
 
-        // The last item in the list should be properties if they exist
         if (resultInfo.additionalProperties !== undefined) {
             tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
+        }
+
+        row = this.createLocationsRow("Location in Log: ", [resultInfo.locationInSarifFile]);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
         }
 
         panel.appendChild(tableEle);
