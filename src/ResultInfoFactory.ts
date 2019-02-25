@@ -54,16 +54,16 @@ export class ResultInfoFactory {
             resultInfo.additionalProperties = result.properties;
         }
 
-        const ruleKey = result.ruleId;
+        const ruleIndex = result.ruleIndex;
         resultInfo.ruleId = result.ruleId;
         const allLocations = resultInfo.locations.concat(resultInfo.relatedLocs);
 
         // Parse the rule related info
         let ruleMessageString: string;
-        if (ruleKey !== undefined && tool !== undefined) {
+        if (ruleIndex !== undefined && tool !== undefined) {
             const ruleDescriptors = tool.driver.ruleDescriptors;
-            if (ruleDescriptors !== undefined && ruleDescriptors[ruleKey] !== undefined) {
-                const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleKey];
+            if (ruleDescriptors !== undefined && ruleDescriptors[ruleIndex] !== undefined) {
+                const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleIndex];
 
                 if (rule.id !== undefined) {
                     resultInfo.ruleId = rule.id;
