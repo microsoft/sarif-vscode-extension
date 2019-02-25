@@ -455,7 +455,9 @@ export class ResultsListController {
                 description: "The state of a result relative to a baseline of a previous run.",
                 hide: false, title: "Baseline",
             } as ResultsListColumn,
+            kind: { description: "Kind", hide: false, title: "Kind" } as ResultsListColumn,
             message: { description: "Result message", hide: false, title: "Message" } as ResultsListColumn,
+            rank: { description: "Rank", hide: false, title: "Rank" } as ResultsListColumn,
             resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
             resultStartPos: {
                 description: "Results position in the file", hide: false, title: "Position",

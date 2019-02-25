@@ -977,7 +977,7 @@ class ExplorerWebview {
      * @param kind the results kind
      */
     private kindTextAndTooltip(kind: sarif.Result.kind) {
-        const value = { text: kind || "", tooltip: SeverityTooltip[kind] || "" };
+        const value = { text: kind || "", tooltip: KindTooltip[kind] || "" };
         return value;
     }
 
