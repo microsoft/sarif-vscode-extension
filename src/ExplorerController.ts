@@ -3,7 +3,6 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
-import * as sarif from "sarif";
 import { commands, extensions, Range, Uri, ViewColumn, WebviewPanel, window } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
@@ -100,11 +99,7 @@ export class ExplorerController {
                 } else {
                     const diagnostic = ExplorerController.Instance.activeSVDiagnostic;
                     LocationFactory.getOrRemap(diagnostic.resultInfo.attachments[attachmentId].file,
-                        {
-                            physicalLocation: {
-                                fileLocation: diagnostic.rawResult.attachments[attachmentId].fileLocation,
-                            },
-                        } as sarif.Location,
+                        diagnostic.rawResult.attachments[attachmentId].artifactLocation,
                         this.activeSVDiagnostic.resultInfo.runId,
                     ).then((loc: Location) => {
                         commands.executeCommand("vscode.open", loc.uri,

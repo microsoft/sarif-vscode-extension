@@ -51,7 +51,7 @@ export class FileConverter {
         if (FileConverter.canUpgradeVersion(version) === true) {
             const saveTemp = "Yes (Save Temp)";
             const saveAs = "Yes (Save As)";
-            const supportedVersion: sarif.Log.version = "2.0.0-csd.2.beta.2019-01-09";
+            const supportedVersion: sarif.Log.version = "2.0.0-csd.2.beta.2019-01-24";
             const choice = await window.showInformationMessage(`Sarif version '${version}' is not supported.
             Upgrade to the latest version? '${supportedVersion}'`,
                 { modal: false } as MessageOptions, saveTemp, saveAs, "No");
@@ -125,7 +125,7 @@ export class FileConverter {
 
     private static get CurrentVersion() {
         if (FileConverter.curVersion === undefined) {
-            FileConverter.curVersion = FileConverter.parseVersion("2.0.0-csd.2.beta.2019-01-09");
+            FileConverter.curVersion = FileConverter.parseVersion("2.0.0-csd.2.beta.2019-01-24");
         }
 
         return FileConverter.curVersion;

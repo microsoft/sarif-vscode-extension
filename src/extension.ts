@@ -34,7 +34,7 @@ export function activate(context: ExtensionContext) {
 
     // Create File mapper command
     context.subscriptions.push(
-        commands.registerCommand(FileMapper.MapCommand, (fileLocation: sarif.FileLocation, runId: number) => {
+        commands.registerCommand(FileMapper.MapCommand, (fileLocation: sarif.ArtifactLocation, runId: number) => {
             const uriBase = Utilities.getUriBase(fileLocation, runId);
             const uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
             FileMapper.Instance.getUserToChooseFile(uri, uriBase);

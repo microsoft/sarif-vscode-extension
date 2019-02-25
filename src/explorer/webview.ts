@@ -535,6 +535,16 @@ class ExplorerWebview {
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
+        if (resultInfo.kind !== undefined) {
+            const kind = this.kindTextAndTooltip(resultInfo.kind);
+            tableEle.appendChild(this.createNameValueRow("Kind:", kind.text, kind.tooltip));
+        }
+
+        if (resultInfo.rank !== undefined) {
+            const rankStr = resultInfo.rank.toString(10);
+            tableEle.appendChild(this.createNameValueRow("Rank:", rankStr, rankStr));
+        }
+
         if (resultInfo.baselineState !== undefined) {
             const baselineState = this.baselineStateTextAndTooltip(resultInfo.baselineState);
             tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
@@ -963,34 +973,11 @@ class ExplorerWebview {
     }
 
     /**
-     * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
-     * @param severity the results severity level
+     * Gets the text and tooltip(a reduced version of the specs description) based on the result's kind
+     * @param kind the results kind
      */
-    private severityTextAndTooltip(severity: sarif.Result.level) {
-        const value = { text: severity || "", tooltip: "" };
-        switch (severity) {
-            case "error":
-                value.tooltip = "The rule was evaluated, and a serious problem was found.";
-                break;
-            case "warning":
-                value.tooltip = "The rule was evaluated, and a problem was found.";
-                break;
-            case "open":
-                value.tooltip = "The rule was evaluated, and the tool concluded that there was " +
-                    "insufficient information to decide whether a problem exists.";
-                break;
-            case "note":
-                value.tooltip = "A purely informational log entry";
-                break;
-            case "notApplicable":
-                value.text = "not applicable";
-                value.tooltip = "The rule was not evaluated, because it does not apply to the analysis target.";
-                break;
-            case "pass":
-                value.tooltip = "The rule was evaluated, and no problem was found.";
-                break;
-        }
-
+    private kindTextAndTooltip(kind: sarif.Result.kind) {
+        const value = { text: kind || "", tooltip: SeverityTooltip[kind] || "" };
         return value;
     }
 
@@ -999,19 +986,16 @@ class ExplorerWebview {
      * @param baselineState the results severity level
      */
     private baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState) {
-        const value = { text: baselineState || "", tooltip: "" };
-        switch (baselineState) {
-            case "new":
-                value.tooltip = "This result was detected in the current run but was not detected in the baseline run.";
-                break;
-            case "existing":
-                value.tooltip = "This result was detected both in the current run and in the baseline run.";
-                break;
-            case "absent":
-                value.tooltip = "This result was detected in the baseline run but was not detected in the current run.";
-                break;
-        }
+        const value = { text: baselineState || "", tooltip: BaselineStateTooltip[baselineState] || "" };
+        return value;
+    }
 
+    /**
+     * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
+     * @param severity the results severity level
+     */
+    private severityTextAndTooltip(severity: sarif.Result.level) {
+        const value = { text: severity || "", tooltip: SeverityTooltip[severity] || "" };
         return value;
     }
 

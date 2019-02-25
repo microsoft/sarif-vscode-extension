@@ -162,11 +162,11 @@ export class FileMapper {
      * @param files array of sarif.Files that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: sarif.File[], runId: number) {
+    public async mapFiles(files: sarif.Artifact[], runId: number) {
         this.userCanceledMapping = false;
         for (const file in files) {
             if (files.hasOwnProperty(file)) {
-                const fileLocation = files[file].fileLocation;
+                const fileLocation = files[file].location;
 
                 const uriBase = Utilities.getUriBase(fileLocation, runId);
                 const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
@@ -208,7 +208,7 @@ export class FileMapper {
      * @param fileUri file Uri that needs to be mapped
      * @param file file object that contains the hash and embedded content
      */
-    private mapEmbeddedContent(fileUri: Uri, file: sarif.File): void {
+    private mapEmbeddedContent(fileUri: Uri, file: sarif.Artifact): void {
         const hashValue = this.getHashValue(file.hashes);
         const fileUriPath = Utilities.getFsPathWithFragment(fileUri);
         const tempPath = Utilities.generateTempPath(fileUriPath, hashValue);

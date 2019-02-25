@@ -229,19 +229,19 @@ suite("getUirBase", () => {
     });
 
     test("Undefined uribaseid", () => {
-        const sarifLocation = { uri: "file:///c:/folder/file.ext" } as sarif.FileLocation;
+        const sarifLocation = { uri: "file:///c:/folder/file.ext" } as sarif.ArtifactLocation;
         const base = Utilities.getUriBase(sarifLocation, runIdTest);
         assert.equal(base, undefined);
     });
 
     test("UriBase match", () => {
-        const sarifLocation = { uri: "/file.ext", uriBaseId: "test2" } as sarif.FileLocation;
+        const sarifLocation = { uri: "/file.ext", uriBaseId: "test2" } as sarif.ArtifactLocation;
         const base = Utilities.getUriBase(sarifLocation, runIdTest);
         assert.equal(base, "file:///c:/folder2");
     });
 
     test("No matching uribaseid", () => {
-        const sarifLocation = { uri: "/file.ext", uriBaseId: "noTest" } as sarif.FileLocation;
+        const sarifLocation = { uri: "/file.ext", uriBaseId: "noTest" } as sarif.ArtifactLocation;
         const base = Utilities.getUriBase(sarifLocation, runIdTest);
         assert.equal(base, "noTest");
     });
@@ -249,10 +249,10 @@ suite("getUirBase", () => {
 
 suite("expandBaseIds", () => {
     const originalUriBaseIds = {
-        file: { uri: "file.ext", uriBaseId: "folder"},
+        file: { uri: "file.ext", uriBaseId: "folder" },
         folder: { uri: "folder", uriBaseId: "root" },
-        root: {uri: "file:///c:/"},
-    } as { [key: string]: sarif.FileLocation };
+        root: { uri: "file:///c:/" },
+    } as { [key: string]: sarif.ArtifactLocation };
 
     test("Undefined originalUriBaseIds", () => {
         const expandedBaseIds = Utilities.expandBaseIds(undefined);

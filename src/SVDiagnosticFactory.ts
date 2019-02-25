@@ -82,13 +82,10 @@ export class SVDiagnosticFactory {
         switch (level) {
             case "error":
                 return DiagnosticSeverity.Error;
-            case "warning":
-            case "open":
-                return DiagnosticSeverity.Warning;
+            case "none":
             case "note":
-            case "notApplicable":
-            case "pass":
                 return DiagnosticSeverity.Information;
+            case "warning":
             default:
                 return DiagnosticSeverity.Warning;
         }

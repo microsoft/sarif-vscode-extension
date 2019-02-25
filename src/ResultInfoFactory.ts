@@ -18,9 +18,9 @@ export class ResultInfoFactory {
      * Processes the result passed in and creates a new ResultInfo object with the information processed
      * @param result sarif result object to be processed
      * @param runId id of the run this result is from
-     * @param resouces resources object that is used for the rules
+     * @param tool tool object that is used for the rules
      */
-    public static async create(result: sarif.Result, runId: number, resources: sarif.Resources): Promise<ResultInfo> {
+    public static async create(result: sarif.Result, runId: number, tool: sarif.Tool): Promise<ResultInfo> {
         const resultInfo = {} as ResultInfo;
 
         resultInfo.runId = runId;
@@ -60,9 +60,10 @@ export class ResultInfoFactory {
 
         // Parse the rule related info
         let ruleMessageString: string;
-        if (ruleKey !== undefined) {
-            if (resources !== undefined && resources.rules !== undefined && resources.rules[ruleKey] !== undefined) {
-                const rule: sarif.Rule = resources.rules[ruleKey];
+        if (ruleKey !== undefined && tool !== undefined) {
+            const ruleDescriptors = tool.driver.ruleDescriptors;
+            if (ruleDescriptors !== undefined && ruleDescriptors[ruleKey] !== undefined) {
+                const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleKey];
 
                 if (rule.id !== undefined) {
                     resultInfo.ruleId = rule.id;
@@ -76,8 +77,9 @@ export class ResultInfoFactory {
                     resultInfo.ruleName = Utilities.parseSarifMessage(rule.name).text;
                 }
 
-                if (rule.configuration !== undefined && rule.configuration.defaultLevel !== undefined) {
-                    resultInfo.severityLevel = ResultInfoFactory.defaultLvlConverter(rule.configuration.defaultLevel);
+                if (rule.defaultConfiguration !== undefined) {
+                    resultInfo.severityLevel = rule.defaultConfiguration.level;
+                    resultInfo.rank = rule.defaultConfiguration.rank;
                 }
 
                 resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
@@ -86,7 +88,7 @@ export class ResultInfoFactory {
                 if (result.message !== undefined && rule.messageStrings !== undefined) {
                     const resultMsgId = result.message.messageId;
                     if (resultMsgId !== undefined && rule.messageStrings[resultMsgId] !== undefined) {
-                        ruleMessageString = rule.messageStrings[resultMsgId];
+                        ruleMessageString = rule.messageStrings[resultMsgId].text;
                     }
                 }
             }
@@ -94,6 +96,8 @@ export class ResultInfoFactory {
 
         resultInfo.baselineState = result.baselineState;
         resultInfo.severityLevel = result.level || resultInfo.severityLevel || "warning";
+        resultInfo.kind = result.kind || resultInfo.kind || "fail";
+        resultInfo.rank = result.rank || resultInfo.rank;
 
         if (result.message === undefined) {
             result.message = {};
@@ -143,7 +147,7 @@ export class ResultInfoFactory {
             for (const sarifAttachment of sarifAttachments) {
                 const attachment = {} as Attachment;
                 attachment.description = Utilities.parseSarifMessage(sarifAttachment.description);
-                await LocationFactory.create({ fileLocation: sarifAttachment.fileLocation }, runId).then(
+                await LocationFactory.create({ artifactLocation: sarifAttachment.artifactLocation }, runId).then(
                     (loc: Location) => {
                         attachment.file = loc;
                     });
@@ -152,7 +156,7 @@ export class ResultInfoFactory {
                     attachment.regionsOfInterest = [];
                     for (const sarifRegion of sarifAttachment.regions) {
                         const physicalLocation = {
-                            fileLocation: sarifAttachment.fileLocation,
+                            artifactLocation: sarifAttachment.artifactLocation,
                             region: sarifRegion,
                         } as sarif.PhysicalLocation;
 
@@ -180,18 +184,18 @@ export class ResultInfoFactory {
             for (const sarifFix of sarifFixes) {
                 const fix = {} as Fix;
                 fix.description = Utilities.parseSarifMessage(sarifFix.description);
-                if (sarifFix.fileChanges !== undefined) {
+                if (sarifFix.changes !== undefined) {
                     fix.files = [];
-                    for (const sarifFileChange of sarifFix.fileChanges) {
+                    for (const sarifChange of sarifFix.changes) {
                         const fixFile = {} as FixFile;
-                        await LocationFactory.create({ fileLocation: sarifFileChange.fileLocation }, runId).then(
+                        await LocationFactory.create({ artifactLocation: sarifChange.artifactLocation }, runId).then(
                             (loc: Location) => {
                                 fixFile.location = loc;
                             });
 
-                        if (sarifFileChange.replacements !== undefined) {
+                        if (sarifChange.replacements !== undefined) {
                             fixFile.changes = [];
-                            for (const sarifReplacement of sarifFileChange.replacements) {
+                            for (const sarifReplacement of sarifChange.replacements) {
                                 const fixChange = {} as FixChange;
                                 if (sarifReplacement.insertedContent !== undefined) {
                                     fixChange.insert = sarifReplacement.insertedContent.text;
@@ -208,20 +212,5 @@ export class ResultInfoFactory {
         }
 
         return fixes;
-    }
-
-    /**
-     * Converts the rule default Level to sarif Level
-     * @param defaultLevel default level to convert
-     */
-    private static defaultLvlConverter(defaultLevel: sarif.RuleConfiguration.defaultLevel): sarif.Result.level {
-        switch (defaultLevel) {
-            case "error":
-            case "warning":
-            case "note":
-                return defaultLevel;
-            default:
-                return "warning";
-        }
     }
 }

@@ -104,7 +104,7 @@ export class CodeFlowDecorations {
         const svDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
         const location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
         const sarifPhysicalLocation = {
-            fileLocation: svDiagnostic.rawResult.attachments[attachmentId].fileLocation,
+            artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
             region: svDiagnostic.rawResult.attachments[attachmentId].regions[regionId],
         } as sarif.PhysicalLocation;
         const sarifLocation = { physicalLocation: sarifPhysicalLocation } as sarif.Location;
