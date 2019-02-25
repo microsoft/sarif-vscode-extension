@@ -47,6 +47,7 @@
                 "sarif-viewer.resultsListHideColumns": {
                     "default": [
                         "baselineState",
+                        "rank",
                         "runId",
                         "sarifFile"
                     ],

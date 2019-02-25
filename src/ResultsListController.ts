@@ -455,9 +455,7 @@ export class ResultsListController {
                 description: "The state of a result relative to a baseline of a previous run.",
                 hide: false, title: "Baseline",
             } as ResultsListColumn,
-            kind: { description: "Kind", hide: false, title: "Kind" } as ResultsListColumn,
             message: { description: "Result message", hide: false, title: "Message" } as ResultsListColumn,
-            rank: { description: "Rank", hide: false, title: "Rank" } as ResultsListColumn,
             resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
             resultStartPos: {
                 description: "Results position in the file", hide: false, title: "Position",
@@ -471,6 +469,9 @@ export class ResultsListController {
                 description: "Sarif file the result data is from", hide: false, title: "Sarif File",
             } as ResultsListColumn,
             severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
+
+            kind: { description: "Kind", hide: false, title: "Kind" } as ResultsListColumn,
+            rank: { description: "Rank", hide: false, title: "Rank" } as ResultsListColumn,
             tool: {
                 description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
             } as ResultsListColumn,

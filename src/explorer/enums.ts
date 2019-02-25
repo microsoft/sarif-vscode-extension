@@ -57,7 +57,7 @@ enum KindTooltip {
     none = "Kind does not apply to the analysis target.",
     notApplicable = "The rule was not evaluated, because it does not apply to the analysis target.",
     pass = "The rule was evaluated, and no problem was found.",
-    fail = "The result represents a problem whose severity is specified by the level property.",
+    fail = "The result represents a problem whose severity is specified by the Severity Level property.",
     review = "The result requires review by a human user to decide if it represents a problem.",
     open = "The rule was evaluated," +
     "and the tool concluded that there was insufficient information to decide whether a problem exists",
