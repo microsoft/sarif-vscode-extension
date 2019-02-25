@@ -101,7 +101,7 @@ export class Utilities {
      * expands out all of the nested based ids to get a flat dictionary of base ids
      * @param baseIds all of the base ids that need to be expanded out
      */
-    public static expandBaseIds(baseIds: { [key: string]: sarif.FileLocation }): { [key: string]: string } {
+    public static expandBaseIds(baseIds: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } {
         if (baseIds === undefined) {
             return undefined;
         }
@@ -164,7 +164,7 @@ export class Utilities {
      * @param fileLocation File Location which contains the uriBaseId
      * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(fileLocation: sarif.FileLocation, runId: number): string {
+    public static getUriBase(fileLocation: sarif.ArtifactLocation, runId: number): string {
         let uriBase: string;
         if (fileLocation !== undefined && fileLocation.uriBaseId !== undefined) {
             const runUriBaseIds = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
@@ -279,7 +279,7 @@ export class Utilities {
      * @param id baseId that needs to be expanded
      * @param baseIds all the base ids
      */
-    private static expandBaseId(id: string, baseIds: { [key: string]: sarif.FileLocation }): string {
+    private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
         let base = "";
         if (baseIds[id].uriBaseId !== undefined) {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);

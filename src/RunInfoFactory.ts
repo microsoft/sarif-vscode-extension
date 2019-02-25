@@ -19,11 +19,11 @@ export class RunInfoFactory {
      */
     public static Create(run: sarif.Run, sarifFileName: string): RunInfo {
         const runInfo = {} as RunInfo;
-        const tool = run.tool;
+        const tool = run.tool.driver;
         runInfo.toolName = tool.name;
         if (runInfo.toolFullName !== undefined) {
             runInfo.toolFullName = tool.fullName;
-        } else if (run.tool.semanticVersion !== undefined) {
+        } else if (tool.semanticVersion !== undefined) {
             runInfo.toolFullName = `${tool.name} ${tool.semanticVersion}`;
         } else {
             runInfo.toolFullName = tool.name;

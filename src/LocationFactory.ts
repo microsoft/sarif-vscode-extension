@@ -29,10 +29,10 @@ export class LocationFactory {
             uri: null,
         } as Location;
 
-        if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
+        if (sarifLocation !== undefined && sarifLocation.artifactLocation !== undefined) {
             location.id = sarifLocation.id;
-            const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
-            location.uriBase = Utilities.getUriBase(sarifLocation.fileLocation, runId);
+            const fileUri = Uri.parse(sarifLocation.artifactLocation.uri);
+            location.uriBase = Utilities.getUriBase(sarifLocation.artifactLocation, runId);
 
             await FileMapper.Instance.get(fileUri, location.uriBase).then((uri: Uri) => {
                 if (uri !== null) {
@@ -70,7 +70,7 @@ export class LocationFactory {
         if (location === undefined || !location.mapped) {
             if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
                 const physLoc = sarifLocation.physicalLocation;
-                const uri = Utilities.combineUriWithUriBase(physLoc.fileLocation.uri, location.uriBase);
+                const uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
                 await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
                     return LocationFactory.create(physLoc, runId);
                 }).then((remappedLocation) => {

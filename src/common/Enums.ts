@@ -23,10 +23,24 @@ export enum MessageType {
 }
 
 export const enum SeverityLevelOrder {
-    error = 0,
-    warning = 1,
-    open = 2,
-    pass = 3,
-    notApplicable = 4,
-    note = 5,
+    error,
+    warning,
+    note,
+    none,
+}
+
+export const enum KindOrder {
+    none,
+    notApplicable,
+    pass,
+    fail,
+    review,
+    open,
+}
+
+export const enum BaselineOrder {
+    new,
+    updated,
+    unchanged,
+    absent,
 }

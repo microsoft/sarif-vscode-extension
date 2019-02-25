@@ -147,7 +147,7 @@ export class LogReader {
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                     log = docMapping.data;
 
-                    if (log.version !== "2.0.0-csd.2.beta.2019-01-09") {
+                    if (log.version !== "2.0.0-csd.2.beta.2019-01-24") {
                         FileConverter.upgradeSarif(log.version, doc);
                         return;
                     }
@@ -158,10 +158,10 @@ export class LogReader {
                         const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
 
                         await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                        await FileMapper.Instance.mapFiles(run.files, runId);
+                        await FileMapper.Instance.mapFiles(run.artifacts, runId);
 
                         await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
-                        await this.readResults(run.results, run.resources, runId, doc.uri, runIndex);
+                        await this.readResults(run.results, run.tool, runId, doc.uri, runIndex);
                     }
 
                     if (sync) {
@@ -177,13 +177,13 @@ export class LogReader {
     /**
      * Reads the results from the run, adding a diagnostic for each result
      * @param results Array of results from the run
-     * @param resources Resources from the run
+     * @param tool Tool from the run
      * @param runId Id of the processed run
      * @param docUri Uri of the sarif file
      * @param runIndex Index of the run in the sarif file
      */
     private async readResults(
-        results: sarif.Result[], resources: sarif.Resources, runId: number, docUri: Uri, runIndex: number,
+        results: sarif.Result[], tool: sarif.Tool, runId: number, docUri: Uri, runIndex: number,
     ) {
         const showIncrement = results.length > 1000;
         let percent = 0;
@@ -201,7 +201,7 @@ export class LogReader {
                 await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
             }
             const sarifResult = results[resultIndex];
-            await ResultInfoFactory.create(sarifResult, runId, resources).then((resultInfo: ResultInfo) => {
+            await ResultInfoFactory.create(sarifResult, runId, tool).then((resultInfo: ResultInfo) => {
                 resultInfo.id = resultIndex;
                 resultInfo.locationInSarifFile = LocationFactory.mapToSarifFileResult(docUri, runIndex, resultIndex);
                 if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {

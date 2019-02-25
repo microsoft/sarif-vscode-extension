@@ -5,8 +5,8 @@
 // ********************************************************/
 /// <reference path="./enums.ts" />
 import {
-    ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSeverityValue,
-    ResultsListValue, WebviewMessage,
+    ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListKindValue, ResultsListRow,
+    ResultsListSeverityValue, ResultsListValue, WebviewMessage,
 } from "../common/Interfaces";
 
 /**
@@ -224,16 +224,14 @@ class ResultsList {
                 </svg>`;
                 break;
             case "warning":
-            case "open":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
                 <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
                 <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
                 </svg>`;
                 break;
-            case "notApplicable":
             case "note":
-            case "pass":
+            case "none":
                 svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
                 <path d="M8.5 3C6 3 4 5 4 7.5S6 12 8.5 12 13 10 13 7.5 11 3 8.5 3Zm0.5 8H8V6h1v5Zm0-6H8V4h1v1Z"
@@ -407,6 +405,8 @@ class ResultsList {
                         textAndTooltip = this.webview.severityTextAndTooltip(colData.value);
                     } else if ((colData as ResultsListBaselineValue).isBaseLine && colData.value !== undefined) {
                         textAndTooltip = this.webview.baselineStateTextAndTooltip(colData.value);
+                    } else if ((colData as ResultsListKindValue).isKind && colData.value !== undefined) {
+                        textAndTooltip = this.webview.kindTextAndTooltip(colData.value);
                     }
                 }
 

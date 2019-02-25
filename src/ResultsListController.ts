@@ -7,10 +7,11 @@ import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
     WorkspaceConfiguration,
 } from "vscode";
-import { MessageType, SeverityLevelOrder } from "./common/Enums";
+import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
 import {
-    ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListPositionValue, ResultsListRow,
-    ResultsListSeverityValue, ResultsListSortBy, ResultsListValue, SarifViewerDiagnostic, WebviewMessage,
+    ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
+    ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue, SarifViewerDiagnostic,
+    WebviewMessage,
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
@@ -255,7 +256,6 @@ export class ResultsListController {
      */
     private createResultsListRow(resultInfo: ResultInfo): ResultsListRow {
         const row = {} as ResultsListRow;
-        row.baselineState = { isBaseLine: true, value: resultInfo.baselineState };
         row.message = { value: resultInfo.message.text };
         row.resultId = { value: resultInfo.id };
         row.ruleId = { value: resultInfo.ruleId };
@@ -266,16 +266,34 @@ export class ResultsListController {
         row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
         row.tool = { value: run.toolName, tooltip: run.toolFullName };
 
+        let baselineOrder: BaselineOrder;
+        switch (resultInfo.baselineState) {
+            case "absent": baselineOrder = BaselineOrder.absent; break;
+            case "new": baselineOrder = BaselineOrder.new; break;
+            case "unchanged": baselineOrder = BaselineOrder.unchanged; break;
+            case "updated": baselineOrder = BaselineOrder.updated; break;
+        }
+        row.baselineState = { order: baselineOrder, isBaseLine: true, value: resultInfo.baselineState };
+
+        let kindOrder: KindOrder;
+        switch (resultInfo.kind) {
+            case "fail": kindOrder = KindOrder.fail; break;
+            case "none": kindOrder = KindOrder.none; break;
+            case "notApplicable": kindOrder = KindOrder.notApplicable; break;
+            case "open": kindOrder = KindOrder.open; break;
+            case "pass": kindOrder = KindOrder.pass; break;
+            case "review": kindOrder = KindOrder.review; break;
+        }
+        row.kind = { isKind: true, order: kindOrder, value: resultInfo.kind };
+
         let sevOrder: SeverityLevelOrder;
         switch (resultInfo.severityLevel) {
             case "error": sevOrder = SeverityLevelOrder.error; break;
             case "warning": sevOrder = SeverityLevelOrder.warning; break;
-            case "open": sevOrder = SeverityLevelOrder.open; break;
-            case "pass": sevOrder = SeverityLevelOrder.pass; break;
-            case "notApplicable": sevOrder = SeverityLevelOrder.notApplicable; break;
+            case "none": sevOrder = SeverityLevelOrder.none; break;
             case "note": sevOrder = SeverityLevelOrder.note; break;
         }
-        row.severityLevel = { isSeverity: true, severityLevelOrder: sevOrder, value: resultInfo.severityLevel };
+        row.severityLevel = { isSeverity: true, order: sevOrder, value: resultInfo.severityLevel };
 
         if (resultInfo.locations[0] !== undefined) {
             row.resultFile = { value: resultInfo.locations[0].fileName, tooltip: resultInfo.locations[0].uri.fsPath };
@@ -318,6 +336,7 @@ export class ResultsListController {
             regExp.test(row.ruleId.value) ||
             regExp.test(row.ruleName.value) ||
             regExp.test(row.severityLevel.value) ||
+            regExp.test(row.kind.value) ||
             regExp.test(row.resultFile.value) ||
             regExp.test(row.sarifFile.value) ||
             regExp.test(row.tool.value)) {
@@ -411,9 +430,9 @@ export class ResultsListController {
                     if (comp === 0) {
                         comp = posA.character - posB.character;
                     }
-                } else if ((valueA as ResultsListSeverityValue).isSeverity) {
-                    comp = (valueA as ResultsListSeverityValue).severityLevelOrder -
-                        (valueB as ResultsListSeverityValue).severityLevelOrder;
+                } else if ((valueA as ResultsListCustomOrderValue).order !== undefined) {
+                    comp = (valueA as ResultsListCustomOrderValue).order -
+                        (valueB as ResultsListCustomOrderValue).order;
                 } else if (typeof valueA.value === "number") {
                     comp = valueA.value - valueB.value;
                 } else {
@@ -450,6 +469,9 @@ export class ResultsListController {
                 description: "Sarif file the result data is from", hide: false, title: "Sarif File",
             } as ResultsListColumn,
             severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
+
+            kind: { description: "Kind", hide: false, title: "Kind" } as ResultsListColumn,
+            rank: { description: "Rank", hide: false, title: "Rank" } as ResultsListColumn,
             tool: {
                 description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
             } as ResultsListColumn,
