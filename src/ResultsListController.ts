@@ -470,8 +470,13 @@ export class ResultsListController {
             } as ResultsListColumn,
             severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
 
-            kind: { description: "Kind", hide: false, title: "Kind" } as ResultsListColumn,
-            rank: { description: "Rank", hide: false, title: "Rank" } as ResultsListColumn,
+            // Space above is needed to keep the order without tslint complaining
+            kind: {
+                description: "Specifies the nature of the result", hide: false, title: "Kind",
+            } as ResultsListColumn,
+            rank: {
+                description: "Value representing the priority or importance of the result", hide: false, title: "Rank",
+            } as ResultsListColumn,
             tool: {
                 description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
             } as ResultsListColumn,
