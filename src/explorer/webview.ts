@@ -531,7 +531,12 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
+        let ruleDescription = resultInfo.ruleName;
+        if (resultInfo.ruleDescription !== undefined) {
+            ruleDescription = resultInfo.ruleDescription.text;
+        }
+        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, ruleDescription, ruleDescription));
+
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
