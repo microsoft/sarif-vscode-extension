@@ -174,22 +174,24 @@ export class FileMapper {
      */
     public async mapFiles(files: sarif.Artifact[], runId: number) {
         this.userCanceledMapping = false;
-        for (const fileIndex of files.keys()) {
-            const file = files[fileIndex];
-            const fileLocation = file.location;
+        if (files !== undefined) {
+            for (const fileIndex of files.keys()) {
+                const file = files[fileIndex];
+                const fileLocation = file.location;
 
-            const uriBase = Utilities.getUriBase(fileLocation, runId);
-            const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
+                const uriBase = Utilities.getUriBase(fileLocation, runId);
+                const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
-            const key = Utilities.getFsPathWithFragment(uriWithBase);
-            if (file.contents !== undefined) {
-                this.mapEmbeddedContent(key, file);
-            } else {
-                await this.map(uriWithBase, uriBase);
+                const key = Utilities.getFsPathWithFragment(uriWithBase);
+                if (file.contents !== undefined) {
+                    this.mapEmbeddedContent(key, file);
+                } else {
+                    await this.map(uriWithBase, uriBase);
+                }
+
+                const index = `${runId}_${fileIndex}`;
+                this.fileIndexKeyMapping.set(index, key);
             }
-
-            const index = `${runId}_${fileIndex}`;
-            this.fileIndexKeyMapping.set(index, key);
         }
     }
 
