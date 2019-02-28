@@ -59,6 +59,8 @@ export interface RunInfo {
     id: number;
     sarifFileFullPath: string;
     sarifFileName: string;
+    startUtc: string;
+    timeDuration: string;
     toolFileName: string;
     toolFullName: string;
     toolName: string;

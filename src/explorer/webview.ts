@@ -606,6 +606,13 @@ class ExplorerWebview {
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
         }
 
+        if (runInfo.startUtc !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Start Time:", new Date(runInfo.startUtc).toUTCString()));
+        }
+        if (runInfo.timeDuration !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Duration:", runInfo.timeDuration));
+        }
+
         // The last item in the list should be properties if they exist
         if (runInfo.additionalProperties !== undefined) {
             tableEle.appendChild(this.createPropertiesRow(runInfo.additionalProperties));

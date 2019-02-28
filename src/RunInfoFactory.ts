@@ -39,6 +39,9 @@ export class RunInfoFactory {
             if (invocation.workingDirectory !== undefined) {
                 runInfo.workingDir = invocation.workingDirectory.uri;
             }
+
+            runInfo.startUtc = invocation.startTimeUtc;
+            runInfo.timeDuration = Utilities.calcDuration(invocation.startTimeUtc, invocation.endTimeUtc);
         }
 
         runInfo.additionalProperties = run.properties;
@@ -46,6 +49,7 @@ export class RunInfoFactory {
 
         runInfo.sarifFileFullPath = sarifFileName;
         runInfo.sarifFileName = Utilities.Path.basename(sarifFileName);
+
         return runInfo;
     }
 }
