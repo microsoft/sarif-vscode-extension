@@ -269,3 +269,52 @@ suite("expandBaseIds", () => {
         });
     });
 });
+
+suite("calcDuration", () => {
+    const startTime = "2016-07-16T14:18:25.000Z";
+    test("Undefined times", () => {
+        let duration = Utilities.calcDuration(undefined, undefined);
+        assert.equal(duration, undefined);
+
+        duration = Utilities.calcDuration(startTime, undefined);
+        assert.equal(duration, undefined);
+
+        duration = Utilities.calcDuration(undefined, startTime);
+        assert.equal(duration, undefined);
+    });
+
+    test("Full Singular", () => {
+        const duration = Utilities.calcDuration(startTime, "2016-07-16T15:19:26.001Z");
+        assert.equal(duration, "1 hr 1 min 1 sec 1 ms");
+    });
+
+    test("Full Plural", () => {
+        const duration = Utilities.calcDuration(startTime, "2016-07-16T16:21:27.004Z");
+        assert.equal(duration, "2 hrs 3 mins 2 secs 4 ms");
+    });
+
+    test("Partial Durations", () => {
+        let duration = Utilities.calcDuration(startTime, "2016-07-16T15:21:27.000Z");
+        assert.equal(duration, "1 hr 3 mins 2 secs");
+
+        duration = Utilities.calcDuration(startTime, "2016-07-16T14:21:27.000Z");
+        assert.equal(duration, "3 mins 2 secs");
+
+        duration = Utilities.calcDuration(startTime, "2016-07-16T14:18:27.000Z");
+        assert.equal(duration, "2 secs");
+
+        duration = Utilities.calcDuration(startTime, "2016-07-16T14:18:25.001Z");
+        assert.equal(duration, "1 ms");
+
+        duration = Utilities.calcDuration(startTime, "2016-07-16T16:18:25.000Z");
+        assert.equal(duration, "2 hrs");
+
+        duration = Utilities.calcDuration(startTime, "2016-07-16T14:19:25.000Z");
+        assert.equal(duration, "1 min");
+    });
+
+    test("Same Time", () => {
+        const duration = Utilities.calcDuration(startTime, startTime);
+        assert.equal(duration, "0 ms");
+    });
+});
