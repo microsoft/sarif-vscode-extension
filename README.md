@@ -1,19 +1,30 @@
 # Sarif Viewer
 
-Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results in the Problems panel and result details in the Sarif Explorer.
+Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code. Supports up to Sarif version '2.0.0-csd.2.beta.2019-01-24'
 
 ## **Features**
- * Lists the results of open SARIF files in the Problems Panel
+ * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)
  * Navigation to the source location of the result
  * Sarif Explorer shows details about the result:
     * Result info
     * Run info
     * Code flow steps
     * Attachments
-    * **_new_** Fixes
+    * Fixes
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
  * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
+
+### Code integration
+ * Highlighting of the result location
+ * Tooltips showing the message
+ * Gutter icons to help identify the location of the result
+ * Codeflow step regions are highlighted and labeled inline
+ * Icons visualizing codeflow step level changes
+    * ![Icons](/resources/readmeImages/CallReturnIcon.PNG?raw=true) Call with a Return
+    * ![Icons](/resources/readmeImages/ReturnCallIcon.PNG?raw=true) Return from a Call
+    * ![Icons](/resources/readmeImages/CallNoReturnIcon.PNG?raw=true) Call with no Return
+    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.PNG?raw=true) Return with no Call
 
 ### Convert Non-Sarif File
  * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog update 2.5.0 for list of supported tools
@@ -29,13 +40,13 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
     * Not update, you can view the original file but the results will not be loaded
 
 ### Sarif Explorer
- * Automatically launches when the first result is navigated to
- * Updates with the details of the selected result in Problems panel
+ * Automatically launches when the first Sarif file is opened
+ * Updates the Result Details Panel with the currently selected result in the Results List, Problems Panel, or in source code
  * Manually open it by typing "Sarif: Launch the Sarif Explorer" in the Command Palette(F1) or using the hotkey (Ctrl+L then Ctrl+E)
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Tool
+ * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, **new** Kind, **new** Rank, Tool
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
@@ -63,4 +74,4 @@ Visualizes the results contained in a 'Static Analysis Results Interchange Forma
  * Check here for known [issues](https://github.com/Microsoft/sarif-vscode-extension/issues)
 
 ## Feedback
-Please post any feedback or issues you would like to report here: https://github.com/Microsoft/sarif-vscode-extension/issues
+Please post any feedback, suggestions or issues you have on the github repo issues page: https://github.com/Microsoft/sarif-vscode-extension/issues

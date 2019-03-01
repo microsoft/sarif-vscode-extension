@@ -1,5 +1,15 @@
 # Change Log
 
+## 2.10.0
+* Updated the supported sarif version '2.0.0-csd.2.beta.2019-01-24' [issue #139](https://github.com/Microsoft/sarif-vscode-extension/issues/139)
+* Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-01-24' [issue #139](https://github.com/Microsoft/sarif-vscode-extension/issues/139)
+* Added Start time and Duration to the Run Info tab in Result Details Panel [issue #145](https://github.com/Microsoft/sarif-vscode-extension/issues/145)
+* Added the Rule Description to the right column of Rule Id in Result Info tab in Result Details Panel [issue #144](https://github.com/Microsoft/sarif-vscode-extension/issues/144)
+* Added a link pointing to the result's Sarif file location, to the Result Info tab in Result Details Panel [issue #14](https://github.com/Microsoft/sarif-vscode-extension/issues/14)
+* Added Kind and Rank to the Results List Panel and Result Info tab in Result Details Panel [issue #139](https://github.com/Microsoft/sarif-vscode-extension/issues/139)
+* Launch the Sarif Explorer on load, removed launching the Problems Panel [issue #135](https://github.com/Microsoft/sarif-vscode-extension/issues/135)
+* Added Sample sarif files to the repo that match the currently supported sarif version [issue #138](https://github.com/Microsoft/sarif-vscode-extension/issues/138)
+
 ## 2.9.0
 * Updated the supported sarif version '2.0.0-csd.2.beta.2019-01-09' [issue #129](https://github.com/Microsoft/sarif-vscode-extension/issues/129)
 * Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-01-09' [issue #129](https://github.com/Microsoft/sarif-vscode-extension/issues/129)
