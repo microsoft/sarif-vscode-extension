@@ -53,6 +53,53 @@ export class Utilities {
     }
 
     /**
+     * Calculates the duration between the start and end times
+     * @param start string representing the start time in utc format
+     * @param end string representing the end time in utc format
+     */
+    public static calcDuration(start: string, end: string): string {
+        let duration = "";
+        if (start !== undefined && end !== undefined) {
+            const diff = new Date(end).getTime() - new Date(start).getTime();
+            if (diff > 0) {
+                const msDiff = diff % 1000;
+                const sDiff = Math.floor((diff / 1000) % 60);
+                const mDiff = Math.floor((diff / 60000) % 60);
+                const hDiff = Math.floor(diff / 3600000);
+
+                if (hDiff > 0) {
+                    const label = (hDiff === 1) ? "hr" : "hrs";
+                    duration = `${hDiff} ${label}`;
+                }
+
+                if (mDiff > 0) {
+                    const label = (mDiff === 1) ? "min" : "mins";
+                    duration = `${duration} ${mDiff} ${label}`;
+                }
+
+                if (sDiff > 0) {
+                    const label = (sDiff === 1) ? "sec" : "secs";
+                    duration = `${duration} ${sDiff} ${label}`;
+                }
+
+                if (msDiff > 0) {
+                    duration = `${duration} ${msDiff} ms`;
+                }
+
+                duration = duration.trim();
+
+            } else {
+                duration = `0 ms`;
+            }
+
+        } else {
+            duration = undefined;
+        }
+
+        return duration;
+    }
+
+    /**
      * Combines and returns the uri with it's uriBase, if uriBase is undefined just returns the original uri
      * @param uriPath uri path from sarif file to combine with the base
      * @param uriBase the uriBase as defined in the sarif file
@@ -101,7 +148,7 @@ export class Utilities {
      * expands out all of the nested based ids to get a flat dictionary of base ids
      * @param baseIds all of the base ids that need to be expanded out
      */
-    public static expandBaseIds(baseIds: { [key: string]: sarif.FileLocation }): { [key: string]: string } {
+    public static expandBaseIds(baseIds: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } {
         if (baseIds === undefined) {
             return undefined;
         }
@@ -164,7 +211,7 @@ export class Utilities {
      * @param fileLocation File Location which contains the uriBaseId
      * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(fileLocation: sarif.FileLocation, runId: number): string {
+    public static getUriBase(fileLocation: sarif.ArtifactLocation, runId: number): string {
         let uriBase: string;
         if (fileLocation !== undefined && fileLocation.uriBaseId !== undefined) {
             const runUriBaseIds = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
@@ -279,7 +326,7 @@ export class Utilities {
      * @param id baseId that needs to be expanded
      * @param baseIds all the base ids
      */
-    private static expandBaseId(id: string, baseIds: { [key: string]: sarif.FileLocation }): string {
+    private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
         let base = "";
         if (baseIds[id].uriBaseId !== undefined) {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);

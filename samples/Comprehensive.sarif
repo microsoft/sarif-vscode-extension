@@ -1,0 +1,486 @@
+{
+  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2019-01-24",
+  "version": "2.0.0-csd.2.beta.2019-01-24",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeScanner",
+          "fullName": "CodeScanner 1.1 for Unix (en-US)",
+          "version": "2.1",
+          "semanticVersion": "2.1.0",
+          "dottedQuadFileVersion": "2.1.0.0",
+          "ruleDescriptors": [
+            {
+              "id": "C2001",
+              "deprecatedIds": [
+                "C0001",
+                "C1001"
+              ],
+              "shortDescription": {
+                "text": "A variable was used without being initialized."
+              },
+              "fullDescription": {
+                "text": "A variable was used without being initialized. This can result in runtime errors such as null reference exceptions."
+              },
+              "messageStrings": {
+                "default": {
+                  "text": "Variable \"{0}\" was used without being initialized."
+                }
+              }
+            }
+          ],
+          "properties": {
+            "copyright": "Copyright (c) 2016 by Example Corporation. All rights reserved."
+          }
+        }
+      },
+      "invocations": [
+        {
+          "commandLine": "CodeScanner.exe @collections.rsp",
+          "responseFiles": [
+            {
+              "uri": "codescanner/config/collections.rsp",
+              "uriBaseId": "TOOLS_ROOT",
+              "index": 3
+            }
+          ],
+          "startTimeUtc": "2016-07-16T14:18:25.000Z",
+          "endTimeUtc": "2016-07-16T14:19:01.000Z",
+          "toolNotifications": [
+            {
+              "id": "CTN0001",
+              "message": {
+                "text": "Run started."
+              },
+              "level": "note"
+            },
+            {
+              "id": "CTN9999",
+              "ruleId": "C2152",
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///home/buildAgent/src/crypto/hash.cpp"
+                }
+              },
+              "message": {
+                "text": "Exception evaluating rule \"C2152\". Rule disabled; run continues."
+              },
+              "level": "error",
+              "threadId": 52,
+              "timeUtc": "2016-07-16T14:18:43.119Z",
+              "exception": {
+                "kind": "ExecutionEngine.RuleFailureException",
+                "message": {
+                  "text": "Unhandled exception during rule evaluation."
+                },
+                "stack": {
+                  "frames": [
+                    {
+                      "location": {
+                        "fullyQualifiedLogicalName": "Rules.SecureHashAlgorithmRule.Evaluate",
+                        "message": {
+                          "text": "Exception thrown"
+                        }
+                      },
+                      "module": "RuleLibrary",
+                      "threadId": 52,
+                      "address": 10092852
+                    },
+                    {
+                      "location": {
+                        "fullyQualifiedLogicalName": "ExecutionEngine.Engine.EvaluateRule"
+                      },
+                      "module": "ExecutionEngine",
+                      "threadId": 52,
+                      "address": 10073356
+                    }
+                  ]
+                },
+                "innerExceptions": [
+                  {
+                    "kind": "System.ArgumentException",
+                    "message": {
+                      "text": "length is < 0"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "CTN0002",
+              "message": {
+                "text": "Run ended."
+              },
+              "level": "note"
+            }
+          ],
+          "configurationNotifications": [
+            {
+              "id": "UnknownRule",
+              "ruleId": "ABC0001",
+              "message": {
+                "text": "Could not disable rule \"ABC0001\" because there is no rule with that id."
+              }
+            }
+          ],
+          "machine": "BLD01",
+          "account": "buildAgent",
+          "processId": 1218,
+          "executableLocation": {
+            "uri": "CodeScanner/CodeScanner.exe",
+            "uriBaseId": "TOOLS_ROOT"
+          },
+          "workingDirectory": {
+            "uri": "CodeScanner/",
+            "uriBaseId": "TOOLS_ROOT"
+          },
+          "environmentVariables": {
+            "PATH": "/usr/local/bin:/bin:/bin/tools:/home/buildAgent/bin",
+            "HOME": "/home/buildAgent",
+            "TZ": "EST"
+          }
+        }
+      ],
+      "conversion": {
+        "tool": {
+          "driver": {
+            "name": "CodeScanner Legacy File Format Converter",
+            "fullName": "CodeScanner Converter Tool",
+            "version": "4.3",
+            "semanticVersion": "4.3.0",
+            "dottedQuadFileVersion": "4.3.0.0"
+          }
+        }
+      },
+      "versionControlProvenance": [
+        {
+          "repositoryUri": "https://github.com/contoso/example",
+          "revisionId": "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcd",
+          "branch": "master",
+          "revisionTag": "beta1",
+          "asOfTimeUtc": "2016-07-16T00:00:00.000Z",
+          "mappedTo": {
+            "uri": "/example",
+            "uriBaseId": "SRCROOT"
+          }
+        }
+      ],
+      "originalUriBaseIds": {
+        "TOOLS_ROOT": {
+          "uri": "file:///bin/tools/"
+        }
+      },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///home/buildAgent/src/collections/list.cpp",
+            "index": 0
+          },
+          "length": 980,
+          "mimeType": "text/x-c",
+          "hashes": {
+            "sha-256": "b13ce2678a8807ba0765ab94a0ecd394f869bc81"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///home/buildAgent/bin/app.zip",
+            "index": 1
+          },
+          "mimeType": "application/zip"
+        },
+        {
+          "location": {
+            "uri": "/docs/intro.docx"
+          },
+          "parentIndex": 1,
+          "offset": 17522,
+          "length": 4050,
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        {
+          "location": {
+            "uri": "codescanner/config/collections.rsp",
+            "uriBaseId": "TOOLS_ROOT",
+            "index": 3
+          },
+          "contents": {
+            "text": "\"-input src/collections/*.cpp -log out/collections.sarif -rules all -disable C9999\"."
+          },
+          "lastModifiedTimeUtc": "2016-07-16T05:37:57.000Z"
+        }
+      ],
+      "logicalLocations": [
+        {
+          "name": "collections",
+          "fullyQualifiedName": "collections",
+          "kind": "namespace"
+        },
+        {
+          "name": "list",
+          "fullyQualifiedName": "collections::list",
+          "parentIndex": 0,
+          "kind": "type"
+        },
+        {
+          "name": "add",
+          "fullyQualifiedName": "collections::list::add",
+          "decoratedName": "?add@list@collections@@QAEXH@Z",
+          "parentIndex": 1,
+          "kind": "function"
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "C2001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "This is the result message with an [embedded link](1), but \\[this one\\] isn't. Here is a [second link](1).",
+            "messageId": "default",
+            "arguments": [
+              "ptr"
+            ]
+          },
+          "analysisTarget": {
+            "uri": "file:///home/buildAgent/src/collections/list.cpp",
+            "index": 0
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///home/buildAgent/src/collections/list.h"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 9,
+                  "endLine": 15,
+                  "endColumn": 10,
+                  "byteOffset": 254,
+                  "byteLength": 1,
+                  "snippet": {
+                    "text": "add_core(ptr, offset, val);\n    return;"
+                  }
+                }
+              },
+              "fullyQualifiedLogicalName": "collections::list:add"
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "Call stack resulting from usage of uninitialized variable."
+              },
+              "frames": [
+                {
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "file:///home/buildAgent/src/collections/list.h"
+                      },
+                      "region": {
+                        "startLine": 110,
+                        "startColumn": 15
+                      }
+                    },
+                    "fullyQualifiedLogicalName": "collections::list:add_core",
+                    "message": {
+                      "text": "Exception thrown."
+                    }
+                  },
+                  "module": "platform",
+                  "threadId": 52,
+                  "address": 10092852,
+                  "offset": 16,
+                  "parameters": [
+                    "null",
+                    "0",
+                    "14"
+                  ]
+                },
+                {
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "file:///home/buildAgent/src/collections/list.h"
+                      },
+                      "region": {
+                        "startLine": 43,
+                        "startColumn": 15
+                      }
+                    },
+                    "fullyQualifiedLogicalName": "collections::list:add"
+                  },
+                  "module": "platform",
+                  "threadId": 52,
+                  "address": 10092176,
+                  "offset": 84,
+                  "parameters": [
+                    "14"
+                  ]
+                },
+                {
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "file:///home/buildAgent/src/application/main.cpp"
+                      },
+                      "region": {
+                        "startLine": 28,
+                        "startColumn": 9
+                      }
+                    },
+                    "fullyQualifiedLogicalName": "main"
+                  },
+                  "module": "application",
+                  "threadId": 52,
+                  "address": 10091200,
+                  "offset": 156
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Path from declaration to usage"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///home/buildAgent/src/collections/list.h"
+                          },
+                          "region": {
+                            "startLine": 15,
+                            "snippet": {
+                              "text": "int *ptr;"
+                            }
+                          }
+                        },
+                        "fullyQualifiedLogicalName": "collections::list:add",
+                        "message": {
+                          "text": "Variable \"ptr\" declared."
+                        }
+                      },
+                      "module": "platform",
+                      "state": {
+                        "value": "[Not initialized}"
+                      },
+                      "executionOrder": 1,
+                      "executionTimeUtc": "2016-07-16T08:01:00Z",
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///home/buildAgent/src/collections/list.h"
+                          },
+                          "region": {
+                            "startLine": 15,
+                            "snippet": {
+                              "text": "offset = 0;"
+                            }
+                          }
+                        },
+                        "fullyQualifiedLogicalName": "collections::list:add"
+                      },
+                      "module": "platform",
+                      "executionOrder": 2,
+                      "executionTimeUtc": "2016-07-16T08:02:00Z",
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///home/buildAgent/src/collections/list.h"
+                          },
+                          "region": {
+                            "startLine": 25,
+                            "snippet": {
+                              "text": "add_core(ptr, offset, val)"
+                            }
+                          }
+                        },
+                        "fullyQualifiedLogicalName": "collections::list:add",
+                        "message": {
+                          "text": "Uninitialized variable \"ptr\" passed to method \"add_core\"."
+                        }
+                      },
+                      "module": "platform",
+                      "executionOrder": 3,
+                      "executionTimeUtc": "2016-07-16T08:03:00Z",
+                      "importance": "essential"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "id": 1,
+                "artifactLocation": {
+                  "uri": "file:///home/buildAgent/src/collections/list.h"
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 5
+                }
+              },
+              "fullyQualifiedLogicalName": "collections::list:add",
+              "message": {
+                "text": "\"count\" was declared here."
+              }
+            }
+          ],
+          "suppressionStates": ["suppressedExternally"],
+          "baselineState": "unchanged",
+          "fixes": [
+            {
+              "description": {
+                "text": "Initialize the variable to null"
+              },
+              "changes": [
+                {
+                  "artifactLocation": {
+                    "uri": "file:///home/buildAgent/src/collections/list.h"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "byteOffset": 109
+                      },
+                      "insertedContent": {
+                        "binary": "PSBudWxs"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "id": {
+        "instanceId": "Nightly code scan/BC650830-A9FE-44CB-8818-AD6C387279A0",
+        "instanceGuid": "BC650830-A9FE-44CB-8818-AD6C387279A0"
+      },
+      "aggregateIds": [
+        {
+          "instanceId": "Build-14.0.1.2-Release-20160716-13:22:18/"
+        }
+      ],
+      "baselineInstanceGuid": "0A106451-C9B1-4309-A7EE-06988B95F723",
+      "columnKind": "utf16CodeUnits"
+    }
+  ]
+}

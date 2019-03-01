@@ -4,7 +4,7 @@
     "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "2.9.0",
+    "version": "2.10.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -47,6 +47,7 @@
                 "sarif-viewer.resultsListHideColumns": {
                     "default": [
                         "baselineState",
+                        "rank",
                         "runId",
                         "sarifFile"
                     ],
@@ -55,7 +56,9 @@
                     "items": {
                         "enum": [
                             "baselineState",
+                            "kind",
                             "message",
+                            "rank",
                             "resultFile",
                             "resultStartPos",
                             "ruleId",
@@ -73,7 +76,9 @@
                     "type": "string",
                     "enum": [
                         "baselineState",
+                        "kind",
                         "message",
+                        "rank",
                         "resultFile",
                         "resultStartPos",
                         "ruleId",
@@ -96,7 +101,9 @@
                             "type": "string",
                             "enum": [
                                 "baselineState",
+                                "kind",
                                 "message",
+                                "rank",
                                 "resultFile",
                                 "resultStartPos",
                                 "ruleId",
@@ -176,10 +183,10 @@
         "@types/node": "^7.10.3",
         "tslint": "^5.12.1",
         "typescript": "^2.9.2",
-        "vscode": "^1.1.29"
+        "vscode": "^1.1.30"
     },
     "dependencies": {
-        "@types/sarif": "^2.0.1",
+        "@types/sarif": "^2.0.3",
         "jsdom": "^11.12.0",
         "json-source-map": "^0.4.0"
     }

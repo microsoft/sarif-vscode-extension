@@ -233,7 +233,6 @@ class ExplorerWebview {
             this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
             rootEle.addEventListener("click", this.onCodeFlowTreeClickedBind);
             container.appendChild(rootEle);
-            container.appendChild(this.createElement("br"));
         }
 
         return container;
@@ -532,9 +531,24 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, resultInfo.ruleName));
+        let ruleDescription = resultInfo.ruleName;
+        if (resultInfo.ruleDescription !== undefined) {
+            ruleDescription = resultInfo.ruleDescription.text;
+        }
+        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, ruleDescription, ruleDescription));
+
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
+
+        if (resultInfo.kind !== undefined) {
+            const kind = this.kindTextAndTooltip(resultInfo.kind);
+            tableEle.appendChild(this.createNameValueRow("Kind:", kind.text, kind.tooltip));
+        }
+
+        if (resultInfo.rank !== undefined) {
+            const rankStr = resultInfo.rank.toString(10);
+            tableEle.appendChild(this.createNameValueRow("Rank:", rankStr, rankStr));
+        }
 
         if (resultInfo.baselineState !== undefined) {
             const baselineState = this.baselineStateTextAndTooltip(resultInfo.baselineState);
@@ -557,9 +571,13 @@ class ExplorerWebview {
             tableEle.appendChild(row);
         }
 
-        // The last item in the list should be properties if they exist
         if (resultInfo.additionalProperties !== undefined) {
             tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
+        }
+
+        row = this.createLocationsRow("Location in Log: ", [resultInfo.locationInSarifFile]);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
         }
 
         panel.appendChild(tableEle);
@@ -586,6 +604,13 @@ class ExplorerWebview {
         }
         if (runInfo.workingDir !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
+        }
+
+        if (runInfo.startUtc !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Start Time:", new Date(runInfo.startUtc).toUTCString()));
+        }
+        if (runInfo.timeDuration !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Duration:", runInfo.timeDuration));
         }
 
         // The last item in the list should be properties if they exist
@@ -749,7 +774,7 @@ class ExplorerWebview {
         resultDetailsContainer.appendChild(tabHeader);
 
         // Create and add the panels
-        const panelContainer = this.createElement("div", { id: "tabContentContainer" }) as HTMLDivElement;
+        const panelContainer = this.createElement("div", { id: "tabcontentcontainer" }) as HTMLDivElement;
         panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
         panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
@@ -960,34 +985,11 @@ class ExplorerWebview {
     }
 
     /**
-     * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
-     * @param severity the results severity level
+     * Gets the text and tooltip(a reduced version of the specs description) based on the result's kind
+     * @param kind the results kind
      */
-    private severityTextAndTooltip(severity: sarif.Result.level) {
-        const value = { text: severity || "", tooltip: "" };
-        switch (severity) {
-            case "error":
-                value.tooltip = "The rule was evaluated, and a serious problem was found.";
-                break;
-            case "warning":
-                value.tooltip = "The rule was evaluated, and a problem was found.";
-                break;
-            case "open":
-                value.tooltip = "The rule was evaluated, and the tool concluded that there was " +
-                    "insufficient information to decide whether a problem exists.";
-                break;
-            case "note":
-                value.tooltip = "A purely informational log entry";
-                break;
-            case "notApplicable":
-                value.text = "not applicable";
-                value.tooltip = "The rule was not evaluated, because it does not apply to the analysis target.";
-                break;
-            case "pass":
-                value.tooltip = "The rule was evaluated, and no problem was found.";
-                break;
-        }
-
+    private kindTextAndTooltip(kind: sarif.Result.kind) {
+        const value = { text: kind || "", tooltip: KindTooltip[kind] || "" };
         return value;
     }
 
@@ -996,19 +998,16 @@ class ExplorerWebview {
      * @param baselineState the results severity level
      */
     private baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState) {
-        const value = { text: baselineState || "", tooltip: "" };
-        switch (baselineState) {
-            case "new":
-                value.tooltip = "This result was detected in the current run but was not detected in the baseline run.";
-                break;
-            case "existing":
-                value.tooltip = "This result was detected both in the current run and in the baseline run.";
-                break;
-            case "absent":
-                value.tooltip = "This result was detected in the baseline run but was not detected in the current run.";
-                break;
-        }
+        const value = { text: baselineState || "", tooltip: BaselineStateTooltip[baselineState] || "" };
+        return value;
+    }
 
+    /**
+     * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
+     * @param severity the results severity level
+     */
+    private severityTextAndTooltip(severity: sarif.Result.level) {
+        const value = { text: severity || "", tooltip: SeverityTooltip[severity] || "" };
         return value;
     }
 

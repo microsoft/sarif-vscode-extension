@@ -4,9 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import {
-    commands, Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, window, workspace,
-} from "vscode";
+import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
 import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
@@ -101,8 +99,6 @@ export class LogReader {
      * Reads through all of the text documents open in the workspace, syncs the issues with problem panel after
      */
     public async readAll(): Promise<void> {
-        commands.executeCommand("workbench.action.problems.focus");
-
         // Get all the documents and read them
         const docs = workspace.textDocuments;
 
@@ -151,7 +147,7 @@ export class LogReader {
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                     log = docMapping.data;
 
-                    if (log.version !== "2.0.0-csd.2.beta.2019-01-09") {
+                    if (log.version !== "2.0.0-csd.2.beta.2019-01-24") {
                         FileConverter.upgradeSarif(log.version, doc);
                         return;
                     }
@@ -162,40 +158,10 @@ export class LogReader {
                         const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
 
                         await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                        await FileMapper.Instance.mapFiles(run.files, runId);
+                        await FileMapper.Instance.mapFiles(run.artifacts, runId);
 
                         await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
-                        const showIncrement = run.results.length > 1000;
-                        let percent = 0;
-                        let interval;
-                        let nextIncrement;
-                        if (showIncrement) {
-                            interval = Math.floor(run.results.length / 10);
-                            nextIncrement = interval;
-                        }
-
-                        for (let resultIndex = 0; resultIndex < run.results.length; resultIndex++) {
-                            if (showIncrement && resultIndex >= nextIncrement) {
-                                nextIncrement = nextIncrement + interval;
-                                percent = percent + 10;
-                                await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results:
-                                    ${percent}% completed`, 10);
-                            }
-
-                            const sarifResult = run.results[resultIndex];
-                            await ResultInfoFactory.create(sarifResult, runId, run.resources).then(
-                                (resultInfo: ResultInfo) => {
-                                    resultInfo.id = resultIndex;
-                                    if (resultInfo.assignedLocation === undefined ||
-                                        !resultInfo.assignedLocation.mapped) {
-                                        resultInfo.assignedLocation = LocationFactory.mapToSarifFile(doc.uri, runIndex,
-                                            resultIndex);
-                                    }
-
-                                    const diagnostic = SVDiagnosticFactory.create(resultInfo, sarifResult);
-                                    SVDiagnosticCollection.Instance.add(diagnostic);
-                                });
-                        }
+                        await this.readResults(run.results, run.tool, runId, doc.uri, runIndex);
                     }
 
                     if (sync) {
@@ -205,6 +171,45 @@ export class LogReader {
                     ProgressHelper.Instance.Progress = undefined;
                     return Promise.resolve();
                 });
+        }
+    }
+
+    /**
+     * Reads the results from the run, adding a diagnostic for each result
+     * @param results Array of results from the run
+     * @param tool Tool from the run
+     * @param runId Id of the processed run
+     * @param docUri Uri of the sarif file
+     * @param runIndex Index of the run in the sarif file
+     */
+    private async readResults(
+        results: sarif.Result[], tool: sarif.Tool, runId: number, docUri: Uri, runIndex: number,
+    ) {
+        const showIncrement = results.length > 1000;
+        let percent = 0;
+        let interval: number;
+        let nextIncrement: number;
+        if (showIncrement) {
+            interval = Math.floor(results.length / 10);
+            nextIncrement = interval;
+        }
+        for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
+            if (showIncrement && resultIndex >= nextIncrement) {
+                nextIncrement = nextIncrement + interval;
+                percent = percent + 10;
+                const progressMsg = `Loading ${results.length} Results: ${percent}% completed`;
+                await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
+            }
+            const sarifResult = results[resultIndex];
+            await ResultInfoFactory.create(sarifResult, runId, tool).then((resultInfo: ResultInfo) => {
+                resultInfo.id = resultIndex;
+                resultInfo.locationInSarifFile = LocationFactory.mapToSarifFileResult(docUri, runIndex, resultIndex);
+                if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
+                    resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(docUri, runIndex, resultIndex);
+                }
+                const diagnostic = SVDiagnosticFactory.create(resultInfo, sarifResult);
+                SVDiagnosticCollection.Instance.add(diagnostic);
+            });
         }
     }
 }

@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
-import { MessageType, SeverityLevelOrder } from "./Enums";
+import { MessageType, SeverityLevelOrder, KindOrder, BaselineOrder } from "./Enums";
 
 /**
 * Interface for options to set while creating an html element
@@ -59,6 +59,8 @@ export interface RunInfo {
     id: number;
     sarifFileFullPath: string;
     sarifFileName: string;
+    startUtc: string;
+    timeDuration: string;
     toolFileName: string;
     toolFullName: string;
     toolName: string;
@@ -74,9 +76,12 @@ export interface ResultInfo {
     codeFlows: CodeFlow[];
     fixes: Fix[];
     id: number;
+    kind: sarif.Result.kind;
+    locationInSarifFile: Location;
     locations: Location[];
     message: Message;
     messageHTML: HTMLLabelElement;
+    rank: number;
     relatedLocs: Location[];
     ruleHelpUri: string;
     ruleId: string;
@@ -194,7 +199,9 @@ export interface ResultsListGroup {
 
 export interface ResultsListRow {
     baselineState: ResultsListBaselineValue,
+    kind: ResultsListKindValue,
     message: ResultsListStringValue,
+    rank: ResultsListNumberValue,
     resultFile: ResultsListStringValue,
     resultId: ResultsListNumberValue,
     resultStartPos: ResultsListPositionValue,
@@ -224,15 +231,27 @@ export interface ResultsListPositionValue extends ResultsListValue {
     value: string,
 }
 
-export interface ResultsListSeverityValue extends ResultsListValue {
-    isSeverity: boolean,
-    severityLevelOrder: SeverityLevelOrder,
-    value: sarif.Result.level,
+export interface ResultsListCustomOrderValue extends ResultsListValue {
+    order: BaselineOrder | KindOrder | SeverityLevelOrder,
+    value: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
 }
 
-export interface ResultsListBaselineValue extends ResultsListValue {
+export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
     isBaseLine: boolean,
+    order: BaselineOrder,
     value: sarif.Result.baselineState,
+}
+
+export interface ResultsListKindValue extends ResultsListCustomOrderValue {
+    isKind: boolean,
+    order: KindOrder,
+    value: sarif.Result.kind,
+}
+
+export interface ResultsListSeverityValue extends ResultsListCustomOrderValue {
+    isSeverity: boolean,
+    order: SeverityLevelOrder,
+    value: sarif.Result.level,
 }
 
 export interface ResultsListColumn {

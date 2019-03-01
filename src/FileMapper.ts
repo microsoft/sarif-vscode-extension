@@ -23,6 +23,7 @@ export class FileMapper {
 
     private baseRemapping: Map<string, string>;
     private fileRemapping: Map<string, Uri>;
+    private fileIndexKeyMapping: Map<string, string>;
     private onMappingChanged: EventEmitter<Uri>;
     private userCanceledMapping: boolean;
     private rootpaths: string[];
@@ -33,6 +34,7 @@ export class FileMapper {
     private constructor() {
         this.baseRemapping = new Map<string, string>();
         this.fileRemapping = new Map<string, Uri>();
+        this.fileIndexKeyMapping = new Map<string, string>();
         this.onMappingChanged = new EventEmitter<Uri>();
 
         this.updateRootPaths();
@@ -57,13 +59,21 @@ export class FileMapper {
     /**
      * Gets the mapped Uri associated with the passed in file, promise returns null if not able to map
      * @param fileUri Uri of the file
+     * @param fileIndex file index of artifact
+     * @param runId id of the run
      * @param uriBase the base path of the uri
      */
-    public async get(fileUri: Uri, uriBase?: string): Promise<Uri> {
-        const uri = Utilities.combineUriWithUriBase(fileUri.toString(true), uriBase);
-        const uriPath = Utilities.getFsPathWithFragment(uri);
-        if (!this.fileRemapping.has(uriPath)) {
-            await this.map(uri, uriBase);
+    public async get(fileUri: Uri, fileIndex: number, runId: number, uriBase?: string): Promise<Uri> {
+        let uriPath: string;
+        if (fileIndex !== undefined) {
+            uriPath = this.fileIndexKeyMapping.get(`${runId}_${fileIndex}`);
+        } else {
+            const uri = Utilities.combineUriWithUriBase(fileUri.toString(true), uriBase);
+            uriPath = Utilities.getFsPathWithFragment(uri);
+            if (!this.fileRemapping.has(uriPath)) {
+                await this.map(uri, uriBase);
+            }
+
         }
 
         return this.fileRemapping.get(uriPath);
@@ -162,20 +172,25 @@ export class FileMapper {
      * @param files array of sarif.Files that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: sarif.File[], runId: number) {
+    public async mapFiles(files: sarif.Artifact[], runId: number) {
         this.userCanceledMapping = false;
-        for (const file in files) {
-            if (files.hasOwnProperty(file)) {
-                const fileLocation = files[file].fileLocation;
+        if (files !== undefined) {
+            for (const fileIndex of files.keys()) {
+                const file = files[fileIndex];
+                const fileLocation = file.location;
 
                 const uriBase = Utilities.getUriBase(fileLocation, runId);
                 const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
-                if (files[file].contents !== undefined) {
-                    this.mapEmbeddedContent(uriWithBase, files[file]);
+                const key = Utilities.getFsPathWithFragment(uriWithBase);
+                if (file.contents !== undefined) {
+                    this.mapEmbeddedContent(key, file);
                 } else {
                     await this.map(uriWithBase, uriBase);
                 }
+
+                const index = `${runId}_${fileIndex}`;
+                this.fileIndexKeyMapping.set(index, key);
             }
         }
     }
@@ -205,13 +220,12 @@ export class FileMapper {
 
     /**
      * Creates a temp file with the decoded content and adds the new temp file to the mapping
-     * @param fileUri file Uri that needs to be mapped
+     * @param fileKey key of the original file path that needs to be mapped
      * @param file file object that contains the hash and embedded content
      */
-    private mapEmbeddedContent(fileUri: Uri, file: sarif.File): void {
+    private mapEmbeddedContent(fileKey: string, file: sarif.Artifact): void {
         const hashValue = this.getHashValue(file.hashes);
-        const fileUriPath = Utilities.getFsPathWithFragment(fileUri);
-        const tempPath = Utilities.generateTempPath(fileUriPath, hashValue);
+        const tempPath = Utilities.generateTempPath(fileKey, hashValue);
 
         let contents: string;
         if (file.contents.text !== undefined) {
@@ -221,7 +235,7 @@ export class FileMapper {
         }
 
         Utilities.createReadOnlyFile(tempPath, contents);
-        this.fileRemapping.set(fileUriPath, Uri.file(tempPath));
+        this.fileRemapping.set(fileKey, Uri.file(tempPath));
     }
 
     /**

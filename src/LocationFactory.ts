@@ -29,12 +29,14 @@ export class LocationFactory {
             uri: null,
         } as Location;
 
-        if (sarifLocation !== undefined && sarifLocation.fileLocation !== undefined) {
+        if (sarifLocation !== undefined && sarifLocation.artifactLocation !== undefined) {
             location.id = sarifLocation.id;
-            const fileUri = Uri.parse(sarifLocation.fileLocation.uri);
-            location.uriBase = Utilities.getUriBase(sarifLocation.fileLocation, runId);
+            const artifactLocation = sarifLocation.artifactLocation;
 
-            await FileMapper.Instance.get(fileUri, location.uriBase).then((uri: Uri) => {
+            const fileUri = Uri.parse(artifactLocation.uri);
+            location.uriBase = Utilities.getUriBase(artifactLocation, runId);
+
+            await FileMapper.Instance.get(fileUri, artifactLocation.index, runId, location.uriBase).then((uri: Uri) => {
                 if (uri !== null) {
                     location.uri = uri;
                     location.mapped = true;
@@ -70,7 +72,7 @@ export class LocationFactory {
         if (location === undefined || !location.mapped) {
             if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
                 const physLoc = sarifLocation.physicalLocation;
-                const uri = Utilities.combineUriWithUriBase(physLoc.fileLocation.uri, location.uriBase);
+                const uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
                 await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
                     return LocationFactory.create(physLoc, runId);
                 }).then((remappedLocation) => {
@@ -83,12 +85,12 @@ export class LocationFactory {
     }
 
     /**
-     * Maps the result back to the location in the SARIF file
+     * Maps a Location to the File Location of a result in the SARIF file
      * @param sarifUri Uri of the SARIF document the result is in
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFile(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
+    public static mapToSarifFileLocation(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
         const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
         const result = sarifMapping.data.runs[runIndex].results[resultIndex];
         const locations = result.locations;
@@ -99,7 +101,32 @@ export class LocationFactory {
             resultPath = resultPath + "/analysisTarget";
         }
 
+        return LocationFactory.createLocationOfMapping(sarifUri, resultPath);
+    }
+
+    /**
+     * Maps a Location to the top of the result in the SARIF file
+     * @param sarifUri Uri of the SARIF document the result is in
+     * @param runIndex the index of the run in the SARIF file
+     * @param resultIndex the index of the result in the SARIF file
+     */
+    public static mapToSarifFileResult(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
+        const resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
+        return LocationFactory.createLocationOfMapping(sarifUri, resultPath, true);
+    }
+
+    /**
+     * Maps the resultPath to a Location object
+     * @param sarifUri Uri of the SARIF document the result is in
+     * @param resultPath the pointer to the JsonMapping
+     * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
+     */
+    public static createLocationOfMapping(sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location {
+        const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
         const locationMapping = sarifMapping.pointers[resultPath];
+        if (insertionPtr === true) {
+            locationMapping.valueEnd = locationMapping.value;
+        }
 
         const resultLocation = {
             endOfLine: false,
