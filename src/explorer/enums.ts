@@ -54,7 +54,6 @@ enum BaselineStateTooltip {
 }
 
 enum KindTooltip {
-    none = "Kind does not apply to the analysis target.",
     notApplicable = "The rule was not evaluated, because it does not apply to the analysis target.",
     pass = "The rule was evaluated, and no problem was found.",
     fail = "The result represents a problem whose severity is specified by the Severity Level property.",

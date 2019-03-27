@@ -65,16 +65,11 @@ export class ResultInfoFactory {
             if (ruleDescriptors !== undefined && ruleDescriptors[ruleIndex] !== undefined) {
                 const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleIndex];
 
+                resultInfo.ruleHelpUri = rule.helpUri;
+                resultInfo.ruleName = rule.name;
+
                 if (rule.id !== undefined) {
                     resultInfo.ruleId = rule.id;
-                }
-
-                if (rule.helpUri !== undefined) {
-                    resultInfo.ruleHelpUri = rule.helpUri;
-                }
-
-                if (rule.name !== undefined) {
-                    resultInfo.ruleName = Utilities.parseSarifMessage(rule.name).text;
                 }
 
                 if (rule.defaultConfiguration !== undefined) {
