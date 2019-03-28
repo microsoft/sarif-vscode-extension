@@ -278,7 +278,6 @@ export class ResultsListController {
         let kindOrder: KindOrder;
         switch (resultInfo.kind) {
             case "fail": kindOrder = KindOrder.fail; break;
-            case "none": kindOrder = KindOrder.none; break;
             case "notApplicable": kindOrder = KindOrder.notApplicable; break;
             case "open": kindOrder = KindOrder.open; break;
             case "pass": kindOrder = KindOrder.pass; break;

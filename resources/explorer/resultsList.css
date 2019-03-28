@@ -84,7 +84,7 @@ option {
 }
 
 .svgIconMasking {
-    background-color: var(--color);
+    background-color: var(--vscode-editor-foreground);
     cursor: pointer;
     height: 32px;
     -webkit-appearance: none;
@@ -191,7 +191,7 @@ button#filterinputcasebutton:before {
 
 #resultslistbuttonbar {
     background-color: var(--vscode-sideBarSectionHeader-background);
-    border-bottom-color: var(--color);
+    border-bottom-color: var(--vscode-editor-foreground);
     border-bottom-style: solid;
     border-bottom-width: thin;
 }

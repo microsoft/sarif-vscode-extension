@@ -23,10 +23,10 @@ Supports up to Sarif version '2.0.0-csd.2.beta.2019-01-24'
  * Gutter icons to help identify the location of the result
  * Codeflow step regions are highlighted and labeled inline
  * Icons visualizing codeflow step level changes
-    * ![Icons](/resources/readmeImages/CallReturnIcon.PNG?raw=true) Call with a Return
-    * ![Icons](/resources/readmeImages/ReturnCallIcon.PNG?raw=true) Return from a Call
-    * ![Icons](/resources/readmeImages/CallNoReturnIcon.PNG?raw=true) Call with no Return
-    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.PNG?raw=true) Return with no Call
+    * ![Icons](/resources/readmeImages/CallReturnIcon.png?raw=true) Call with a Return
+    * ![Icons](/resources/readmeImages/ReturnCallIcon.png?raw=true) Return from a Call
+    * ![Icons](/resources/readmeImages/CallNoReturnIcon.png?raw=true) Call with no Return
+    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.png?raw=true) Return with no Call
 
 ### Convert Non-Sarif File
  * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog update 2.5.0 for list of supported tools
