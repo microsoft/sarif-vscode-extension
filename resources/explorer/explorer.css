@@ -28,7 +28,7 @@ body {
 .headercontainer>label:first-child::before {
     font-size: 10px;
     font-weight: normal;
-    color: var(--color);
+    color: var(--vscode-editor-foreground);
 }
 
 /* expand arrow */
@@ -91,7 +91,7 @@ div#resultdetailscontainer:empty {
 
 .tab {
     color: var(--vscode-tab-inactiveForeground);
-    border-color: var(--color);
+    border-color: var(--vscode-editor-foreground);
     padding: 5px 7px;
     user-select: none;
     white-space: nowrap;
@@ -105,7 +105,7 @@ div#resultdetailscontainer:empty {
     border-bottom-color: var(--vscode-tab-activeForeground);
     border-bottom-style: solid;
     border-bottom-width: 1px;
-    color: var(--color);
+    color: var(--vscode-tab-activeForeground);
     padding-bottom: 2px;
 }
 
@@ -123,7 +123,7 @@ div#resultdetailscontainer:empty {
 
 .tabcontentheader {
     background-color: var(--vscode-sideBarSectionHeader-background);
-    border-bottom-color: var(--color);
+    border-bottom-color: var(--vscode-editor-foreground);
     border-bottom-style: solid;
     border-bottom-width: thin;
     display: flex;
@@ -162,7 +162,7 @@ input[type=range]:focus {
 }
 
 input[type='range']::-webkit-slider-runnable-track {
-    background: repeating-linear-gradient(90deg, transparent, transparent .30em, var(--color) .30em, transparent .45em, transparent 2em);
+    background: repeating-linear-gradient(90deg, transparent, transparent .30em, var(--vscode-editor-foreground) .30em, transparent .45em, transparent 2em);
     background-origin: content-box;
     background-position-y: 100%;
     background-repeat: no-repeat;
@@ -170,8 +170,8 @@ input[type='range']::-webkit-slider-runnable-track {
 }
 
 ul {
-    background: var(--background-color);
-    color: var(--color);
+    background: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
     list-style-type: none;
     outline: none;
     padding-left: 15px;
@@ -220,7 +220,7 @@ li:hover {
 
 li.codeflowselected {
     background: var(--vscode-editor-inactiveSelectionBackground);
-    color: var(--color);
+    color: var(--vscode-editor-foreground);
 }
 
 li.codeflowselected:focus {
