@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.11.0
+* Updated the supported sarif version '2.0.0-csd.2.beta.2019-02-20'
+* Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-02-20'
+* Fixed a bug causing the filter and hide/show columns buttons on the Results Lists to not be visible
+
 ## 2.10.0
 * Updated the supported sarif version '2.0.0-csd.2.beta.2019-01-24' [issue #139](https://github.com/Microsoft/sarif-vscode-extension/issues/139)
 * Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-01-24' [issue #139](https://github.com/Microsoft/sarif-vscode-extension/issues/139)

@@ -30,7 +30,6 @@ export const enum SeverityLevelOrder {
 }
 
 export const enum KindOrder {
-    none,
     notApplicable,
     pass,
     fail,

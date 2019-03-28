@@ -2,7 +2,7 @@
 
 Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code.
 
-Supports up to Sarif version '2.0.0-csd.2.beta.2019-01-24'
+Supports up to Sarif version '2.0.0-csd.2.beta.2019-02-20'
 
 ## **Features**
  * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)
@@ -23,10 +23,10 @@ Supports up to Sarif version '2.0.0-csd.2.beta.2019-01-24'
  * Gutter icons to help identify the location of the result
  * Codeflow step regions are highlighted and labeled inline
  * Icons visualizing codeflow step level changes
-    * ![Icons](/resources/readmeImages/CallReturnIcon.PNG?raw=true) Call with a Return
-    * ![Icons](/resources/readmeImages/ReturnCallIcon.PNG?raw=true) Return from a Call
-    * ![Icons](/resources/readmeImages/CallNoReturnIcon.PNG?raw=true) Call with no Return
-    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.PNG?raw=true) Return with no Call
+    * ![Icons](/resources/readmeImages/CallReturnIcon.png?raw=true) Call with a Return
+    * ![Icons](/resources/readmeImages/ReturnCallIcon.png?raw=true) Return from a Call
+    * ![Icons](/resources/readmeImages/CallNoReturnIcon.png?raw=true) Call with no Return
+    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.png?raw=true) Return with no Call
 
 ### Convert Non-Sarif File
  * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog update 2.5.0 for list of supported tools
