@@ -107,7 +107,7 @@ export class Utilities {
     public static combineUriWithUriBase(uriPath: string, uriBase: string): Uri {
         let combinedPath = uriPath;
 
-        if (uriBase !== undefined) {
+        if (uriBase !== undefined && uriBase !== "") {
             combinedPath = Utilities.Path.posix.join(uriBase, uriPath);
         }
 

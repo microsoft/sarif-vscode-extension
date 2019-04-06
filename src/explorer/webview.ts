@@ -654,6 +654,10 @@ class ExplorerWebview {
         return row;
     }
 
+    /**
+     * Creates the Rule description section in the results details panel
+     * @param message Rule message
+     */
     private createRuleDescription(message: Message): HTMLDivElement {
         const ruleDescription = this.createElement("div", { id: "ruledescription" }) as HTMLDivElement;
         let text = message.html.text;
@@ -806,6 +810,10 @@ class ExplorerWebview {
         }
     }
 
+    /**
+     * Callback when user clicks on the header, for showing and hiding the Results list or Results Details sections
+     * @param event event fired when user clicked a header
+     */
     private onHeaderClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
         while (!ele.classList.contains("headercontainer")) {

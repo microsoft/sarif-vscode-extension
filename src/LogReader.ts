@@ -147,7 +147,7 @@ export class LogReader {
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                     log = docMapping.data;
 
-                    if (log.version !== "2.0.0-csd.2.beta.2019-02-20") {
+                    if (log.version !== "2.0.0-csd.2.beta.2019-04-03") {
                         FileConverter.upgradeSarif(log.version, doc);
                         return;
                     }
