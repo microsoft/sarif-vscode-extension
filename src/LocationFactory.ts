@@ -33,15 +33,14 @@ export class LocationFactory {
             location.id = sarifLocation.id;
             const artifactLocation = sarifLocation.artifactLocation;
 
-            const fileUri = Uri.parse(artifactLocation.uri);
             location.uriBase = Utilities.getUriBase(artifactLocation, runId);
 
-            await FileMapper.Instance.get(fileUri, artifactLocation.index, runId, location.uriBase).then((uri: Uri) => {
+            await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((uri: Uri) => {
                 if (uri !== null) {
                     location.uri = uri;
                     location.mapped = true;
                 } else {
-                    location.uri = fileUri;
+                    location.uri = Utilities.combineUriWithUriBase(artifactLocation.uri, location.uriBase);
                     location.mapped = false;
                 }
 
