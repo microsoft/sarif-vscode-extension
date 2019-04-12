@@ -251,6 +251,9 @@ suite("expandBaseIds", () => {
     const originalUriBaseIds = {
         file: { uri: "file.ext", uriBaseId: "folder" },
         folder: { uri: "folder", uriBaseId: "root" },
+        networkFile: { uri: "file.ext", uriBaseId: "networkFolder" },
+        networkFolder: { uri: "folder", uriBaseId: "networkRoot" },
+        networkRoot: { uri: "file://network/" },
         root: { uri: "file:///c:/" },
     } as { [key: string]: sarif.ArtifactLocation };
 
@@ -263,9 +266,12 @@ suite("expandBaseIds", () => {
         const expandedBaseIds = Utilities.expandBaseIds(originalUriBaseIds);
         assert.notEqual(expandedBaseIds, undefined);
         assert.deepEqual(expandedBaseIds, {
-            file: "file:/c:/folder/file.ext",
-            folder: "file:/c:/folder",
-            root: "file:/c:/",
+            file: "file:///c:/folder/file.ext",
+            folder: "file:///c:/folder",
+            networkFile: "file://network/folder/file.ext",
+            networkFolder: "file://network/folder",
+            networkRoot: "file://network/",
+            root: "file:///c:/",
         });
     });
 });
