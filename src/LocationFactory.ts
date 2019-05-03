@@ -30,7 +30,7 @@ export class LocationFactory {
         } as Location;
 
         if (sarifLocation !== undefined && sarifLocation.artifactLocation !== undefined) {
-            location.id = sarifLocation.id;
+            location.id = sarifLocation.artifactLocation.index;
             const artifactLocation = sarifLocation.artifactLocation;
 
             location.uriBase = Utilities.getUriBase(artifactLocation, runId);
