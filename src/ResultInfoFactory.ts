@@ -61,7 +61,7 @@ export class ResultInfoFactory {
         // Parse the rule related info
         let ruleMessageString: string;
         if (ruleIndex !== undefined && tool !== undefined) {
-            const ruleDescriptors = tool.driver.ruleDescriptors;
+            const ruleDescriptors = tool.driver.rules;
             if (ruleDescriptors !== undefined && ruleDescriptors[ruleIndex] !== undefined) {
                 const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleIndex];
 
@@ -81,7 +81,7 @@ export class ResultInfoFactory {
                     allLocations);
 
                 if (result.message !== undefined && rule.messageStrings !== undefined) {
-                    const resultMsgId = result.message.messageId;
+                    const resultMsgId = result.message.id;
                     if (resultMsgId !== undefined && rule.messageStrings[resultMsgId] !== undefined) {
                         ruleMessageString = rule.messageStrings[resultMsgId].text;
                     }

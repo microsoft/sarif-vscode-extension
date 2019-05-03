@@ -63,12 +63,12 @@ export class FileMapper {
      * @param runId id of the run
      * @param uriBase the base path of the uri
      */
-    public async get(fileUri: Uri, fileIndex: number, runId: number, uriBase?: string): Promise<Uri> {
+    public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string): Promise<Uri> {
         let uriPath: string;
-        if (fileIndex !== undefined) {
-            uriPath = this.fileIndexKeyMapping.get(`${runId}_${fileIndex}`);
+        if (location.index !== undefined) {
+            uriPath = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
         } else {
-            const uri = Utilities.combineUriWithUriBase(fileUri.toString(true), uriBase);
+            const uri = Utilities.combineUriWithUriBase(location.uri, uriBase);
             uriPath = Utilities.getFsPathWithFragment(uri);
             if (!this.fileRemapping.has(uriPath)) {
                 await this.map(uri, uriBase);
@@ -91,11 +91,11 @@ export class FileMapper {
         return this.openRemappingInputDialog(origUri).then(async (path) => {
             if (path === null) {
                 // path is null if the skip next button was pressed
-                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
             } else if (path === undefined) {
                 // path is undefined if the input was dismissed without fixing the path
                 this.userCanceledMapping = true;
-                this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
             } else {
                 const uri = Uri.file(path);
                 const filePath: string = Utilities.getFsPathWithFragment(uri);
@@ -113,10 +113,10 @@ export class FileMapper {
                     config.update(this.configRootpaths, rootpaths, true);
 
                     if (!this.tryConfigRootpathsUri(origUri, uriBase)) {
-                        this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), null);
+                        this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
                     }
                 } else {
-                    this.fileRemapping.set(Utilities.getFsPathWithFragment(origUri), uri);
+                    this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
                     this.saveBasePath(origUri, uri, uriBase);
                     this.fileRemapping.forEach((value: Uri, key: string) => {
                         if (value === null) {
@@ -159,7 +159,7 @@ export class FileMapper {
 
         // if user previously canceled mapping we don't open the file chooser
         if (this.userCanceledMapping) {
-            this.fileRemapping.set(uriPath, null);
+            this.addToFileMapping(uriPath, null);
             return Promise.resolve();
         }
 
@@ -193,6 +193,19 @@ export class FileMapper {
                 this.fileIndexKeyMapping.set(index, key);
             }
         }
+    }
+
+    /**
+     * Adds a file/Uri mapping to the fileRemapping, also calls toString to generate the .external for the webview
+     * @param key the original file path
+     * @param uri the uri of the mapped file path
+     */
+    private addToFileMapping(key: string, uri: Uri = null): void {
+        if (uri !== null) {
+            uri.toString();
+        }
+
+        this.fileRemapping.set(key, uri);
     }
 
     /**
@@ -235,7 +248,7 @@ export class FileMapper {
         }
 
         Utilities.createReadOnlyFile(tempPath, contents);
-        this.fileRemapping.set(fileKey, Uri.file(tempPath));
+        this.addToFileMapping(fileKey, Uri.file(tempPath));
     }
 
     /**
@@ -383,7 +396,7 @@ export class FileMapper {
         try {
             if (!Utilities.Fs.statSync(Utilities.getFsPathWithFragment(uri)).isDirectory()) {
                 if (key !== undefined) {
-                    this.fileRemapping.set(key, uri);
+                    this.addToFileMapping(key, uri);
                 }
                 return true;
             }
@@ -426,7 +439,7 @@ export class FileMapper {
             dirParts.push(originPath.base);
 
             while (dirParts.length !== 0) {
-                const mappedUri = Uri.file(Utilities.Path.posix.join(rootpath, dirParts.join(Utilities.Path.sep)));
+                const mappedUri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(Utilities.Path.sep)));
                 if (this.tryMapUri(mappedUri, Utilities.getFsPathWithFragment(uri))) {
                     this.saveBasePath(uri, mappedUri, uriBase);
                     return true;
