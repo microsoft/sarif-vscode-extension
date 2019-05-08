@@ -1,6 +1,6 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2019-04-03",
-  "version": "2.0.0-csd.2.beta.2019-04-03",
+  "$schema": "http://json.schemastore.org/sarif-2.1.0-rtm.0",
+  "version": "2.1.0",
   "runs": [
     {
       "tool": {
@@ -2936,7 +2936,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/scripts/buildDocs.ts",
@@ -3015,7 +3015,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/scripts/generate-changelog.ts",
@@ -4046,7 +4046,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/language/rule/abstractRule.ts",
@@ -4237,7 +4237,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/language/rule/rule.ts",
@@ -13136,7 +13136,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/rules/preferMethodSignatureRule.ts",
@@ -13194,7 +13194,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/rules/preferMethodSignatureRule.ts",
@@ -13251,7 +13251,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/rules/preferMethodSignatureRule.ts",
@@ -13300,7 +13300,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/src/rules/preferMethodSignatureRule.ts",
@@ -18166,7 +18166,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/allow-js-exclude-node-modules/test.ts",
@@ -18243,7 +18243,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-exclude/excluded.ts",
@@ -18319,7 +18319,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-exclude/excluded1.ts",
@@ -18395,7 +18395,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-exclude/included.ts",
@@ -18471,7 +18471,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-exclude/subdir/excluded.ts",
@@ -18547,7 +18547,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-exclude/subdir/excluded2.ts",
@@ -18596,7 +18596,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/config-findup/no-config/index.test.ts",
@@ -18645,7 +18645,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/codeFrameFormatter.test.ts",
@@ -18721,7 +18721,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/externalFormatter.test.ts",
@@ -18798,7 +18798,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/fileslistFormatter.test.ts",
@@ -18847,7 +18847,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/fileslistFormatter.test.ts",
@@ -18923,7 +18923,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -18973,7 +18973,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -19024,7 +19024,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -19075,7 +19075,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -19123,7 +19123,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -19170,7 +19170,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/jsonFormatter.test.ts",
@@ -19219,7 +19219,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/msbuildFormatter.test.ts",
@@ -19295,7 +19295,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19345,7 +19345,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19396,7 +19396,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19447,7 +19447,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19495,7 +19495,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19542,7 +19542,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/pmdFormatter.test.ts",
@@ -19591,7 +19591,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/proseFormatter.test.ts",
@@ -19667,7 +19667,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/stylishFormatter.test.ts",
@@ -19743,7 +19743,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/tapFormatter.test.ts",
@@ -19792,7 +19792,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/formatters/vsoFormatter.test.ts",
@@ -19895,7 +19895,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/multiple-excludes/invalid.test.ts",
@@ -19944,7 +19944,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/multiple-excludes/invalid.test.ts",
@@ -20020,7 +20020,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/multiple-excludes/invalid2.test.ts",
@@ -20096,7 +20096,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/multiple-excludes/valid.test.ts",
@@ -20202,7 +20202,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/after.test.ts",
@@ -20253,7 +20253,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/before.test.ts",
@@ -20357,7 +20357,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/before.test.ts",
@@ -20407,7 +20407,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/before.test.ts",
@@ -20456,7 +20456,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/before.test.ts",
@@ -20505,7 +20505,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/files/project-multiple-fixes/before.test.ts",
@@ -21420,7 +21420,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/deprecation/other.test.ts",
@@ -21554,7 +21554,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/deprecation/other2.test.ts",
@@ -21604,7 +21604,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/deprecation/other2.test.ts",
@@ -21683,7 +21683,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -21741,7 +21741,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -21799,7 +21799,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -21850,7 +21850,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -21901,7 +21901,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -21952,7 +21952,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -22003,7 +22003,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -22054,7 +22054,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -22105,7 +22105,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -22155,7 +22155,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-irregular-whitespace/test.builder.ts",
@@ -22398,7 +22398,7 @@
           ],
           "fixes": [
             {
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "src/tslint/test/rules/no-unused-variable/type-checked/a.test.ts",

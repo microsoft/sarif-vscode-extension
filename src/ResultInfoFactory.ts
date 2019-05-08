@@ -118,7 +118,9 @@ export class ResultInfoFactory {
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                await LocationFactory.create(sarifLocation.physicalLocation, runId).then((location: Location) => {
+                const locId = sarifLocation.id;
+                const physicalLocation = sarifLocation.physicalLocation;
+                await LocationFactory.create(physicalLocation, runId, locId).then((location: Location) => {
                     locations.push(location);
                 });
             }
