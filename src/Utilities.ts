@@ -112,12 +112,14 @@ export class Utilities {
         }
 
         let uri: Uri;
-        try {
-            uri = Uri.parse(combinedPath);
-        } catch (e) {
-            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
-            // if it's malformed in the next if statement we force it to file schema
-            if (e.message !== "URI malformed") { throw e; }
+        if (combinedPath !== "") {
+            try {
+                uri = Uri.parse(combinedPath);
+            } catch (e) {
+                // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+                // if it's malformed in the next if statement we force it to file schema
+                if (e.message !== "URI malformed") { throw e; }
+            }
         }
 
         if (uri === undefined || uri.scheme !== "file") {
