@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.12.0
+* Updated the supported sarif version '2.1.0-rtm.0'
+* Updated the sarif Multitool to the version supporting '2.1.0-rtm.0'
+* Fixed uriBaseId not working correctly when pointing to a file share [issue #152](https://github.com/Microsoft/sarif-vscode-extension/issues/152)
+
 ## 2.11.0
 * Updated the supported sarif version '2.0.0-csd.2.beta.2019-02-20'
 * Updated the sarif Multitool to the version supporting '2.0.0-csd.2.beta.2019-02-20'
