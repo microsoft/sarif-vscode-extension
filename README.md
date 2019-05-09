@@ -2,7 +2,7 @@
 
 Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code.
 
-Supports up to Sarif version '2.0.0-csd.2.beta.2019-02-20'
+Supports up to Sarif version '2.1.0-rtm.0'
 
 ## **Features**
  * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)
@@ -48,7 +48,7 @@ Supports up to Sarif version '2.0.0-csd.2.beta.2019-02-20'
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, **new** Kind, **new** Rank, Tool
+ * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
