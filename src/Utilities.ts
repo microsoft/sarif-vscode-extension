@@ -107,16 +107,19 @@ export class Utilities {
     public static combineUriWithUriBase(uriPath: string, uriBase: string): Uri {
         let combinedPath = uriPath;
 
-        if (uriBase !== undefined) {
-            combinedPath = Utilities.Path.posix.join(uriBase, uriPath);
+        if (uriBase !== undefined && uriBase !== "") {
+            combinedPath = this.joinPath(uriBase, uriPath);
         }
 
         let uri: Uri;
-        try {
-            uri = Uri.parse(combinedPath);
-        } catch (e) {
-            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
-            if (e.message !== "URI malformed") { throw e; }
+        if (combinedPath !== "") {
+            try {
+                uri = Uri.parse(combinedPath);
+            } catch (e) {
+                // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+                // if it's malformed in the next if statement we force it to file schema
+                if (e.message !== "URI malformed") { throw e; }
+            }
         }
 
         if (uri === undefined || uri.scheme !== "file") {
@@ -162,6 +165,27 @@ export class Utilities {
         }
 
         return expandedBaseIds;
+    }
+
+    /**
+     * joins two paths adding a / if needed
+     * @param start Start of path
+     * @param end End of path
+     */
+    public static joinPath(start: string, end: string): string {
+        let joined = start;
+
+        if (joined !== "" && joined[joined.length - 1] !== "/") {
+            joined = joined + "/";
+        }
+
+        if (end[0] === "/") {
+            joined = joined + end.slice(1);
+        } else {
+            joined = joined + end;
+        }
+
+        return joined;
     }
 
     /**
@@ -332,7 +356,7 @@ export class Utilities {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
         }
 
-        return this.Path.posix.join(base, baseIds[id].uri);
+        return this.joinPath(base, baseIds[id].uri);
     }
 
     /**

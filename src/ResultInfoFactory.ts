@@ -61,7 +61,7 @@ export class ResultInfoFactory {
         // Parse the rule related info
         let ruleMessageString: string;
         if (ruleIndex !== undefined && tool !== undefined) {
-            const ruleDescriptors = tool.driver.ruleDescriptors;
+            const ruleDescriptors = tool.driver.rules;
             if (ruleDescriptors !== undefined && ruleDescriptors[ruleIndex] !== undefined) {
                 const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleIndex];
 
@@ -81,7 +81,7 @@ export class ResultInfoFactory {
                     allLocations);
 
                 if (result.message !== undefined && rule.messageStrings !== undefined) {
-                    const resultMsgId = result.message.messageId;
+                    const resultMsgId = result.message.id;
                     if (resultMsgId !== undefined && rule.messageStrings[resultMsgId] !== undefined) {
                         ruleMessageString = rule.messageStrings[resultMsgId].text;
                     }
@@ -118,7 +118,9 @@ export class ResultInfoFactory {
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                await LocationFactory.create(sarifLocation.physicalLocation, runId).then((location: Location) => {
+                const locId = sarifLocation.id;
+                const physicalLocation = sarifLocation.physicalLocation;
+                await LocationFactory.create(physicalLocation, runId, locId).then((location: Location) => {
                     locations.push(location);
                 });
             }
@@ -179,9 +181,9 @@ export class ResultInfoFactory {
             for (const sarifFix of sarifFixes) {
                 const fix = {} as Fix;
                 fix.description = Utilities.parseSarifMessage(sarifFix.description);
-                if (sarifFix.changes !== undefined) {
+                if (sarifFix.artifactChanges !== undefined) {
                     fix.files = [];
-                    for (const sarifChange of sarifFix.changes) {
+                    for (const sarifChange of sarifFix.artifactChanges) {
                         const fixFile = {} as FixFile;
                         await LocationFactory.create({ artifactLocation: sarifChange.artifactLocation }, runId).then(
                             (loc: Location) => {

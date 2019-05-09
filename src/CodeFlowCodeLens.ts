@@ -41,6 +41,13 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
         return this.onDidChangeCodeLensesEmitter.event;
     }
 
+    /**
+     * Compute a list of [lenses](#CodeLens). This call should return as fast as possible and if
+     * computing the commands is expensive implementors should only return code lens objects with the
+     * range set and implement [resolve](#CodeLensProvider.resolveCodeLens).
+     * @param document The document in which the command was invoked.
+     * @param token A cancellation token.
+     */
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
         const codeLenses: CodeLens[] = [];
         const explorerController = ExplorerController.Instance;

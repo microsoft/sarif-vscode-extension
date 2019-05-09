@@ -1,6 +1,6 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2019-02-20",
-  "version": "2.0.0-csd.2.beta.2019-02-20",
+  "$schema": "http://json.schemastore.org/sarif-2.1.0-rtm.0",
+  "version": "2.1.0",
   "runs": [
     {
       "tool": {
@@ -10,7 +10,7 @@
           "version": "2.1",
           "semanticVersion": "2.1.0",
           "dottedQuadFileVersion": "2.1.0.0",
-          "ruleDescriptors": [
+          "rules": [
             {
               "id": "C2001",
               "deprecatedIds": [
@@ -49,20 +49,24 @@
           "endTimeUtc": "2016-07-16T14:19:01.000Z",
           "toolExecutionNotifications": [
             {
-              "id": "CTN0001",
               "message": {
                 "text": "Run started."
               },
-              "level": "note"
+              "level": "note",
+              "descriptor": {
+                "id": "CTN0001"
+              }
             },
             {
-              "id": "CTN9999",
-              "ruleId": "C2152",
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "file:///home/buildAgent/src/crypto/hash.cpp"
+              "locations": [
+                {
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "file:///home/buildAgent/src/crypto/hash.cpp"
+                    }
+                  }
                 }
-              },
+              ],
               "message": {
                 "text": "Exception evaluating rule \"C2152\". Rule disabled; run continues."
               },
@@ -76,26 +80,30 @@
                   "frames": [
                     {
                       "location": {
-                        "fullyQualifiedLogicalName": "Rules.SecureHashAlgorithmRule.Evaluate",
+                        "physicalLocation": {
+                          "address": {}
+                        },
+                        "logicalLocation": {
+                          "fullyQualifiedName": "Rules.SecureHashAlgorithmRule.Evaluate"
+                        },
                         "message": {
                           "text": "Exception thrown"
                         }
                       },
                       "module": "RuleLibrary",
-                      "threadId": 52,
-                      "address": {
-                        "baseAddress": 10092852
-                      }
+                      "threadId": 52
                     },
                     {
                       "location": {
-                        "fullyQualifiedLogicalName": "ExecutionEngine.Engine.EvaluateRule"
+                        "physicalLocation": {
+                          "address": {}
+                        },
+                        "logicalLocation": {
+                          "fullyQualifiedName": "ExecutionEngine.Engine.EvaluateRule"
+                        }
                       },
                       "module": "ExecutionEngine",
-                      "threadId": 52,
-                      "address": {
-                        "baseAddress": 10073356
-                      }
+                      "threadId": 52
                     }
                   ]
                 },
@@ -105,25 +113,38 @@
                     "message": "length is < 0"
                   }
                 ]
+              },
+              "descriptor": {
+                "id": "CTN9999"
+              },
+              "associatedRule": {
+                "id": "C2152"
               }
             },
             {
-              "id": "CTN0002",
               "message": {
                 "text": "Run ended."
               },
-              "level": "note"
+              "level": "note",
+              "descriptor": {
+                "id": "CTN0002"
+              }
             }
           ],
           "toolConfigurationNotifications": [
             {
-              "id": "UnknownRule",
-              "ruleId": "ABC0001",
               "message": {
                 "text": "Could not disable rule \"ABC0001\" because there is no rule with that id."
+              },
+              "descriptor": {
+                "id": "UnknownRule"
+              },
+              "associatedRule": {
+                "id": "ABC0001"
               }
             }
           ],
+          "executionSuccessful": true,
           "machine": "BLD01",
           "account": "buildAgent",
           "processId": 1218,
@@ -238,7 +259,7 @@
           "level": "error",
           "message": {
             "text": "This is the result message with an [embedded link](1), but \\[this one\\] isn't. Here is a [second link](1).",
-            "messageId": "default",
+            "id": "default",
             "arguments": [
               "ptr"
             ]
@@ -265,7 +286,9 @@
                   }
                 }
               },
-              "fullyQualifiedLogicalName": "collections::list:add"
+              "logicalLocation": {
+                "fullyQualifiedName": "collections::list:add"
+              }
             }
           ],
           "stacks": [
@@ -277,6 +300,7 @@
                 {
                   "location": {
                     "physicalLocation": {
+                      "address": {},
                       "artifactLocation": {
                         "uri": "file:///home/buildAgent/src/collections/list.h"
                       },
@@ -285,17 +309,15 @@
                         "startColumn": 15
                       }
                     },
-                    "fullyQualifiedLogicalName": "collections::list:add_core",
+                    "logicalLocation": {
+                      "fullyQualifiedName": "collections::list:add_core"
+                    },
                     "message": {
                       "text": "Exception thrown."
                     }
                   },
                   "module": "platform",
                   "threadId": 52,
-                  "address": {
-                    "baseAddress": 10092852,
-                    "offset": 16
-                  },
                   "parameters": [
                     "null",
                     "0",
@@ -305,6 +327,7 @@
                 {
                   "location": {
                     "physicalLocation": {
+                      "address": {},
                       "artifactLocation": {
                         "uri": "file:///home/buildAgent/src/collections/list.h"
                       },
@@ -313,14 +336,12 @@
                         "startColumn": 15
                       }
                     },
-                    "fullyQualifiedLogicalName": "collections::list:add"
+                    "logicalLocation": {
+                      "fullyQualifiedName": "collections::list:add"
+                    }
                   },
                   "module": "platform",
                   "threadId": 52,
-                  "address": {
-                    "baseAddress": 10092176,
-                    "offset": 84
-                  },
                   "parameters": [
                     "14"
                   ]
@@ -328,6 +349,7 @@
                 {
                   "location": {
                     "physicalLocation": {
+                      "address": {},
                       "artifactLocation": {
                         "uri": "file:///home/buildAgent/src/application/main.cpp"
                       },
@@ -336,14 +358,12 @@
                         "startColumn": 9
                       }
                     },
-                    "fullyQualifiedLogicalName": "main"
+                    "logicalLocation": {
+                      "fullyQualifiedName": "main"
+                    }
                   },
                   "module": "application",
-                  "threadId": 52,
-                  "address": {
-                    "baseAddress": 10091200,
-                    "offset": 156
-                  }
+                  "threadId": 52
                 }
               ]
             }
@@ -369,14 +389,18 @@
                             }
                           }
                         },
-                        "fullyQualifiedLogicalName": "collections::list:add",
+                        "logicalLocation": {
+                          "fullyQualifiedName": "collections::list:add"
+                        },
                         "message": {
                           "text": "Variable \"ptr\" declared."
                         }
                       },
                       "module": "platform",
                       "state": {
-                        "value": "[Not initialized}"
+                        "value": {
+                          "text": "[Not initialized}"
+                        }
                       },
                       "executionOrder": 1,
                       "executionTimeUtc": "2016-07-16T08:01:00Z",
@@ -395,7 +419,9 @@
                             }
                           }
                         },
-                        "fullyQualifiedLogicalName": "collections::list:add"
+                        "logicalLocation": {
+                          "fullyQualifiedName": "collections::list:add"
+                        }
                       },
                       "module": "platform",
                       "executionOrder": 2,
@@ -415,7 +441,9 @@
                             }
                           }
                         },
-                        "fullyQualifiedLogicalName": "collections::list:add",
+                        "logicalLocation": {
+                          "fullyQualifiedName": "collections::list:add"
+                        },
                         "message": {
                           "text": "Uninitialized variable \"ptr\" passed to method \"add_core\"."
                         }
@@ -432,8 +460,8 @@
           ],
           "relatedLocations": [
             {
+              "id": 1,
               "physicalLocation": {
-                "id": 1,
                 "artifactLocation": {
                   "uri": "file:///home/buildAgent/src/collections/list.h"
                 },
@@ -442,20 +470,26 @@
                   "startColumn": 5
                 }
               },
-              "fullyQualifiedLogicalName": "collections::list:add",
+              "logicalLocation": {
+                "fullyQualifiedName": "collections::list:add"
+              },
               "message": {
                 "text": "\"count\" was declared here."
               }
             }
           ],
-          "suppressionStates": ["suppressedExternally"],
+          "suppressions": [
+            {
+              "kind": "external"
+            }
+          ],
           "baselineState": "unchanged",
           "fixes": [
             {
               "description": {
                 "text": "Initialize the variable to null"
               },
-              "changes": [
+              "artifactChanges": [
                 {
                   "artifactLocation": {
                     "uri": "file:///home/buildAgent/src/collections/list.h"
@@ -476,16 +510,16 @@
           ]
         }
       ],
-      "id": {
-        "instanceId": "Nightly code scan/BC650830-A9FE-44CB-8818-AD6C387279A0",
-        "instanceGuid": "BC650830-A9FE-44CB-8818-AD6C387279A0"
+      "automationDetails": {
+        "id": "Nightly code scan/BC650830-A9FE-44CB-8818-AD6C387279A0",
+        "guid": "BC650830-A9FE-44CB-8818-AD6C387279A0"
       },
-      "aggregateIds": [
+      "runAggregates": [
         {
-          "instanceId": "Build-14.0.1.2-Release-20160716-13:22:18/"
+          "id": "Build-14.0.1.2-Release-20160716-13:22:18/"
         }
       ],
-      "baselineInstanceGuid": "0A106451-C9B1-4309-A7EE-06988B95F723",
+      "baselineGuid": "0A106451-C9B1-4309-A7EE-06988B95F723",
       "columnKind": "utf16CodeUnits"
     }
   ]

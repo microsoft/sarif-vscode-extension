@@ -364,9 +364,11 @@ class ExplorerWebview {
                 if (attachment.file.uri.fragment !== undefined && attachment.file.uri.fragment !== "") {
                     fragment = "#" + attachment.file.uri.fragment;
                 }
+                // @ts-ignore external exist on the webview side
+                const tooltipPath = attachment.file.uri.external.replace("%3A", ":");
                 let treeNodeOptions = {
                     isParent: isAParent, locationText: attachment.file.fileName, message: attachment.description.text,
-                    requestId: `${aIndex}`, tooltip: "file://" + attachment.file.uri.path + fragment,
+                    requestId: `${aIndex}`, tooltip: tooltipPath,
                 } as TreeNodeOptions;
                 const parent = this.createNode(treeNodeOptions);
                 if (isAParent) {
@@ -654,6 +656,10 @@ class ExplorerWebview {
         return row;
     }
 
+    /**
+     * Creates the Rule description section in the results details panel
+     * @param message Rule message
+     */
     private createRuleDescription(message: Message): HTMLDivElement {
         const ruleDescription = this.createElement("div", { id: "ruledescription" }) as HTMLDivElement;
         let text = message.html.text;
@@ -683,7 +689,8 @@ class ExplorerWebview {
         if (location.uri.fragment !== undefined && location.uri.fragment !== "") {
             fragment = "#" + location.uri.fragment;
         }
-        const file = "file://" + location.uri.path + fragment;
+        // @ts-ignore external exist on the webview side
+        const file = location.uri.external.replace("%3A", ":");
         const sourceLink = this.createElement("a", {
             attributes: {
                 "data-eCol": location.range[1].character.toString(),
@@ -806,6 +813,10 @@ class ExplorerWebview {
         }
     }
 
+    /**
+     * Callback when user clicks on the header, for showing and hiding the Results list or Results Details sections
+     * @param event event fired when user clicked a header
+     */
     private onHeaderClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
         while (!ele.classList.contains("headercontainer")) {
