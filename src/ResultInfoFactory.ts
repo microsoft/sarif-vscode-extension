@@ -118,7 +118,9 @@ export class ResultInfoFactory {
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                await LocationFactory.create(sarifLocation.physicalLocation, runId).then((location: Location) => {
+                const locId = sarifLocation.id;
+                const physicalLocation = sarifLocation.physicalLocation;
+                await LocationFactory.create(physicalLocation, runId, locId).then((location: Location) => {
                     locations.push(location);
                 });
             }
@@ -179,9 +181,9 @@ export class ResultInfoFactory {
             for (const sarifFix of sarifFixes) {
                 const fix = {} as Fix;
                 fix.description = Utilities.parseSarifMessage(sarifFix.description);
-                if (sarifFix.changes !== undefined) {
+                if (sarifFix.artifactChanges !== undefined) {
                     fix.files = [];
-                    for (const sarifChange of sarifFix.changes) {
+                    for (const sarifChange of sarifFix.artifactChanges) {
                         const fixFile = {} as FixFile;
                         await LocationFactory.create({ artifactLocation: sarifChange.artifactLocation }, runId).then(
                             (loc: Location) => {
