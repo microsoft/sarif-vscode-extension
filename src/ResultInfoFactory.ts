@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
-import { Attachment, CodeFlow, Fix, FixChange, FixFile, Location, ResultInfo } from "./common/Interfaces";
+import { Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack } from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
@@ -48,6 +48,10 @@ export class ResultInfoFactory {
 
         await CodeFlows.create(result.codeFlows, runId).then((codeFlows: CodeFlow[]) => {
             resultInfo.codeFlows = codeFlows;
+        });
+
+        await ResultInfoFactory.parseStacks(result.stacks, runId).then((stacks: Stack[]) => {
+            resultInfo.stacks = stacks;
         });
 
         if (result.properties !== undefined) {
@@ -209,5 +213,54 @@ export class ResultInfoFactory {
         }
 
         return fixes;
+    }
+
+    /**
+     * Parses the sarif stacks objects and returns and array of processed Stacks
+     * @param sarifStacks sarif stacks to parse
+     * @param runId id of the run this result is from
+     */
+    private static async parseStacks(sarifStacks: sarif.Stack[], runId: number): Promise<Stack[]> {
+        let stacks: Stack[];
+
+        if (sarifStacks !== undefined) {
+            stacks = [];
+            for (const sarifStack of sarifStacks) {
+                const stack = {} as Stack;
+                stack.message = Utilities.parseSarifMessage(sarifStack.message);
+                stack.frames = [];
+                for (const sarifFrame of sarifStack.frames) {
+                    const frame = {} as Frame;
+                    frame.name = "";
+                    if (sarifFrame.module !== undefined) {
+                        frame.name += sarifFrame.module + "!";
+                    }
+
+                    const sFLoc = sarifFrame.location;
+                    if (sFLoc !== undefined) {
+                        frame.message = Utilities.parseSarifMessage(sFLoc.message);
+                        await LocationFactory.create(sFLoc.physicalLocation, runId, sFLoc.id).then((loc: Location) => {
+                            frame.location = loc;
+                        });
+
+                        if (sFLoc.logicalLocation !== undefined) {
+                            if (sFLoc.logicalLocation.fullyQualifiedName !== undefined) {
+                                frame.name += sFLoc.logicalLocation.fullyQualifiedName;
+                            } else {
+                                frame.name += sFLoc.logicalLocation.name;
+                            }
+                        }
+                    }
+
+                    frame.parameters = sarifFrame.parameters || [];
+                    frame.threadId = sarifFrame.threadId;
+                    stack.frames.push(frame);
+                }
+
+                stacks.push(stack);
+            }
+        }
+
+        return stacks;
     }
 }

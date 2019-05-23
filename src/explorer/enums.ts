@@ -24,6 +24,7 @@ enum tabNames {
     fixes = "fixestab",
     resultinfo = "resultinfotab",
     runinfo = "runinfotab",
+    stacks = "stackstab",
 }
 
 enum ToggleState {

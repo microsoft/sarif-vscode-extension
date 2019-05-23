@@ -34,7 +34,7 @@ body {
 /* expand arrow */
 .headercontainer.collapsed>label:first-child::before,
 li.collapsed::before,
-.resultslistgroup.collapsed>th::before {
+.listtablegroup.collapsed>th::before {
     content: "\25b7";
     font-weight: normal;
     padding-right: 5px;
@@ -43,7 +43,7 @@ li.collapsed::before,
 /* collapse arrow */
 .headercontainer.expanded>label:first-child::before,
 li.expanded::before,
-.resultslistgroup.expanded>th::before {
+.listtablegroup.expanded>th::before {
     content: "\25e2";
     font-weight: normal;
     padding-right: 3px;
@@ -119,6 +119,14 @@ div#resultdetailscontainer:empty {
 .tabcontentactive {
     display: flex;
     flex-flow: column nowrap;
+}
+
+#stackstabcontent.tabcontentactive {
+    display: unset;
+}
+
+#stackstabcontent {
+    padding: 0px 0px 0px 10px;
 }
 
 .tabcontentheader {
