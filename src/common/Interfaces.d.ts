@@ -89,6 +89,7 @@ export interface ResultInfo {
     ruleDescription: Message;
     runId: number;
     severityLevel: sarif.Result.level;
+    stacks: Stack[];
 }
 
 export interface CodeFlow {
@@ -122,6 +123,19 @@ export interface CodeFlowStep {
     state: object;
     stepId: number;
     traversalId: string;
+}
+
+export interface Stack {
+    frames: Frame[];
+    message: Message;
+}
+
+export interface Frame {
+    location: Location;
+    message: Message;
+    name: string;
+    parameters: string[];
+    threadId: number;
 }
 
 export interface Message {

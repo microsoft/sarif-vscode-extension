@@ -21,17 +21,6 @@
     overflow-y: scroll;
 }
 
-#resultslisttable {
-    border-spacing: 0px !important;
-    cursor: pointer;
-    user-select: none;
-    width: 100%;
-}
-
-#resultslisttable>thead>tr>th:first-child {
-    width: 25px !important;
-}
-
 td,
 th {
     overflow: hidden;
@@ -54,18 +43,6 @@ th>span.descending:before {
 
 tr {
     white-space: nowrap;
-}
-
-tr.resultslistrow:hover {
-    background-color: var(--vscode-editor-hoverHighlightBackground);
-}
-
-tr.resultslistrow.selected {
-    background-color: var(--vscode-editor-inactiveSelectionBackground);
-}
-
-tr.resultslistrow.selected:focus {
-    background-color: var(--vscode-editor-selectionBackground);
 }
 
 select#resultslistgroupby {
@@ -208,10 +185,6 @@ button#filterinputcasebutton:before {
     min-width: .6em;
     padding: .3em .5em;
     text-align: center;
-}
-
-.resultslistrow.hidden {
-    display: none;
 }
 
 .severityiconcell {

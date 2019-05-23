@@ -72,12 +72,12 @@ class ResultsList {
     public updateSelection() {
         const diag = this.webview.diagnostic;
         const id = JSON.stringify({ resultId: diag.resultInfo.id, runId: diag.resultInfo.runId });
-        const curSelected = document.getElementsByClassName("resultslistrow selected");
+        const curSelected = document.getElementsByClassName("listtablerow selected");
         while (curSelected.length > 0) {
             curSelected[0].classList.remove("selected");
         }
 
-        const rows = document.getElementsByClassName("resultslistrow") as HTMLCollectionOf<HTMLElement>;
+        const rows = document.getElementsByClassName("listtablerow") as HTMLCollectionOf<HTMLElement>;
         // @ts-ignore: compiler complains even though results can be iterated
         for (const row of rows) {
             if (row.dataset.id === id) {
@@ -87,7 +87,7 @@ class ResultsList {
     }
 
     /**
-     * Creates the content that shows in the results details header of the Explorer window
+     * Creates the content that shows in the results list header of the Explorer window
      */
     private createResultsListHeader() {
         const header = document.getElementById("resultslistheader") as HTMLDivElement;
@@ -281,7 +281,7 @@ class ResultsList {
         HTMLTableRowElement {
         const groupRow = this.webview.createElement("tr", {
             attributes: { "data-group": groupId, "tabindex": "0" },
-            className: `resultslistgroup ${state}`,
+            className: `listtablegroup ${state}`,
         }) as HTMLTableRowElement;
         groupRow.addEventListener("click", this.onToggleGroupBind);
 
@@ -368,7 +368,7 @@ class ResultsList {
         const frag = document.createDocumentFragment();
         const resultRowBase = this.webview.createElement("tr", {
             attributes: { "data-group": groupId, "tabindex": "0" },
-            className: `resultslistrow`,
+            className: `listtablerow`,
         }) as HTMLTableRowElement;
 
         const rowCellBase = this.webview.createElement("td") as HTMLTableDataCellElement;
@@ -477,7 +477,7 @@ class ResultsList {
      */
     private onRowClicked(event) {
         const row = event.currentTarget as HTMLTableRowElement;
-        const curSelected = row.parentElement.getElementsByClassName("resultslistrow selected");
+        const curSelected = row.parentElement.getElementsByClassName("listtablerow selected");
         while (curSelected.length > 0) {
             curSelected[0].classList.remove("selected");
         }
@@ -568,7 +568,7 @@ class ResultsList {
      * @param stateToToggle The state either expanded or collapsed to toggle all groups to
      */
     private toggleAllGroups(stateToToggle: ToggleState) {
-        const className = `resultslistgroup ${stateToToggle}`;
+        const className = `listtablegroup ${stateToToggle}`;
         const groups = document.getElementsByClassName(className) as HTMLCollectionOf<HTMLTableRowElement>;
 
         while (groups.length > 0) {
@@ -591,10 +591,11 @@ class ResultsList {
             this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
         }
 
-        const results = document.getElementsByClassName("resultslistrow") as HTMLCollectionOf<HTMLElement>;
+        const results = document.querySelectorAll("#resultslisttable > tbody > .listtablerow") as NodeListOf<Element>;
 
         // @ts-ignore: compiler complains even though results can be iterated
         for (const result of results) {
+            // @ts-ignore: compiler complains even though result does have a dataset
             if (result.dataset.group === row.dataset.group) {
                 if (hideRow) {
                     result.classList.add("hidden");
