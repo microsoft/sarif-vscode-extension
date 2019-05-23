@@ -665,11 +665,25 @@ class ExplorerWebview {
 
                 const tdTag = "td";
                 for (const frame of stack.frames) {
+                    const fLocation = frame.location;
+                    // @ts-ignore external exist on the webview side
+                    const file = fLocation.uri.external.replace("%3A", ":");
+
                     const fRow = this.createElement("tr", {
-                        attributes: { "data-group": stackIndex, "tabindex": "0" },
+                        attributes: {
+                            "data-eCol": fLocation.range[1].character.toString(),
+                            "data-eLine": fLocation.range[1].line.toString(),
+                            "data-file": file,
+                            "data-group": stackIndex,
+                            "data-sCol": fLocation.range[0].character.toString(),
+                            "data-sLine": fLocation.range[0].line.toString(),
+                            "href": "#0",
+                            "tabindex": "0",
+                        },
                         className: "listtablerow",
                     });
-                    const fLine = frame.location.range[0].line.toString();
+                    fRow.addEventListener("click", this.onSourceLinkClickedBind);
+                    const fLine = fLocation.range[0].line.toString();
                     const fParameters = frame.parameters.toString();
                     let fMsg = "";
                     if (frame.message !== undefined) {
@@ -682,18 +696,13 @@ class ExplorerWebview {
                     }
 
                     fRow.appendChild(this.createElement(tdTag));
+                    fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
+                    fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
                     fRow.appendChild(this.createElement(tdTag,
-                        { text: fMsg, tooltip: fMsg }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: frame.name, tooltip: frame.name }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: fLine, tooltip: fLine }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: frame.location.fileName, tooltip: frame.location.fileName }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: fParameters, tooltip: fParameters }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: fThreadId, tooltip: fThreadId }));
+                        { text: frame.location.fileName, tooltip: fLocation.fileName }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
                     tableBodyEle.appendChild(fRow);
                 }
             }
@@ -765,10 +774,6 @@ class ExplorerWebview {
      * @param linkText The text to display on the link
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        let fragment = "";
-        if (location.uri.fragment !== undefined && location.uri.fragment !== "") {
-            fragment = "#" + location.uri.fragment;
-        }
         // @ts-ignore external exist on the webview side
         const file = location.uri.external.replace("%3A", ":");
         const sourceLink = this.createElement("a", {
@@ -986,7 +991,7 @@ class ExplorerWebview {
      * @param event event fired when a sourcelink was clicked
      */
     private onSourceLinkClicked(event: MouseEvent) {
-        const ele = event.srcElement as HTMLElement;
+        const ele = event.currentTarget as HTMLElement;
         const msgData = {
             eCol: ele.dataset.ecol, eLine: ele.dataset.eline, file: ele.dataset.file, sCol: ele.dataset.scol,
             sLine: ele.dataset.sline,
