@@ -618,6 +618,13 @@ class ExplorerWebview {
             tableEle.appendChild(this.createNameValueRow("Duration:", runInfo.timeDuration));
         }
 
+        if (runInfo.automationCategory !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Automation Category:", runInfo.automationCategory));
+        }
+        if (runInfo.automationIdentifier !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Automation Identifier:", runInfo.automationIdentifier));
+        }
+
         // The last item in the list should be properties if they exist
         if (runInfo.additionalProperties !== undefined) {
             tableEle.appendChild(this.createPropertiesRow(runInfo.additionalProperties));

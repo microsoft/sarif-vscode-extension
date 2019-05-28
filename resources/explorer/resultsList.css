@@ -196,8 +196,14 @@ button#filterinputcasebutton:before {
     height: 16px;
 }
 
-@media screen and (max-width:285px) {
+@media screen and (max-width:300px) {
     #resultslistgroupbylabel {
         display: none;
+    }
+}
+
+@media screen and (max-width:240px) {
+    #resultslistgroupby {
+        max-width: 95px;
     }
 }
