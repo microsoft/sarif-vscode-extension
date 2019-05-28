@@ -243,11 +243,11 @@ export class ResultInfoFactory {
                             frame.location = loc;
                         });
 
-                        if (sFLoc.logicalLocation !== undefined) {
-                            if (sFLoc.logicalLocation.fullyQualifiedName !== undefined) {
-                                frame.name += sFLoc.logicalLocation.fullyQualifiedName;
+                        if (sFLoc.logicalLocations !== undefined && sFLoc.logicalLocations.length > 0 ) {
+                            if (sFLoc.logicalLocations[0].fullyQualifiedName !== undefined) {
+                                frame.name += sFLoc.logicalLocations[0].fullyQualifiedName;
                             } else {
-                                frame.name += sFLoc.logicalLocation.name;
+                                frame.name += sFLoc.logicalLocations[0].name;
                             }
                         }
                     }

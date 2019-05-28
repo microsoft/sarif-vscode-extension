@@ -146,6 +146,7 @@ export class FileConverter {
             FileConverter.tools.set("AndroidStudio", ["xml"]);
             FileConverter.tools.set("ClangAnalyzer", ["xml"]);
             FileConverter.tools.set("CppCheck", ["xml"]);
+            FileConverter.tools.set("ContrastSecurity", ["xml"]);
             FileConverter.tools.set("Fortify", ["xml"]);
             FileConverter.tools.set("FortifyFpr", ["fpr"]);
             FileConverter.tools.set("FxCop", ["fxcop", "xml"]);
