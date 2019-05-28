@@ -2,7 +2,7 @@
 
 Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code.
 
-Supports up to Sarif version '2.1.0-rtm.0'
+Supports up to Sarif version '2.1.0-rtm.1', sdk version '2.1.2'
 
 ## **Features**
  * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)
@@ -13,6 +13,7 @@ Supports up to Sarif version '2.1.0-rtm.0'
     * Code flow steps
     * Attachments
     * Fixes
+    * *new* Stacks
  * Supports embedded target files
  * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
  * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
@@ -48,7 +49,7 @@ Supports up to Sarif version '2.1.0-rtm.0'
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool
+ * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool, *new*Automation Category, *new* Automation Id
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header

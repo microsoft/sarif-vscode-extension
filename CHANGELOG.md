@@ -1,5 +1,11 @@
 # Change Log
 
+## 2.13.0
+* Added Stacks panel to the Result Details section in the Sarif Explorer [issue #10](https://github.com/Microsoft/sarif-vscode-extension/issues/11)
+* Added Automation Category and Automation Id to the Results list columns and the Run Info panel
+* Updated the supported sarif version '2.1.0-rtm.1'
+* Updated the sarif Multitool to the version supporting '2.1.0-rtm.1'
+
 ## 2.12.0
 * Updated the supported sarif version '2.1.0-rtm.0'
 * Updated the sarif Multitool to the version supporting '2.1.0-rtm.0'
