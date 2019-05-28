@@ -50,6 +50,19 @@ export class RunInfoFactory {
         runInfo.sarifFileFullPath = sarifFileName;
         runInfo.sarifFileName = Utilities.Path.basename(sarifFileName);
 
+        if (run.automationDetails !== undefined && run.automationDetails.id !== undefined) {
+            const splitId = run.automationDetails.id.split("/");
+            const identifier = splitId.pop();
+            if (identifier !== "") {
+                runInfo.automationIdentifier = identifier;
+            }
+
+            const category = splitId.join("/");
+            if (identifier !== "") {
+                runInfo.automationCategory = category;
+            }
+        }
+
         return runInfo;
     }
 }

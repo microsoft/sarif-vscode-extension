@@ -55,6 +55,8 @@ export interface SarifViewerDiagnostic extends Diagnostic {
 
 export interface RunInfo {
     additionalProperties: { [key: string]: string };
+    automationCategory: string;
+    automationIdentifier: string;
     cmdLine: string;
     id: number;
     sarifFileFullPath: string;
@@ -212,6 +214,8 @@ export interface ResultsListGroup {
 }
 
 export interface ResultsListRow {
+    automationCat: ResultsListStringValue,
+    automationId: ResultsListStringValue,
     baselineState: ResultsListBaselineValue,
     kind: ResultsListKindValue,
     message: ResultsListStringValue,
