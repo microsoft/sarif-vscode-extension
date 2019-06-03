@@ -284,8 +284,10 @@ export interface ResultsListSortBy {
 }
 
 export interface SarifVersion {
+    original: string,
     csd?: number,
     csdDate?: Date,
+    rtm?: number,
     major: number,
     minor: number,
     sub: number,
