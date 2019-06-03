@@ -147,8 +147,7 @@ export class LogReader {
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
                     log = docMapping.data;
 
-                    if (log.version !== "2.1.0") {
-                        FileConverter.upgradeSarif(log.version, doc);
+                    if (FileConverter.tryUpgradeSarif(log.version, log.$schema, doc)) {
                         return;
                     }
 
