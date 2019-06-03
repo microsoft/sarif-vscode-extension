@@ -1,5 +1,12 @@
 # Change Log
 
+## 2.13.0
+* Added Stacks panel to the Result Details section in the Sarif Explorer [issue #10](https://github.com/Microsoft/sarif-vscode-extension/issues/11)
+* Added Automation Category and Automation Id to the Results list columns and the Run Info panel
+* Updated the supported sarif version '2.1.0-rtm.1'
+* Updated the sarif Multitool to the version supporting '2.1.0-rtm.1'
+* Updated Convert to Sarif dialog to support ContrastSecurity files
+
 ## 2.12.0
 * Updated the supported sarif version '2.1.0-rtm.0'
 * Updated the sarif Multitool to the version supporting '2.1.0-rtm.0'
@@ -59,7 +66,7 @@
 * Added feature to open and convert non-sarif static analysis file to sarif for analysis [issue #79](https://github.com/Microsoft/sarif-vscode-extension/issues/79)
     * New command to activate the converter is "Sarif: Convert and open a non-sarif file"
     * Supported analysis tool files are: 
-        * AndroidStudio, ClangAnalyzer, CppCheck, Fortify, FortifyFpr, FxCop, PREfast, Pylint, SemmleQL, StaticDriverVerifier, TSLint
+        * AndroidStudio, ClangAnalyzer, CppCheck, ContrastSecurity, Fortify, FortifyFpr, FxCop, PREfast, Pylint, SemmleQL, StaticDriverVerifier, TSLint
 * Added support for showing QuickFix light bulb and context menu in the Problems panel when a Sarif result can be remapped
 * Fixed bug where the UI dialog for remapping allowed a non valid path to be entered [issue #92](https://github.com/Microsoft/sarif-vscode-extension/issues/92)
 * Fixed bug where the Sarif Explorer showed empty when a sarif result was missing data such as rule id, rule name or location

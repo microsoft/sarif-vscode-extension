@@ -55,6 +55,8 @@ export interface SarifViewerDiagnostic extends Diagnostic {
 
 export interface RunInfo {
     additionalProperties: { [key: string]: string };
+    automationCategory: string;
+    automationIdentifier: string;
     cmdLine: string;
     id: number;
     sarifFileFullPath: string;
@@ -89,6 +91,7 @@ export interface ResultInfo {
     ruleDescription: Message;
     runId: number;
     severityLevel: sarif.Result.level;
+    stacks: Stack[];
 }
 
 export interface CodeFlow {
@@ -122,6 +125,19 @@ export interface CodeFlowStep {
     state: object;
     stepId: number;
     traversalId: string;
+}
+
+export interface Stack {
+    frames: Frame[];
+    message: Message;
+}
+
+export interface Frame {
+    location: Location;
+    message: Message;
+    name: string;
+    parameters: string[];
+    threadId: number;
 }
 
 export interface Message {
@@ -198,6 +214,8 @@ export interface ResultsListGroup {
 }
 
 export interface ResultsListRow {
+    automationCat: ResultsListStringValue,
+    automationId: ResultsListStringValue,
     baselineState: ResultsListBaselineValue,
     kind: ResultsListKindValue,
     message: ResultsListStringValue,
@@ -266,8 +284,10 @@ export interface ResultsListSortBy {
 }
 
 export interface SarifVersion {
+    original: string,
     csd?: number,
     csdDate?: Date,
+    rtm?: number,
     major: number,
     minor: number,
     sub: number,

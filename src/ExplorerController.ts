@@ -207,6 +207,7 @@ export class ExplorerController {
         const scriptsPath = "out/explorer/explorer/";
 
         const cssExplorerDiskPath = this.getVSCodeResourcePath(resourcesPath, "explorer.css");
+        const cssListTableDiskPath = this.getVSCodeResourcePath(resourcesPath, "listTable.css");
         const cssResultsListDiskPath = this.getVSCodeResourcePath(resourcesPath, "resultsList.css");
         const jQueryDiskPath = this.getVSCodeResourcePath(resourcesPath, "jquery-3.3.1.min.js");
         const colResizeDiskPath = this.getVSCodeResourcePath(resourcesPath, "colResizable-1.6.min.js");
@@ -221,6 +222,7 @@ export class ExplorerController {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Sarif Explorer</title>
+            <link rel="stylesheet" type="text/css" href = "${cssListTableDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssExplorerDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssResultsListDiskPath}">
             <script src="${jQueryDiskPath}"></script>
@@ -231,7 +233,7 @@ export class ExplorerController {
             <div id="resultslistcontainer">
                 <div id="resultslistbuttonbar"></div>
                 <div id="resultslisttablecontainer">
-                    <table id="resultslisttable"></table>
+                    <table id="resultslisttable" class="listtable"></table>
                 </div>
             </div>
             <div id="resultdetailsheader" class="headercontainer expanded"></div>

@@ -263,6 +263,8 @@ export class ResultsListController {
         row.runId = { value: resultInfo.runId };
 
         const run = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
+        row.automationCat = { value: run.automationCategory };
+        row.automationId = { value: run.automationIdentifier };
         row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
         row.tool = { value: run.toolName, tooltip: run.toolFullName };
 
@@ -330,7 +332,9 @@ export class ResultsListController {
      * @param regExp RegExp based on the filter settings, use generateFilterRegex() to create
      */
     private applyFilterToRow(row: ResultsListRow, regExp: RegExp): boolean {
-        if (regExp.test(row.baselineState.value) ||
+        if (regExp.test(row.automationCat.value) ||
+            regExp.test(row.automationId.value) ||
+            regExp.test(row.baselineState.value) ||
             regExp.test(row.message.value) ||
             regExp.test(row.ruleId.value) ||
             regExp.test(row.ruleName.value) ||
@@ -478,6 +482,17 @@ export class ResultsListController {
             } as ResultsListColumn,
             tool: {
                 description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
+            } as ResultsListColumn,
+
+            // Space above is needed to keep the order without tslint complaining
+            automationCat: {
+                description: "The automation category this results run belongs to",
+                hide: false, title: "Automation Cat",
+            } as ResultsListColumn,
+            automationId: {
+                description: "The unique automation id of this results run," +
+                    " used within the automation category if present",
+                hide: false, title: "Automation Id",
             } as ResultsListColumn,
         };
     }

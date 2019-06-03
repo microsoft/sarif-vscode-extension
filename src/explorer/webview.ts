@@ -8,7 +8,7 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location,
-    LocationData, Message, ResultInfo, ResultsListData, RunInfo, TreeNodeOptions, WebviewMessage,
+    LocationData, Message, ResultInfo, ResultsListData, RunInfo, Stack, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
 
 /**
@@ -19,6 +19,7 @@ class ExplorerWebview {
     private hasCodeFlows: boolean;
     private hasAttachments: boolean;
     private hasFixes: boolean;
+    private hasStacks: boolean;
     private onAttachmentClickedBind;
     private onCodeFlowTreeClickedBind;
     private onCollapseAllClickedBind;
@@ -28,6 +29,7 @@ class ExplorerWebview {
     private onMessageBind;
     private onSourceLinkClickedBind;
     private onTabClickedBind;
+    private onToggleStackGroupBind;
     private onVerbosityChangeBind;
     private vscode;
     private resultsList;
@@ -41,6 +43,7 @@ class ExplorerWebview {
         this.onHeaderClickedBind = this.onHeaderClicked.bind(this);
         this.onMessageBind = this.onMessage.bind(this);
         this.onSourceLinkClickedBind = this.onSourceLinkClicked.bind(this);
+        this.onToggleStackGroupBind = this.onToggleStackGroup.bind(this);
         this.onTabClickedBind = this.onTabClicked.bind(this);
         this.onVerbosityChangeBind = this.onVerbosityChange.bind(this);
 
@@ -615,12 +618,105 @@ class ExplorerWebview {
             tableEle.appendChild(this.createNameValueRow("Duration:", runInfo.timeDuration));
         }
 
+        if (runInfo.automationCategory !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Automation Category:", runInfo.automationCategory));
+        }
+        if (runInfo.automationIdentifier !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Automation Identifier:", runInfo.automationIdentifier));
+        }
+
         // The last item in the list should be properties if they exist
         if (runInfo.additionalProperties !== undefined) {
             tableEle.appendChild(this.createPropertiesRow(runInfo.additionalProperties));
         }
 
         panel.appendChild(tableEle);
+
+        return panel;
+    }
+
+    /**
+     * Creates a Panel that shows the Stacks of a result
+     * @param stacks Array of Stack objects to create the panel with
+     */
+    private createPanelStacks(stacks: Stack[]): HTMLDivElement {
+        const panel = this.createPanel(tabNames.stacks);
+
+        if (stacks !== undefined) {
+            const tableEle = this.createElement("table",
+                { id: "stackstable", className: "listtable" }) as HTMLTableElement;
+
+            const headerNames = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
+            const headerRow = this.createElement("tr") as HTMLTableRowElement;
+            for (const header of headerNames) {
+                const headerEle = this.createElement("th", { text: header });
+                headerRow.appendChild(headerEle);
+            }
+            const tableHeadEle = this.createElement("thead") as HTMLHeadElement;
+            tableHeadEle.appendChild(headerRow);
+            tableEle.appendChild(tableHeadEle);
+
+            const tableBodyEle = this.createElement("tbody") as HTMLBodyElement;
+            for (let stackIndex = 0; stackIndex < stacks.length; stackIndex++) {
+                const stack = stacks[stackIndex];
+                const msgRow = this.createElement("tr", {
+                    attributes: { "data-group": stackIndex, "tabindex": "0" },
+                    className: `listtablegroup ${ToggleState.expanded}`,
+                });
+                msgRow.appendChild(this.createElement("th", {
+                    attributes: { colspan: `${headerNames.length}` },
+                    text: stack.message.text,
+                }));
+                msgRow.addEventListener("click", this.onToggleStackGroupBind);
+                tableBodyEle.appendChild(msgRow);
+
+                const tdTag = "td";
+                for (const frame of stack.frames) {
+                    const fLocation = frame.location;
+                    // @ts-ignore external exist on the webview side
+                    const file = fLocation.uri.external.replace("%3A", ":");
+
+                    const fRow = this.createElement("tr", {
+                        attributes: {
+                            "data-eCol": fLocation.range[1].character.toString(),
+                            "data-eLine": fLocation.range[1].line.toString(),
+                            "data-file": file,
+                            "data-group": stackIndex,
+                            "data-sCol": fLocation.range[0].character.toString(),
+                            "data-sLine": fLocation.range[0].line.toString(),
+                            "href": "#0",
+                            "tabindex": "0",
+                        },
+                        className: "listtablerow",
+                    });
+                    fRow.addEventListener("click", this.onSourceLinkClickedBind);
+                    const fLine = fLocation.range[0].line.toString();
+                    const fParameters = frame.parameters.toString();
+                    let fMsg = "";
+                    if (frame.message !== undefined) {
+                        fMsg = frame.message.text;
+                    }
+
+                    let fThreadId = "";
+                    if (frame.threadId !== undefined) {
+                        fThreadId = frame.threadId.toString();
+                    }
+
+                    fRow.appendChild(this.createElement(tdTag));
+                    fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
+                    fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
+                    fRow.appendChild(this.createElement(tdTag,
+                        { text: frame.location.fileName, tooltip: fLocation.fileName }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
+                    fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
+                    tableBodyEle.appendChild(fRow);
+                }
+            }
+
+            tableEle.appendChild(tableBodyEle);
+            panel.appendChild(tableEle);
+        }
 
         return panel;
     }
@@ -685,10 +781,6 @@ class ExplorerWebview {
      * @param linkText The text to display on the link
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        let fragment = "";
-        if (location.uri.fragment !== undefined && location.uri.fragment !== "") {
-            fragment = "#" + location.uri.fragment;
-        }
         // @ts-ignore external exist on the webview side
         const file = location.uri.external.replace("%3A", ":");
         const sourceLink = this.createElement("a", {
@@ -740,6 +832,9 @@ class ExplorerWebview {
         if (this.hasFixes) {
             container.appendChild(this.createTabElement(tabNames.fixes, "Fixes", "FIXES"));
         }
+        if (this.hasStacks) {
+            container.appendChild(this.createTabElement(tabNames.stacks, "Stacks", "STACKS"));
+        }
 
         return container;
     }
@@ -769,6 +864,7 @@ class ExplorerWebview {
         this.hasCodeFlows = resultInfo.codeFlows !== undefined;
         this.hasAttachments = resultInfo.attachments !== undefined;
         this.hasFixes = resultInfo.fixes !== undefined;
+        this.hasStacks = resultInfo.stacks !== undefined;
 
         const body = document.body;
 
@@ -787,6 +883,7 @@ class ExplorerWebview {
         panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
         panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
         panelContainer.appendChild(this.createPanelFixes(resultInfo.fixes));
+        panelContainer.appendChild(this.createPanelStacks(resultInfo.stacks));
         resultDetailsContainer.appendChild(panelContainer);
 
         // Setup any state
@@ -901,7 +998,7 @@ class ExplorerWebview {
      * @param event event fired when a sourcelink was clicked
      */
     private onSourceLinkClicked(event: MouseEvent) {
-        const ele = event.srcElement as HTMLElement;
+        const ele = event.currentTarget as HTMLElement;
         const msgData = {
             eCol: ele.dataset.ecol, eLine: ele.dataset.eline, file: ele.dataset.file, sCol: ele.dataset.scol,
             sLine: ele.dataset.sline,
@@ -916,6 +1013,35 @@ class ExplorerWebview {
     private onTabClicked(event: MouseEvent) {
         // @ts-ignore: id does exist on the currentTarget property
         this.openTab(event.currentTarget.id);
+    }
+
+    /**
+     * Toggles the group row as well as any stacks list rows that match the group
+     * @param row Group row to toggled
+     */
+    private onToggleStackGroup(event: Event) {
+        const row = event.currentTarget as HTMLTableRowElement;
+        let hideRow = false;
+        if (row.classList.contains(`${ToggleState.expanded}`)) {
+            row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
+            hideRow = true;
+        } else {
+            row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
+        }
+
+        const results = document.querySelectorAll("#stackstable > tbody > .listtablerow") as NodeListOf<Element>;
+
+        // @ts-ignore: compiler complains even though results can be iterated
+        for (const result of results) {
+            // @ts-ignore: compiler complains even though results have a dataset
+            if (result.dataset.group === row.dataset.group) {
+                if (hideRow) {
+                    result.classList.add("hidden");
+                } else {
+                    result.classList.remove("hidden");
+                }
+            }
+        }
     }
 
     /**
@@ -940,6 +1066,20 @@ class ExplorerWebview {
 
         document.getElementById(id).classList.add("tabactive");
         document.getElementById(id + "content").classList.add("tabcontentactive");
+
+        if (id === tabNames.stacks) {
+            const table = $("#stackstable");
+            if (table !== null) {
+                // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+                table.colResizable({ disable: true });
+                // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
+                table.colResizable({
+                    disabledColumns: [0], headerOnly: true, liveDrag: true,
+                    minWidth: 26, partialRefresh: true, postbackSafe: true,
+                });
+                window.dispatchEvent(new Event("resize"));
+            }
+        }
 
         this.sendMessage({ data: id, type: MessageType.TabChanged } as WebviewMessage);
     }

@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.1.0-rtm.0",
+  "$schema": "http://json.schemastore.org/sarif-2.1.0-rtm.1",
   "version": "2.1.0",
   "runs": [
     {
@@ -83,9 +83,11 @@
                         "physicalLocation": {
                           "address": {}
                         },
-                        "logicalLocation": {
-                          "fullyQualifiedName": "Rules.SecureHashAlgorithmRule.Evaluate"
-                        },
+                        "logicalLocations": [
+                          {
+                            "fullyQualifiedName": "Rules.SecureHashAlgorithmRule.Evaluate"
+                          }
+                        ],
                         "message": {
                           "text": "Exception thrown"
                         }
@@ -98,9 +100,11 @@
                         "physicalLocation": {
                           "address": {}
                         },
-                        "logicalLocation": {
-                          "fullyQualifiedName": "ExecutionEngine.Engine.EvaluateRule"
-                        }
+                        "logicalLocations": [
+                          {
+                            "fullyQualifiedName": "ExecutionEngine.Engine.EvaluateRule"
+                          }
+                        ]
                       },
                       "module": "ExecutionEngine",
                       "threadId": 52
@@ -286,9 +290,11 @@
                   }
                 }
               },
-              "logicalLocation": {
-                "fullyQualifiedName": "collections::list:add"
-              }
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "collections::list:add"
+                }
+              ]
             }
           ],
           "stacks": [
@@ -309,9 +315,11 @@
                         "startColumn": 15
                       }
                     },
-                    "logicalLocation": {
-                      "fullyQualifiedName": "collections::list:add_core"
-                    },
+                    "logicalLocations": [
+                      {
+                        "fullyQualifiedName": "collections::list:add_core"
+                      }
+                    ],
                     "message": {
                       "text": "Exception thrown."
                     }
@@ -336,9 +344,11 @@
                         "startColumn": 15
                       }
                     },
-                    "logicalLocation": {
-                      "fullyQualifiedName": "collections::list:add"
-                    }
+                    "logicalLocations": [
+                      {
+                        "fullyQualifiedName": "collections::list:add"
+                      }
+                    ]
                   },
                   "module": "platform",
                   "threadId": 52,
@@ -358,9 +368,11 @@
                         "startColumn": 9
                       }
                     },
-                    "logicalLocation": {
-                      "fullyQualifiedName": "main"
-                    }
+                    "logicalLocations": [
+                      {
+                        "fullyQualifiedName": "main"
+                      }
+                    ]
                   },
                   "module": "application",
                   "threadId": 52
@@ -389,9 +401,11 @@
                             }
                           }
                         },
-                        "logicalLocation": {
-                          "fullyQualifiedName": "collections::list:add"
-                        },
+                        "logicalLocations": [
+                          {
+                            "fullyQualifiedName": "collections::list:add"
+                          }
+                        ],
                         "message": {
                           "text": "Variable \"ptr\" declared."
                         }
@@ -419,9 +433,11 @@
                             }
                           }
                         },
-                        "logicalLocation": {
-                          "fullyQualifiedName": "collections::list:add"
-                        }
+                        "logicalLocations": [
+                          {
+                            "fullyQualifiedName": "collections::list:add"
+                          }
+                        ]
                       },
                       "module": "platform",
                       "executionOrder": 2,
@@ -441,9 +457,11 @@
                             }
                           }
                         },
-                        "logicalLocation": {
-                          "fullyQualifiedName": "collections::list:add"
-                        },
+                        "logicalLocations": [
+                          {
+                            "fullyQualifiedName": "collections::list:add"
+                          }
+                        ],
                         "message": {
                           "text": "Uninitialized variable \"ptr\" passed to method \"add_core\"."
                         }
@@ -470,9 +488,11 @@
                   "startColumn": 5
                 }
               },
-              "logicalLocation": {
-                "fullyQualifiedName": "collections::list:add"
-              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "collections::list:add"
+                }
+              ],
               "message": {
                 "text": "\"count\" was declared here."
               }
