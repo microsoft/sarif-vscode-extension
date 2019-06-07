@@ -2,7 +2,7 @@
 
 Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code.
 
-Supports up to Sarif version '2.1.0-rtm.1', sdk version '2.1.2'
+Supports Sarif version '2.1.0'
 
 ## **Features**
  * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)

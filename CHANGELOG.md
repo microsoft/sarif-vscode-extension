@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.13.1
+* Security fix for a dependency
+* Fixed bug when closing a file it would sometimes remove more results then it should
+
 ## 2.13.0
 * Added Stacks panel to the Result Details section in the Sarif Explorer [issue #10](https://github.com/Microsoft/sarif-vscode-extension/issues/11)
 * Added Automation Category and Automation Id to the Results list columns and the Run Info panel
