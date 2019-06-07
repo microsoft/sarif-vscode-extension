@@ -294,6 +294,8 @@ export class SVDiagnosticCollection {
             }
         }
 
-        ResultsListController.Instance.updateResultsListData(diagnosticsRemoved, true);
+        if (diagnosticsRemoved.length > 0) {
+            ResultsListController.Instance.updateResultsListData(diagnosticsRemoved, true);
+        }
     }
 }

@@ -73,7 +73,7 @@ export class ResultsListController {
                 this.resultsListRows.delete(id);
                 const index = this.postFilterListRows.indexOf(id);
                 if (index !== -1) {
-                    this.postFilterListRows.splice(index);
+                    this.postFilterListRows.splice(index, 1);
                 }
             }
         } else {
@@ -89,7 +89,7 @@ export class ResultsListController {
                         this.postFilterListRows.push(id);
                     }
                 } else if (index !== -1) {
-                    this.postFilterListRows.splice(index);
+                    this.postFilterListRows.splice(index, 1);
                 }
             }
         }
