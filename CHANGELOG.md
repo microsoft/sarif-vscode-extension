@@ -2,10 +2,12 @@
 
 ## 2.13.1
 * Security fix for a dependency
-* Fixed bug when closing a file it would sometimes remove more results then it should
+* Fixed Extension not loading sarif results when 
+* Fixed Extension fails to load SARIF files without $schema property [issue #168](https://github.com/Microsoft/sarif-vscode-extension/issues/168)
+* Fixed Cannot load SARIF files with $schema set from sarif-spec github repo [issue #169](https://github.com/Microsoft/sarif-vscode-extension/issues/169)
 
 ## 2.13.0
-* Added Stacks panel to the Result Details section in the Sarif Explorer [issue #10](https://github.com/Microsoft/sarif-vscode-extension/issues/11)
+* Added Stacks panel to the Result Details section in the Sarif Explorer [issue #11](https://github.com/Microsoft/sarif-vscode-extension/issues/11)
 * Added Automation Category and Automation Id to the Results list columns and the Run Info panel
 * Updated the supported sarif version '2.1.0-rtm.1'
 * Updated the sarif Multitool to the version supporting '2.1.0-rtm.1'
