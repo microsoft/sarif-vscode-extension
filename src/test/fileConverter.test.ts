@@ -189,4 +189,22 @@ suite("parseSchemaVersion", () => {
         const parsedVer = callParseSchema(version);
         assert.deepEqual(parsedVer, { major: 1, minor: 2, original: version, sub: 3 } as SarifVersion);
     });
+
+    test("2.1.0 with alternative schema with json end", () => {
+        const ver = "2.1.0";
+        const fullVer = `https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`;
+        // @ts-ignore parseSchema is private but ingnoring for testing
+        const parsedVer = FileConverter.parseSchema(fullVer);
+        assert.deepEqual(parsedVer, { major: 2, minor: 1, original: ver, sub: 0 } as SarifVersion);
+    });
+
+    test("full csd with alternative schema with json end", () => {
+        const ver = "2.0.0-csd.2.beta.2018-9-10";
+        const fullVer = `https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`;
+        // @ts-ignore parseSchema is private but ingnoring for testing
+        const parsedVer = FileConverter.parseSchema(fullVer);
+        assert.deepEqual(parsedVer, {
+            csd: 2, csdDate: new Date(2018, 9, 10), major: 2, minor: 0, original: ver, sub: 0,
+        } as SarifVersion);
+    });
 });

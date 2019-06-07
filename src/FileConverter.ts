@@ -41,7 +41,7 @@ export class FileConverter {
     }
 
     /**
-     * Checks if the Version and Schema version are older then the current version and tries to upgrade if they are
+     * Checks if the Version and Schema version are older then the MultiTools current version and upgrades if they are
      * Returns false if Version and Schema Version match and the file can be loaded the way it is
      * @param version The version from the sarif file
      * @param schema The Schema from the sarif file
@@ -49,18 +49,22 @@ export class FileConverter {
      */
     public static tryUpgradeSarif(version: sarif.Log.version, schema: string, doc: TextDocument): boolean {
         let tryToUpgrade = false;
-        const curVersion = FileConverter.CurrentVersion;
+        const mTCurVersion = FileConverter.MultiToolCurrentVersion;
         const parsedVer = FileConverter.parseVersion(version);
         let parsedSchemaVer: SarifVersion;
 
-        if (parsedVer.original !== curVersion.original) {
-            tryToUpgrade = FileConverter.isOlderThenVersion(parsedVer, curVersion);
+        if (parsedVer.original !== mTCurVersion.original) {
+            tryToUpgrade = FileConverter.isOlderThenVersion(parsedVer, mTCurVersion);
         } else {
-            parsedSchemaVer = FileConverter.parseSchema(schema);
-            const curSchemaVersion = FileConverter.CurrentSchemaVersion;
+            if (schema !== undefined && schema.startsWith("http://json.schemastore.org/sarif-")) {
+                parsedSchemaVer = FileConverter.parseSchema(schema);
+                const mTCurSchemaVersion = FileConverter.MultiToolCurrentSchemaVersion;
 
-            if (parsedSchemaVer.original !== curSchemaVersion.original) {
-                tryToUpgrade = FileConverter.isOlderThenVersion(parsedSchemaVer, curSchemaVersion);
+                if (parsedSchemaVer.original !== mTCurSchemaVersion.original) {
+                    tryToUpgrade = FileConverter.isOlderThenVersion(parsedSchemaVer, mTCurSchemaVersion);
+                } else {
+                    return false;
+                }
             } else {
                 return false;
             }
@@ -69,7 +73,7 @@ export class FileConverter {
         if (tryToUpgrade) {
             FileConverter.upgradeSarif(doc, parsedVer, parsedSchemaVer);
         } else {
-            window.showErrorMessage(`Sarif version '${version}' is not yet supported by the Viewer.
+            window.showErrorMessage(`Sarif version '${version}'(schema '${schema}') is not yet supported by the Viewer.
             Make sure you have the latest extension version and check
             https://github.com/Microsoft/sarif-vscode-extension for future support.`);
         }
@@ -94,14 +98,14 @@ export class FileConverter {
         let infoMsg: string;
 
         if (sarifSchema !== undefined) {
-            curVersion = FileConverter.CurrentSchemaVersion.original;
-            version = `schema version ${sarifSchema.original}`;
+            curVersion = `schema version '${FileConverter.MultiToolCurrentSchemaVersion.original}'`;
+            version = `schema version '${sarifSchema.original}'`;
         } else {
-            curVersion = FileConverter.CurrentVersion.original;
-            version = `version ${sarifVersion.original}`;
+            curVersion = `version '${FileConverter.MultiToolCurrentVersion.original}'`;
+            version = `version '${sarifVersion.original}'`;
         }
 
-        infoMsg = `Sarif '${version}' is not supported. Upgrade to the latest version? '${curVersion}'`;
+        infoMsg = `Sarif ${version} is not supported. Upgrade to the latest ${curVersion}? `;
         const choice = await window.showInformationMessage(infoMsg, msgOptions, saveTemp, saveAs, "No");
 
         let output: string;
@@ -154,10 +158,13 @@ export class FileConverter {
     }
 
     private static childProcess;
-    private static curSchemaVersion: SarifVersion;
-    private static curVersion: SarifVersion;
+    private static multiToolSchemaVersion: SarifVersion;
+    private static multiToolRawSchema = "http://json.schemastore.org/sarif-2.1.0-rtm.1";
+    private static multiToolVersion: SarifVersion;
+    private static multiToolRawVersion = "2.1.0" as sarif.Log.version;
     private static multiTool: string;
     private static tools: Map<string, string[]>;
+    private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
 
     private static get ChildProcess() {
         if (FileConverter.childProcess === undefined) {
@@ -167,20 +174,20 @@ export class FileConverter {
         return FileConverter.childProcess;
     }
 
-    private static get CurrentSchemaVersion() {
-        if (FileConverter.curSchemaVersion === undefined) {
-            FileConverter.curSchemaVersion = FileConverter.parseSchema("http://json.schemastore.org/sarif-2.1.0-rtm.1");
+    private static get MultiToolCurrentSchemaVersion() {
+        if (FileConverter.multiToolSchemaVersion === undefined) {
+            FileConverter.multiToolSchemaVersion = FileConverter.parseSchema(FileConverter.multiToolRawSchema);
         }
 
-        return FileConverter.curSchemaVersion;
+        return FileConverter.multiToolSchemaVersion;
     }
 
-    private static get CurrentVersion() {
-        if (FileConverter.curVersion === undefined) {
-            FileConverter.curVersion = FileConverter.parseVersion("2.1.0");
+    private static get MultiToolCurrentVersion() {
+        if (FileConverter.multiToolVersion === undefined) {
+            FileConverter.multiToolVersion = FileConverter.parseVersion(FileConverter.multiToolRawVersion);
         }
 
-        return FileConverter.curVersion;
+        return FileConverter.multiToolVersion;
     }
 
     private static get MultiTool(): string {
@@ -312,9 +319,11 @@ export class FileConverter {
      * @param schema schema string from the sarif log to parse
      */
     private static parseSchema(schema: string): SarifVersion {
-        const splitSchema = schema.split("sarif-");
-        const schemaVer = FileConverter.parseVersion(splitSchema[splitSchema.length - 1] as sarif.Log.version);
-        return schemaVer;
+        const regEx = new RegExp(FileConverter.regExpVersion);
+        let rawSchemaVersion = regEx.exec(schema)[0];
+        rawSchemaVersion = rawSchemaVersion.replace(".json", "");
+        const parsedSchemaVer = FileConverter.parseVersion(rawSchemaVersion as sarif.Log.version);
+        return parsedSchemaVer;
     }
 
 }
