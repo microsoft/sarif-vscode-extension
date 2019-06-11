@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Command } from "vscode";
-import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, ThreadFlow } from "./common/Interfaces";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
@@ -153,38 +153,42 @@ export class CodeFlows {
 
     /**
      * Creates the CodeFlowStep object from the passed in sarif CodeFlowLocation object
-     * @param cFLoc the CodeFlowLocation object that needs to be processed
-     * @param nextCFLoc the next CodeFlowLocation object, it's nesting level is used to determine if isCall or isReturn
+     * @param tFLoc the ThreadFlowLocation that needs to be processed
+     * @param nextTFLoc the next ThreadFlowLocation, it's nesting level is used to determine if isCall or isReturn
      * @param indexId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
      * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
-        cFLoc: sarif.ThreadFlowLocation,
-        nextCFLoc: sarif.ThreadFlowLocation,
+        tFLoc: sarif.ThreadFlowLocation,
+        nextTFLoc: sarif.ThreadFlowLocation,
         indexId: string,
         stepNumber: number,
         runId: number,
     ): Promise<CodeFlowStep> {
 
-        let loc: Location;
-        await LocationFactory.create(cFLoc.location.physicalLocation, runId).then((location: Location) => {
-            loc = location;
-        });
-
         let isParentFlag = false;
         let isLastChildFlag = false;
-        if (nextCFLoc !== undefined) {
-            if ((cFLoc.nestingLevel < nextCFLoc.nestingLevel) ||
-                (cFLoc.nestingLevel === undefined && nextCFLoc.nestingLevel !== undefined)) {
+        if (nextTFLoc !== undefined) {
+            if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
+                (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
                 isParentFlag = true;
-            } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel ||
-                (cFLoc.nestingLevel !== undefined && nextCFLoc.nestingLevel === undefined)) {
+            } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
+                (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
                 isLastChildFlag = true;
             }
         }
 
-        const message = Utilities.parseSarifMessage(cFLoc.location.message);
+        let loc: Location;
+        let message: Message;
+        if (tFLoc.location !== undefined) {
+            await LocationFactory.create(tFLoc.location.physicalLocation, runId).then((location: Location) => {
+                loc = location;
+            });
+
+            message = Utilities.parseSarifMessage(tFLoc.location.message);
+        }
+
         let messageText = "";
         if (message !== undefined) {
             messageText = message.text;
@@ -206,7 +210,7 @@ export class CodeFlows {
             title: messageWithStepText,
         } as Command;
 
-        let nestingLevelValue = cFLoc.nestingLevel;
+        let nestingLevelValue = tFLoc.nestingLevel;
         if (nestingLevelValue === undefined) {
             nestingLevelValue = -1;
         }
@@ -214,15 +218,15 @@ export class CodeFlows {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: cFLoc.importance || "important",
+            importance: tFLoc.importance || "important",
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,
             message: messageText,
             messageWithStep: messageWithStepText,
             nestingLevel: nestingLevelValue,
-            state: cFLoc.state,
-            stepId: cFLoc.executionOrder,
+            state: tFLoc.state,
+            stepId: tFLoc.executionOrder,
             traversalId: indexId,
         };
 
