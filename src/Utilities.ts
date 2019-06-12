@@ -356,7 +356,7 @@ export class Utilities {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
         }
 
-        return this.joinPath(base, baseIds[id].uri);
+        return this.joinPath(base, baseIds[id].uri || id);
     }
 
     /**
