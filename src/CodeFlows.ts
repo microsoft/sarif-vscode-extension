@@ -57,6 +57,19 @@ export class CodeFlows {
     }
 
     /**
+     * Map ThreadFlowLocations array from the sarif file for
+     * @param tFLocs The array of ThreadFlowLocations off of the run object
+     * @param runId Id of the run
+     */
+    public static mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number) {
+        if (tFLocs !== undefined) {
+            for (let index = 0; index < tFLocs.length; index++) {
+                CodeFlows.threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
+            }
+        }
+    }
+
+    /**
      * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
      * @param codeFlows array of processed codeflow objects to try to remap
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
@@ -79,6 +92,8 @@ export class CodeFlows {
             }
         }
     }
+
+    private static threadFlowLocations = new Map<string, sarif.ThreadFlowLocation>();
 
     /**
      * Creates the CodeFlow object from the passed in sarif codeflow object
@@ -160,16 +175,32 @@ export class CodeFlows {
      * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
-        tFLoc: sarif.ThreadFlowLocation,
-        nextTFLoc: sarif.ThreadFlowLocation,
+        tFLocOrig: sarif.ThreadFlowLocation,
+        nextTFLocOrig: sarif.ThreadFlowLocation,
         indexId: string,
         stepNumber: number,
         runId: number,
     ): Promise<CodeFlowStep> {
 
+        let tFLoc = tFLocOrig;
+        if (tFLoc.index !== undefined) {
+            const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
+            if (lookedUpLoc !== undefined) {
+                tFLoc = lookedUpLoc;
+            }
+        }
+
         let isParentFlag = false;
         let isLastChildFlag = false;
-        if (nextTFLoc !== undefined) {
+        if (nextTFLocOrig !== undefined) {
+            let nextTFLoc = nextTFLocOrig;
+            if (nextTFLoc.index !== undefined) {
+                const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
+                if (lookedUpLoc !== undefined) {
+                    nextTFLoc = lookedUpLoc;
+                }
+            }
+
             if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
                 (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
                 isParentFlag = true;
