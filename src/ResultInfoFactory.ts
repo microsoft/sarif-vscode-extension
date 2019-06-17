@@ -58,14 +58,33 @@ export class ResultInfoFactory {
             resultInfo.additionalProperties = result.properties;
         }
 
-        const ruleIndex = result.ruleIndex;
-        resultInfo.ruleId = result.ruleId;
+        let ruleIndex: number;
+        let ruleId: string;
+        let extensionIndex: number;
+
+        if (result.rule !== undefined) {
+            ruleIndex = result.rule.index;
+            ruleId = result.rule.id;
+            if (result.rule.toolComponent !== undefined) {
+                extensionIndex = result.rule.toolComponent.index;
+            }
+        }
+
+        ruleIndex = ruleIndex || result.ruleIndex;
+        resultInfo.ruleId = ruleId || result.ruleId;
+
         const allLocations = resultInfo.locations.concat(resultInfo.relatedLocs);
 
         // Parse the rule related info
         let ruleMessageString: string;
         if (ruleIndex !== undefined && tool !== undefined) {
-            const ruleDescriptors = tool.driver.rules;
+            let ruleDescriptors: sarif.ReportingDescriptor[];
+            if (extensionIndex === undefined) {
+                ruleDescriptors = tool.driver.rules;
+            } else {
+                ruleDescriptors = tool.extensions[extensionIndex].rules;
+            }
+
             if (ruleDescriptors !== undefined && ruleDescriptors[ruleIndex] !== undefined) {
                 const rule: sarif.ReportingDescriptor = ruleDescriptors[ruleIndex];
 
@@ -243,7 +262,7 @@ export class ResultInfoFactory {
                             frame.location = loc;
                         });
 
-                        if (sFLoc.logicalLocations !== undefined && sFLoc.logicalLocations.length > 0 ) {
+                        if (sFLoc.logicalLocations !== undefined && sFLoc.logicalLocations.length > 0) {
                             if (sFLoc.logicalLocations[0].fullyQualifiedName !== undefined) {
                                 frame.name += sFLoc.logicalLocations[0].fullyQualifiedName;
                             } else {

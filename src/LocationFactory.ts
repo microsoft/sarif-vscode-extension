@@ -180,10 +180,10 @@ export class LocationFactory {
                 }
             } else if (region.charOffset !== undefined) {
                 startline = 0;
-                startcol = region.charOffset - 1;
+                startcol = region.charOffset;
 
                 if (region.charLength !== undefined) {
-                    endcol = region.charLength + region.charOffset - 1;
+                    endcol = region.charLength + region.charOffset;
                 } else {
                     endcol = startcol;
                 }
