@@ -16,48 +16,52 @@ import { Utilities } from "./Utilities";
 export class LocationFactory {
 
     /**
-     * Processes the passed in location and creates a new ResultLocation
-     * Returns undefined if location or filelocation are not defined
+     * Processes the passed in sarif location and creates a new Location
      * @param sarifLocation location from result in sarif file
      * @param runId used for mapping uribaseids
-     * @param id location Id
      */
-    public static async create(sarifLocation: sarif.PhysicalLocation, runId: number, id?: number): Promise<Location> {
-        if (sarifLocation === undefined || sarifLocation.artifactLocation === undefined) {
-            return Promise.resolve(undefined);
-        }
-
+    public static async create(sarifLocation: sarif.Location, runId: number): Promise<Location> {
         const location = {
             endOfLine: false,
-            fileName: "",
+            mapped: false,
             range: new Range(0, 0, 0, 1),
-            uri: null,
         } as Location;
 
-        location.id = id;
+        if (sarifLocation !== undefined) {
+            location.id = sarifLocation.id;
+            const physLocation = sarifLocation.physicalLocation;
+            if (physLocation !== undefined && physLocation.artifactLocation !== undefined) {
+                const artifactLocation = physLocation.artifactLocation;
+                location.uriBase = Utilities.getUriBase(artifactLocation, runId);
 
-        const artifactLocation = sarifLocation.artifactLocation;
-        location.uriBase = Utilities.getUriBase(artifactLocation, runId);
+                await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((uri: Uri) => {
+                    if (uri !== null) {
+                        location.uri = uri;
+                        location.mapped = true;
+                    } else {
+                        location.uri = Utilities.combineUriWithUriBase(artifactLocation.uri, location.uriBase);
+                        location.uri.toString();
+                    }
 
-        await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((uri: Uri) => {
-            if (uri !== null) {
-                location.uri = uri;
-                location.mapped = true;
-            } else {
-                location.uri = Utilities.combineUriWithUriBase(artifactLocation.uri, location.uriBase);
-                location.uri.toString();
-                location.mapped = false;
+                    location.fileName = location.uri.toString(true).substring(
+                        location.uri.toString(true).lastIndexOf("/") + 1);
+                });
+
+                if (physLocation.region !== undefined) {
+                    const parsedRange = LocationFactory.parseRange(physLocation.region);
+                    location.range = parsedRange.range;
+                    location.endOfLine = parsedRange.endOfLine;
+                    location.message = Utilities.parseSarifMessage(physLocation.region.message);
+                }
             }
 
-            location.fileName = location.uri.toString(true).substring(
-                location.uri.toString(true).lastIndexOf("/") + 1);
-        });
-
-        if (sarifLocation.region !== undefined) {
-            const parsedRange = LocationFactory.parseRange(sarifLocation.region);
-            location.range = parsedRange.range;
-            location.endOfLine = parsedRange.endOfLine;
-            location.message = Utilities.parseSarifMessage(sarifLocation.region.message);
+            const logLocations = sarifLocation.logicalLocations;
+            if (logLocations !== undefined) {
+                location.logicalLocations = [];
+                for (const logLoc of logLocations) {
+                    location.logicalLocations.push(logLoc.fullyQualifiedName || logLoc.name);
+                }
+            }
         }
 
         return location;
@@ -75,7 +79,7 @@ export class LocationFactory {
                 const physLoc = sarifLocation.physicalLocation;
                 const uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
                 await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
-                    return LocationFactory.create(physLoc, runId, sarifLocation.id);
+                    return LocationFactory.create(sarifLocation, runId);
                 }).then((remappedLocation) => {
                     location = remappedLocation;
                 });

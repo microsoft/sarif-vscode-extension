@@ -318,7 +318,7 @@ export class CodeFlowDecorations {
      */
     private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions {
         let decoration;
-        if (step.location !== undefined && step.location.mapped &&
+        if (step.location.uri !== undefined && step.location.mapped &&
             step.location.uri.toString() === editor.document.uri.toString()) {
             let stepRange = step.location.range;
             if (step.location.endOfLine === true) {

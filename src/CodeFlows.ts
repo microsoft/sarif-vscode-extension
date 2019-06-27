@@ -84,7 +84,7 @@ export class CodeFlows {
                     const step = thread.steps[stepKey];
                     if (step.location !== undefined && step.location.mapped !== true) {
                         const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        await LocationFactory.create(sarifLoc.physicalLocation, runId).then((location: Location) => {
+                        await LocationFactory.create(sarifLoc, runId).then((location: Location) => {
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                         });
                     }
@@ -213,24 +213,20 @@ export class CodeFlows {
         let loc: Location;
         let message: Message;
         if (tFLoc.location !== undefined) {
-            await LocationFactory.create(tFLoc.location.physicalLocation, runId).then((location: Location) => {
+            await LocationFactory.create(tFLoc.location, runId).then((location: Location) => {
                 loc = location;
             });
 
             message = Utilities.parseSarifMessage(tFLoc.location.message);
         }
 
-        let messageText = "";
-        if (message !== undefined) {
+        let messageText: string;
+        if (message.text !== undefined) {
             messageText = message.text;
-        }
-
-        if (messageText === "") {
-            if (isLastChildFlag) {
-                messageText = "[return call]";
-            } else {
-                messageText = "[no description]";
-            }
+        } else if (isLastChildFlag) {
+            messageText = "[return call]";
+        } else {
+            messageText = "[no description]";
         }
 
         const messageWithStepText = `Step ${stepNumber}: ${messageText}`;

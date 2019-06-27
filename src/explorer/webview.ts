@@ -7,8 +7,8 @@
 import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
-    Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location,
-    LocationData, Message, ResultInfo, ResultsListData, RunInfo, Stack, TreeNodeOptions, WebviewMessage,
+    Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
+    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage,
 } from "../common/Interfaces";
 
 /**
@@ -200,22 +200,21 @@ class ExplorerWebview {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
             const nodeClass = `${step.importance || "important"} verbosityshow`;
-            let fileName: string;
-            let fileLine = "";
-            if (step.location !== undefined) {
-                fileName = `${step.location.fileName}`;
-                fileLine = `(${step.location.range[0].line + 1})`;
-            }
-
             treeNodeOptions = {
-                isParent: step.isParent, liClass: nodeClass, locationLine: fileLine, locationText: fileName,
-                message: step.message, requestId: step.traversalId, tooltip: step.messageWithStep,
+                isParent: step.isParent,
+                liClass: nodeClass,
+                location: step.location,
+                message: step.message,
+                requestId: step.traversalId,
+                tooltip: step.messageWithStep,
             };
         } else {
             // Placeholder node
             treeNodeOptions = {
-                isParent: true, liClass: `${"essential"} verbosityshow`,
-                locationLine: "", locationText: undefined, message: "Nested first step", requestId: "-1",
+                isParent: true,
+                liClass: `${"essential"} verbosityshow`,
+                message: "Nested first step",
+                requestId: "-1",
                 tooltip: "First step starts in a nested call",
             };
         }
@@ -278,9 +277,40 @@ class ExplorerWebview {
             if (loc !== undefined && loc !== null) {
                 const text = `${loc.fileName} (${(loc.range[0].line + 1)})`;
                 const link = this.createSourceLink(loc, text);
-                cellContents.appendChild(link);
-                cellContents.appendChild(this.createElement("br"));
-                locationsAdded++;
+                if (link !== undefined) {
+                    cellContents.appendChild(link);
+                    cellContents.appendChild(this.createElement("br"));
+                    locationsAdded++;
+                }
+            }
+        }
+
+        if (locationsAdded === 0) {
+            return undefined;
+        }
+
+        return this.createRowWithContents(rowName, cellContents);
+    }
+
+    /**
+     * Creates a row with logical locations, returns undefined if no logical locations are displayable
+     * @param rowName name to show up on the left side of the row
+     * @param locations Array of Locations to be added to the Html
+     */
+    private createLogicalLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement {
+        const cellContents = this.createElement("div") as HTMLDivElement;
+
+        let locationsAdded = 0;
+        for (const loc of locations) {
+            if (loc !== undefined && loc !== null) {
+                if (loc.logicalLocations !== undefined) {
+                    for (const logLoc of loc.logicalLocations) {
+                        const text = this.createElement("span", { text: logLoc });
+                        cellContents.appendChild(text);
+                        cellContents.appendChild(this.createElement("br"));
+                        locationsAdded++;
+                    }
+                }
             }
         }
 
@@ -318,12 +348,51 @@ class ExplorerWebview {
             options.liClass = "unexpandable " + options.liClass;
         }
 
+        if (options.location !== undefined) {
+            if (options.logicalLocation === undefined) {
+                const optLogLocs = options.location.logicalLocations;
+                if (optLogLocs !== undefined && optLogLocs.length > 0) {
+                    options.logicalLocation = optLogLocs[0];
+                }
+            }
+
+            if (options.locationText === undefined) {
+                options.locationText = options.location.fileName;
+            }
+
+            if (options.locationText !== undefined && options.locationLine === undefined) {
+                const locRange = options.location.range[0];
+                options.locationLine = `(${locRange.line + 1},${locRange.character + 1})`;
+            }
+
+            if (options.message === undefined) {
+                options.message = options.location.message.text;
+            }
+
+            if (options.tooltip === undefined) {
+                if (options.message !== undefined) {
+                    options.tooltip = options.message;
+                } else if (options.location.uri !== undefined) {
+                    // @ts-ignore external exist on the webview side
+                    options.tooltip = options.location.uri.external.replace("%3A", ":");
+                }
+            }
+        }
+
         if (options.locationText === undefined) {
-            options.locationText = "[no location]";
+            options.locationText = options.logicalLocation || "[no location]";
         }
 
         if (options.locationLine === undefined) {
             options.locationLine = "";
+        }
+
+        if (options.message === undefined) {
+            options.message = "[no description]";
+        }
+
+        if (options.tooltip === undefined) {
+            options.tooltip = options.message;
         }
 
         const node = this.createElement("li", {
@@ -363,29 +432,22 @@ class ExplorerWebview {
                 let isAParent = false;
                 const attachment = attachments[aIndex];
                 if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
-                let fragment = "";
-                if (attachment.file.uri.fragment !== undefined && attachment.file.uri.fragment !== "") {
-                    fragment = "#" + attachment.file.uri.fragment;
-                }
-                // @ts-ignore external exist on the webview side
-                const tooltipPath = attachment.file.uri.external.replace("%3A", ":");
                 let treeNodeOptions = {
-                    isParent: isAParent, locationText: attachment.file.fileName, message: attachment.description.text,
-                    requestId: `${aIndex}`, tooltip: tooltipPath,
+                    isParent: isAParent,
+                    location: attachment.file,
+                    message: attachment.description.text,
+                    requestId: `${aIndex}`,
                 } as TreeNodeOptions;
                 const parent = this.createNode(treeNodeOptions);
                 if (isAParent) {
                     const childrenContainer = this.createElement("ul") as HTMLUListElement;
                     for (const rIndex of attachment.regionsOfInterest.keys()) {
                         const region = attachment.regionsOfInterest[rIndex];
-                        let regionText = "No Description";
-                        if (region.message !== undefined) {
-                            regionText = region.message.text;
-                        }
-                        const locText = `(${region.range[0].line + 1},${region.range[0].character + 1})`;
                         treeNodeOptions = {
-                            isParent: false, locationText: locText, message: regionText,
-                            requestId: `${aIndex}_${rIndex}`, tooltip: regionText,
+                            isParent: false,
+                            locationText: "",
+                            message: region.message.text,
+                            requestId: `${aIndex}_${rIndex}`,
                         } as TreeNodeOptions;
 
                         childrenContainer.appendChild(this.createNode(treeNodeOptions));
@@ -450,13 +512,11 @@ class ExplorerWebview {
             for (const index of fixes.keys()) {
                 const fix = fixes[index];
                 const hasFiles = fix.files !== undefined && fix.files.length > 0;
-                let fixMsg = "No Description";
-                if (fix.description !== undefined) {
-                    fixMsg = fix.description.text;
-                }
                 const fixRootNodeOptions = {
-                    isParent: hasFiles, locationText: "", message: fixMsg,
-                    requestId: `${index}`, tooltip: fixMsg,
+                    isParent: hasFiles,
+                    locationText: "",
+                    message: fix.description.text,
+                    requestId: `${index}`,
                 } as TreeNodeOptions;
                 const fixRootNode = this.createNode(fixRootNodeOptions);
                 rootEle.appendChild(fixRootNode);
@@ -481,8 +541,10 @@ class ExplorerWebview {
                                 const change = file.changes[changeIndex];
                                 const changeMsg = `Change ${changeIndex + 1}`;
                                 const changeNodeOptions = {
-                                    isParent: true, locationText: "", message: changeMsg,
-                                    requestId: `${index}`, tooltip: changeMsg,
+                                    isParent: true,
+                                    locationText: "",
+                                    message: changeMsg,
+                                    requestId: `${index}`,
                                 } as TreeNodeOptions;
                                 const changeNode = this.createNode(changeNodeOptions);
                                 changesContainer.appendChild(changeNode);
@@ -501,8 +563,10 @@ class ExplorerWebview {
                                     }
 
                                     const deleteNodeOptions = {
-                                        isParent: false, locationText: "", message: delMsg,
-                                        requestId: `${index}`, tooltip: delMsg,
+                                        isParent: false,
+                                        locationText: "",
+                                        message: delMsg,
+                                        requestId: `${index}`,
                                     } as TreeNodeOptions;
                                     changeDetailsContainer.appendChild(this.createNode(deleteNodeOptions));
                                 }
@@ -511,8 +575,10 @@ class ExplorerWebview {
                                     const msg = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
                                         `"${change.insert}"`;
                                     const insertNodeOptions = {
-                                        isParent: false, locationText: "", message: msg, requestId: `${index}`,
-                                        tooltip: msg,
+                                        isParent: false,
+                                        locationText: "",
+                                        message: msg,
+                                        requestId: `${index}`,
                                     } as TreeNodeOptions;
                                     changeDetailsContainer.appendChild(this.createNode(insertNodeOptions));
                                 }
@@ -536,11 +602,10 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        let ruleDescription = resultInfo.ruleName;
         if (resultInfo.ruleDescription !== undefined) {
-            ruleDescription = resultInfo.ruleDescription.text;
+            const ruleDescription = resultInfo.ruleDescription.text || resultInfo.ruleName;
+            tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, ruleDescription));
         }
-        tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, ruleDescription, ruleDescription));
 
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
@@ -551,8 +616,7 @@ class ExplorerWebview {
         }
 
         if (resultInfo.rank !== undefined) {
-            const rankStr = resultInfo.rank.toString(10);
-            tableEle.appendChild(this.createNameValueRow("Rank:", rankStr, rankStr));
+            tableEle.appendChild(this.createNameValueRow("Rank:", resultInfo.rank.toString(10)));
         }
 
         if (resultInfo.baselineState !== undefined) {
@@ -571,7 +635,17 @@ class ExplorerWebview {
             tableEle.appendChild(row);
         }
 
+        row = this.createLogicalLocationsRow("Logical Locations: ", resultInfo.locations);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
+        }
+
         row = this.createLocationsRow("Related: ", resultInfo.relatedLocs);
+        if (row !== undefined) {
+            tableEle.appendChild(row);
+        }
+
+        row = this.createLogicalLocationsRow("Related Logical Locations: ", resultInfo.relatedLocs);
         if (row !== undefined) {
             tableEle.appendChild(row);
         }
@@ -639,32 +713,35 @@ class ExplorerWebview {
      * Creates a Panel that shows the Stacks of a result
      * @param stacks Array of Stack objects to create the panel with
      */
-    private createPanelStacks(stacks: Stack[]): HTMLDivElement {
+    private createPanelStacks(stacks: Stacks): HTMLDivElement {
         const panel = this.createPanel(tabNames.stacks);
-
         if (stacks !== undefined) {
             const tableEle = this.createElement("table",
                 { id: "stackstable", className: "listtable" }) as HTMLTableElement;
 
             const headerNames = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
             const headerRow = this.createElement("tr") as HTMLTableRowElement;
-            for (const header of headerNames) {
-                const headerEle = this.createElement("th", { text: header });
-                headerRow.appendChild(headerEle);
+            let columnCount = 0;
+            for (let index = 0; index < headerNames.length; index++) {
+                if (stacks.columnsWithContent[index] === true) {
+                    const headerEle = this.createElement("th", { text: headerNames[index] });
+                    headerRow.appendChild(headerEle);
+                    columnCount++;
+                }
             }
             const tableHeadEle = this.createElement("thead") as HTMLHeadElement;
             tableHeadEle.appendChild(headerRow);
             tableEle.appendChild(tableHeadEle);
 
             const tableBodyEle = this.createElement("tbody") as HTMLBodyElement;
-            for (let stackIndex = 0; stackIndex < stacks.length; stackIndex++) {
-                const stack = stacks[stackIndex];
+            for (let stackIndex = 0; stackIndex < stacks.stacks.length; stackIndex++) {
+                const stack = stacks.stacks[stackIndex];
                 const msgRow = this.createElement("tr", {
                     attributes: { "data-group": stackIndex, "tabindex": "0" },
                     className: `listtablegroup ${ToggleState.expanded}`,
                 });
                 msgRow.appendChild(this.createElement("th", {
-                    attributes: { colspan: `${headerNames.length}` },
+                    attributes: { colspan: `${columnCount}` },
                     text: stack.message.text,
                 }));
                 msgRow.addEventListener("click", this.onToggleStackGroupBind);
@@ -673,8 +750,11 @@ class ExplorerWebview {
                 const tdTag = "td";
                 for (const frame of stack.frames) {
                     const fLocation = frame.location;
-                    // @ts-ignore external exist on the webview side
-                    const file = fLocation.uri.external.replace("%3A", ":");
+                    let file: string;
+                    if (fLocation.uri !== undefined) {
+                        // @ts-ignore external exist on the webview side
+                        file = fLocation.uri.external.replace("%3A", ":");
+                    }
 
                     const fRow = this.createElement("tr", {
                         attributes: {
@@ -684,16 +764,18 @@ class ExplorerWebview {
                             "data-group": stackIndex,
                             "data-sCol": fLocation.range[0].character.toString(),
                             "data-sLine": fLocation.range[0].line.toString(),
-                            "href": "#0",
-                            "tabindex": "0",
                         },
                         className: "listtablerow",
                     });
-                    fRow.addEventListener("click", this.onSourceLinkClickedBind);
+
+                    if (file !== undefined) {
+                        fRow.addEventListener("click", this.onSourceLinkClickedBind);
+                    }
+
                     const fLine = fLocation.range[0].line.toString();
                     const fParameters = frame.parameters.toString();
                     let fMsg = "";
-                    if (frame.message !== undefined) {
+                    if (frame.message !== undefined && frame.message.text !== undefined) {
                         fMsg = frame.message.text;
                     }
 
@@ -703,18 +785,31 @@ class ExplorerWebview {
                     }
 
                     fRow.appendChild(this.createElement(tdTag));
-                    fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
-                    fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
-                    fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
-                    fRow.appendChild(this.createElement(tdTag,
-                        { text: frame.location.fileName, tooltip: fLocation.fileName }));
-                    fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
-                    fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
+                    if (stacks.columnsWithContent[1] === true) {
+                        fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
+                    }
+                    if (stacks.columnsWithContent[2] === true) {
+                        fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
+                    }
+                    if (stacks.columnsWithContent[3] === true) {
+                        fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
+                    }
+                    if (stacks.columnsWithContent[4] === true) {
+                        fRow.appendChild(this.createElement(tdTag,
+                            { text: frame.location.fileName, tooltip: fLocation.fileName }));
+                    }
+                    if (stacks.columnsWithContent[5] === true) {
+                        fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
+                    }
+                    if (stacks.columnsWithContent[6] === true) {
+                        fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
+                    }
+
                     tableBodyEle.appendChild(fRow);
                 }
             }
-
             tableEle.appendChild(tableBodyEle);
+
             panel.appendChild(tableEle);
         }
 
@@ -781,20 +876,23 @@ class ExplorerWebview {
      * @param linkText The text to display on the link
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        // @ts-ignore external exist on the webview side
-        const file = location.uri.external.replace("%3A", ":");
-        const sourceLink = this.createElement("a", {
-            attributes: {
-                "data-eCol": location.range[1].character.toString(),
-                "data-eLine": location.range[1].line.toString(),
-                "data-file": file,
-                "data-sCol": location.range[0].character.toString(),
-                "data-sLine": location.range[0].line.toString(),
-                "href": "#0",
-            }, className: "sourcelink", text: linkText, tooltip: file,
-        }) as HTMLAnchorElement;
+        let sourceLink: HTMLAnchorElement;
+        if (location.uri !== undefined) {
+            // @ts-ignore external exist on the webview side
+            const file = location.uri.external.replace("%3A", ":");
+            sourceLink = this.createElement("a", {
+                attributes: {
+                    "data-eCol": location.range[1].character.toString(),
+                    "data-eLine": location.range[1].line.toString(),
+                    "data-file": file,
+                    "data-sCol": location.range[0].character.toString(),
+                    "data-sLine": location.range[0].line.toString(),
+                    "href": "#0",
+                }, className: "sourcelink", text: linkText, tooltip: file,
+            }) as HTMLAnchorElement;
 
-        sourceLink.addEventListener("click", this.onSourceLinkClickedBind);
+            sourceLink.addEventListener("click", this.onSourceLinkClickedBind);
+        }
 
         return sourceLink;
     }

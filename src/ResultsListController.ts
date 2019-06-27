@@ -296,7 +296,7 @@ export class ResultsListController {
         }
         row.severityLevel = { isSeverity: true, order: sevOrder, value: resultInfo.severityLevel };
 
-        if (resultInfo.locations[0] !== undefined) {
+        if (resultInfo.locations[0] !== undefined && resultInfo.locations[0].uri !== undefined) {
             row.resultFile = { value: resultInfo.locations[0].fileName, tooltip: resultInfo.locations[0].uri.fsPath };
             const position = resultInfo.locations[0].range.start;
             row.resultStartPos = {
@@ -304,8 +304,8 @@ export class ResultsListController {
                 value: `(${position.line + 1}, ${position.character + 1})`,
             };
         } else {
-            row.resultFile = { value: "No Location" };
-            row.resultStartPos = { pos: new Position(0, 0), value: `(0, 0)` };
+            row.resultFile = { value: "" };
+            row.resultStartPos = { pos: new Position(0, 0), value: `` };
         }
 
         return row;
