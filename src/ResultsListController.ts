@@ -296,16 +296,27 @@ export class ResultsListController {
         }
         row.severityLevel = { isSeverity: true, order: sevOrder, value: resultInfo.severityLevel };
 
-        if (resultInfo.locations[0] !== undefined && resultInfo.locations[0].uri !== undefined) {
-            row.resultFile = { value: resultInfo.locations[0].fileName, tooltip: resultInfo.locations[0].uri.fsPath };
-            const position = resultInfo.locations[0].range.start;
-            row.resultStartPos = {
-                pos: position,
-                value: `(${position.line + 1}, ${position.character + 1})`,
-            };
+        if (resultInfo.locations[0] !== undefined) {
+            const loc = resultInfo.locations[0];
+            if (loc.uri !== undefined) {
+                row.resultFile = { value: loc.fileName, tooltip: loc.uri.fsPath };
+                const position = loc.range.start;
+                row.resultStartPos = {
+                    pos: position,
+                    value: `(${position.line + 1}, ${position.character + 1})`,
+                };
+            }
+
+            let logLocation = "";
+            if (loc.logicalLocations !== undefined) {
+                logLocation = loc.logicalLocations[0];
+            }
+            row.logicalLocation = { value: logLocation };
+
         } else {
             row.resultFile = { value: "" };
             row.resultStartPos = { pos: new Position(0, 0), value: `` };
+            row.logicalLocation = { value: "" };
         }
 
         return row;
@@ -342,7 +353,8 @@ export class ResultsListController {
             regExp.test(row.kind.value) ||
             regExp.test(row.resultFile.value) ||
             regExp.test(row.sarifFile.value) ||
-            regExp.test(row.tool.value)) {
+            regExp.test(row.tool.value) ||
+            regExp.test(row.logicalLocation.value)) {
             return true;
         }
 
@@ -462,6 +474,11 @@ export class ResultsListController {
             resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
             resultStartPos: {
                 description: "Results position in the file", hide: false, title: "Position",
+            } as ResultsListColumn,
+
+            // Space above is needed to keep the order without tslint complaining
+            logicalLocation: {
+                description: "Logical Location", hide: false, title: "Logical Location",
             } as ResultsListColumn,
             ruleId: { description: "Rule Id", hide: false, title: "Rule Id" } as ResultsListColumn,
             ruleName: { description: "Rule Name", hide: false, title: "Rule Name" } as ResultsListColumn,

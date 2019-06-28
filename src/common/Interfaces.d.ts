@@ -226,6 +226,7 @@ export interface ResultsListRow {
     automationId: ResultsListStringValue,
     baselineState: ResultsListBaselineValue,
     kind: ResultsListKindValue,
+    logicalLocation: ResultsListStringValue,
     message: ResultsListStringValue,
     rank: ResultsListNumberValue,
     resultFile: ResultsListStringValue,
