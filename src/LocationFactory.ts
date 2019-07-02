@@ -34,14 +34,11 @@ export class LocationFactory {
                 const artifactLocation = physLocation.artifactLocation;
                 location.uriBase = Utilities.getUriBase(artifactLocation, runId);
 
-                await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((uri: Uri) => {
-                    if (uri !== null) {
-                        location.uri = uri;
-                        location.mapped = true;
-                    } else {
-                        location.uri = Utilities.combineUriWithUriBase(artifactLocation.uri, location.uriBase);
-                        location.uri.toString();
-                    }
+                await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((data) => {
+                    location.uri = data.uri;
+                    location.mapped = data.mapped;
+                    // toString() is executed to create an external value for the webview's use
+                    location.uri.toString();
 
                     location.fileName = location.uri.toString(true).substring(
                         location.uri.toString(true).lastIndexOf("/") + 1);

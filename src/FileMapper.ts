@@ -63,7 +63,8 @@ export class FileMapper {
      * @param runId id of the run
      * @param uriBase the base path of the uri
      */
-    public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string): Promise<Uri> {
+    public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string):
+        Promise<{ mapped: boolean, uri: Uri }> {
         let uriPath: string;
         if (location.index !== undefined) {
             uriPath = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
@@ -76,7 +77,18 @@ export class FileMapper {
 
         }
 
-        return this.fileRemapping.get(uriPath);
+        const mappedUri = this.fileRemapping.get(uriPath);
+        const returnData = {
+            mapped: true,
+            uri: mappedUri,
+        };
+
+        if (returnData.uri === null) {
+            returnData.mapped = false;
+            returnData.uri = Uri.parse(uriPath);
+        }
+
+        return returnData;
     }
 
     /**

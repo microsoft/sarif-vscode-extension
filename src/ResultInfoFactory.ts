@@ -261,19 +261,14 @@ export class ResultInfoFactory {
                     }
 
                     const sFLoc = sarifFrame.location;
-                    if (sFLoc !== undefined) {
-                        frame.message = Utilities.parseSarifMessage(sFLoc.message);
-                        await LocationFactory.create(sFLoc, runId).then((loc: Location) => {
-                            frame.location = loc;
-                        });
+                    await LocationFactory.create(sFLoc, runId).then((loc: Location) => {
+                        frame.location = loc;
+                    });
 
-                        if (sFLoc.logicalLocations !== undefined && sFLoc.logicalLocations.length > 0) {
-                            if (sFLoc.logicalLocations[0].fullyQualifiedName !== undefined) {
-                                frame.name += sFLoc.logicalLocations[0].fullyQualifiedName;
-                            } else {
-                                frame.name += sFLoc.logicalLocations[0].name;
-                            }
-                        }
+                    frame.message = Utilities.parseSarifMessage(frame.location.message);
+
+                    if (frame.location.logicalLocations !== undefined) {
+                        frame.name = frame.location.logicalLocations[0];
                     }
 
                     frame.parameters = sarifFrame.parameters || [];

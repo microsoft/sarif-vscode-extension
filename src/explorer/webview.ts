@@ -250,7 +250,8 @@ class ExplorerWebview {
             header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
             header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
         } else {
-            header.appendChild(this.createElement("label", { id: "titlerulename", text: "No Rule Info" }));
+            const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
+            header.appendChild(this.createElement("label", { id: "titlerulename", text: severity.text }));
         }
         header.appendChild(this.createElement("label", { text: " | " }));
 
@@ -602,9 +603,8 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        if (resultInfo.ruleDescription !== undefined) {
-            const ruleDescription = resultInfo.ruleDescription.text || resultInfo.ruleName;
-            tableEle.appendChild(this.createNameValueRow(resultInfo.ruleId, ruleDescription));
+        if (resultInfo.ruleDescription.text !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Rule Description:", resultInfo.ruleDescription.text));
         }
 
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);

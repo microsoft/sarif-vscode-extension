@@ -433,11 +433,13 @@ export class ResultsListController {
                     valueB = a[this.sortBy.column];
                 }
 
-                if (valueA.value === undefined) {
+                if (valueA === undefined || valueA.value === undefined) {
                     comp = -1;
-                    if (valueB.value === undefined) {
+                    if (valueB === undefined || valueB.value === undefined) {
                         comp = 0;
                     }
+                } else if (valueB === undefined || valueB.value === undefined) {
+                    comp = 1;
                 } else if ((valueA as ResultsListPositionValue).pos !== undefined) {
                     const posA = (valueA as ResultsListPositionValue).pos;
                     const posB = (valueB as ResultsListPositionValue).pos;

@@ -212,16 +212,14 @@ export class CodeFlows {
 
         let loc: Location;
         let message: Message;
-        if (tFLoc.location !== undefined) {
-            await LocationFactory.create(tFLoc.location, runId).then((location: Location) => {
-                loc = location;
-            });
+        await LocationFactory.create(tFLoc.location, runId).then((location: Location) => {
+            loc = location;
+        });
 
-            message = Utilities.parseSarifMessage(tFLoc.location.message);
-        }
+        message = Utilities.parseSarifMessage(tFLoc.location.message);
 
         let messageText: string;
-        if (message.text !== undefined) {
+        if (message !== undefined && message.text !== undefined) {
             messageText = message.text;
         } else if (isLastChildFlag) {
             messageText = "[return call]";
