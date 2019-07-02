@@ -5,7 +5,9 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
-import { Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack } from "./common/Interfaces";
+import {
+    Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks,
+} from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 
@@ -50,7 +52,7 @@ export class ResultInfoFactory {
             resultInfo.codeFlows = codeFlows;
         });
 
-        await ResultInfoFactory.parseStacks(result.stacks, runId).then((stacks: Stack[]) => {
+        await ResultInfoFactory.parseStacks(result.stacks, runId).then((stacks: Stacks) => {
             resultInfo.stacks = stacks;
         });
 
@@ -90,6 +92,8 @@ export class ResultInfoFactory {
 
                 resultInfo.ruleHelpUri = rule.helpUri;
                 resultInfo.ruleName = rule.name;
+                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
+                    allLocations);
 
                 if (rule.id !== undefined) {
                     resultInfo.ruleId = rule.id;
@@ -99,9 +103,6 @@ export class ResultInfoFactory {
                     resultInfo.severityLevel = rule.defaultConfiguration.level;
                     resultInfo.rank = rule.defaultConfiguration.rank;
                 }
-
-                resultInfo.ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
-                    allLocations);
 
                 if (result.message !== undefined && rule.messageStrings !== undefined) {
                     const resultMsgId = result.message.id;
@@ -141,9 +142,7 @@ export class ResultInfoFactory {
 
         if (sarifLocations !== undefined) {
             for (const sarifLocation of sarifLocations) {
-                const locId = sarifLocation.id;
-                const physicalLocation = sarifLocation.physicalLocation;
-                await LocationFactory.create(physicalLocation, runId, locId).then((location: Location) => {
+                await LocationFactory.create(sarifLocation, runId).then((location: Location) => {
                     locations.push(location);
                 });
             }
@@ -167,20 +166,24 @@ export class ResultInfoFactory {
             for (const sarifAttachment of sarifAttachments) {
                 const attachment = {} as Attachment;
                 attachment.description = Utilities.parseSarifMessage(sarifAttachment.description);
-                await LocationFactory.create({ artifactLocation: sarifAttachment.artifactLocation }, runId).then(
-                    (loc: Location) => {
-                        attachment.file = loc;
-                    });
+                const attachmentLocation = {
+                    physicalLocation: { artifactLocation: sarifAttachment.artifactLocation },
+                } as sarif.Location;
+                await LocationFactory.create(attachmentLocation, runId).then((loc: Location) => {
+                    attachment.file = loc;
+                });
 
                 if (sarifAttachment.regions !== undefined) {
                     attachment.regionsOfInterest = [];
                     for (const sarifRegion of sarifAttachment.regions) {
-                        const physicalLocation = {
-                            artifactLocation: sarifAttachment.artifactLocation,
-                            region: sarifRegion,
-                        } as sarif.PhysicalLocation;
+                        const regionLocation = {
+                            physicalLocation: {
+                                artifactLocation: sarifAttachment.artifactLocation,
+                                region: sarifRegion,
+                            },
+                        } as sarif.Location;
 
-                        await LocationFactory.create(physicalLocation, runId).then((location: Location) => {
+                        await LocationFactory.create(regionLocation, runId).then((location: Location) => {
                             attachment.regionsOfInterest.push(location);
                         });
                     }
@@ -208,10 +211,12 @@ export class ResultInfoFactory {
                     fix.files = [];
                     for (const sarifChange of sarifFix.artifactChanges) {
                         const fixFile = {} as FixFile;
-                        await LocationFactory.create({ artifactLocation: sarifChange.artifactLocation }, runId).then(
-                            (loc: Location) => {
-                                fixFile.location = loc;
-                            });
+                        const fixLocation = {
+                            physicalLocation: { artifactLocation: sarifChange.artifactLocation },
+                        } as sarif.Location;
+                        await LocationFactory.create(fixLocation, runId).then((loc: Location) => {
+                            fixFile.location = loc;
+                        });
 
                         if (sarifChange.replacements !== undefined) {
                             fixFile.changes = [];
@@ -235,15 +240,15 @@ export class ResultInfoFactory {
     }
 
     /**
-     * Parses the sarif stacks objects and returns and array of processed Stacks
+     * Parses the sarif stacks objects and returns a Stacks obj
      * @param sarifStacks sarif stacks to parse
      * @param runId id of the run this result is from
      */
-    private static async parseStacks(sarifStacks: sarif.Stack[], runId: number): Promise<Stack[]> {
-        let stacks: Stack[];
+    private static async parseStacks(sarifStacks: sarif.Stack[], runId: number): Promise<Stacks> {
+        let stacks: Stacks;
 
         if (sarifStacks !== undefined) {
-            stacks = [];
+            stacks = { columnsWithContent: [true], stacks: [] } as Stacks;
             for (const sarifStack of sarifStacks) {
                 const stack = {} as Stack;
                 stack.message = Utilities.parseSarifMessage(sarifStack.message);
@@ -256,30 +261,56 @@ export class ResultInfoFactory {
                     }
 
                     const sFLoc = sarifFrame.location;
-                    if (sFLoc !== undefined) {
-                        frame.message = Utilities.parseSarifMessage(sFLoc.message);
-                        await LocationFactory.create(sFLoc.physicalLocation, runId, sFLoc.id).then((loc: Location) => {
-                            frame.location = loc;
-                        });
+                    await LocationFactory.create(sFLoc, runId).then((loc: Location) => {
+                        frame.location = loc;
+                    });
 
-                        if (sFLoc.logicalLocations !== undefined && sFLoc.logicalLocations.length > 0) {
-                            if (sFLoc.logicalLocations[0].fullyQualifiedName !== undefined) {
-                                frame.name += sFLoc.logicalLocations[0].fullyQualifiedName;
-                            } else {
-                                frame.name += sFLoc.logicalLocations[0].name;
-                            }
-                        }
+                    frame.message = Utilities.parseSarifMessage(frame.location.message);
+
+                    if (frame.location.logicalLocations !== undefined) {
+                        frame.name = frame.location.logicalLocations[0];
                     }
 
                     frame.parameters = sarifFrame.parameters || [];
                     frame.threadId = sarifFrame.threadId;
+                    stacks.columnsWithContent = this.checkFrameContent(frame, stacks.columnsWithContent);
                     stack.frames.push(frame);
                 }
 
-                stacks.push(stack);
+                stacks.stacks.push(stack);
             }
         }
 
         return stacks;
+    }
+
+    /**
+     * checks if frame has content for each column, if it does then sets the hascontent flag to true
+     * Provides a quick way for the sarif explorer to determine if it should not display a column
+     * @param frame the stack frame to check for content
+     * @param hasContent the current set of hasContent flags
+     */
+    private static checkFrameContent(frame: Frame, hasContent: boolean[]): boolean[] {
+        if (hasContent[1] === false) {
+            hasContent[1] = frame.message.text !== undefined && frame.message.text !== "";
+        }
+        if (hasContent[2] !== true) {
+            hasContent[2] = frame.name !== undefined && frame.name !== "";
+        }
+        if (hasContent[3] !== true) {
+            const range = frame.location.range;
+            hasContent[3] = range !== undefined && range.start.line !== 0;
+        }
+        if (hasContent[4] !== true) {
+            hasContent[4] = frame.location.fileName !== undefined && frame.location.fileName !== "";
+        }
+        if (hasContent[5] !== true) {
+            hasContent[5] = frame.parameters !== undefined && frame.parameters.length !== 0;
+        }
+        if (hasContent[6] !== true) {
+            hasContent[6] = frame.threadId !== undefined;
+        }
+
+        return hasContent;
     }
 }

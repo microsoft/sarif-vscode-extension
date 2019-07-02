@@ -196,7 +196,7 @@ button#filterinputcasebutton:before {
     height: 16px;
 }
 
-@media screen and (max-width:300px) {
+@media screen and (max-width:305px) {
     #resultslistgroupbylabel {
         display: none;
     }

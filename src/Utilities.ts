@@ -258,7 +258,7 @@ export class Utilities {
      * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
-        let message: Message;
+        let message = {} as Message;
 
         if (sarifMessage !== undefined) {
             if (sarifMessage.text !== undefined) {
@@ -287,7 +287,7 @@ export class Utilities {
                             }
                         }
 
-                        if (location !== undefined) {
+                        if (location !== undefined && location.uri !== undefined) {
                             // Handle the Text version
                             msgText = msgText.replace(embeddedLink, `${linkText}(${location.uri.toString(true)})`);
 
