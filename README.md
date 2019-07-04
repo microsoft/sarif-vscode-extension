@@ -49,7 +49,7 @@ Supports Sarif version '2.1.0'
 
 #### Results List
 ![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
- * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool, *new*Automation Category, *new* Automation Id
+ * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool, Automation Category, Automation Id, *new*Logical Location
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
  * Sort By: Results are sortable by clicking the column header
