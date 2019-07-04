@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.14.0
+* Added support for Logical Locations
+    * Added Logical Location to Results list columns
+    * Added Logical Locations to Results Info panel
+    * Displays Logical Location as backup when physical location is not provided
+* Added support for ThreadFlowLocation indexes
+* Fixed bug when handling a charoffset of 0
+* Fixed a few issues where support was needed for optional Sarif information
+
 ## 2.13.1
 * Security fix for a dependency
 * Fixed Extension not loading sarif results when 
