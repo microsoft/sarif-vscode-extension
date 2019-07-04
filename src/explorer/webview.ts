@@ -256,9 +256,13 @@ class ExplorerWebview {
         header.appendChild(this.createElement("label", { text: " | " }));
 
         let filenameandline = "No Location";
-        if (resultInfo.locations[0] !== null && resultInfo.locations[0] !== undefined) {
-            filenameandline = resultInfo.locations[0].fileName + " (" +
-                (resultInfo.locations[0].range[0].line + 1/*Range is 0 based*/) + ")";
+        const resultLocation = resultInfo.locations[0];
+        if (resultLocation !== null && resultLocation !== undefined) {
+            if (resultLocation.uri !== undefined) {
+                filenameandline = `${resultLocation.fileName} (${resultLocation.range[0].line + 1/*Convert 0 based*/})`;
+            } else if (resultLocation.logicalLocations !== undefined && resultLocation.logicalLocations.length > 0) {
+                filenameandline = resultLocation.logicalLocations[0];
+            }
         }
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
