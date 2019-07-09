@@ -41,6 +41,7 @@ export interface Location {
     id: number;
     endOfLine: boolean;
     fileName: string;
+    logicalLocations: string[];
     mapped: boolean;
     message: Message;
     range: Range;
@@ -91,7 +92,7 @@ export interface ResultInfo {
     ruleDescription: Message;
     runId: number;
     severityLevel: sarif.Result.level;
-    stacks: Stack[];
+    stacks: Stacks;
 }
 
 export interface CodeFlow {
@@ -125,6 +126,11 @@ export interface CodeFlowStep {
     state: object;
     stepId: number;
     traversalId: string;
+}
+
+export interface Stacks {
+    columnsWithContent: boolean[];
+    stacks: Stack[];
 }
 
 export interface Stack {
@@ -169,11 +175,13 @@ export interface FixChange {
 export interface TreeNodeOptions {
     isParent: boolean,
     liClass: string,
-    locationLine: string,
-    locationText: string,
-    message: string,
+    location?: Location,
+    locationLine?: string,
+    locationText?: string,
+    logicalLocation?: string,
+    message?: string,
     requestId: string,
-    tooltip: string,
+    tooltip?: string,
 }
 
 export interface WebviewMessage {
@@ -218,6 +226,7 @@ export interface ResultsListRow {
     automationId: ResultsListStringValue,
     baselineState: ResultsListBaselineValue,
     kind: ResultsListKindValue,
+    logicalLocation: ResultsListStringValue,
     message: ResultsListStringValue,
     rank: ResultsListNumberValue,
     resultFile: ResultsListStringValue,

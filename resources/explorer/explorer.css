@@ -157,6 +157,10 @@ div#resultdetailscontainer:empty {
     white-space: nowrap;
 }
 
+.td-contentvalue {
+    white-space: normal;
+}
+
 input[type=range] {
     width: 4.75em;
 }

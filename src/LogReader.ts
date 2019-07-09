@@ -5,6 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
+import { CodeFlows } from "./CodeFlows";
 import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
 import { FileMapper } from "./FileMapper";
@@ -155,6 +156,7 @@ export class LogReader {
                         const run = log.runs[runIndex];
                         runInfo = RunInfoFactory.Create(run, doc.fileName);
                         const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
+                        CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runId);
 
                         await ProgressHelper.Instance.setProgressReport("Mapping Files");
                         await FileMapper.Instance.mapFiles(run.artifacts, runId);

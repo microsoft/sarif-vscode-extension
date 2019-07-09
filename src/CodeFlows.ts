@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Command } from "vscode";
-import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, ThreadFlow } from "./common/Interfaces";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
@@ -57,6 +57,19 @@ export class CodeFlows {
     }
 
     /**
+     * Map ThreadFlowLocations array from the sarif file for
+     * @param tFLocs The array of ThreadFlowLocations off of the run object
+     * @param runId Id of the run
+     */
+    public static mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number) {
+        if (tFLocs !== undefined) {
+            for (let index = 0; index < tFLocs.length; index++) {
+                CodeFlows.threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
+            }
+        }
+    }
+
+    /**
      * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
      * @param codeFlows array of processed codeflow objects to try to remap
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
@@ -71,7 +84,7 @@ export class CodeFlows {
                     const step = thread.steps[stepKey];
                     if (step.location !== undefined && step.location.mapped !== true) {
                         const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        await LocationFactory.create(sarifLoc.physicalLocation, runId).then((location: Location) => {
+                        await LocationFactory.create(sarifLoc, runId).then((location: Location) => {
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                         });
                     }
@@ -79,6 +92,8 @@ export class CodeFlows {
             }
         }
     }
+
+    private static threadFlowLocations = new Map<string, sarif.ThreadFlowLocation>();
 
     /**
      * Creates the CodeFlow object from the passed in sarif codeflow object
@@ -153,49 +168,63 @@ export class CodeFlows {
 
     /**
      * Creates the CodeFlowStep object from the passed in sarif CodeFlowLocation object
-     * @param cFLoc the CodeFlowLocation object that needs to be processed
-     * @param nextCFLoc the next CodeFlowLocation object, it's nesting level is used to determine if isCall or isReturn
+     * @param tFLoc the ThreadFlowLocation that needs to be processed
+     * @param nextTFLoc the next ThreadFlowLocation, it's nesting level is used to determine if isCall or isReturn
      * @param indexId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
      * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
-        cFLoc: sarif.ThreadFlowLocation,
-        nextCFLoc: sarif.ThreadFlowLocation,
+        tFLocOrig: sarif.ThreadFlowLocation,
+        nextTFLocOrig: sarif.ThreadFlowLocation,
         indexId: string,
         stepNumber: number,
         runId: number,
     ): Promise<CodeFlowStep> {
 
-        let loc: Location;
-        await LocationFactory.create(cFLoc.location.physicalLocation, runId).then((location: Location) => {
-            loc = location;
-        });
+        let tFLoc = tFLocOrig;
+        if (tFLoc.index !== undefined) {
+            const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
+            if (lookedUpLoc !== undefined) {
+                tFLoc = lookedUpLoc;
+            }
+        }
 
         let isParentFlag = false;
         let isLastChildFlag = false;
-        if (nextCFLoc !== undefined) {
-            if ((cFLoc.nestingLevel < nextCFLoc.nestingLevel) ||
-                (cFLoc.nestingLevel === undefined && nextCFLoc.nestingLevel !== undefined)) {
+        if (nextTFLocOrig !== undefined) {
+            let nextTFLoc = nextTFLocOrig;
+            if (nextTFLoc.index !== undefined) {
+                const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
+                if (lookedUpLoc !== undefined) {
+                    nextTFLoc = lookedUpLoc;
+                }
+            }
+
+            if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
+                (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
                 isParentFlag = true;
-            } else if (cFLoc.nestingLevel > nextCFLoc.nestingLevel ||
-                (cFLoc.nestingLevel !== undefined && nextCFLoc.nestingLevel === undefined)) {
+            } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
+                (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
                 isLastChildFlag = true;
             }
         }
 
-        const message = Utilities.parseSarifMessage(cFLoc.location.message);
-        let messageText = "";
-        if (message !== undefined) {
-            messageText = message.text;
-        }
+        let loc: Location;
+        let message: Message;
+        await LocationFactory.create(tFLoc.location, runId).then((location: Location) => {
+            loc = location;
+        });
 
-        if (messageText === "") {
-            if (isLastChildFlag) {
-                messageText = "[return call]";
-            } else {
-                messageText = "[no description]";
-            }
+        message = Utilities.parseSarifMessage(tFLoc.location.message);
+
+        let messageText: string;
+        if (message !== undefined && message.text !== undefined) {
+            messageText = message.text;
+        } else if (isLastChildFlag) {
+            messageText = "[return call]";
+        } else {
+            messageText = "[no description]";
         }
 
         const messageWithStepText = `Step ${stepNumber}: ${messageText}`;
@@ -206,7 +235,7 @@ export class CodeFlows {
             title: messageWithStepText,
         } as Command;
 
-        let nestingLevelValue = cFLoc.nestingLevel;
+        let nestingLevelValue = tFLoc.nestingLevel;
         if (nestingLevelValue === undefined) {
             nestingLevelValue = -1;
         }
@@ -214,15 +243,15 @@ export class CodeFlows {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: cFLoc.importance || "important",
+            importance: tFLoc.importance || "important",
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,
             message: messageText,
             messageWithStep: messageWithStepText,
             nestingLevel: nestingLevelValue,
-            state: cFLoc.state,
-            stepId: cFLoc.executionOrder,
+            state: tFLoc.state,
+            stepId: tFLoc.executionOrder,
             traversalId: indexId,
         };
 
