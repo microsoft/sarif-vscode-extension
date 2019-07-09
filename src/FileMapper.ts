@@ -346,7 +346,14 @@ export class FileMapper {
                         try {
                             isDirectory = Utilities.Fs.statSync(validateUri.fsPath).isDirectory();
                         } catch (error) {
-                            if (error.code !== "ENOENT") { throw error; }
+                            switch (error.code) {
+                                case "ENOENT":
+                                    break;
+                                case "UNKNOWN":
+                                    if (validateUri.authority !== "") { break; }
+                                default:
+                                    throw error;
+                            }
                         }
 
                         if (isDirectory === true) {
@@ -415,7 +422,14 @@ export class FileMapper {
                 return true;
             }
         } catch (error) {
-            if (error.code !== "ENOENT") { throw error; }
+            switch (error.code) {
+                case "ENOENT":
+                    break;
+                case "UNKNOWN":
+                    if (uri.authority !== "") { break; }
+                default:
+                    throw error;
+            }
         }
 
         return false;
