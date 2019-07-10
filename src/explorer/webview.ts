@@ -607,7 +607,7 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        if (resultInfo.ruleDescription.text !== undefined) {
+        if (resultInfo.ruleDescription !== undefined && resultInfo.ruleDescription.text !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Rule Description:", resultInfo.ruleDescription.text));
         }
 
