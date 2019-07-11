@@ -4,6 +4,7 @@
 // *                                                       *
 // ********************************************************/
 /// <reference path="./enums.ts" />
+import * as sarif from "sarif";
 import {
     ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListKindValue, ResultsListRow,
     ResultsListSeverityValue, ResultsListValue, WebviewMessage,
@@ -30,6 +31,7 @@ class ResultsList {
     private data: ResultsListData;
 
     private webview;
+    private severityIconHTMLEles: Map<sarif.Result.level, HTMLDivElement>;
 
     public constructor(explorer) {
         this.webview = explorer;
@@ -47,6 +49,32 @@ class ResultsList {
         this.collapsedGroups = [];
         this.createResultsListHeader();
         this.createResultsListPanelButtons();
+
+        this.severityIconHTMLEles = new Map<sarif.Result.level, HTMLDivElement>();
+        const sevEle = this.webview.createElement("div", { className: "severityiconwrapper" });
+        sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="6" fill="#1e1e1e"/>
+            <path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5 -2.2-5-5-5Zm3 7l-1 1 -2-2 -2 2 -1-1 2-2L5
+                6l1-1 2 2 2-2 1 1 -2 2L11 10Z" fill="#f48771"/>
+            <path d="M11 6l-1-1 -2 2 -2-2 -1 1 2 2L5 10l1 1 2-2 2 2 1-1 -2-2Z" fill="#252526"/>
+        </svg>`;
+        this.severityIconHTMLEles.set("error", sevEle.cloneNode(true));
+
+        sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
+            <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
+            <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
+        </svg>`;
+        this.severityIconHTMLEles.set("warning", sevEle.cloneNode(true));
+
+        sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
+            <path d="M8.5 3C6 3 4 5 4 7.5S6 12 8.5 12 13 10 13 7.5 11 3 8.5 3Zm0.5 8H8V6h1v5Zm0-6H8V4h1v1Z"
+                fill="#1ba1e2"/>
+            <path d="M8 6h1v5H8V6Zm0-2v1h1V4H8Z" fill="#252526"/>
+        </svg>`;
+        this.severityIconHTMLEles.set("none", sevEle);
+        this.severityIconHTMLEles.set("note", sevEle);
     }
 
     public set Data(value: ResultsListData) {
@@ -209,45 +237,6 @@ class ResultsList {
     }
 
     /**
-     * Creates a severity icon for a results row, icon strings match the icon files in resources folder
-     * @param severity Severity level value to create an icon
-     */
-    private createSevIcon(severity: ResultsListSeverityValue): HTMLDivElement {
-        let svg: string;
-        switch (severity.value) {
-            case "error":
-                svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="8" cy="8" r="6" fill="#1e1e1e"/>
-                <path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5 -2.2-5-5-5Zm3 7l-1 1 -2-2 -2 2 -1-1 2-2L5
-                6l1-1 2 2 2-2 1 1 -2 2L11 10Z" fill="#f48771"/>
-                <path d="M11 6l-1-1 -2 2 -2-2 -1 1 2 2L5 10l1 1 2-2 2 2 1-1 -2-2Z" fill="#252526"/>
-                </svg>`;
-                break;
-            case "warning":
-                svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
-                <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
-                <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
-                </svg>`;
-                break;
-            case "note":
-            case "none":
-                svg = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
-                <path d="M8.5 3C6 3 4 5 4 7.5S6 12 8.5 12 13 10 13 7.5 11 3 8.5 3Zm0.5 8H8V6h1v5Zm0-6H8V4h1v1Z"
-                fill="#1ba1e2"/>
-                <path d="M8 6h1v5H8V6Zm0-2v1h1V4H8Z" fill="#252526"/>
-                </svg>`;
-                break;
-        }
-
-        const wrapper = this.webview.createElement("div", { className: "severityiconwrapper" }) as HTMLDivElement;
-        wrapper.innerHTML = svg;
-
-        return wrapper;
-    }
-
-    /**
      * Creates the table body or group and result rows, using the columns for order and to show or hide
      * @param columns the tables header column elements
      */
@@ -388,7 +377,7 @@ class ResultsList {
 
             const iconCell = rowCellBase.cloneNode() as HTMLTableCellElement;
             iconCell.classList.add("severityiconcell");
-            iconCell.appendChild(this.createSevIcon(row.severityLevel));
+            iconCell.appendChild(this.severityIconHTMLEles.get(row.severityLevel.value).cloneNode(true));
             resultRow.appendChild(iconCell);
 
             for (let index = 1; index < cols.length; index++) {
@@ -556,11 +545,11 @@ class ResultsList {
         const tableHead = this.createTableHeader();
         table.appendChild(tableHead);
 
-        const tableBody = this.createTableBody(tableHead.children[0].children);
-        table.appendChild(tableBody);
-
         // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
         $("#resultslisttable").colResizable(this.colResizeObj);
+
+        const tableBody = this.createTableBody(tableHead.children[0].children);
+        table.appendChild(tableBody);
     }
 
     /**
