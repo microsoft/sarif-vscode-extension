@@ -1,23 +1,17 @@
 {
     "compilerOptions": {
-        "allowJs": true,
         "module": "commonjs",
         "target": "es6",
         "outDir": "out",
         "lib": [
-            "dom",
             "es6"
         ],
         "sourceMap": true,
-        "rootDir": "src",
-        "noUnusedLocals": true
+        "rootDir": "./src"
     },
     "exclude": [
-        "node_modules",
-        ".vscode-test",
         "out",
-        "src\\explorer",
-        "resources",
-        "sariftypesgenerator"
+        "./node_modules",
+        "./.vscode-test"
     ]
 }
