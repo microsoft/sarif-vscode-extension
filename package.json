@@ -190,12 +190,12 @@
         "lint": "tslint --project ./ -t verbose"
     },
     "devDependencies": {
-        "@types/jquery": "^3.3.29",
+        "@types/jquery": "^3.3.30",
         "@types/mocha": "^2.2.42",
-        "@types/node": "^7.10.6",
-        "tslint": "^5.17.0",
+        "@types/node": "^7.10.7",
+        "tslint": "^5.18.0",
         "typescript": "^2.9.2",
-        "vscode": "^1.1.34"
+        "vscode": "^1.1.35"
     },
     "dependencies": {
         "@types/sarif": "^2.1.1",
