@@ -40,7 +40,7 @@ suite("parseRange", () => {
 
     test("Basic using charLength", async () => {
         const region = { charLength: 2, charOffset: 2} as sarif.Region;
-        const expected = new Range(0, 1, 0, 3);
+        const expected = new Range(0, 2, 0, 4);
         // @ts-ignore parseRange is a private static method on LocationFactory
         const result: { range: Range, endOfLine: boolean } = await LocationFactory.parseRange(region);
         assert.deepEqual(result.range, expected);
