@@ -91,7 +91,7 @@ suite("parseSarifMessages", () => {
 
     test("Undefined message", () => {
         const message = Utilities.parseSarifMessage(undefined);
-        assert.equal(message, undefined);
+        assert.deepEqual(message, {});
     });
 
     test("Empty string", () => {
