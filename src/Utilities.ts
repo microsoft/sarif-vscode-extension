@@ -305,6 +305,7 @@ export class Utilities {
                     return `${p2}(${p1})`;
                 });
                 msgText = Utilities.unescapeBrackets(msgText);
+                msgText = Utilities.Md.utils.unescapeAll(msgText);
             }
 
             message = { text: msgText, html: mdText };
