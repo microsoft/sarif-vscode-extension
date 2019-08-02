@@ -4,8 +4,8 @@
 // *                                                       *
 // ********************************************************/
 import * as assert from "assert";
-import { SarifVersion } from "../common/Interfaces";
-import { FileConverter } from "../FileConverter";
+import { SarifVersion } from "../../common/Interfaces";
+import { FileConverter } from "../../FileConverter";
 
 suite("canUpgradeVersion", () => {
     // @ts-ignore parseVersion is private

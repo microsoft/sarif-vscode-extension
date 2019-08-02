@@ -332,12 +332,20 @@ class ExplorerWebview {
      * @param name value in the left column
      * @param value value in the right column
      * @param valueTooltip tooltip to show over the value in right column
+     * @param isHtml flag to set if the @param value is html so it gets set via innerHtml *note* only set on safe values
      */
-    private createNameValueRow(name: string, value: string, valueTooltip?: string) {
+    private createNameValueRow(name: string, value: string, valueTooltip?: string, isHtml?: boolean) {
         const row = this.createElement("tr") as HTMLTableRowElement;
         row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
         if (valueTooltip === undefined) { valueTooltip = value; }
-        row.appendChild(this.createElement("td", { className: "td-contentvalue", text: value, tooltip: valueTooltip }));
+        if (isHtml === true) {
+            const cont = this.createElement("td", { className: "td-contentvalue", tooltip: valueTooltip });
+            cont.innerHTML = value;
+            row.appendChild(cont);
+        } else {
+            const cont = this.createElement("td", { className: "td-contentvalue", text: value, tooltip: valueTooltip });
+            row.appendChild(cont);
+        }
 
         return row;
     }
@@ -607,8 +615,11 @@ class ExplorerWebview {
         const panel = this.createPanel(tabNames.resultinfo);
         const tableEle = this.createElement("table") as HTMLTableElement;
 
-        if (resultInfo.ruleDescription !== undefined && resultInfo.ruleDescription.text !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("Rule Description:", resultInfo.ruleDescription.text));
+        if (resultInfo.ruleDescription !== undefined) {
+            const ruleDesc = resultInfo.ruleDescription;
+            if (ruleDesc.html !== undefined && ruleDesc.html !== resultInfo.message.html) {
+                tableEle.appendChild(this.createNameValueRow("Rule Description:", ruleDesc.html, ruleDesc.text, true));
+            }
         }
 
         const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
@@ -852,29 +863,6 @@ class ExplorerWebview {
     }
 
     /**
-     * Creates the Rule description section in the results details panel
-     * @param message Rule message
-     */
-    private createRuleDescription(message: Message): HTMLDivElement {
-        const ruleDescription = this.createElement("div", { id: "ruledescription" }) as HTMLDivElement;
-        let text = message.html.text;
-        for (let index = 0; index < message.html.locations.length; index++) {
-            const split = text.split(`{(${index})}`);
-            ruleDescription.appendChild(document.createTextNode(split[0]));
-            const link = this.createSourceLink(message.html.locations[index].loc, message.html.locations[index].text);
-            ruleDescription.appendChild(link);
-            split.shift();
-            text = split.join(`{(${index})}`);
-        }
-
-        if (text !== "") {
-            ruleDescription.appendChild(document.createTextNode(text));
-        }
-
-        return ruleDescription;
-    }
-
-    /**
      * Creates a html link element that when clicked will open the source in the VSCode Editor
      * @param location The location object that represents where the link points to
      * @param linkText The text to display on the link
@@ -968,15 +956,17 @@ class ExplorerWebview {
         this.hasFixes = resultInfo.fixes !== undefined;
         this.hasStacks = resultInfo.stacks !== undefined;
 
-        const body = document.body;
-
         this.createResultDetailsHeader(resultInfo);
 
         const resultDetailsContainer = document.getElementById("resultdetailscontainer") as HTMLDivElement;
-        resultDetailsContainer.appendChild(this.createRuleDescription(resultInfo.message));
 
-        const tabHeader = this.createTabHeaderContainer();
-        resultDetailsContainer.appendChild(tabHeader);
+        const resultDetails = this.createElement("div", { id: "resultdescription" }) as HTMLDivElement;
+        if (resultInfo.message.html !== undefined) {
+            resultDetails.innerHTML = resultInfo.message.html;
+        }
+
+        resultDetailsContainer.appendChild(resultDetails);
+        resultDetailsContainer.appendChild(this.createTabHeaderContainer());
 
         // Create and add the panels
         const panelContainer = this.createElement("div", { id: "tabcontentcontainer" }) as HTMLDivElement;

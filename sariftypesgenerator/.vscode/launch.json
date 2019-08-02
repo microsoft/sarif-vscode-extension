@@ -3,34 +3,25 @@
     "version": "0.1.0",
     "configurations": [
         {
-            "name": "Extension",
+            "name": "SarifTypesGenerator",
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceRoot}"
-            ],
+            "args": ["--extensionDevelopmentPath=${workspaceFolder:SarifTypesGenerator}" ],
             "stopOnEntry": false,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/out/**/*.js"
-            ],
+            "outFiles": [ "${workspaceFolder:SarifTypesGenerator}/out/**/*.js" ],
             "preLaunchTask": "npm: watch"
         },
         {
-            "name": "Extension Tests",
+            "name": "SarifTypesGenerator Tests",
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
-            ],
+            "args": ["--extensionDevelopmentPath=${workspaceFolder:SarifTypesGenerator}", "--extensionTestsPath=${workspaceFolder:SarifTypesGenerator}/out/test" ],
             "stopOnEntry": false,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceFolder}/out/test/**/*.js"
-            ],
+            "outFiles": [ "${workspaceFolder:SarifTypesGenerator}/out/test/**/*.js" ],
             "preLaunchTask": "npm: watch"
         }
     ]

@@ -5,5 +5,8 @@ out/**/*.map
 src/**
 .gitignore
 tsconfig.json
-vsc-extension-quickstart.md
+tsconfig.explorer.json
 tslint.json
+sariftypesgenerator/**
+samples/**
+workspace.code-workspace

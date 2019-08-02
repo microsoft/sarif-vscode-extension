@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "SarifExtension",
+			"path": "C:\\repos\\Sarif-VSCode"
+		},
+		{
+			"name": "SarifTypesGenerator",
+			"path": "C:\\repos\\Sarif-VSCode\\sariftypesgenerator"
+		}
+	],
+	"settings": {}
+}

@@ -1,0 +1,17 @@
+{
+    "defaultSeverity": "error",
+    "extends": [
+        "tslint:recommended"
+    ],
+    "jsRules": {},
+    "rules": {
+        "completed-docs": [
+            true,
+                "classes",
+                "methods"
+        ],
+        "no-reference": false,
+        "no-console": false
+    },
+    "rulesDirectory": []
+}

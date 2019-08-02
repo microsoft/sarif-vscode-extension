@@ -56,7 +56,11 @@ export class FileConverter {
         if (parsedVer.original !== mTCurVersion.original) {
             tryToUpgrade = FileConverter.isOlderThenVersion(parsedVer, mTCurVersion);
         } else {
-            if (schema !== undefined && schema.startsWith("http://json.schemastore.org/sarif-")) {
+            if (schema === "http://json.schemastore.org/sarif-2.1.0-rtm.1") {
+                // By passes a bug in the multitool, remove after fix https://github.com/microsoft/sarif-sdk/issues/1584
+                return false;
+            } else if (schema !== undefined && (schema.startsWith("http://json.schemastore.org/sarif-") ||
+                schema.startsWith("https://schemastore.azurewebsites.net/schemas/json/sarif-"))) {
                 parsedSchemaVer = FileConverter.parseSchema(schema);
                 const mTCurSchemaVersion = FileConverter.MultiToolCurrentSchemaVersion;
 
@@ -159,7 +163,7 @@ export class FileConverter {
 
     private static childProcess;
     private static multiToolSchemaVersion: SarifVersion;
-    private static multiToolRawSchema = "http://json.schemastore.org/sarif-2.1.0-rtm.1";
+    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json";
     private static multiToolVersion: SarifVersion;
     private static multiToolRawVersion = "2.1.0" as sarif.Log.version;
     private static multiTool: string;
@@ -315,7 +319,7 @@ export class FileConverter {
 
     /**
      * Parses the version out of the schema string to a Version object
-     * ex. "http://json.schemastore.org/sarif-2.1.0-rtm.1"
+     * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json"
      * @param schema schema string from the sarif log to parse
      */
     private static parseSchema(schema: string): SarifVersion {

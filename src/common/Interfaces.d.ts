@@ -147,7 +147,7 @@ export interface Frame {
 }
 
 export interface Message {
-    html: { text: string, locations: { text: string, loc: Location }[] },
+    html: string,
     text: string,
 }
 

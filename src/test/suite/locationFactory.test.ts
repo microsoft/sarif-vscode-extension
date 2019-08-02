@@ -8,7 +8,7 @@
 import * as assert from "assert";
 import * as sarif from "sarif";
 import { Range } from "vscode";
-import { LocationFactory } from "../LocationFactory";
+import { LocationFactory } from "../../LocationFactory";
 
 suite("parseRange", () => {
     test("Undefined range", async () => {
@@ -40,7 +40,7 @@ suite("parseRange", () => {
 
     test("Basic using charLength", async () => {
         const region = { charLength: 2, charOffset: 2} as sarif.Region;
-        const expected = new Range(0, 1, 0, 3);
+        const expected = new Range(0, 2, 0, 4);
         // @ts-ignore parseRange is a private static method on LocationFactory
         const result: { range: Range, endOfLine: boolean } = await LocationFactory.parseRange(region);
         assert.deepEqual(result.range, expected);

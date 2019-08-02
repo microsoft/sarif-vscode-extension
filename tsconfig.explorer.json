@@ -7,12 +7,16 @@
             "dom",
             "es6"
         ],
-        "sourceMap": true
+        "sourceMap": true,
+        "types": [
+            "jquery",
+            "vscode"
+        ]
     },
-    "files": [
-        "node_modules\\vscode\\vscode.d.ts"
-    ],
     "include": [
         "src\\explorer\\*"
+    ],
+    "exclude": [
+        "node_modules"
     ]
 }
