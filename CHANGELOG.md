@@ -1,5 +1,14 @@
 # Change Log
 
+## 2.15.0
+* Added Markdown text support [issue #184](https://github.com/Microsoft/sarif-vscode-extension/issues/184)
+* Added support for line breaks in plain text messages [issue #186](https://github.com/Microsoft/sarif-vscode-extension/issues/186)
+* Fixed web links not rendering correctly in plain text messages [issue #185](https://github.com/Microsoft/sarif-vscode-extension/issues/185)
+* Added Results List performance improvements
+* Updated the supported sarif schema version to '2.1.0-rtm.4'
+* Security fix for lodash dependency
+* Reduced the overall size of the vsix (7.6Mb -> 3Mb) and installed size(26.8Mb -> 6.9Mb)
+
 ## 2.14.0
 * Added support for Logical Locations
     * Added Logical Location to Results list columns
