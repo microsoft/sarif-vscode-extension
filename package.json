@@ -25,7 +25,7 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.32.0"
+        "vscode": "^1.36.0"
     },
     "activationEvents": [
         "onLanguage:json",

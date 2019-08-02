@@ -393,9 +393,9 @@ export class Utilities {
 
         return text.replace(Utilities.embeddedRegEx, (match, p1, id) => {
             const linkId = parseInt(id, 10);
-            const location = locations.find((loc: Location) => {
+            const location = locations.find((loc: Location, index: number, obj: Location[]) => {
                 if (loc !== undefined && loc.id === linkId) {
-                    return loc;
+                    return true;
                 }
             });
 
