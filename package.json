@@ -185,21 +185,25 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test",
+        "pretest": "npm run compile",
+        "test": "node ./out/test/runTest.js",
         "lint": "tslint --project ./ -t verbose"
     },
     "devDependencies": {
+        "@types/glob": "^7.1.1",
         "@types/jquery": "^3.3.30",
+        "@types/markdown-it": "0.0.8",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.10.7",
+        "@types/sarif": "^2.1.2",
+        "@types/vscode": "^1.36.0",
+        "mocha": "^6.2.0",
         "tslint": "^5.18.0",
         "typescript": "^2.9.2",
-        "vscode": "^1.1.35"
+        "vscode-test": "^1.0.2"
     },
     "dependencies": {
-        "@types/sarif": "^2.1.2",
-        "jsdom": "^11.12.0",
-        "json-source-map": "^0.4.0"
+        "json-source-map": "^0.4.0",
+        "markdown-it": "^9.0.1"
     }
 }

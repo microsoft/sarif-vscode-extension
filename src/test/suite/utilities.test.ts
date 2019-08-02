@@ -8,9 +8,9 @@
 import * as assert from "assert";
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
-import { Location, RunInfo } from "../common/Interfaces";
-import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
-import { Utilities } from "../Utilities";
+import { Location, RunInfo } from "../../common/Interfaces";
+import { SVDiagnosticCollection } from "../../SVDiagnosticCollection";
+import { Utilities } from "../../Utilities";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema = "file";
@@ -99,122 +99,174 @@ suite("parseSarifMessages", () => {
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, inputText);
-        assert.equal(message.html.text, inputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.html, inputText);
     });
 
     test("Simple string", () => {
         const inputText = "A simple string";
+        const outputHTML = `<p>${inputText}</p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, inputText);
-        assert.equal(message.html.text, inputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.html, outputHTML);
     });
 
     test("Simple argument", () => {
         const inputText = "A string with {0} argument";
         const inputArguments = ["1"];
         const outputText = "A string with 1 argument";
+        const outputHtml = `<p>${outputText}</p>\n`;
         const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Multiple arguments", () => {
         const inputText = "A string with {0} arguments, from {1} code for {2}.";
         const inputArguments = ["3", "test", "testing"];
         const outputText = "A string with 3 arguments, from test code for testing.";
+        const outputHtml = `<p>${outputText}</p>\n`;
         const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Argument used twice", () => {
         const inputText = "{0} string with {0} argument";
         const inputArguments = ["1"];
         const outputText = "1 string with 1 argument";
+        const outputHtml = `<p>${outputText}</p>\n`;
         const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Simple embedded link", () => {
         const inputText = "A string with [Embedded](0) links";
         const outputText = "A string with Embedded(file:///c:/folder/file.ext) links";
-        const outputHTMLText = "A string with {(0)} links";
+        const start = locations1[0].range.start;
+        const end = locations1[0].range.end;
+        const file = locations1[0].uri.toString(true);
+        const outputHtml =
+            `<p>A string with <a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">Embedded</a> links</p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage, locations1);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputHTMLText);
-        assert.equal(message.html.locations.length, 1);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Embedded link used twice", () => {
         const inputText = "[Embedded](0) Links: A string with duplicate [Embedded](0) links";
         const outputText = "Embedded(file:///c:/folder/file.ext) Links: " +
             "A string with duplicate Embedded(file:///c:/folder/file.ext) links";
-        const outputHTMLText = "{(0)} Links: A string with duplicate {(1)} links";
+        const start = locations1[0].range.start;
+        const end = locations1[0].range.end;
+        const file = locations1[0].uri.toString(true);
+        const outputHtml =
+            `<p><a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">Embedded</a> Links: A string with duplicate ` +
+            `<a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">Embedded</a> links</p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage, locations1);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputHTMLText);
-        assert.equal(message.html.locations.length, 2);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Two out of order embedded links", () => {
         const inputText = "A string with two Embedded Links: [link1](1) [link2](0)";
         const outputText = "A string with two Embedded Links: link1(file:///c:/folder/file.ext)" +
             " link2(file:///c:/folder1/file1.ext)";
-        const outputHTMLText = "A string with two Embedded Links: {(0)} {(1)}";
+        const start1 = locations2[0].range.start;
+        const end1 = locations2[0].range.end;
+        const file1 = locations2[0].uri.toString(true);
+        const start2 = locations2[1].range.start;
+        const end2 = locations2[1].range.end;
+        const file2 = locations2[1].uri.toString(true);
+        const outputHtml =
+            `<p>A string with two Embedded Links: <a href="#0" class="sourcelink" data-file="${file1}" ` +
+            `data-sLine="${start1.line}" data-sCol="${start1.character}" ` +
+            `data-eLine="${end1.line}" data-eCol="${end1.character}" ` +
+            `title="${file1}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">link1</a> ` +
+            `<a href="#0" class="sourcelink" data-file="${file2}" ` +
+            `data-sLine="${start2.line}" data-sCol="${start2.character}" ` +
+            `data-eLine="${end2.line}" data-eCol="${end2.character}" ` +
+            `title="${file2}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">link2</a></p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage, locations2);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputHTMLText);
-        assert.equal(message.html.locations.length, 2);
-        assert.equal(message.html.locations[0].text, "link1");
-        assert.equal(message.html.locations[1].text, "link2");
+        assert.equal(message.html, outputHtml);
     });
 
     test("Bracketed links", () => {
         const inputText = "Bracketed links: \\[[outside bracket](0)\\], [\\[inside bracket\\]](0)";
         const outputText = "Bracketed links: [outside bracket(file:///c:/folder/file.ext)]," +
             " [inside bracket](file:///c:/folder/file.ext)";
-        const outputHTMLText = "Bracketed links: [{(0)}], {(1)}";
+        const start = locations1[0].range.start;
+        const end = locations1[0].range.end;
+        const file = locations1[0].uri.toString(true);
+        const outputHtml =
+            `<p>Bracketed links: [` +
+            `<a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">outside bracket</a>` +
+            `], ` +
+            `<a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">[inside bracket]</a></p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage, locations1);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputHTMLText);
-        assert.equal(message.html.locations.length, 2);
-        assert.equal(message.html.locations[0].text, "outside bracket");
-        assert.equal(message.html.locations[1].text, "[inside bracket]");
+        assert.equal(message.html, outputHtml);
     });
 
     test("Embedded link with no location", () => {
         const inputText = "A string with an [Embedded](0) link.";
+        const outputText = "A string with an Embedded(0) link.";
+        const outputHtml = `<p>A string with an <a href="0">Embedded</a> link.</p>\n`;
         const sarifMessage = { text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage);
-        assert.equal(message.text, inputText);
-        assert.equal(message.html.text, inputText);
-        assert.equal(message.html.locations.length, 0);
+        assert.equal(message.text, outputText);
+        assert.equal(message.html, outputHtml);
     });
 
     test("Argument and embedded link", () => {
         const inputText = "A string with {0} argument and an [Embedded](0) link.";
         const inputArguments = ["1"];
         const outputText = "A string with 1 argument and an Embedded(file:///c:/folder/file.ext) link.";
-        const outputHTMLText = "A string with 1 argument and an {(0)} link.";
+        const start = locations1[0].range.start;
+        const end = locations1[0].range.end;
+        const file = locations1[0].uri.toString(true);
+        const outputHtml =
+            `<p>A string with 1 argument and an ` +
+            `<a href="#0" class="sourcelink" data-file="${file}" ` +
+            `data-sLine="${start.line}" data-sCol="${start.character}" ` +
+            `data-eLine="${end.line}" data-eCol="${end.character}" ` +
+            `title="${file}" ` +
+            `onclick="explorerWebview.onSourceLinkClickedBind(event)">Embedded</a> link.</p>\n`;
         const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
         const message = Utilities.parseSarifMessage(sarifMessage, locations1);
         assert.equal(message.text, outputText);
-        assert.equal(message.html.text, outputHTMLText);
-        assert.equal(message.html.locations.length, 1);
+        assert.equal(message.html, outputHtml);
     });
 });
 

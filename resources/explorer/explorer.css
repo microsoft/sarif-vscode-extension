@@ -75,9 +75,9 @@ div#resultdetailscontainer:empty {
     display: none;
 }
 
-#ruledescription {
+#resultdescription {
     flex: 0 0 auto;
-    max-height: 25%;
+    max-height: 40%;
     overflow-x: hidden;
     overflow-wrap: break-word;
     padding: 2px 10px;

@@ -33,6 +33,16 @@ export class Utilities {
     }
 
     /**
+     * Markdown-it object for parsing markdown text
+     */
+    public static get Md() {
+        if (Utilities.md === undefined) {
+            Utilities.md = require("markdown-it")();
+        }
+        return Utilities.md;
+    }
+
+    /**
      * nodejs Operating System object
      */
     public static get Os() {
@@ -261,49 +271,43 @@ export class Utilities {
         let message = {} as Message;
 
         if (sarifMessage !== undefined) {
-            if (sarifMessage.text !== undefined) {
-                let sarifText = sarifMessage.text;
-                if (sarifMessage.arguments !== undefined) {
+            let mdText = sarifMessage.markdown;
+            let msgText = sarifMessage.text;
+
+            // Insert result specific arguments
+            if (sarifMessage.arguments !== undefined) {
+                if (msgText !== undefined) {
                     for (let index = 0; index < sarifMessage.arguments.length; index++) {
-                        sarifText = sarifText.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
-
-                let msgText = sarifText;
-                const msgHTML = { text: sarifText, locations: new Array<{ text: string, loc: Location }>() };
-                // parse embedded locations
-                let match = Utilities.embeddedRegEx.exec(msgText);
-                if (locations !== undefined && match !== null) {
-                    do {
-                        const embeddedLink = match[1];
-                        const linkText = match[2];
-                        const linkId = parseInt(match[3], 10);
-
-                        let location: Location;
-                        for (const loc of locations) {
-                            if (loc !== undefined && loc.id === linkId) {
-                                location = loc;
-                                break;
-                            }
-                        }
-
-                        if (location !== undefined && location.uri !== undefined) {
-                            // Handle the Text version
-                            msgText = msgText.replace(embeddedLink, `${linkText}(${location.uri.toString(true)})`);
-
-                            // Handle the HTML version
-                            msgHTML.text = msgHTML.text.replace(embeddedLink, `{(${msgHTML.locations.length})}`);
-                            msgHTML.locations.push({ text: Utilities.unescapeBrackets(linkText), loc: location });
-                        }
-
-                        match = Utilities.embeddedRegEx.exec(msgText);
-                    } while (match !== null);
+                if (mdText !== undefined) {
+                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
+                        mdText = mdText.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                    }
                 }
-
-                msgText = Utilities.unescapeBrackets(msgText);
-                msgHTML.text = Utilities.unescapeBrackets(msgHTML.text);
-                message = { text: msgText, html: msgHTML };
             }
+
+            if (mdText === undefined) {
+                mdText = msgText;
+            }
+
+            if (mdText !== undefined) {
+                mdText = Utilities.Md.render(mdText);
+                mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
+                mdText = Utilities.unescapeBrackets(mdText);
+            }
+
+            if (msgText !== undefined) {
+                msgText = Utilities.Md.renderInline(msgText);
+                msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
+                msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
+                    return `${p2}(${p1})`;
+                });
+                msgText = Utilities.unescapeBrackets(msgText);
+            }
+
+            message = { text: msgText, html: mdText };
         }
 
         return message;
@@ -319,9 +323,11 @@ export class Utilities {
     }
 
     private static fs: any;
+    private static md: markdownit;
     private static os: any;
     private static path: any;
-    private static embeddedRegEx = /(?:[^\\]|^)(\[((?:\\\]|[^\]])+)\]\((\d+)\))/g;
+    private static embeddedRegEx = /(<a href=)"(\d+)">/g;
+    private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
     private static readonly SarifViewerTempDir = "SarifViewerExtension";
 
@@ -374,6 +380,45 @@ export class Utilities {
                 Utilities.Fs.unlinkSync(contentPath);
             }
         }
+    }
+
+    /**
+     * Replaces links that are location links, that have a digit as the href value
+     * @param text Text to parse through and replace location links with the usable link
+     * @param locations array of locations to use in replacing the links
+     * @param isMd if true the format replaced is as a markdown, if false it returns as if plain text
+     */
+    private static ReplaceLocationLinks(text: string, locations: Location[], isMd: boolean): string {
+        if (locations === undefined) { return text; }
+
+        return text.replace(Utilities.embeddedRegEx, (match, p1, id) => {
+            const linkId = parseInt(id, 10);
+            const location = locations.find((loc: Location) => {
+                if (loc !== undefined && loc.id === linkId) {
+                    return loc;
+                }
+            });
+
+            if (location !== undefined && location.uri !== undefined) {
+                if (isMd) {
+                    const className = `class="sourcelink"`;
+                    const tooltip = `title="${location.uri.toString(true)}"`;
+                    const data =
+                        `data-file="${location.uri.toString(true)}" ` +
+                        `data-sLine="${location.range.start.line}" ` +
+                        `data-sCol="${location.range.start.character}" ` +
+                        `data-eLine="${location.range.end.line}" ` +
+                        `data-eCol="${location.range.end.character}"`;
+                    const onClick = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
+
+                    return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
+                } else {
+                    return `${p1}"${location.uri.toString(true)}">`;
+                }
+            } else {
+                return match;
+            }
+        });
     }
 
     /**
