@@ -206,12 +206,21 @@ export class Utilities {
     public static generateTempPath(filePath: string, hashValue?: string): string {
         const pathObj = Utilities.Path.parse(filePath);
         let tempPath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "",
-            pathObj.dir.replace(pathObj.root, ""));
+            pathObj.dir.replace(pathObj.root, "").replace(":", ""));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         tempPath = Utilities.createDirectoryInTemp(tempPath);
-        tempPath = Utilities.Path.posix.join(tempPath, Utilities.Path.win32.basename(filePath));
+        tempPath = Utilities.Path.posix.join(tempPath, Utilities.makeFileNameSafe(Utilities.Path.win32.basename(filePath)));
 
         return tempPath;
+    }
+
+    /**
+     * This will remove illegal characters from a file name
+     * Illegal characters include \/:*?"<>|
+     * @param fileName file name to modify
+     */
+    public static makeFileNameSafe(fileName: string): string {
+        return fileName.replace(/[/\\?%*:|"<>]/g, '-');
     }
 
     /**
