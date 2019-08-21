@@ -205,11 +205,11 @@ export class Utilities {
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
         const pathObj = Utilities.Path.parse(filePath);
-        let tempPath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "",
-            pathObj.dir.replace(pathObj.root, "").replace(":", ""));
+        let basePath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "");
+        let tempPath: string = Utilities.makeFileNameSafe(Utilities.Path.join(pathObj.dir.replace(pathObj.root, ""), Utilities.Path.win32.basename(filePath)));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
-        tempPath = Utilities.createDirectoryInTemp(tempPath);
-        tempPath = Utilities.Path.posix.join(tempPath, Utilities.makeFileNameSafe(Utilities.Path.win32.basename(filePath)));
+        basePath = Utilities.createDirectoryInTemp(basePath);
+        tempPath = Utilities.Path.posix.join(basePath, tempPath);
 
         return tempPath;
     }
