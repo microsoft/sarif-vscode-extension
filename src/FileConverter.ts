@@ -31,6 +31,7 @@ export class FileConverter {
             const dialogOptions = { canSelectFiles: true, canSelectMany: false, filters: {} } as OpenDialogOptions;
             const toolExt = FileConverter.Tools.get(tool);
             dialogOptions.filters[`${tool} log files`] = toolExt;
+            dialogOptions.filters['All files'] = [ '*' ]
 
             return window.showOpenDialog(dialogOptions);
         }).then((uris: Uri[]) => {
