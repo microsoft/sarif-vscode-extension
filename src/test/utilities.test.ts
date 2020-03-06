@@ -11,9 +11,9 @@ import * as path from "path";
 import * as sarif from "sarif";
 
 import { Range, Uri } from "vscode";
-import { Location, RunInfo } from "../../common/Interfaces";
-import { SVDiagnosticCollection } from "../../SVDiagnosticCollection";
-import { Utilities } from "../../Utilities";
+import { Location, RunInfo } from "../common/Interfaces";
+import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
+import { Utilities } from "../Utilities";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema = "file";
@@ -57,9 +57,9 @@ suite("combineUriWithUriBase", () => {
     test ("Fix path casing", () => {
         const directoryEntries: string[] = fs.readdirSync(__dirname);
         for (const directoryEntry of directoryEntries) {
-            const lowerCassdDirectory: string = path.join(__dirname, directoryEntry).toLowerCase();
+            const lowerCasedDirectory: string = path.join(__dirname, directoryEntry).toLowerCase();
             assert.equal(path.join(__dirname, directoryEntry),
-                Utilities.fixUriCasing(Uri.file(lowerCassdDirectory)).fsPath);
+                Utilities.fixUriCasing(Uri.file(lowerCasedDirectory)).fsPath);
             const upperCasedPath: string = path.join(__dirname, directoryEntry).toUpperCase();
             assert.equal(path.join(__dirname, directoryEntry),
                 Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
