@@ -55,26 +55,15 @@ suite("combineUriWithUriBase", () => {
     });
 
     test ("Fix path casing", () => {
-        let currentRoot: string | undefined = __dirname;
-
-        while (currentRoot) {
-            const directoryEntries: string[] = fs.readdirSync(currentRoot);
-            for (const directoryEntry of directoryEntries) {
-                const lowerCassdDirectory: string = path.join(currentRoot, directoryEntry).toLowerCase();
-                assert.equal(path.join(currentRoot, directoryEntry),
-                    Utilities.fixUriCasing(Uri.file(lowerCassdDirectory)).fsPath);
-                const upperCasedPath: string = path.join(currentRoot, directoryEntry).toUpperCase();
-                assert.equal(path.join(currentRoot, directoryEntry),
-                    Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
-                }
-
-            const parent: string = path.dirname(currentRoot);
-            if (parent.toUpperCase() === currentRoot.toUpperCase()) {
-                break;
+        const directoryEntries: string[] = fs.readdirSync(__dirname);
+        for (const directoryEntry of directoryEntries) {
+            const lowerCassdDirectory: string = path.join(__dirname, directoryEntry).toLowerCase();
+            assert.equal(path.join(__dirname, directoryEntry),
+                Utilities.fixUriCasing(Uri.file(lowerCassdDirectory)).fsPath);
+            const upperCasedPath: string = path.join(__dirname, directoryEntry).toUpperCase();
+            assert.equal(path.join(__dirname, directoryEntry),
+                Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
             }
-
-            currentRoot = parent;
-        }
     });
 });
 

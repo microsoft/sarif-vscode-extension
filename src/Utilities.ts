@@ -319,7 +319,8 @@ export class Utilities {
      */
     public static fixUriCasing(uri: Uri): Uri {
         // We can only support file-system scheme files.
-        if (uri.scheme.toUpperCase() !== "FILE") {
+        // Use "root" locale to indicate invariant language.
+        if (uri.scheme.toLocaleUpperCase("root") !== "FILE") {
             return uri;
         }
 
@@ -330,23 +331,27 @@ export class Utilities {
         }
 
         // We assume that the "root" drive is lower-cased which is "usually" the case.
-        const fixedPathParts: string[] = [ pathParts[0].toLowerCase() + path.sep];
+        let fixedPath: string = pathParts[0].toLowerCase() + path.sep;
 
         while (pathPartIndex + 1 < pathParts.length) {
-            const directoryToRead: string = path.join(...fixedPathParts);
+            const directoryToRead: string = fixedPath;
             const directoryEntries: string[] = fs.readdirSync(directoryToRead);
             const fixedPathPart: string | undefined =
                 directoryEntries.find((directoryEntry) =>
-                    directoryEntry.toUpperCase() === pathParts[pathPartIndex + 1].toUpperCase());
+                    // Use "undefined" as the locale which means "default for environment" (which
+                    // in our case is whatever VSCode is running in).
+                    // We use this compare because file names can be typed in any language.
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
             if (!fixedPathPart) {
                 throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
             }
 
-            fixedPathParts.push(fixedPathPart);
+            fixedPath = path.join(fixedPath, fixedPathPart);
+
             pathPartIndex++;
         }
 
-        return Uri.file(path.join(...fixedPathParts));
+        return Uri.file(fixedPath);
     }
 
     private static md: markdownit;
