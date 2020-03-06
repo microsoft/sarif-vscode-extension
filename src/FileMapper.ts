@@ -3,6 +3,8 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as fs from "fs";
+import * as path from "path";
 import * as sarif from "sarif";
 import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, QuickInputButton, Uri,
@@ -100,19 +102,19 @@ export class FileMapper {
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
         const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
-        return this.openRemappingInputDialog(origUri).then(async (path) => {
-            if (path === null) {
+        return this.openRemappingInputDialog(origUri).then(async (directory) => {
+            if (directory === null) {
                 // path is null if the skip next button was pressed
                 this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
-            } else if (path === undefined) {
+            } else if (directory === undefined) {
                 // path is undefined if the input was dismissed without fixing the path
                 this.userCanceledMapping = true;
                 this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
             } else {
-                const uri = Uri.file(path);
+                const uri = Uri.file(directory);
                 const filePath: string = Utilities.getFsPathWithFragment(uri);
 
-                if (Utilities.Fs.statSync(filePath).isDirectory()) {
+                if (fs.statSync(filePath).isDirectory()) {
                     const config = workspace.getConfiguration(Utilities.configSection);
                     const rootpaths: string[] = config.get(this.configRootpaths);
 
@@ -328,23 +330,23 @@ export class FileMapper {
             }));
 
             disposables.push(input.onDidChangeValue(() => {
-                const path = input.value;
+                const directory = input.value;
                 let message = `'${uri.fsPath}' can not be found.
                 Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
 
-                if (path !== undefined && path !== "") {
+                if (directory !== undefined && directory !== "") {
                     let validateUri: Uri;
                     let isDirectory;
                     try {
-                        validateUri = Uri.file(path);
+                        validateUri = Uri.file(directory);
                     } catch (error) {
                         if (error.message !== "URI malformed") { throw error; }
                     }
 
                     if (validateUri !== undefined) {
                         try {
-                            isDirectory = Utilities.Fs.statSync(validateUri.fsPath).isDirectory();
+                            isDirectory = fs.statSync(validateUri.fsPath).isDirectory();
                         } catch (error) {
                             switch (error.code) {
                                 case "ENOENT":
@@ -415,7 +417,7 @@ export class FileMapper {
      */
     private tryMapUri(uri: Uri, key?: string): boolean {
         try {
-            if (!Utilities.Fs.statSync(Utilities.getFsPathWithFragment(uri)).isDirectory()) {
+            if (!fs.statSync(Utilities.getFsPathWithFragment(uri)).isDirectory()) {
                 if (key !== undefined) {
                     this.addToFileMapping(key, uri);
                 }
@@ -459,15 +461,15 @@ export class FileMapper {
      * @param uri file uri to try to rebase
      */
     private tryConfigRootpathsUri(uri: Uri, uriBase: string): boolean {
-        const originPath = Utilities.Path.parse(Utilities.getFsPathWithFragment(uri));
+        const originPath = path.parse(Utilities.getFsPathWithFragment(uri));
         const dir: string = originPath.dir.replace(originPath.root, "");
 
         for (const rootpath of this.rootpaths) {
-            const dirParts: string[] = dir.split(Utilities.Path.sep);
+            const dirParts: string[] = dir.split(path.sep);
             dirParts.push(originPath.base);
 
             while (dirParts.length !== 0) {
-                const mappedUri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(Utilities.Path.sep)));
+                const mappedUri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(path.sep)));
                 if (this.tryMapUri(mappedUri, Utilities.getFsPathWithFragment(uri))) {
                     this.saveBasePath(uri, mappedUri, uriBase);
                     return true;

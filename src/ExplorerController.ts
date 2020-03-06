@@ -3,6 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as path from "path";
 import { commands, extensions, Range, Uri, ViewColumn, WebviewPanel, window } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
@@ -13,7 +14,6 @@ import {
 import { LocationFactory } from "./LocationFactory";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-import { Utilities } from "./Utilities";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -66,8 +66,8 @@ export class ExplorerController {
                 {
                     enableScripts: true,
                     localResourceRoots: [
-                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "resources", "explorer")),
-                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "out", "explorer")),
+                        Uri.file(path.posix.join(this.extensionPath, "resources", "explorer")),
+                        Uri.file(path.posix.join(this.extensionPath, "out", "explorer")),
                     ],
                 },
             );
@@ -192,9 +192,9 @@ export class ExplorerController {
      * @param path relative path to the file from the extension folder
      * @param file name of the file
      */
-    private getVSCodeResourcePath(path: string, file: string): Uri {
+    private getVSCodeResourcePath(directory: string, file: string): Uri {
         const vscodeResource = "vscode-resource";
-        const diskPath: string = Utilities.Path.posix.join(this.extensionPath, path, file);
+        const diskPath: string = path.posix.join(this.extensionPath, directory, file);
         const uri = Uri.file(diskPath);
         return uri.with({ scheme: vscodeResource });
     }

@@ -163,7 +163,7 @@ export class FileConverter {
 
     private static childProcess;
     private static multiToolSchemaVersion: SarifVersion;
-    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json";
+    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json";
     private static multiToolVersion: SarifVersion;
     private static multiToolRawVersion = "2.1.0" as sarif.Log.version;
     private static multiTool: string;
@@ -319,7 +319,7 @@ export class FileConverter {
 
     /**
      * Parses the version out of the schema string to a Version object
-     * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json"
+     * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json"
      * @param schema schema string from the sarif log to parse
      */
     private static parseSchema(schema: string): SarifVersion {
