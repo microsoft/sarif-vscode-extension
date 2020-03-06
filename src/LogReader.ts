@@ -3,6 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as path from "path";
 import * as sarif from "sarif";
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
 import { CodeFlows } from "./CodeFlows";
@@ -15,7 +16,6 @@ import { ResultInfoFactory } from "./ResultInfoFactory";
 import { RunInfoFactory } from "./RunInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
-import { Utilities } from "./Utilities";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -126,7 +126,7 @@ export class LogReader {
             const pOptions = {
                 cancellable: false,
                 location: ProgressLocation.Notification,
-                title: "Processing " + Utilities.Path.basename(doc.fileName),
+                title: "Processing " + path.basename(doc.fileName),
             } as ProgressOptions;
 
             return window.withProgress(pOptions,

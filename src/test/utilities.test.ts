@@ -6,11 +6,14 @@
 
 // The module 'assert' provides assertion methods from node
 import * as assert from "assert";
+import * as fs from "fs";
+import * as path from "path";
 import * as sarif from "sarif";
+
 import { Range, Uri } from "vscode";
-import { Location, RunInfo } from "../../common/Interfaces";
-import { SVDiagnosticCollection } from "../../SVDiagnosticCollection";
-import { Utilities } from "../../Utilities";
+import { Location, RunInfo } from "../common/Interfaces";
+import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
+import { Utilities } from "../Utilities";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema = "file";
@@ -49,6 +52,18 @@ suite("combineUriWithUriBase", () => {
         uri = Utilities.combineUriWithUriBase("/" + uriPath, uriBasePath + "/");
         assert.equal(uri.scheme, expectedFileSchema);
         assert.equal(uri.fsPath, expectedPath);
+    });
+
+    test ("Fix path casing", () => {
+        const directoryEntries: string[] = fs.readdirSync(__dirname);
+        for (const directoryEntry of directoryEntries) {
+            const lowerCasedDirectory: string = path.join(__dirname, directoryEntry).toLowerCase();
+            assert.equal(path.join(__dirname, directoryEntry),
+                Utilities.fixUriCasing(Uri.file(lowerCasedDirectory)).fsPath);
+            const upperCasedPath: string = path.join(__dirname, directoryEntry).toUpperCase();
+            assert.equal(path.join(__dirname, directoryEntry),
+                Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
+            }
     });
 });
 

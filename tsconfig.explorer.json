@@ -2,7 +2,7 @@
     "compilerOptions": {
         "allowJs": true,
         "target": "es6",
-        "outDir": "out\\explorer",
+        "outDir": "out/explorer",
         "lib": [
             "dom",
             "es6"
@@ -14,7 +14,7 @@
         ]
     },
     "include": [
-        "src\\explorer\\*"
+        "src/explorer/*.ts"
     ],
     "exclude": [
         "node_modules"

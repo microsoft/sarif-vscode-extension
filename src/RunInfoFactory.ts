@@ -3,6 +3,7 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as path from "path";
 import * as sarif from "sarif";
 import { RunInfo } from "./common/Interfaces";
 import { Utilities } from "./Utilities";
@@ -48,7 +49,7 @@ export class RunInfoFactory {
         runInfo.uriBaseIds = Utilities.expandBaseIds(run.originalUriBaseIds);
 
         runInfo.sarifFileFullPath = sarifFileName;
-        runInfo.sarifFileName = Utilities.Path.basename(sarifFileName);
+        runInfo.sarifFileName = path.basename(sarifFileName);
 
         if (run.automationDetails !== undefined && run.automationDetails.id !== undefined) {
             const splitId = run.automationDetails.id.split("/");

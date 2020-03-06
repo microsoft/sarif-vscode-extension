@@ -35,7 +35,7 @@ export class LocationFactory {
                 location.uriBase = Utilities.getUriBase(artifactLocation, runId);
 
                 await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((data) => {
-                    location.uri = data.uri;
+                    location.uri = Utilities.fixUriCasing(data.uri);
                     location.mapped = data.mapped;
                     // toString() is executed to create an external value for the webview's use
                     location.uri.toString();

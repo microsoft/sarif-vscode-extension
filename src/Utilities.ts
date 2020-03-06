@@ -3,6 +3,8 @@
 // *   Copyright (C) Microsoft. All rights reserved.       *
 // *                                                       *
 // ********************************************************/
+import * as fs from "fs";
+import * as path from "path";
 import * as sarif from "sarif";
 import { extensions, Uri } from "vscode";
 import { Location, Message } from "./common/Interfaces";
@@ -13,16 +15,6 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
  */
 export class Utilities {
     public static readonly configSection = "sarif-viewer";
-
-    /**
-     * nodejs File System object
-     */
-    public static get Fs() {
-        if (Utilities.fs === undefined) {
-            Utilities.fs = require("fs");
-        }
-        return Utilities.fs;
-    }
 
     public static get IconsPath() {
         if (Utilities.iconsPath === undefined) {
@@ -50,16 +42,6 @@ export class Utilities {
             Utilities.os = require("os");
         }
         return Utilities.os;
-    }
-
-    /**
-     * nodejs Path object
-     */
-    public static get Path() {
-        if (Utilities.path === undefined) {
-            Utilities.path = require("path");
-        }
-        return Utilities.path;
     }
 
     /**
@@ -136,9 +118,9 @@ export class Utilities {
             uri = Uri.file(combinedPath);
         }
 
-        const path = Utilities.getFsPathWithFragment(uri);
+        const fsPath = Utilities.getFsPathWithFragment(uri);
 
-        return Uri.file(path);
+        return Uri.file(fsPath);
     }
 
     /**
@@ -147,14 +129,12 @@ export class Utilities {
      * @param path path to create the file in
      * @param contents content to add to the file after created
      */
-    public static createReadOnlyFile(path: string, contents: string): void {
-        try {
-            Utilities.Fs.unlinkSync(path);
-        } catch (error) {
-            if (error.code !== "ENOENT") { throw error; }
+    public static createReadOnlyFile(directory: string, contents: string): void {
+        if (fs.existsSync(directory)) {
+            fs.unlinkSync(directory);
         }
 
-        Utilities.Fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
+        fs.writeFileSync(directory, contents, { mode: 0o444/*readonly*/ });
     }
 
     /**
@@ -204,12 +184,13 @@ export class Utilities {
      * @param hashValue optional hash value to add to the path
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
-        const pathObj = Utilities.Path.parse(filePath);
-        let basePath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "");
-        let tempPath: string = Utilities.makeFileNameSafe(Utilities.Path.join(pathObj.dir.replace(pathObj.root, ""), Utilities.Path.win32.basename(filePath)));
+        const pathObj = path.parse(filePath);
+        let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || "");
+        let tempPath: string = Utilities.makeFileNameSafe(
+            path.join(pathObj.dir.replace(pathObj.root, ""), path.win32.basename(filePath)));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         basePath = Utilities.createDirectoryInTemp(basePath);
-        tempPath = Utilities.Path.posix.join(basePath, tempPath);
+        tempPath = path.posix.join(basePath, tempPath);
 
         return tempPath;
     }
@@ -220,7 +201,7 @@ export class Utilities {
      * @param fileName file name to modify
      */
     public static makeFileNameSafe(fileName: string): string {
-        return fileName.replace(/[/\\?%*:|"<>]/g, '-');
+        return fileName.replace(/[/\\?%*:|"<>]/g, "-");
     }
 
     /**
@@ -232,7 +213,7 @@ export class Utilities {
         if (uri.scheme === "file") {
             return Utilities.getFsPathWithFragment(uri);
         } else {
-            return Utilities.Path.normalize(uri.toString(true));
+            return path.normalize(uri.toString(true));
         }
     }
 
@@ -246,7 +227,7 @@ export class Utilities {
             fragment = "#" + uri.fragment;
         }
 
-        return Utilities.Path.normalize(uri.fsPath + fragment);
+        return path.normalize(uri.fsPath + fragment);
     }
 
     /**
@@ -327,15 +308,60 @@ export class Utilities {
      * Handles cleaning up the Sarif Viewer temp directory used for temp files (embedded code, converted files, etc.)
      */
     public static removeSarifViewerTempDirectory(): void {
-        const path = Utilities.Path.join(Utilities.Os.tmpdir(), Utilities.SarifViewerTempDir);
-        Utilities.removeDirectoryContents(path);
-        Utilities.Fs.rmdirSync(path);
+        const tempPath = path.join(Utilities.Os.tmpdir(), Utilities.SarifViewerTempDir);
+        Utilities.removeDirectoryContents(tempPath);
+        fs.rmdirSync(tempPath);
     }
 
-    private static fs: any;
+    /**
+     * Fixes up file schemed based paths to contain the proper casing for VSCode's URIs which are case sensitive.
+     * @param uri The URI for which to fix the casing.
+     */
+    public static fixUriCasing(uri: Uri): Uri {
+        // We can only support file-system scheme files.
+        // Use "root" locale to indicate invariant language.
+        if (uri.scheme.toLocaleUpperCase("root") !== "FILE") {
+            return uri;
+        }
+
+        let pathPartIndex: number = 0;
+        const pathParts: string[] = uri.fsPath.split(path.sep);
+        if (pathParts.length < 1) {
+            return uri;
+        }
+
+        // We assume that the "root" drive is lower-cased which is "usually" the case.
+        // There is an windows API
+        // [GetLogicalDriveStringsW]
+        // (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getlogicaldrivestringsw)
+        // that we often use in native/C# code to get the proper casing of the driver letter.
+        // As far as I know, this doesn't exist in node\javascript land.
+        // It is a very rare rare case that the drive letter is uppercased however.
+        let fixedPath: string = pathParts[0].toLowerCase() + path.sep;
+
+        while (pathPartIndex + 1 < pathParts.length) {
+            const directoryToRead: string = fixedPath;
+            const directoryEntries: string[] = fs.readdirSync(directoryToRead);
+            const fixedPathPart: string | undefined =
+                directoryEntries.find((directoryEntry) =>
+                    // Use "undefined" as the locale which means "default for environment" (which
+                    // in our case is whatever VSCode is running in).
+                    // We use this compare because file names can be typed in any language.
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+            if (!fixedPathPart) {
+                throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
+            }
+
+            fixedPath = path.join(fixedPath, fixedPathPart);
+
+            pathPartIndex++;
+        }
+
+        return Uri.file(fixedPath);
+    }
+
     private static md: markdownit;
     private static os: any;
-    private static path: any;
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
@@ -343,16 +369,16 @@ export class Utilities {
 
     /**
      * Loops through the passed in path's directories and creates the directory structure
-     * @param path directory path that needs to be created in temp directory(including temp directory)
+     * @param relativePath directory path that needs to be created in temp directory(including temp directory)
      */
-    private static createDirectoryInTemp(path: string): string {
-        const directories = path.split(Utilities.Path.sep);
+    private static createDirectoryInTemp(relativePath: string): string {
+        const directories = relativePath.split(path.sep);
         let createPath: string = Utilities.Os.tmpdir();
 
         for (const directory of directories) {
-            createPath = Utilities.Path.join(createPath, directory);
+            createPath = path.join(createPath, directory);
             try {
-                Utilities.Fs.mkdirSync(createPath);
+                fs.mkdirSync(createPath);
             } catch (error) {
                 if (error.code !== "EEXIST") { throw error; }
             }
@@ -377,17 +403,17 @@ export class Utilities {
 
     /**
      * Recursivly removes all of the contents in a directory, including subfolders
-     * @param path directory to remove all contents from
+     * @param directory directory to remove all contents from
      */
-    private static removeDirectoryContents(path: string): void {
-        const contents = Utilities.Fs.readdirSync(path);
+    private static removeDirectoryContents(directory: string): void {
+        const contents = fs.readdirSync(directory);
         for (const content of contents) {
-            const contentPath = Utilities.Path.join(path, content);
-            if (Utilities.Fs.lstatSync(contentPath).isDirectory()) {
+            const contentPath = path.join(directory, content);
+            if (fs.lstatSync(contentPath).isDirectory()) {
                 this.removeDirectoryContents(contentPath);
-                Utilities.Fs.rmdirSync(contentPath);
+                fs.rmdirSync(contentPath);
             } else {
-                Utilities.Fs.unlinkSync(contentPath);
+                fs.unlinkSync(contentPath);
             }
         }
     }
