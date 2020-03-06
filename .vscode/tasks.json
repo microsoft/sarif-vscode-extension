@@ -14,12 +14,15 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "dependsOn" : [
+                "BuildExplorer"
+            ]
         },
         {
             "label": "BuildExplorer",
-            "type": "shell",
-            "command": "tsc -p tsconfig.explorer.json",
+            "type": "npm",
+            "script": "prevscode:prepublish",
             "group": "build",
             "presentation": {
                 "echo": true,
