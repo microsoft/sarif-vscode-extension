@@ -265,10 +265,6 @@ export class SVDiagnosticCollection {
                 diags = issues;
             }
 
-            // Make sure to fix the path casing before we give it to VSCode. The URIs
-            // in VSCode are case-sensitive, but a lot of SARIF files contain completely
-            // lower-cased paths. If we don't correct the path casing then VSCode
-            // will open two editors for the same file.
             this.diagnosticCollection.set(key, diags);
         }
     }
