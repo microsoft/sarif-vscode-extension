@@ -331,6 +331,12 @@ export class Utilities {
         }
 
         // We assume that the "root" drive is lower-cased which is "usually" the case.
+        // There is an windows API
+        // [GetLogicalDriveStringsW]
+        // (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getlogicaldrivestringsw)
+        // that we often use in native/C# code to get the proper casing of the driver letter.
+        // As far as I know, this doesn't exist in node\javascript land.
+        // It is a very rare rare case that the drive letter is uppercased however.
         let fixedPath: string = pathParts[0].toLowerCase() + path.sep;
 
         while (pathPartIndex + 1 < pathParts.length) {
