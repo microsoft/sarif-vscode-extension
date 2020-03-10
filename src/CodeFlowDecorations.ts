@@ -220,23 +220,23 @@ export class CodeFlowDecorations {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
-        await LocationFactory.getOrRemap(location, sarifLocation,
-            ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId).then((loc: Location) => {
-                location = loc;
-            });
+        const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
+            location,
+            sarifLocation,
+            ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId);
 
-        if (location !== undefined && location.mapped) {
-            let locRange: Range = location.range;
-            if (location.endOfLine === true) {
+        if (remappedLocation && remappedLocation.mapped) {
+            let locRange: Range = remappedLocation.range;
+            if (remappedLocation.endOfLine === true) {
                 locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
             }
 
-            return workspace.openTextDocument(location.uri).then((doc) => {
+            return workspace.openTextDocument(remappedLocation.uri).then((doc) => {
                 return window.showTextDocument(doc, ViewColumn.One, true);
             }).then((editor) => {
                 editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
                     [{ range: locRange }]);
-                editor.revealRange(location.range, TextEditorRevealType.InCenterIfOutsideViewport);
+                editor.revealRange(remappedLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
             }, (reason) => {
                 // Failed to map after asking the user, fail silently as there's no location to add the selection
                 return Promise.resolve();

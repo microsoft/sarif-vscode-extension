@@ -145,7 +145,7 @@ export class LocationFactory {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    public static parseRange(region: sarif.Region): { range: Range, endOfLine: boolean } {
+    public static parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
         let startline = 0;
         let startcol = 0;
         let endline = 0;

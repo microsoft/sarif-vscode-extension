@@ -5,6 +5,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
+import * as os from "os";
+
 import { extensions, Uri } from "vscode";
 import { Location, Message } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
@@ -26,21 +28,12 @@ export class Utilities {
     /**
      * Markdown-it object for parsing markdown text
      */
-    public static get Md(): string {
-        if (Utilities.md === undefined) {
+    public static get Md(): markdownit {
+        if (!Utilities.md) {
             Utilities.md = require("markdown-it")();
         }
-        return Utilities.md;
-    }
 
-    /**
-     * nodejs Operating System object
-     */
-    public static get Os(): string {
-        if (Utilities.os === undefined) {
-            Utilities.os = require("os");
-        }
-        return Utilities.os;
+        return Utilities.md;
     }
 
     /**
@@ -102,7 +95,7 @@ export class Utilities {
             combinedPath = this.joinPath(uriBase, uriPath);
         }
 
-        let uri: Uri;
+        let uri: Uri | undefined;
         if (combinedPath !== "") {
             try {
                 uri = Uri.parse(combinedPath);
@@ -113,11 +106,11 @@ export class Utilities {
             }
         }
 
-        if (uri === undefined || uri.scheme !== "file") {
+        if (!uri || uri.scheme !== "file") {
             uri = Uri.file(combinedPath);
         }
 
-        const fsPath = Utilities.getFsPathWithFragment(uri);
+        const fsPath: string = Utilities.getFsPathWithFragment(uri);
 
         return Uri.file(fsPath);
     }
@@ -162,7 +155,7 @@ export class Utilities {
      * @param end End of path
      */
     public static joinPath(start: string, end: string): string {
-        let joined = start;
+        let joined: string = start;
 
         if (joined !== "" && joined[joined.length - 1] !== "/") {
             joined = joined + "/";
@@ -183,7 +176,7 @@ export class Utilities {
      * @param hashValue optional hash value to add to the path
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
-        const pathObj = path.parse(filePath);
+        const pathObj: path.ParsedPath = path.parse(filePath);
         let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || "");
         let tempPath: string = Utilities.makeFileNameSafe(
             path.join(pathObj.dir.replace(pathObj.root, ""), path.win32.basename(filePath)));
@@ -221,7 +214,7 @@ export class Utilities {
      * @param uri uri to pull the fspath and fragment from
      */
     public static getFsPathWithFragment(uri: Uri): string {
-        let fragment = "";
+        let fragment: string = "";
         if (uri.fragment !== "") {
             fragment = "#" + uri.fragment;
         }
@@ -257,37 +250,35 @@ export class Utilities {
      * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
-        let message = {} as Message;
-
-        if (sarifMessage !== undefined) {
-            let mdText = sarifMessage.markdown;
-            let msgText = sarifMessage.text;
+        if (sarifMessage) {
+            let mdText: string | undefined = sarifMessage.markdown;
+            let msgText: string | undefined = sarifMessage.text;
 
             // Insert result specific arguments
-            if (sarifMessage.arguments !== undefined) {
-                if (msgText !== undefined) {
-                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
+            if (sarifMessage.arguments) {
+                if (msgText) {
+                    for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
                         msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
-                if (mdText !== undefined) {
-                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
+                if (mdText) {
+                    for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
                         mdText = mdText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
             }
 
-            if (mdText === undefined) {
+            if (!mdText) {
                 mdText = msgText;
             }
 
-            if (mdText !== undefined) {
+            if (mdText) {
                 mdText = Utilities.Md.render(mdText);
                 mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
                 mdText = Utilities.unescapeBrackets(mdText);
             }
 
-            if (msgText !== undefined) {
+            if (msgText) {
                 msgText = Utilities.Md.renderInline(msgText);
                 msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
@@ -297,17 +288,17 @@ export class Utilities {
                 msgText = Utilities.Md.utils.unescapeAll(msgText);
             }
 
-            message = { text: msgText, html: mdText };
+            return { text: msgText, html: mdText };
         }
 
-        return message;
+        return {};
     }
 
     /**
      * Handles cleaning up the Sarif Viewer temp directory used for temp files (embedded code, converted files, etc.)
      */
     public static removeSarifViewerTempDirectory(): void {
-        const tempPath = path.join(Utilities.Os.tmpdir(), Utilities.SarifViewerTempDir);
+        const tempPath: string = path.join(os.tmpdir(), Utilities.SarifViewerTempDir);
         Utilities.removeDirectoryContents(tempPath);
         fs.rmdirSync(tempPath);
     }
@@ -360,7 +351,6 @@ export class Utilities {
     }
 
     private static md: markdownit;
-    private static os: any;
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
@@ -371,8 +361,8 @@ export class Utilities {
      * @param relativePath directory path that needs to be created in temp directory(including temp directory)
      */
     private static createDirectoryInTemp(relativePath: string): string {
-        const directories = relativePath.split(path.sep);
-        let createPath: string = Utilities.Os.tmpdir();
+        const directories: string[] = relativePath.split(path.sep);
+        let createPath: string = os.tmpdir();
 
         for (const directory of directories) {
             createPath = path.join(createPath, directory);
@@ -392,7 +382,7 @@ export class Utilities {
      * @param baseIds all the base ids
      */
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
-        let base = "";
+        let base: string = "";
         if (baseIds[id].uriBaseId !== undefined) {
             base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
         }
@@ -405,9 +395,9 @@ export class Utilities {
      * @param directory directory to remove all contents from
      */
     private static removeDirectoryContents(directory: string): void {
-        const contents = fs.readdirSync(directory);
+        const contents: string[] = fs.readdirSync(directory);
         for (const content of contents) {
-            const contentPath = path.join(directory, content);
+            const contentPath: string = path.join(directory, content);
             if (fs.lstatSync(contentPath).isDirectory()) {
                 this.removeDirectoryContents(contentPath);
                 fs.rmdirSync(contentPath);
@@ -423,28 +413,28 @@ export class Utilities {
      * @param locations array of locations to use in replacing the links
      * @param isMd if true the format replaced is as a markdown, if false it returns as if plain text
      */
-    private static ReplaceLocationLinks(text: string, locations: Location[], isMd: boolean): string {
-        if (locations === undefined) { return text; }
+    private static ReplaceLocationLinks(text: string, locations: Location[] | undefined, isMd: boolean): string {
+        if (!locations) {
+            return text;
+        }
 
         return text.replace(Utilities.embeddedRegEx, (match, p1, id) => {
-            const linkId = parseInt(id, 10);
-            const location = locations.find((loc: Location, index: number, obj: Location[]) => {
-                if (loc !== undefined && loc.id === linkId) {
-                    return true;
-                }
+            const linkId: number = parseInt(id, 10);
+            const location: Location | undefined = locations.find((loc: Location, index: number, obj: Location[]) => {
+                return loc && loc.id === linkId;
             });
 
-            if (location !== undefined && location.uri !== undefined) {
+            if (location && location.uri) {
                 if (isMd) {
-                    const className = `class="sourcelink"`;
-                    const tooltip = `title="${location.uri.toString(true)}"`;
-                    const data =
+                    const className: string = `class="sourcelink"`;
+                    const tooltip: string = `title="${location.uri.toString(true)}"`;
+                    const data: string =
                         `data-file="${location.uri.toString(true)}" ` +
                         `data-sLine="${location.range.start.line}" ` +
                         `data-sCol="${location.range.start.character}" ` +
                         `data-eLine="${location.range.end.line}" ` +
                         `data-eCol="${location.range.end.character}"`;
-                    const onClick = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
+                    const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
 
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
                 } else {

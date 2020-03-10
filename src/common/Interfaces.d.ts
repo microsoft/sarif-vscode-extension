@@ -41,12 +41,12 @@ export interface Location {
     id: number;
     endOfLine: boolean;
     fileName: string;
-    logicalLocations?: string[];
+    logicalLocations: string[];
     mapped: boolean;
-    message?: Message;
+    message: Message;
     range: Range;
     uri: Uri;
-    uriBase?: string;
+    uriBase: string;
 }
 
 export interface SarifViewerDiagnostic {
@@ -55,20 +55,20 @@ export interface SarifViewerDiagnostic {
 }
 
 export interface RunInfo {
-    additionalProperties?: { [key: string]: string };
-    automationCategory?: string;
-    automationIdentifier?: string;
-    cmdLine?: string;
-    id?: number;
-    sarifFileFullPath?: string;
-    sarifFileName?: string;
-    startUtc?: string;
-    timeDuration?: string;
-    toolFileName?: string;
-    toolFullName?: string;
-    toolName?: string;
-    uriBaseIds?: { [key: string]: string };
-    workingDir?: string;
+    additionalProperties: { [key: string]: string };
+    automationCategory: string;
+    automationIdentifier: string;
+    cmdLine: string;
+    id: number;
+    sarifFileFullPath: string;
+    sarifFileName: string;
+    startUtc: string;
+    timeDuration: string;
+    toolFileName: string;
+    toolFullName: string;
+    toolName: string;
+    uriBaseIds: { [key: string]: string };
+    workingDir: string;
 }
 
 export interface ResultInfo {
@@ -147,8 +147,8 @@ export interface Frame {
 }
 
 export interface Message {
-    html: string,
-    text: string,
+    html?: string,
+    text?: string,
 }
 
 export interface Attachment {
