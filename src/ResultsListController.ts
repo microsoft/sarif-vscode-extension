@@ -9,13 +9,14 @@ import {
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
-    ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue, SarifViewerDiagnostic,
+    ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage,
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
+import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -49,14 +50,14 @@ export class ResultsListController {
         this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
     }
 
-    public static get Instance() {
+    public static get Instance(): ResultsListController {
         return ResultsListController.instance || (ResultsListController.instance = new ResultsListController());
     }
 
     /**
      * For disposing on extension close
      */
-    public dispose() {
+    public dispose(): void {
         this.changeSettingsDisposable.dispose();
     }
 

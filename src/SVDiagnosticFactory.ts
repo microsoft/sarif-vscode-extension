@@ -3,11 +3,12 @@
  */
 
 import * as sarif from "sarif";
-import { Diagnostic, DiagnosticSeverity } from "vscode";
+import { DiagnosticSeverity } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { ResultInfo, SarifViewerDiagnostic } from "./common/Interfaces";
+import { ResultInfo } from "./common/Interfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Object that is used to display a problem in the Problems panel
@@ -22,9 +23,8 @@ export class SVDiagnosticFactory {
      * @param resultinfo processed result info
      * @param result sarif result info from the sarif file
      */
-    public static create(resultinfo: ResultInfo, result: sarif.Result): SarifViewerDiagnostic {
-        const diagnostic = new Diagnostic(resultinfo.assignedLocation.range, resultinfo.message.text);
-        const svDiagnostic = diagnostic as SarifViewerDiagnostic;
+    public static create(resultinfo: ResultInfo, result: sarif.Result): SarifViewerVsCodeDiagnostic {
+        const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(resultinfo.assignedLocation.range, resultinfo.message.text);
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultinfo.severityLevel);
         svDiagnostic.code = resultinfo.ruleId;
         svDiagnostic.resultInfo = resultinfo;
@@ -39,7 +39,7 @@ export class SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    public static async tryToRemapLocations(diagnostic: SarifViewerDiagnostic): Promise<boolean> {
+    public static async tryToRemapLocations(diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         const runId = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows !== undefined) {
             await CodeFlows.tryRemapCodeFlows(diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
@@ -94,7 +94,7 @@ export class SVDiagnosticFactory {
      * Prepends the message with the rule Id if available
      * And Unmapped if the result has not been mapped
      */
-    private static updateMessage(diagnostic: SarifViewerDiagnostic): string {
+    private static updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
         let message = diagnostic.resultInfo.message.text;
 
         if (!diagnostic.resultInfo.assignedLocation.mapped) {

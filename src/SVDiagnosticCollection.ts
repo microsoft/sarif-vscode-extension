@@ -3,11 +3,12 @@
  */
 
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
-import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
+import { RunInfo } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { Utilities } from "./Utilities";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Manager for the Diagnostic Collection contianing the sarif result diagnostics
@@ -20,9 +21,9 @@ export class SVDiagnosticCollection {
     private static instance: SVDiagnosticCollection;
 
     private diagnosticCollection: DiagnosticCollection;
-    private issuesCollection: Map<string, SarifViewerDiagnostic[]>;
+    private issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
     private runInfoCollection: RunInfo[];
-    private unmappedIssuesCollection: Map<string, SarifViewerDiagnostic[]>;
+    private unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
 
     public static get Instance(): SVDiagnosticCollection {
         return SVDiagnosticCollection.instance || (SVDiagnosticCollection.instance = new SVDiagnosticCollection());
@@ -32,8 +33,8 @@ export class SVDiagnosticCollection {
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
-        this.issuesCollection = new Map<string, SarifViewerDiagnostic[]>();
-        this.unmappedIssuesCollection = new Map<string, SarifViewerDiagnostic[]>();
+        this.issuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
+        this.unmappedIssuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
         this.runInfoCollection = [];
     }
 
@@ -54,7 +55,7 @@ export class SVDiagnosticCollection {
      * After you finish adding all of the new diagnostics, call syncDiagnostics to get them added to the problems panel
      * @param issue diagnostic to add to the problems panel
      */
-    public add(issue: SarifViewerDiagnostic) {
+    public add(issue: SarifViewerVsCodeDiagnostic) {
         if (issue.resultInfo.assignedLocation.mapped) {
             this.addToCollection(this.issuesCollection, issue);
         } else {
@@ -99,8 +100,8 @@ export class SVDiagnosticCollection {
     /**
      * Gets a flat array of all the diaganostics (includes mapped and unmapped)
      */
-    public getAllDiagnostics(): SarifViewerDiagnostic[] {
-        const allDiags: SarifViewerDiagnostic[] = [];
+    public getAllDiagnostics(): SarifViewerVsCodeDiagnostic[] {
+        const allDiags: SarifViewerVsCodeDiagnostic[] = [];
         this.unmappedIssuesCollection.forEach((value) => {
             allDiags.push(...value);
         });
@@ -115,8 +116,8 @@ export class SVDiagnosticCollection {
     /**
      * Gets a flat array of all the unmapped diagnostics
      */
-    public getAllUnmappedDiagnostics(): SarifViewerDiagnostic[] {
-        const unmapped: SarifViewerDiagnostic[] = [];
+    public getAllUnmappedDiagnostics(): SarifViewerVsCodeDiagnostic[] {
+        const unmapped: SarifViewerVsCodeDiagnostic[] = [];
         this.unmappedIssuesCollection.forEach((value) => {
             unmapped.push(...value);
         });
@@ -129,11 +130,11 @@ export class SVDiagnosticCollection {
      * @param resultId Id of the result
      * @param runId Id of the run the results from
      */
-    public getResultInfo(resultId: number, runId: number): SarifViewerDiagnostic {
-        let result: SarifViewerDiagnostic;
-        this.unmappedIssuesCollection.forEach((diags: SarifViewerDiagnostic[]) => {
+    public getResultInfo(resultId: number, runId: number): SarifViewerVsCodeDiagnostic {
+        let result: SarifViewerVsCodeDiagnostic;
+        this.unmappedIssuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
             if (result === undefined) {
-                result = diags.find((diag: SarifViewerDiagnostic) => {
+                result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
                     if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
                         return true;
                     }
@@ -142,9 +143,9 @@ export class SVDiagnosticCollection {
         });
 
         if (result === undefined) {
-            this.issuesCollection.forEach((diags: SarifViewerDiagnostic[]) => {
+            this.issuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
                 if (result === undefined) {
-                    result = diags.find((diag: SarifViewerDiagnostic) => {
+                    result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
                         if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
                             return true;
                         }
@@ -235,7 +236,7 @@ export class SVDiagnosticCollection {
      * @param collection dictionary to add the diagnostic to
      * @param issue diagnostic that needs to be added to dictionary
      */
-    private addToCollection(collection: Map<string, SarifViewerDiagnostic[]>, issue: SarifViewerDiagnostic) {
+    private addToCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>, issue: SarifViewerVsCodeDiagnostic) {
         const key = Utilities.getFsPathWithFragment(issue.resultInfo.assignedLocation.uri);
         if (collection.has(key)) {
             collection.get(key).push(issue);
@@ -249,7 +250,7 @@ export class SVDiagnosticCollection {
      * Handles if the size is larger then the max we stop 1 short and add our custom message as the final diagnostic
      * @param collection dictionary of diagnostics that need to be added to the panel
      */
-    private addToDiagnosticCollection(collection: Map<string, SarifViewerDiagnostic[]>) {
+    private addToDiagnosticCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>) {
         for (const issues of collection.values()) {
             let diags: Diagnostic[];
             const key = issues[0].resultInfo.assignedLocation.uri;
@@ -273,7 +274,7 @@ export class SVDiagnosticCollection {
      * @param runsToRemove array of runids to be removed
      * @param collection diagnostic collection to search for matching runids
      */
-    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerDiagnostic[]>) {
+    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>) {
         let diagnosticsRemoved = [];
         for (const key of collection.keys()) {
             const diagnostics = collection.get(key);

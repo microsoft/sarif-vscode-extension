@@ -7,15 +7,15 @@ import * as path from "path";
 
 export function run(): Promise<void> {
     // Create the mocha test
-    const mocha = new Mocha({
+    const mocha: Mocha = new Mocha({
         ui: "tdd",
     });
     mocha.useColors(true);
 
-    const testsRoot = path.resolve(__dirname, "..");
+    const testsRoot: string = path.resolve(__dirname, "..");
 
     return new Promise((c, e) => {
-        glob("**/**.test.js", { cwd: testsRoot }, (err: Error, files: string[]) => {
+        glob("**/**.test.js", { cwd: testsRoot }, (err: Error | null, files: string[]) => {
             if (err) {
                 return e(err);
             }

@@ -49,7 +49,7 @@ export interface Location {
     uriBase: string;
 }
 
-export interface SarifViewerDiagnostic extends Diagnostic {
+export interface SarifViewerDiagnostic {
     resultInfo: ResultInfo;
     rawResult: sarif.Result;
 }

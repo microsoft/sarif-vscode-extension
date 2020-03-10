@@ -8,11 +8,12 @@ import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { MessageType } from "./common/Enums";
 import {
-    DiagnosticData, Location, LocationData, ResultsListData, SarifViewerDiagnostic, WebviewMessage,
+    DiagnosticData, Location, LocationData, ResultsListData, WebviewMessage,
 } from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel

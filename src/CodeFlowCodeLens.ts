@@ -32,7 +32,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     /**
      * For disposing on extension close
      */
-    public dispose() {
+    public dispose(): void {
         this.onDidChangeCodeLensesEmitter.dispose();
         this.codeLensProvider.dispose();
     }

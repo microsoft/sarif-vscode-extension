@@ -9,10 +9,10 @@ import {
 } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes

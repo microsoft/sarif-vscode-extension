@@ -9,27 +9,27 @@ import * as path from "path";
 import * as sarif from "sarif";
 
 import { Range, Uri } from "vscode";
-import { Location, RunInfo } from "../common/Interfaces";
+import { RunInfo, Message } from "../common/Interfaces";
 import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { Utilities } from "../Utilities";
 
 suite("combineUriWithUriBase", () => {
-    const expectedFileSchema = "file";
+    const expectedFileSchema: string = "file";
     test("Empty paths", () => {
-        const uri = Utilities.combineUriWithUriBase("", "");
+        const uri: Uri = Utilities.combineUriWithUriBase("", "");
         assert.equal(uri.scheme, expectedFileSchema);
         assert.equal(uri.fsPath, "\\");
     });
 
     test("Undefined base", () => {
-        const uri = Utilities.combineUriWithUriBase("file:///c:/folder/file.ext", undefined);
+        const uri: Uri = Utilities.combineUriWithUriBase("file:///c:/folder/file.ext", undefined);
         assert.equal(uri.scheme, expectedFileSchema);
         assert.equal(uri.fsPath, "c:\\folder\\file.ext");
     });
 
     test("Path with uri id base", () => {
-        const uriPath = "\\folder\\file.ext";
-        let uri = Utilities.combineUriWithUriBase(uriPath, "%srcroot%");
+        const uriPath: string = "\\folder\\file.ext";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, "%srcroot%");
         assert.equal(uri.scheme, expectedFileSchema);
         assert.equal(uri.fsPath, "\\%srcroot%" + uriPath);
         uri = Utilities.combineUriWithUriBase(uriPath, "#srcroot#");
@@ -38,10 +38,10 @@ suite("combineUriWithUriBase", () => {
     });
 
     test("Path With basepath ", () => {
-        const expectedPath = "c:\\folder1\\folder2\\file.ext";
-        const uriPath = "folder2/file.ext";
-        const uriBasePath = "file:///c:/folder1";
-        let uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
+        const expectedPath: string = "c:\\folder1\\folder2\\file.ext";
+        const uriPath: string = "folder2/file.ext";
+        const uriBasePath: string= "file:///c:/folder1";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
         assert.equal(uri.scheme, expectedFileSchema);
         assert.equal(uri.fsPath, expectedPath);
         uri = Utilities.combineUriWithUriBase("/" + uriPath, uriBasePath);
@@ -66,7 +66,7 @@ suite("combineUriWithUriBase", () => {
 });
 
 suite("parseSarifMessages", () => {
-    const locations1 = [
+    const locations1: sarif.Location[] = [
         {
             endOfLine: false,
             fileName: "file.ext",
@@ -76,10 +76,10 @@ suite("parseSarifMessages", () => {
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
-        } as Location,
+        },
     ];
 
-    const locations2 = [
+    const locations2: sarif.Location[] = [
         {
             endOfLine: false,
             fileName: "file.ext",
@@ -89,7 +89,7 @@ suite("parseSarifMessages", () => {
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
-        } as Location,
+        },
         {
             endOfLine: false,
             fileName: "file1.ext",
@@ -99,60 +99,60 @@ suite("parseSarifMessages", () => {
             range: new Range(3, 3, 4, 4),
             uri: Uri.file("c:/folder1/file1.ext"),
             uriBase: undefined,
-        } as Location,
+        },
     ];
 
     test("Undefined message", () => {
-        const message = Utilities.parseSarifMessage(undefined);
+        const message: Message = Utilities.parseSarifMessage({});
         assert.deepEqual(message, {});
     });
 
     test("Empty string", () => {
-        const inputText = "";
-        const sarifMessage = { text: inputText } as sarif.Message;
-        const message = Utilities.parseSarifMessage(sarifMessage);
+        const inputText: string = "";
+        const sarifMessage: sarif.Message = { text: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, inputText);
         assert.equal(message.html, inputText);
     });
 
     test("Simple string", () => {
-        const inputText = "A simple string";
-        const outputHTML = `<p>${inputText}</p>\n`;
-        const sarifMessage = { text: inputText } as sarif.Message;
-        const message = Utilities.parseSarifMessage(sarifMessage);
+        const inputText: string = "A simple string";
+        const outputHTML: string = `<p>${inputText}</p>\n`;
+        const sarifMessage: sarif.Message = { text: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, inputText);
         assert.equal(message.html, outputHTML);
     });
 
     test("Simple argument", () => {
-        const inputText = "A string with {0} argument";
-        const inputArguments = ["1"];
-        const outputText = "A string with 1 argument";
-        const outputHtml = `<p>${outputText}</p>\n`;
-        const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
-        const message = Utilities.parseSarifMessage(sarifMessage);
+        const inputText: string = "A string with {0} argument";
+        const inputArguments: string[] = ["1"];
+        const outputText: string  = "A string with 1 argument";
+        const outputHtml: string = `<p>${outputText}</p>\n`;
+        const sarifMessage: sarif.Message = { arguments: inputArguments, text: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
         assert.equal(message.html, outputHtml);
     });
 
     test("Multiple arguments", () => {
-        const inputText = "A string with {0} arguments, from {1} code for {2}.";
-        const inputArguments = ["3", "test", "testing"];
-        const outputText = "A string with 3 arguments, from test code for testing.";
-        const outputHtml = `<p>${outputText}</p>\n`;
-        const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
-        const message = Utilities.parseSarifMessage(sarifMessage);
+        const inputText: string = "A string with {0} arguments, from {1} code for {2}.";
+        const inputArguments: string[] = ["3", "test", "testing"];
+        const outputText: string = "A string with 3 arguments, from test code for testing.";
+        const outputHtml: string = `<p>${outputText}</p>\n`;
+        const sarifMessage: sarif.Message = { arguments: inputArguments, text: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
         assert.equal(message.html, outputHtml);
     });
 
     test("Argument used twice", () => {
-        const inputText = "{0} string with {0} argument";
-        const inputArguments = ["1"];
-        const outputText = "1 string with 1 argument";
-        const outputHtml = `<p>${outputText}</p>\n`;
-        const sarifMessage = { arguments: inputArguments, text: inputText } as sarif.Message;
-        const message = Utilities.parseSarifMessage(sarifMessage);
+        const inputText: string = "{0} string with {0} argument";
+        const inputArguments: string[]  = ["1"];
+        const outputText: string = "1 string with 1 argument";
+        const outputHtml: string = `<p>${outputText}</p>\n`;
+        const sarifMessage: sarif.Message = { arguments: inputArguments, text: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
         assert.equal(message.text, outputText);
         assert.equal(message.html, outputHtml);
     });

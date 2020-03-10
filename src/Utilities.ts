@@ -15,7 +15,7 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 export class Utilities {
     public static readonly configSection = "sarif-viewer";
 
-    public static get IconsPath() {
+    public static get IconsPath(): string {
         if (Utilities.iconsPath === undefined) {
             Utilities.iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
                 "/resources/icons/";
@@ -26,7 +26,7 @@ export class Utilities {
     /**
      * Markdown-it object for parsing markdown text
      */
-    public static get Md() {
+    public static get Md(): string {
         if (Utilities.md === undefined) {
             Utilities.md = require("markdown-it")();
         }
@@ -36,7 +36,7 @@ export class Utilities {
     /**
      * nodejs Operating System object
      */
-    public static get Os() {
+    public static get Os(): string {
         if (Utilities.os === undefined) {
             Utilities.os = require("os");
         }
