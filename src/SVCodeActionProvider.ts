@@ -12,7 +12,7 @@ import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes
@@ -57,10 +57,10 @@ export class SVCodeActionProvider implements CodeActionProvider {
         range: Range,
         context: CodeActionContext,
         token: CancellationToken): ProviderResult<CodeAction[]> {
-        const index = context.diagnostics.findIndex((x) => (x as SarifViewerDiagnostic).resultInfo !== undefined);
+        const index = context.diagnostics.findIndex((x) => (x as SarifViewerVsCodeDiagnostic).resultInfo !== undefined);
         let actions: CodeAction[];
         if (context.only === undefined && index !== -1) {
-            const svDiagnostic = context.diagnostics[index] as SarifViewerDiagnostic;
+            const svDiagnostic = context.diagnostics[index] as SarifViewerVsCodeDiagnostic;
             if (svDiagnostic.source === "SARIFViewer") {
                 // This diagnostic is the place holder for the problems panel limit message,
                 // can possibly put logic here to allow for showing next set of diagnostics
@@ -91,7 +91,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
      * Creates the set of code actions for the passed in Sarif Viewer Diagnostic
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
-    private getCodeActions(svDiagnostic: SarifViewerDiagnostic): CodeAction[] {
+    private getCodeActions(svDiagnostic: SarifViewerVsCodeDiagnostic): CodeAction[] {
         const rawLocations = svDiagnostic.rawResult.locations;
         const actions: CodeAction[] = [];
 

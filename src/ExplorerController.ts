@@ -13,7 +13,7 @@ import {
 import { LocationFactory } from "./LocationFactory";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -25,7 +25,7 @@ export class ExplorerController {
 
     private static instance: ExplorerController;
 
-    public activeSVDiagnostic: SarifViewerDiagnostic;
+    public activeSVDiagnostic: SarifViewerVsCodeDiagnostic;
     public resultsListData: ResultsListData;
     public selectedVerbosity: string;
 
@@ -156,7 +156,7 @@ export class ExplorerController {
      * @param diag diagnostic to show
      * @param mappingUpdate optional flag to indicate a mapping update and the state shouldn't be reset
      */
-    public setActiveDiagnostic(diag: SarifViewerDiagnostic, mappingUpdate?: boolean) {
+    public setActiveDiagnostic(diag: SarifViewerVsCodeDiagnostic, mappingUpdate?: boolean) {
         if (this.activeSVDiagnostic === undefined || this.activeSVDiagnostic !== diag || mappingUpdate) {
             this.activeSVDiagnostic = diag;
             if (!mappingUpdate) {

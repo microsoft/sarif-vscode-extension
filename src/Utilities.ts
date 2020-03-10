@@ -48,28 +48,31 @@ export class Utilities {
      * @param start string representing the start time in utc format
      * @param end string representing the end time in utc format
      */
-    public static calcDuration(start: string, end: string): string {
-        let duration = "";
-        if (start !== undefined && end !== undefined) {
-            const diff = new Date(end).getTime() - new Date(start).getTime();
+    public static calcDuration(start?: string, end?: string): string | undefined {
+        let duration: string | undefined;
+
+        if (start && end) {
+            duration = "";
+
+            const diff: number = new Date(end).getTime() - new Date(start).getTime();
             if (diff > 0) {
-                const msDiff = diff % 1000;
-                const sDiff = Math.floor((diff / 1000) % 60);
-                const mDiff = Math.floor((diff / 60000) % 60);
-                const hDiff = Math.floor(diff / 3600000);
+                const msDiff: number = diff % 1000;
+                const sDiff: number = Math.floor((diff / 1000) % 60);
+                const mDiff: number = Math.floor((diff / 60000) % 60);
+                const hDiff: number = Math.floor(diff / 3600000);
 
                 if (hDiff > 0) {
-                    const label = (hDiff === 1) ? "hr" : "hrs";
+                    const label: string = (hDiff === 1) ? "hr" : "hrs";
                     duration = `${hDiff} ${label}`;
                 }
 
                 if (mDiff > 0) {
-                    const label = (mDiff === 1) ? "min" : "mins";
+                    const label: string = (mDiff === 1) ? "min" : "mins";
                     duration = `${duration} ${mDiff} ${label}`;
                 }
 
                 if (sDiff > 0) {
-                    const label = (sDiff === 1) ? "sec" : "secs";
+                    const label: string = (sDiff === 1) ? "sec" : "secs";
                     duration = `${duration} ${sDiff} ${label}`;
                 }
 
@@ -82,9 +85,6 @@ export class Utilities {
             } else {
                 duration = `0 ms`;
             }
-
-        } else {
-            duration = undefined;
         }
 
         return duration;
@@ -95,10 +95,10 @@ export class Utilities {
      * @param uriPath uri path from sarif file to combine with the base
      * @param uriBase the uriBase as defined in the sarif file
      */
-    public static combineUriWithUriBase(uriPath: string, uriBase: string): Uri {
-        let combinedPath = uriPath;
+    public static combineUriWithUriBase(uriPath: string, uriBase?: string): Uri {
+        let combinedPath: string = uriPath;
 
-        if (uriBase !== undefined && uriBase !== "") {
+        if (uriBase && uriBase.length !== 0) {
             combinedPath = this.joinPath(uriBase, uriPath);
         }
 
@@ -140,8 +140,8 @@ export class Utilities {
      * expands out all of the nested based ids to get a flat dictionary of base ids
      * @param baseIds all of the base ids that need to be expanded out
      */
-    public static expandBaseIds(baseIds: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } {
-        if (baseIds === undefined) {
+    public static expandBaseIds(baseIds?: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } | undefined {
+        if (!baseIds) {
             return undefined;
         }
 
@@ -234,15 +234,15 @@ export class Utilities {
      * @param fileLocation File Location which contains the uriBaseId
      * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(fileLocation: sarif.ArtifactLocation, runId: number): string {
-        let uriBase: string;
-        if (fileLocation !== undefined && fileLocation.uriBaseId !== undefined) {
-            const runUriBaseIds = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
-            if (runUriBaseIds !== undefined) {
+    public static getUriBase(fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
+        let uriBase: string | undefined;
+        if (fileLocation && fileLocation.uriBaseId && runId) {
+            const runUriBaseIds: { [key: string]: string } = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
+            if (runUriBaseIds) {
                 uriBase = runUriBaseIds[fileLocation.uriBaseId];
             }
 
-            if (uriBase === undefined) {
+            if (!uriBase) {
                 uriBase = fileLocation.uriBaseId;
             }
         }

@@ -16,7 +16,7 @@ import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
-import { SarifViewerDiagnostic } from "./SarifViewerDiagnostic";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -66,7 +66,7 @@ export class ResultsListController {
      * @param diags Array of diags that need to be updated
      * @param remove flag to remove the diags in the array, otherwise they will be udpated
      */
-    public updateResultsListData(diags: SarifViewerDiagnostic[], remove?: boolean) {
+    public updateResultsListData(diags: SarifViewerVsCodeDiagnostic[], remove?: boolean) {
         if (remove === true) {
             for (const key of diags.keys()) {
                 const id = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
