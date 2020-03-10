@@ -3,7 +3,7 @@
  */
 
  import * as sarif from "sarif";
-import { commands, ExtensionContext } from "vscode";
+import { commands, ExtensionContext, Uri } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
@@ -18,7 +18,7 @@ import { Utilities } from "./Utilities";
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext): Promise<void> {
     // Create the launch Explorer command
     context.subscriptions.push(
         commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
@@ -26,18 +26,10 @@ export function activate(context: ExtensionContext) {
         }));
 
     context.subscriptions.push(
-        commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, (id: string) => {
-            CodeFlowDecorations.updateCodeFlowSelection(id);
-            ExplorerController.Instance.setSelectedCodeFlow(id);
-        }));
+        commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, SendCFSelectionToExplorerCommand));
 
     // Create File mapper command
-    context.subscriptions.push(
-        commands.registerCommand(FileMapper.MapCommand, (fileLocation: sarif.ArtifactLocation, runId: number) => {
-            const uriBase = Utilities.getUriBase(fileLocation, runId);
-            const uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
-            FileMapper.Instance.getUserToChooseFile(uri, uriBase);
-        }));
+    context.subscriptions.push(commands.registerCommand(FileMapper.MapCommand, mapFileCommand));
 
     context.subscriptions.push(
         commands.registerCommand(CodeFlowDecorations.selectNextCFStepCommand, CodeFlowDecorations.selectNextCFStep),
@@ -50,22 +42,38 @@ export function activate(context: ExtensionContext) {
         commands.registerCommand(FileConverter.ConvertCommand, FileConverter.selectConverter),
     );
 
-    // Instantiate the providers and filemaper which will register their listeners and register their disposables
+    // Instantiate the providers and file mapper which will register their listeners and register their disposables
     context.subscriptions.push(SVCodeActionProvider.Instance);
     context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
     context.subscriptions.push(FileMapper.Instance);
 
     // Read the initial set of open SARIF files
-    const reader = LogReader.Instance;
+    const reader: LogReader = LogReader.Instance;
     context.subscriptions.push(reader);
-    reader.readAll();
+
+    // TODO: Need to add "Start floating promise" utility function here
+    await reader.readAll();
+}
+
+async function SendCFSelectionToExplorerCommand(id: string): Promise<void> {
+    await CodeFlowDecorations.updateCodeFlowSelection(id);
+    ExplorerController.Instance.setSelectedCodeFlow(id);
+}
+
+function mapFileCommand(fileLocation: sarif.ArtifactLocation, runId: number): Promise<void>  {
+    const uriBase: string | undefined = Utilities.getUriBase(fileLocation, runId);
+    if (uriBase && fileLocation.uri) {
+        const uri: Uri  = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
+        return FileMapper.Instance.getUserToChooseFile(uri, uriBase);
+    }
+
+    return Promise.resolve();
 }
 
 /**
  * Clean up extension if it gets deactivated
  */
-export function deactivate() {
+export function deactivate(): void {
     // ToDo: rusty: Close html preview, unregister events, clear diagnostic collection
     Utilities.removeSarifViewerTempDirectory();
-    return undefined;
 }
