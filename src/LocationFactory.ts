@@ -69,11 +69,11 @@ export class LocationFactory {
      * @param sarifLocation raw sarif Location of the file
      * @param runId used for mapping uribaseids
      */
-    public static async getOrRemap(location: Location, sarifLocation: sarif.Location, runId: number) {
-        if (location === undefined || !location.mapped) {
-            if (sarifLocation !== undefined && sarifLocation.physicalLocation !== undefined) {
-                const physLoc = sarifLocation.physicalLocation;
-                const uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
+    public static async getOrRemap(location: Location | undefined, sarifLocation: sarif.Location, runId: number): Promise<Location | undefined> {
+        if (!location || !location.mapped) {
+            if (sarifLocation && sarifLocation.physicalLocation) {
+                const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
+                const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
                 await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
                     return LocationFactory.create(sarifLocation, runId);
                 }).then((remappedLocation) => {
