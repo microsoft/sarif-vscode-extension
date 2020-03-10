@@ -1,8 +1,7 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
 /// <reference path="./enums.ts" />
 import * as sarif from "sarif";
 import { Position } from "vscode";

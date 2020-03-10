@@ -1,8 +1,8 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+
 import {
     CancellationToken, CodeAction, CodeActionContext, CodeActionKind, CodeActionProvider, Command, commands, Disposable,
     languages, ProviderResult, Range, TextDocument,

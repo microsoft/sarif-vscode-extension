@@ -1,8 +1,6 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
 import * as glob from "glob";
 import * as Mocha from "mocha";
 import * as path from "path";

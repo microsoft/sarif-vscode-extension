@@ -1,8 +1,6 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
 
 // The module 'assert' provides assertion methods from node
 import * as assert from "assert";

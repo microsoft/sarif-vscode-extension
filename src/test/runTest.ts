@@ -1,9 +1,8 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
-import * as path from "path";
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+ import * as path from "path";
 
 import { runTests } from "vscode-test";
 

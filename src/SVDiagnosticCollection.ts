@@ -1,8 +1,7 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
 import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";

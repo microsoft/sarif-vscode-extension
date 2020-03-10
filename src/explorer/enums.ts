@@ -1,3 +1,7 @@
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
 // Enums
 
 /** Updating this also requires an update to the matching enum in the explorer folder */

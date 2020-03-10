@@ -1,8 +1,7 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
 import * as sarif from "sarif";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow } from "./common/Interfaces";

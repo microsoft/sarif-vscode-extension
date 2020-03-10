@@ -1,8 +1,8 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+
 import * as path from "path";
 import * as sarif from "sarif";
 import { RunInfo } from "./common/Interfaces";
