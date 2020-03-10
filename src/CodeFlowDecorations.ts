@@ -196,9 +196,9 @@ export class CodeFlowDecorations {
      */
     public static async updateCodeFlowSelection(idText?: string, idCFStep?: CodeFlowStepId): Promise<void> {
         let id: CodeFlowStepId | undefined;
-        if (idText !== undefined) {
+        if (idText) {
             id = CodeFlows.parseCodeFlowId(idText);
-        } else if (idCFStep !== undefined) {
+        } else if (idCFStep) {
             id = idCFStep;
         }
 
