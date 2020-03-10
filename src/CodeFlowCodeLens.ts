@@ -7,6 +7,7 @@ import {
     TextDocument,
 } from "vscode";
 import { ExplorerController } from "./ExplorerController";
+import { CodeFlow, ThreadFlow, CodeFlowStep, Location } from "./common/Interfaces";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
@@ -22,7 +23,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     }
 
     static get Instance(): CodeFlowCodeLensProvider {
-        if (CodeFlowCodeLensProvider.instance === undefined) {
+        if (!CodeFlowCodeLensProvider.instance) {
             CodeFlowCodeLensProvider.instance = new CodeFlowCodeLensProvider();
         }
 
@@ -50,25 +51,25 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
      */
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
         const codeLenses: CodeLens[] = [];
-        const explorerController = ExplorerController.Instance;
-        const verbosity = explorerController.selectedVerbosity || "important";
+        const explorerController: ExplorerController = ExplorerController.Instance;
+        const verbosity: string = explorerController.selectedVerbosity || "important";
 
-        if (explorerController.activeSVDiagnostic !== undefined) {
-            const codeFlows = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
-            if (codeFlows !== undefined) {
+        if (explorerController.activeSVDiagnostic) {
+            const codeFlows: CodeFlow[] = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
+            if (codeFlows) {
                 for (const cFIndex of codeFlows.keys()) {
-                    const codeFlow = codeFlows[cFIndex];
+                    const codeFlow: CodeFlow = codeFlows[cFIndex];
                     for (const tFIndex of codeFlow.threads.keys()) {
-                        const threadFlow = codeFlow.threads[tFIndex];
+                        const threadFlow: ThreadFlow = codeFlow.threads[tFIndex];
                         for (const stepIndex of threadFlow.steps.keys()) {
-                            const step = threadFlow.steps[stepIndex];
-                            const stepLoc = step.location;
-                            if (stepLoc.uri !== undefined) {
+                            const step: CodeFlowStep = threadFlow.steps[stepIndex];
+                            const stepLoc: Location = step.location;
+                            if (stepLoc.uri) {
                                 if (stepLoc.uri.toString() === document.uri.toString()) {
                                     if (step.importance === "essential" ||
                                         verbosity === "unimportant" ||
                                         step.importance === verbosity) {
-                                        const codeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
+                                        const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
                                         codeLenses.push(codeLens);
                                     }
                                 }
@@ -85,7 +86,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     /**
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
-    public triggerCodeLensRefresh() {
+    public triggerCodeLensRefresh(): void {
         this.onDidChangeCodeLensesEmitter.fire();
     }
 }
