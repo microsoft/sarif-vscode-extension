@@ -4,7 +4,7 @@
 
 import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
-    WorkspaceConfiguration,
+    WorkspaceConfiguration, Uri
 } from "vscode";
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
 import {
@@ -46,7 +46,7 @@ export class ResultsListController {
         this.filterCaseMatch = false;
         this.filterText = "";
         this.initializeColumns();
-        this.onSettingsChanged(undefined);
+        this.onSettingsChanged({ affectsConfiguration: (section: string, resource?: Uri) => true});
         this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
     }
 
