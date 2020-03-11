@@ -7,7 +7,7 @@ import * as path from "path";
 import * as sarif from "sarif";
 import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, QuickInputButton, Uri,
-    window, workspace,
+    window, workspace, WorkspaceConfiguration,
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
@@ -93,23 +93,23 @@ export class FileMapper {
      * @param uriBase the base path of the uri
      */
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
-        const oldProgressMsg = ProgressHelper.Instance.CurrentMessage;
+        const oldProgressMsg: string = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
         return this.openRemappingInputDialog(origUri).then(async (directory) => {
-            if (directory === null) {
+            if (!directory) {
                 // path is null if the skip next button was pressed
-                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
-            } else if (directory === undefined) {
+                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
+            } else if (!directory) {
                 // path is undefined if the input was dismissed without fixing the path
                 this.userCanceledMapping = true;
-                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
+                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
             } else {
-                const uri = Uri.file(directory);
+                const uri: Uri = Uri.file(directory);
                 const filePath: string = Utilities.getFsPathWithFragment(uri);
 
                 if (fs.statSync(filePath).isDirectory()) {
-                    const config = workspace.getConfiguration(Utilities.configSection);
-                    const rootpaths: string[] = config.get(this.configRootpaths);
+                    const config: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
+                    const rootpaths: string[] = config.get(this.configRootpaths, []);
 
                     if (rootpaths.length === 1 && rootpaths[0] === this.rootpathSample) {
                         rootpaths.pop();
@@ -117,10 +117,10 @@ export class FileMapper {
 
                     rootpaths.push(Utilities.getDisplayableRootpath(uri));
                     this.rootpaths = rootpaths;
-                    config.update(this.configRootpaths, rootpaths, true);
+                    await config.update(this.configRootpaths, rootpaths, true);
 
                     if (!this.tryConfigRootpathsUri(origUri, uriBase)) {
-                        this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), null);
+                        this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
                     }
                 } else {
                     this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
@@ -181,25 +181,25 @@ export class FileMapper {
      * @param files array of sarif.Files that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: sarif.Artifact[], runId: number) {
+    public async mapFiles(files: sarif.Artifact[], runId: number): Promise<void> {
         this.userCanceledMapping = false;
         if (files !== undefined) {
             for (const fileIndex of files.keys()) {
-                const file = files[fileIndex];
-                const fileLocation = file.location;
+                const file: sarif.Artifact = files[fileIndex];
+                const fileLocation: sarif.Location | undefined = file.location;
 
-                if (fileLocation !== undefined) {
-                    const uriBase = Utilities.getUriBase(fileLocation, runId);
-                    const uriWithBase = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
+                if (fileLocation) {
+                    const uriBase: string | undefined = Utilities.getUriBase(fileLocation, runId);
+                    const uriWithBase: Uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
-                    const key = Utilities.getFsPathWithFragment(uriWithBase);
-                    if (file.contents !== undefined) {
+                    const key: string = Utilities.getFsPathWithFragment(uriWithBase);
+                    if (file.contents) {
                         this.mapEmbeddedContent(key, file);
                     } else {
                         await this.map(uriWithBase, uriBase);
                     }
 
-                    const index = `${runId}_${fileIndex}`;
+                    const index: string = `${runId}_${fileIndex}`;
                     this.fileIndexKeyMapping.set(index, key);
                 }
             }
@@ -211,23 +211,24 @@ export class FileMapper {
      * @param key the original file path
      * @param uri the uri of the mapped file path
      */
-    private addToFileMapping(key: string, uri: Uri = null): void {
-        if (uri !== null) {
+    private addToFileMapping(key: string, uri?: Uri): void {
+        if (uri) {
             uri.toString();
+            this.fileRemapping.set(key, uri);
+        } else {
+            this.fileRemapping.delete(key);
         }
-
-        this.fileRemapping.set(key, uri);
     }
 
     /**
      * Gets the hash value for the embedded content. Preference for sha256, if not found it uses the first hash value
      * @param hashes dictionary of hashes
      */
-    private getHashValue(hashes: { [key: string]: string; }): string {
-        let value = "";
-        if (hashes !== undefined) {
-            const sha256Key = "sha256";
-            if (hashes[sha256Key] !== undefined) {
+    private getHashValue(hashes?: { [key: string]: string }): string {
+        let value: string = "";
+        if (hashes) {
+            const sha256Key: string  = "sha256";
+            if (hashes[sha256Key]) {
                 value = hashes[sha256Key];
             } else {
                 for (const key in hashes) {
@@ -248,18 +249,20 @@ export class FileMapper {
      * @param file file object that contains the hash and embedded content
      */
     private mapEmbeddedContent(fileKey: string, file: sarif.Artifact): void {
-        const hashValue = this.getHashValue(file.hashes);
-        const tempPath = Utilities.generateTempPath(fileKey, hashValue);
+        const hashValue: string = this.getHashValue(file.hashes);
+        const tempPath: string = Utilities.generateTempPath(fileKey, hashValue);
 
-        let contents: string;
-        if (file.contents.text !== undefined) {
+        let contents: string | undefined;
+        if (file.contents &&  file.contents.text) {
             contents = file.contents.text;
-        } else {
+        } else if (file.contents && file.contents.binary){
             contents = Buffer.from(file.contents.binary, "base64").toString();
         }
 
-        Utilities.createReadOnlyFile(tempPath, contents);
-        this.addToFileMapping(fileKey, Uri.file(tempPath));
+        if (contents) {
+            Utilities.createReadOnlyFile(tempPath, contents);
+            this.addToFileMapping(fileKey, Uri.file(tempPath));
+        }
     }
 
     /**
