@@ -6,8 +6,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
 import {
-    ConfigurationChangeEvent, Disposable, Event, EventEmitter, OpenDialogOptions, QuickInputButton, Uri,
-    window, workspace, WorkspaceConfiguration,
+    ConfigurationChangeEvent, Disposable, Event, EventEmitter, QuickInputButton, Uri,
+    window, workspace, WorkspaceConfiguration, InputBox,
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
@@ -183,7 +183,7 @@ export class FileMapper {
      */
     public async mapFiles(files: sarif.Artifact[], runId: number): Promise<void> {
         this.userCanceledMapping = false;
-        if (files !== undefined) {
+        if (files) {
             for (const fileIndex of files.keys()) {
                 const file: sarif.Artifact = files[fileIndex];
                 const fileLocation: sarif.Location | undefined = file.location;
@@ -255,7 +255,7 @@ export class FileMapper {
         let contents: string | undefined;
         if (file.contents &&  file.contents.text) {
             contents = file.contents.text;
-        } else if (file.contents && file.contents.binary){
+        } else if (file.contents && file.contents.binary) {
             contents = Buffer.from(file.contents.binary, "base64").toString();
         }
 
@@ -271,15 +271,13 @@ export class FileMapper {
      */
     private async openRemappingInputDialog(uri: Uri): Promise<string> {
         const disposables: Disposable[] = [];
-        let resolved = false;
+        let resolved: boolean = false;
         return new Promise<string>((resolve, rejected) => {
-            const input = window.createInputBox();
+            const input: InputBox = window.createInputBox();
             input.title = "Sarif Result Location Remapping";
             input.value = uri.fsPath;
             input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
-            input.validationMessage = `'${uri.fsPath}' can not be found.
-        Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
-        rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
+            input.validationMessage = `'${uri.fsPath}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
             input.ignoreFocusOut = true;
 
             input.buttons = new Array<QuickInputButton>(
@@ -305,41 +303,44 @@ export class FileMapper {
                 }
             }));
 
-            disposables.push(input.onDidTriggerButton((button) => {
+            disposables.push(input.onDidTriggerButton(async (button) => {
                 switch (button.iconPath) {
                     case Utilities.IconsPath + "open-folder.svg":
-                        const openOptions: OpenDialogOptions = Object.create(null);
-                        openOptions.canSelectMany = false;
-                        openOptions.openLabel = "Map";
-
-                        window.showOpenDialog(openOptions).then((selectedUris) => {
-                            if (selectedUris !== undefined && selectedUris[0] !== undefined) {
-                                input.value = selectedUris[0].fsPath;
-                                input.validationMessage = undefined;
-                            }
+                        const selectedUris: Uri[] | undefined = await window.showOpenDialog({
+                            canSelectMany: false,
+                            openLabel: "Map"
                         });
+
+                        if (selectedUris && selectedUris.length !== 0) {
+                            input.value = selectedUris[0].fsPath;
+                            input.validationMessage = undefined;
+                        }
                         break;
+
                     case Utilities.IconsPath + "next.svg":
                         resolved = true;
                         input.hide();
-                        resolve(null);
+                        resolve();
                         break;
                 }
             }));
 
             disposables.push(input.onDidChangeValue(() => {
-                const directory = input.value;
-                let message = `'${uri.fsPath}' can not be found.
+                const directory: string = input.value;
+                let message: string | undefined = `'${uri.fsPath}' can not be found.
                 Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
 
                 if (directory !== undefined && directory !== "") {
-                    let validateUri: Uri;
-                    let isDirectory;
+                    let validateUri: Uri | undefined;
+                    let isDirectory: boolean = false;
+
                     try {
                         validateUri = Uri.file(directory);
                     } catch (error) {
-                        if (error.message !== "URI malformed") { throw error; }
+                        if (error.message !== "URI malformed") {
+                            throw error;
+                        }
                     }
 
                     if (validateUri !== undefined) {
@@ -350,13 +351,17 @@ export class FileMapper {
                                 case "ENOENT":
                                     break;
                                 case "UNKNOWN":
-                                    if (validateUri.authority !== "") { break; }
+                                    if (validateUri.authority !== "") {
+                                        break;
+                                    }
+                                    throw error;
+
                                 default:
                                     throw error;
                             }
                         }
 
-                        if (isDirectory === true) {
+                        if (isDirectory) {
                             message = undefined;
                             if (this.rootpaths.indexOf(validateUri.fsPath) !== -1) {
                                 message = `'${validateUri.fsPath}' already exists in the settings
@@ -425,8 +430,13 @@ export class FileMapper {
             switch (error.code) {
                 case "ENOENT":
                     break;
+
                 case "UNKNOWN":
-                    if (uri.authority !== "") { break; }
+                    if (uri.authority !== "") {
+                        break;
+                    }
+                    break;
+
                 default:
                     throw error;
             }
@@ -441,10 +451,10 @@ export class FileMapper {
      */
     private tryRebaseUri(uri: Uri): boolean {
         for (const [base, remappedBase] of this.baseRemapping.entries()) {
-            const uriText = uri.toString(true);
+            const uriText: string = uri.toString(true);
             if (uriText.indexOf(base) === 0) {
-                const newpath = uriText.replace(base, remappedBase);
-                const mappedUri = Uri.parse(newpath);
+                const newpath: string = uriText.replace(base, remappedBase);
+                const mappedUri: Uri = Uri.parse(newpath);
                 if (this.tryMapUri(mappedUri, Utilities.getFsPathWithFragment(uri))) {
                     return true;
                 }
@@ -484,10 +494,10 @@ export class FileMapper {
      * Updates the rootpaths property with the latest from the configuration
      * @param event Optional event if this was called because the configuration change
      */
-    private updateRootPaths(event?: ConfigurationChangeEvent) {
-        if (event === undefined || event.affectsConfiguration(Utilities.configSection)) {
-            const sarifConfig = workspace.getConfiguration(Utilities.configSection);
-            const oldRootpaths = this.rootpaths;
+    private updateRootPaths(event?: ConfigurationChangeEvent): void {
+        if (!event || event.affectsConfiguration(Utilities.configSection)) {
+            const sarifConfig: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
+            const oldRootpaths: string[] = this.rootpaths;
             this.rootpaths = (sarifConfig.get(this.configRootpaths) as string[]).filter((value, index, array) => {
                 return value !== this.rootpathSample;
             });
@@ -501,10 +511,10 @@ export class FileMapper {
     /**
      * Goes through the filemappings and tries to remap any that aren't mapped(null) using the rootpaths
      */
-    private updateMappingsWithRootPaths() {
-        let remapped = false;
+    private updateMappingsWithRootPaths(): void {
+        let remapped: boolean = false;
         this.fileRemapping.forEach((value: Uri, key: string, map: Map<string, Uri>) => {
-            if (value === null) {
+            if (value) {
                 if (this.tryConfigRootpathsUri(Uri.file(key), undefined)) {
                     remapped = true;
                 }
