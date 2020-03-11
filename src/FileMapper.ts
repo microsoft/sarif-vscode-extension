@@ -95,49 +95,46 @@ export class FileMapper {
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
         const oldProgressMsg: string = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
-        return this.openRemappingInputDialog(origUri).then(async (directory) => {
-            if (!directory) {
-                // path is null if the skip next button was pressed
-                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
-            } else if (!directory) {
-                // path is undefined if the input was dismissed without fixing the path
-                this.userCanceledMapping = true;
-                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
-            } else {
-                const uri: Uri = Uri.file(directory);
-                const filePath: string = Utilities.getFsPathWithFragment(uri);
 
-                if (fs.statSync(filePath).isDirectory()) {
-                    const config: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
-                    const rootpaths: string[] = config.get(this.configRootpaths, []);
+        const directory: string | undefined = await this.openRemappingInputDialog(origUri);
 
-                    if (rootpaths.length === 1 && rootpaths[0] === this.rootpathSample) {
-                        rootpaths.pop();
-                    }
+        if (!directory) {
+            // path is undefined if the skip next button was pressed or the input was dismissed without fixing the path
+            this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
+        } else {
+            const uri: Uri = Uri.file(directory);
+            const filePath: string = Utilities.getFsPathWithFragment(uri);
 
-                    rootpaths.push(Utilities.getDisplayableRootpath(uri));
-                    this.rootpaths = rootpaths;
-                    await config.update(this.configRootpaths, rootpaths, true);
+            if (fs.statSync(filePath).isDirectory()) {
+                const config: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
+                const rootpaths: string[] = config.get(this.configRootpaths, []);
 
-                    if (!this.tryConfigRootpathsUri(origUri, uriBase)) {
-                        this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
-                    }
-                } else {
-                    this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
-                    this.saveBasePath(origUri, uri, uriBase);
-                    this.fileRemapping.forEach((value: Uri, key: string) => {
-                        if (value === null) {
-                            this.tryRebaseUri(Uri.file(key));
-                        }
-                    });
+                if (rootpaths.length === 1 && rootpaths[0] === this.rootpathSample) {
+                    rootpaths.pop();
                 }
 
-                this.onMappingChanged.fire(origUri);
+                rootpaths.push(Utilities.getDisplayableRootpath(uri));
+                this.rootpaths = rootpaths;
+                await config.update(this.configRootpaths, rootpaths, true);
+
+                if (!this.tryConfigRootpathsUri(origUri, uriBase)) {
+                    this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
+                }
+            } else {
+                this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
+                this.saveBasePath(origUri, uri, uriBase);
+                this.fileRemapping.forEach((value: Uri, key: string) => {
+                    if (value === null) {
+                        this.tryRebaseUri(Uri.file(key));
+                    }
+                });
             }
+
+            this.onMappingChanged.fire(origUri);
 
             await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
             return Promise.resolve();
-        });
+        }
     }
 
     /**
@@ -269,10 +266,15 @@ export class FileMapper {
      * Shows the Inputbox with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
      */
-    private async openRemappingInputDialog(uri: Uri): Promise<string> {
-        const disposables: Disposable[] = [];
-        let resolved: boolean = false;
+    private async openRemappingInputDialog(uri: Uri): Promise<string | undefined> {
+        interface RemappingQuickInputButtons extends QuickInputButton {
+            remappingType: 'Open' | 'Skip';
+        }
+
         return new Promise<string>((resolve, rejected) => {
+            const disposables: Disposable[] = [];
+            let resolvedString: string | undefined;
+
             const input: InputBox = window.createInputBox();
             input.title = "Sarif Result Location Remapping";
             input.value = uri.fsPath;
@@ -280,47 +282,44 @@ export class FileMapper {
             input.validationMessage = `'${uri.fsPath}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
             input.ignoreFocusOut = true;
 
-            input.buttons = new Array<QuickInputButton>(
-                { iconPath: Utilities.IconsPath + "open-folder.svg", tooltip: "Open file picker" } as QuickInputButton,
-                { iconPath: Utilities.IconsPath + "next.svg", tooltip: "Skip to next" } as QuickInputButton,
-            );
+            input.buttons = <RemappingQuickInputButtons[]>[{
+                iconPath: Utilities.IconsPath + "open-folder.svg",
+                tooltip: "Open file picker",
+                remappingType: 'Open'
+            }, {
+                iconPath: Utilities.IconsPath + "next.svg",
+                tooltip: "Skip to next",
+                remappingType: 'Skip'
+            }];
 
             disposables.push(input.onDidAccept(() => {
-                if (input.validationMessage === undefined) {
-                    resolved = true;
+                if (resolvedString) {
                     input.hide();
-                    resolve(input.value);
+                    resolve(resolvedString);
                 }
             }));
 
             disposables.push(input.onDidHide(() => {
-                disposables.forEach((dis: Disposable) => {
-                    dis.dispose();
-                });
-
-                if (!resolved) {
-                    resolve(undefined);
-                }
+                resolve(resolvedString);
             }));
 
             disposables.push(input.onDidTriggerButton(async (button) => {
-                switch (button.iconPath) {
-                    case Utilities.IconsPath + "open-folder.svg":
+                switch ((<RemappingQuickInputButtons>button).remappingType) {
+                    case 'Open':
                         const selectedUris: Uri[] | undefined = await window.showOpenDialog({
                             canSelectMany: false,
                             openLabel: "Map"
                         });
 
-                        if (selectedUris && selectedUris.length !== 0) {
+                        if (selectedUris && selectedUris.length === 1) {
                             input.value = selectedUris[0].fsPath;
-                            input.validationMessage = undefined;
                         }
                         break;
 
-                    case Utilities.IconsPath + "next.svg":
-                        resolved = true;
+                    case 'Skip':
+                        this.userCanceledMapping = true;
                         input.hide();
-                        resolve();
+                        resolve(resolvedString);
                         break;
                 }
             }));
@@ -331,7 +330,7 @@ export class FileMapper {
                 Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
                 rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
 
-                if (directory !== undefined && directory !== "") {
+                if (directory && directory.length !== 0) {
                     let validateUri: Uri | undefined;
                     let isDirectory: boolean = false;
 
@@ -343,13 +342,15 @@ export class FileMapper {
                         }
                     }
 
-                    if (validateUri !== undefined) {
+                    if (validateUri) {
                         try {
                             isDirectory = fs.statSync(validateUri.fsPath).isDirectory();
                         } catch (error) {
                             switch (error.code) {
+                                // Path not found.
                                 case "ENOENT":
                                     break;
+
                                 case "UNKNOWN":
                                     if (validateUri.authority !== "") {
                                         break;
@@ -362,15 +363,15 @@ export class FileMapper {
                         }
 
                         if (isDirectory) {
-                            message = undefined;
-                            if (this.rootpaths.indexOf(validateUri.fsPath) !== -1) {
+                            const rootPathIndex: number = this.rootpaths.indexOf(validateUri.fsPath);
+                            if (rootPathIndex !== -1) {
                                 message = `'${validateUri.fsPath}' already exists in the settings
                                     (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)`;
+                            } else {
+                                resolvedString = this.rootpaths[rootPathIndex];
                             }
-                        } else if (isDirectory === false) {
-                            if (this.tryMapUri(validateUri)) {
-                                message = undefined;
-                            }
+                        } else if (this.tryMapUri(validateUri)) {
+                            message = undefined;
                         }
                     }
                 }
@@ -514,11 +515,7 @@ export class FileMapper {
     private updateMappingsWithRootPaths(): void {
         let remapped: boolean = false;
         this.fileRemapping.forEach((value: Uri, key: string, map: Map<string, Uri>) => {
-            if (value) {
-                if (this.tryConfigRootpathsUri(Uri.file(key), undefined)) {
-                    remapped = true;
-                }
-            }
+            remapped = remapped || this.tryConfigRootpathsUri(Uri.file(key), undefined);
         });
 
         if (remapped) {

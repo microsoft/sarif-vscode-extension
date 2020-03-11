@@ -4,7 +4,7 @@
 
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
-import { Location } from "./common/Interfaces";
+import { Location, Message } from "./common/Interfaces";
 import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { Utilities } from "./Utilities";
@@ -13,54 +13,67 @@ import { Utilities } from "./Utilities";
  * Class that processes and creates a location object from a results physicallocation
  */
 export class LocationFactory {
-
     /**
      * Processes the passed in sarif location and creates a new Location
      * @param sarifLocation location from result in sarif file
      * @param runId used for mapping uribaseids
      */
     public static async create(sarifLocation: sarif.Location, runId: number): Promise<Location> {
-        const location = {
-            endOfLine: false,
-            mapped: false,
-            range: new Range(0, 0, 0, 1),
-        } as Location;
+        const id: number | undefined = sarifLocation.id;
+        const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
+        let uriBase: string | undefined;
+        let uri: Uri | undefined;
+        let mapped: boolean = false;
+        let fileName: string | undefined;
+        let parsedRange: { range: Range; endOfLine: boolean } | undefined;
+        let message: Message | undefined;
+        let logicalLocations: string[] | undefined;
 
-        if (sarifLocation !== undefined) {
-            location.id = sarifLocation.id;
-            const physLocation = sarifLocation.physicalLocation;
-            if (physLocation !== undefined && physLocation.artifactLocation !== undefined) {
-                const artifactLocation = physLocation.artifactLocation;
-                location.uriBase = Utilities.getUriBase(artifactLocation, runId);
+        if (physLocation  && physLocation.artifactLocation) {
+            const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
+            uriBase = Utilities.getUriBase(artifactLocation, runId);
 
-                await FileMapper.Instance.get(artifactLocation, runId, location.uriBase).then((data) => {
-                    location.uri = Utilities.fixUriCasing(data.uri);
-                    location.mapped = data.mapped;
-                    // toString() is executed to create an external value for the webview's use
-                    location.uri.toString();
+            uri = await FileMapper.Instance.get(artifactLocation, runId, uriBase);
 
-                    location.fileName = location.uri.toString(true).substring(
-                        location.uri.toString(true).lastIndexOf("/") + 1);
-                });
+            if (uri) {
+                uri = Utilities.fixUriCasing(uri);
 
-                if (physLocation.region !== undefined) {
-                    const parsedRange = LocationFactory.parseRange(physLocation.region);
-                    location.range = parsedRange.range;
-                    location.endOfLine = parsedRange.endOfLine;
-                    location.message = Utilities.parseSarifMessage(physLocation.region.message);
-                }
+                // toString() is executed to create an external value for the webview's use
+                uri.toString();
+                mapped = true;
+
+                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
             }
 
-            const logLocations = sarifLocation.logicalLocations;
-            if (logLocations !== undefined) {
-                location.logicalLocations = [];
-                for (const logLoc of logLocations) {
-                    location.logicalLocations.push(logLoc.fullyQualifiedName || logLoc.name);
+            if (physLocation.region) {
+                parsedRange = LocationFactory.parseRange(physLocation.region);
+                message = Utilities.parseSarifMessage(physLocation.region.message);
+            }
+        }
+
+        const logLocations: sarif.LogicalLocation[] | undefined = sarifLocation.logicalLocations;
+        if (logLocations) {
+            logicalLocations = [];
+            for (const logLoc of logLocations) {
+                if (logLoc.fullyQualifiedName) {
+                    logicalLocations.push(logLoc.fullyQualifiedName);
+                } else if (logLoc.name) {
+                    logicalLocations.push(logLoc.name);
                 }
             }
         }
 
-        return location;
+        return {
+            id: id,
+            endOfLine: parsedRange?.endOfLine,
+            fileName: fileName,
+            logicalLocations: logicalLocations,
+            mapped: mapped,
+            range: parsedRange?.range,
+            uri: uri,
+            uriBase: uriBase,
+            message: message
+        };
     }
 
     /**
@@ -73,16 +86,18 @@ export class LocationFactory {
         if (!location || !location.mapped) {
             if (sarifLocation && sarifLocation.physicalLocation) {
                 const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
-                const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
-                await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
-                    return LocationFactory.create(sarifLocation, runId);
-                }).then((remappedLocation) => {
-                    location = remappedLocation;
-                });
+                if (physLoc.artifactLocation && physLoc.artifactLocation.uri) {
+                    const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location && location.uriBase);
+                    await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
+                        return LocationFactory.create(sarifLocation, runId);
+                    }).then((remappedLocation) => {
+                        location = remappedLocation;
+                    });
+                }
             }
         }
 
-        return location;
+        return undefined;
     }
 
     /**

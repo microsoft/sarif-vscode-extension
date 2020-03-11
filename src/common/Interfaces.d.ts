@@ -38,15 +38,15 @@ export interface HTMLElementOptions {
 }
 
 export interface Location {
-    id: number;
-    endOfLine: boolean;
-    fileName: string;
-    logicalLocations: string[];
-    mapped: boolean;
-    message: Message;
-    range: Range;
-    uri: Uri;
-    uriBase: string;
+    id?: number;
+    endOfLine?: boolean;
+    fileName?: string;
+    logicalLocations?: string[];
+    mapped?: boolean;
+    message?: Message;
+    range?: Range;
+    uri?: Uri;
+    uriBase?: string;
 }
 
 export interface SarifViewerDiagnostic {

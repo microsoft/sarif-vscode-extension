@@ -64,14 +64,12 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
                         for (const stepIndex of threadFlow.steps.keys()) {
                             const step: CodeFlowStep = threadFlow.steps[stepIndex];
                             const stepLoc: Location = step.location;
-                            if (stepLoc.uri) {
-                                if (stepLoc.uri.toString() === document.uri.toString()) {
-                                    if (step.importance === "essential" ||
-                                        verbosity === "unimportant" ||
-                                        step.importance === verbosity) {
-                                        const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
-                                        codeLenses.push(codeLens);
-                                    }
+                            if (stepLoc.uri && stepLoc.range && stepLoc.uri.toString() === document.uri.toString()) {
+                                if (step.importance === "essential" ||
+                                    verbosity === "unimportant" ||
+                                    step.importance === verbosity) {
+                                    const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
+                                    codeLenses.push(codeLens);
                                 }
                             }
                         }
