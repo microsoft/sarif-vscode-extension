@@ -65,31 +65,25 @@ export class FileMapper {
      * @param uriBase the base path of the uri
      */
     public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string):
-        Promise<{ mapped: boolean, uri: Uri }> {
-        let uriPath: string;
-        if (location.index !== undefined) {
+        Promise<Uri | undefined> {
+        let uriPath: string | undefined;
+        if (location.index) {
             uriPath = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
         } else {
-            const uri = Utilities.combineUriWithUriBase(location.uri, uriBase);
-            uriPath = Utilities.getFsPathWithFragment(uri);
-            if (!this.fileRemapping.has(uriPath)) {
-                await this.map(uri, uriBase);
+            if (location.uri) {
+                const uri: Uri = Utilities.combineUriWithUriBase(location.uri, uriBase);
+                uriPath = Utilities.getFsPathWithFragment(uri);
+                if (!this.fileRemapping.has(uriPath)) {
+                    await this.map(uri, uriBase);
+                }
             }
-
         }
 
-        const mappedUri = this.fileRemapping.get(uriPath);
-        const returnData = {
-            mapped: true,
-            uri: mappedUri,
-        };
-
-        if (returnData.uri === null) {
-            returnData.mapped = false;
-            returnData.uri = Uri.parse(uriPath);
+        if (!uriPath) {
+            return undefined;
         }
 
-        return returnData;
+        return this.fileRemapping.get(uriPath);
     }
 
     /**
@@ -151,9 +145,9 @@ export class FileMapper {
      * @param uri Uri that needs to be mapped, should already have uribase included
      * @param uriBase the base path of the uri
      */
-    public async map(uri: Uri, uriBase: string): Promise<void> {
+    public async map(uri: Uri, uriBase?: string): Promise<void> {
         // check if the file has already been remapped and the mapping isn't null(previously failed to map)
-        const uriPath = Utilities.getFsPathWithFragment(uri);
+        const uriPath: string = Utilities.getFsPathWithFragment(uri);
         if (this.fileRemapping.has(uriPath) && this.fileRemapping.get(uriPath) !== null) {
             return Promise.resolve();
         }
@@ -166,18 +160,20 @@ export class FileMapper {
             return Promise.resolve();
         }
 
-        if (this.tryConfigRootpathsUri(uri, uriBase)) {
+        if (uriBase && this.tryConfigRootpathsUri(uri, uriBase)) {
             return Promise.resolve();
         }
 
         // if user previously canceled mapping we don't open the file chooser
         if (this.userCanceledMapping) {
-            this.addToFileMapping(uriPath, null);
+            this.addToFileMapping(uriPath, undefined);
             return Promise.resolve();
         }
 
         // If not able to remap using other means, we need to ask the user to enter a path for remapping
-        return this.getUserToChooseFile(uri, uriBase);
+        if (uriBase) {
+            await this.getUserToChooseFile(uri, uriBase);
+        }
     }
 
     /**
@@ -386,21 +382,21 @@ export class FileMapper {
      * @param remappedUri Uri the originalUri has been successfully mapped to
      * @param uriBase Base path of the uri if defined in the sarif file
      */
-    private saveBasePath(originalUri: Uri, remappedUri: Uri, uriBase: string) {
-        const oPath = originalUri.toString(true);
-        const rPath = remappedUri.toString(true);
-        if (uriBase !== undefined) {
-            const relativePath = oPath.substring(oPath.indexOf(uriBase) + uriBase.length);
-            const index = rPath.indexOf(relativePath);
+    private saveBasePath(originalUri: Uri, remappedUri: Uri, uriBase?: string): void {
+        const oPath: string = originalUri.toString(true);
+        const rPath: string = remappedUri.toString(true);
+        if (uriBase) {
+            const relativePath: string = oPath.substring(oPath.indexOf(uriBase) + uriBase.length);
+            const index: number = rPath.indexOf(relativePath);
             if (index !== -1) {
                 this.baseRemapping.set(oPath.replace(relativePath, ""), rPath.replace(relativePath, ""));
                 return;
             }
         }
 
-        for (let i = 1; i <= rPath.length; i++) {
-            const oIndex = oPath.length - i;
-            const rIndex = rPath.length - i;
+        for (let i: number = 1; i <= rPath.length; i++) {
+            const oIndex: number = oPath.length - i;
+            const rIndex: number = rPath.length - i;
             if (oIndex === 0 || oPath[oIndex].toLocaleLowerCase() !== rPath[rIndex].toLocaleLowerCase()) {
                 this.baseRemapping.set(oPath.substring(0, oIndex + 1), rPath.substring(0, rIndex + 1));
                 break;
@@ -459,8 +455,8 @@ export class FileMapper {
      * Tries to remapped path using any of the RootPaths in the config
      * @param uri file uri to try to rebase
      */
-    private tryConfigRootpathsUri(uri: Uri, uriBase: string): boolean {
-        const originPath = path.parse(Utilities.getFsPathWithFragment(uri));
+    private tryConfigRootpathsUri(uri: Uri, uriBase?: string): boolean {
+        const originPath: path.ParsedPath = path.parse(Utilities.getFsPathWithFragment(uri));
         const dir: string = originPath.dir.replace(originPath.root, "");
 
         for (const rootpath of this.rootpaths) {
@@ -468,7 +464,7 @@ export class FileMapper {
             dirParts.push(originPath.base);
 
             while (dirParts.length !== 0) {
-                const mappedUri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(path.sep)));
+                const mappedUri: Uri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(path.sep)));
                 if (this.tryMapUri(mappedUri, Utilities.getFsPathWithFragment(uri))) {
                     this.saveBasePath(uri, mappedUri, uriBase);
                     return true;
