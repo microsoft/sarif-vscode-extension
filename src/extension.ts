@@ -19,6 +19,9 @@ import { Utilities } from "./Utilities";
  * Process any open SARIF Files
  */
 export async function activate(context: ExtensionContext): Promise<void> {
+    Utilities.initialize(context);
+    FileConverter.initialize(context);
+
     // Create the launch Explorer command
     context.subscriptions.push(
         commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
@@ -37,8 +40,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(
         commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
     );
-
-    FileConverter.initializeFileConverter(context);
 
     // Instantiate the providers and file mapper which will register their listeners and register their disposables
     context.subscriptions.push(SVCodeActionProvider.Instance);

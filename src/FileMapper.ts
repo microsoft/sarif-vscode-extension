@@ -26,8 +26,8 @@ export class FileMapper {
     private fileRemapping: Map<string, Uri>;
     private fileIndexKeyMapping: Map<string, string>;
     private onMappingChanged: EventEmitter<Uri>;
-    private userCanceledMapping: boolean;
-    private rootpaths: string[];
+    private userCanceledMapping: boolean = false;
+    private rootpaths: string[] = [];
     private readonly rootpathSample = "c:\\sample\\path";
     private readonly configRootpaths = "rootpaths";
     private changeConfigDisposable: Disposable;

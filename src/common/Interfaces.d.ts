@@ -96,14 +96,14 @@ export interface ResultInfo {
 }
 
 export interface CodeFlow {
-    message: string;
+    message?: string;
     threads: ThreadFlow[];
 }
 
 export interface ThreadFlow {
-    message: string;
+    message?: string;
     lvlsFirstStepIsNested: number;
-    id: string;
+    id?: string;
     steps: CodeFlowStep[];
 }
 
@@ -114,7 +114,7 @@ export interface CodeFlowStepId {
 }
 
 export interface CodeFlowStep {
-    beforeIcon: string;
+    beforeIcon?: string;
     codeLensCommand: Command;
     importance: sarif.ThreadFlowLocation.importance,
     isLastChild: boolean;

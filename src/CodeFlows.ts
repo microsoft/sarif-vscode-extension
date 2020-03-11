@@ -19,10 +19,9 @@ export class CodeFlows {
      * @param runId id of the run this result is from
      */
     public static async create(sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<CodeFlow[]> {
-        let codeFlows;
+        const codeFlows: CodeFlow[] = [];
         if (sarifCodeFlows !== undefined && sarifCodeFlows.length !== 0) {
-            codeFlows = [];
-            for (let cFIndex = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
+            for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
                 await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`, runId).then(
                     (codeFlow: CodeFlow) => {
                         codeFlows.push(codeFlow);
@@ -30,7 +29,7 @@ export class CodeFlows {
             }
         }
 
-        return Promise.resolve(codeFlows);
+        return codeFlows;
     }
 
     /**
@@ -38,11 +37,11 @@ export class CodeFlows {
      * Returns a CodeFlowStepId object or undefined if there's no valid matching id (placeholder or bad formatting)
      * @param idText the codeflow id in text format ex: 1_1_2
      */
-    public static parseCodeFlowId(idText: string): CodeFlowStepId {
-        let codeFlowId: CodeFlowStepId;
+    public static parseCodeFlowId(idText: string): CodeFlowStepId | undefined {
+        let codeFlowId: CodeFlowStepId | undefined;
 
         if (idText !== "-1") {
-            const cFSelectionId = idText.split("_");
+            const cFSelectionId: string[] = idText.split("_");
             if (cFSelectionId.length === 3) {
                 codeFlowId = {
                     cFId: parseInt(cFSelectionId[0], 10),
@@ -60,9 +59,9 @@ export class CodeFlows {
      * @param tFLocs The array of ThreadFlowLocations off of the run object
      * @param runId Id of the run
      */
-    public static mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number) {
+    public static mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number): void {
         if (tFLocs !== undefined) {
-            for (let index = 0; index < tFLocs.length; index++) {
+            for (let index: number = 0; index < tFLocs.length; index++) {
                 CodeFlows.threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
             }
         }
@@ -74,18 +73,20 @@ export class CodeFlows {
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
      * @param runId used for mapping uribaseids
      */
-    public static async tryRemapCodeFlows(codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number) {
+    public static async tryRemapCodeFlows(codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
         for (const cFKey of codeFlows.keys()) {
-            const codeFlow = codeFlows[cFKey];
+            const codeFlow: CodeFlow = codeFlows[cFKey];
             for (const tFKey of codeFlow.threads.keys()) {
-                const thread = codeFlow.threads[tFKey];
+                const thread: ThreadFlow = codeFlow.threads[tFKey];
                 for (const stepKey of thread.steps.keys()) {
-                    const step = thread.steps[stepKey];
-                    if (step.location !== undefined && step.location.mapped !== true) {
-                        const sarifLoc = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        await LocationFactory.create(sarifLoc, runId).then((location: Location) => {
-                            codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
-                        });
+                    const step: CodeFlowStep = thread.steps[stepKey];
+                    if (step.location && step.location.mapped) {
+                        const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
+                        if (sarifLoc) {
+                            await LocationFactory.create(sarifLoc, runId).then((location: Location) => {
+                                codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
+                            });
+                        }
                     }
                 }
             }
@@ -109,7 +110,7 @@ export class CodeFlows {
         if (sarifCF.message !== undefined) {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
-        for (let tFIndex = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
+        for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
             await CodeFlows.createThreadFlow(sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
@@ -138,7 +139,7 @@ export class CodeFlows {
             threadFlow.message = Utilities.parseSarifMessage(sarifTF.message).text;
         }
 
-        for (let index = 0; index < sarifTF.locations.length; index++) {
+        for (let index: number = 0; index < sarifTF.locations.length; index++) {
             await CodeFlows.createCodeFlowStep(sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
@@ -146,8 +147,8 @@ export class CodeFlows {
         }
 
         // additional processing once we have all of the steps processed
-        let hasUndefinedNestingLevel = false;
-        let hasZeroNestingLevel = false;
+        let hasUndefinedNestingLevel: boolean = false;
+        let hasZeroNestingLevel: boolean = false;
         for (const index of threadFlow.steps.keys()) {
             threadFlow.steps[index].beforeIcon = CodeFlows.getBeforeIcon(index, threadFlow);
 
@@ -181,21 +182,21 @@ export class CodeFlows {
         runId: number,
     ): Promise<CodeFlowStep> {
 
-        let tFLoc = tFLocOrig;
-        if (tFLoc.index !== undefined) {
-            const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
-            if (lookedUpLoc !== undefined) {
+        let tFLoc: sarif.ThreadFlowLocation = tFLocOrig;
+        if (tFLoc.index) {
+            const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
+            if (lookedUpLoc) {
                 tFLoc = lookedUpLoc;
             }
         }
 
-        let isParentFlag = false;
-        let isLastChildFlag = false;
-        if (nextTFLocOrig !== undefined) {
-            let nextTFLoc = nextTFLocOrig;
-            if (nextTFLoc.index !== undefined) {
-                const lookedUpLoc = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
-                if (lookedUpLoc !== undefined) {
+        let isParentFlag: boolean = false;
+        let isLastChildFlag: boolean  = false;
+        if (nextTFLocOrig) {
+            let nextTFLoc: sarif.ThreadFlowLocation = nextTFLocOrig;
+            if (nextTFLoc.index) {
+                const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
+                if (lookedUpLoc) {
                     nextTFLoc = lookedUpLoc;
                 }
             }
@@ -226,16 +227,16 @@ export class CodeFlows {
             messageText = "[no description]";
         }
 
-        const messageWithStepText = `Step ${stepNumber}: ${messageText}`;
+        const messageWithStepText: string = `Step ${stepNumber}: ${messageText}`;
 
-        const command = {
+        const command: Command = {
             arguments: [indexId],
             command: ExplorerController.SendCFSelectionToExplorerCommand,
             title: messageWithStepText,
-        } as Command;
+        };
 
-        let nestingLevelValue = tFLoc.nestingLevel;
-        if (nestingLevelValue === undefined) {
+        let nestingLevelValue: number | undefined = tFLoc.nestingLevel;
+        if (!nestingLevelValue) {
             nestingLevelValue = -1;
         }
 
@@ -262,12 +263,12 @@ export class CodeFlows {
      * @param index Index of the step to determine the before icon of
      * @param threadFlow threadFlow that contains the step
      */
-    private static getBeforeIcon(index: number, threadFlow: ThreadFlow): string {
-        let iconName: string;
-        const step = threadFlow.steps[index];
+    private static getBeforeIcon(index: number, threadFlow: ThreadFlow): string | undefined {
+        let iconName: string | undefined;
+        const step: CodeFlowStep = threadFlow.steps[index];
         if (step.isParent) {
             iconName = "call-no-return.svg";
-            for (let nextIndex = index + 1; nextIndex < threadFlow.steps.length; nextIndex++) {
+            for (let nextIndex: number = index + 1; nextIndex < threadFlow.steps.length; nextIndex++) {
                 if (threadFlow.steps[nextIndex].nestingLevel <= step.nestingLevel) {
                     iconName = "call-with-return.svg";
                     break;
@@ -276,7 +277,7 @@ export class CodeFlows {
         } else if (step.isLastChild) {
             iconName = "return-no-call.svg";
             if (step.nestingLevel !== -1) {
-                for (let prevIndex = index - 1; prevIndex >= 0; prevIndex--) {
+                for (let prevIndex: number = index - 1; prevIndex >= 0; prevIndex--) {
                     if (threadFlow.steps[prevIndex].nestingLevel < step.nestingLevel) {
                         iconName = "return-with-call.svg";
                         break;
@@ -285,7 +286,7 @@ export class CodeFlows {
             }
         }
 
-        if (iconName !== undefined) {
+        if (iconName) {
             iconName = Utilities.IconsPath + iconName;
         }
 
@@ -299,8 +300,8 @@ export class CodeFlows {
      * @param hasZeroNL flag for if the thread has any steps that are nested level of 0
      */
     private static getLevelsFirstStepIsNested(step: CodeFlowStep, hasUndefinedNL: boolean, hasZeroNL: boolean): number {
-        const firstNestingLevel = step.nestingLevel;
-        let lvlsFirstStepIsNested = 0;
+        const firstNestingLevel: number = step.nestingLevel;
+        let lvlsFirstStepIsNested: number = 0;
         switch (firstNestingLevel) {
             case -1:
                 break;

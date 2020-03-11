@@ -6,8 +6,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
 import * as os from "os";
+import * as vscode from "vscode";
 
-import { extensions, Uri } from "vscode";
 import { Location, Message } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
@@ -15,13 +15,23 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
+    private static extensionContext: vscode.ExtensionContext | undefined;
+
+    public static initialize(extensionContext: vscode.ExtensionContext): void {
+        Utilities.extensionContext = extensionContext;
+    }
+
     public static readonly configSection = "sarif-viewer";
 
     public static get IconsPath(): string {
-        if (Utilities.iconsPath === undefined) {
-            Utilities.iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-                "/resources/icons/";
+        if (!Utilities.extensionContext) {
+            throw new Error("The utilities were not properly initialized");
         }
+
+        if (!Utilities.iconsPath) {
+            Utilities.iconsPath = Utilities.extensionContext.asAbsolutePath("/resources/icons/");
+        }
+
         return Utilities.iconsPath;
     }
 
@@ -88,17 +98,17 @@ export class Utilities {
      * @param uriPath uri path from sarif file to combine with the base
      * @param uriBase the uriBase as defined in the sarif file
      */
-    public static combineUriWithUriBase(uriPath: string, uriBase?: string): Uri {
+    public static combineUriWithUriBase(uriPath: string, uriBase?: string): vscode.Uri {
         let combinedPath: string = uriPath;
 
         if (uriBase && uriBase.length !== 0) {
             combinedPath = this.joinPath(uriBase, uriPath);
         }
 
-        let uri: Uri | undefined;
+        let uri: vscode.Uri | undefined;
         if (combinedPath !== "") {
             try {
-                uri = Uri.parse(combinedPath);
+                uri = vscode.Uri.parse(combinedPath);
             } catch (e) {
                 // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
                 // if it's malformed in the next if statement we force it to file schema
@@ -107,12 +117,12 @@ export class Utilities {
         }
 
         if (!uri || uri.scheme !== "file") {
-            uri = Uri.file(combinedPath);
+            uri = vscode.Uri.file(combinedPath);
         }
 
         const fsPath: string = Utilities.getFsPathWithFragment(uri);
 
-        return Uri.file(fsPath);
+        return vscode.Uri.file(fsPath);
     }
 
     /**
@@ -201,7 +211,7 @@ export class Utilities {
      * ex: file:///d:/test/ and d:\\test will return d:\test
      * @param uri path to a directory
      */
-    public static getDisplayableRootpath(uri: Uri): string {
+    public static getDisplayableRootpath(uri: vscode.Uri): string {
         if (uri.scheme === "file") {
             return Utilities.getFsPathWithFragment(uri);
         } else {
@@ -213,7 +223,7 @@ export class Utilities {
      * Returns the fspath include the fragment if it exists
      * @param uri uri to pull the fspath and fragment from
      */
-    public static getFsPathWithFragment(uri: Uri): string {
+    public static getFsPathWithFragment(uri: vscode.Uri): string {
         let fragment: string = "";
         if (uri.fragment !== "") {
             fragment = "#" + uri.fragment;
@@ -307,7 +317,7 @@ export class Utilities {
      * Fixes up file schemed based paths to contain the proper casing for VSCode's URIs which are case sensitive.
      * @param uri The URI for which to fix the casing.
      */
-    public static fixUriCasing(uri: Uri): Uri {
+    public static fixUriCasing(uri: vscode.Uri): vscode.Uri {
         // We can only support file-system scheme files.
         // Use "root" locale to indicate invariant language.
         if (uri.scheme.toLocaleUpperCase("root") !== "FILE") {
@@ -347,7 +357,7 @@ export class Utilities {
             pathPartIndex++;
         }
 
-        return Uri.file(fixedPath);
+        return vscode.Uri.file(fixedPath);
     }
 
     private static md: markdownit;
@@ -383,15 +393,16 @@ export class Utilities {
      */
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
         let base: string = "";
-        if (baseIds[id].uriBaseId !== undefined) {
-            base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
+        const artifactLocation: sarif.ArtifactLocation | undefined = baseIds[id];
+        if (artifactLocation && artifactLocation.uriBaseId)  {
+            base = Utilities.expandBaseId(artifactLocation.uriBaseId, baseIds);
         }
 
         return this.joinPath(base, baseIds[id].uri || id);
     }
 
     /**
-     * Recursivly removes all of the contents in a directory, including subfolders
+     * Recursively removes all of the contents in a directory, including subfolders
      * @param directory directory to remove all contents from
      */
     private static removeDirectoryContents(directory: string): void {
