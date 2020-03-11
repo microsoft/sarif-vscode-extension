@@ -38,9 +38,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
     );
 
-    context.subscriptions.push(
-        commands.registerCommand(FileConverter.ConvertCommand, FileConverter.selectConverter),
-    );
+    FileConverter.initializeFileConverter(context);
 
     // Instantiate the providers and file mapper which will register their listeners and register their disposables
     context.subscriptions.push(SVCodeActionProvider.Instance);
