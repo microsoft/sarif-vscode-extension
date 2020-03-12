@@ -93,7 +93,7 @@ export class FileMapper {
      * @param uriBase the base path of the uri
      */
     public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
-        const oldProgressMsg: string = ProgressHelper.Instance.CurrentMessage;
+        const oldProgressMsg: string | undefined = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
 
         const directory: string | undefined = await this.openRemappingInputDialog(origUri);
