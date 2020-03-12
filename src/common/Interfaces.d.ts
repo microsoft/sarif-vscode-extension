@@ -238,48 +238,46 @@ export interface ResultsListRow {
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
     tool: ResultsListStringValue,
-    readonly [key: string]: ResultsListValue;
+    readonly [key: string]: ResultsListValue | ResultsListStringValue | ResultsListNumberValue | ResultsListCustomOrderValue | ResultsListPositionValue;
 }
 
 export interface ResultsListValue {
-    value: any,
+    value?: any,
     tooltip?: string,
 }
 
 export interface ResultsListStringValue extends ResultsListValue {
-    value: string,
+    value?: string,
 }
 
 export interface ResultsListNumberValue extends ResultsListValue {
-    value: number
+    value?: number
 }
 
 export interface ResultsListPositionValue extends ResultsListValue {
-    pos: Position,
-    value: string,
+    pos?: Position,
+    value?: string,
 }
 
 export interface ResultsListCustomOrderValue extends ResultsListValue {
+    customOrderType : 'Baseline' | 'Kind' | 'Severity';
     order: BaselineOrder | KindOrder | SeverityLevelOrder,
-    value: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
+    value?: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
 }
 
-export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
-    isBaseLine: boolean,
-    order: BaselineOrder,
-    value: sarif.Result.baselineState,
+customOrderType: 'Baseline',
+    export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
+    order: BaselineOrder
 }
 
 export interface ResultsListKindValue extends ResultsListCustomOrderValue {
-    isKind: boolean,
-    order: KindOrder,
-    value: sarif.Result.kind,
+    customOrderType: 'Kind',
+    order: KindOrder
 }
 
 export interface ResultsListSeverityValue extends ResultsListCustomOrderValue {
-    isSeverity: boolean,
-    order: SeverityLevelOrder,
-    value: sarif.Result.level,
+    customOrderType: 'Severity',
+    order: SeverityLevelOrder
 }
 
 export interface ResultsListColumn {

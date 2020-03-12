@@ -10,7 +10,7 @@ import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./com
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
-    WebviewMessage, SarifViewerDiagnostic, Location
+    WebviewMessage, SarifViewerDiagnostic, Location, RunInfo
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
@@ -268,29 +268,18 @@ export class ResultsListController {
      * @param resultInfo Result info that needs to be converted to a row of data for the Results List
      */
     private createResultsListRow(resultInfo: ResultInfo): ResultsListRow {
-        const row = {} as ResultsListRow;
-        row.message = { value: resultInfo.message.text };
-        row.resultId = { value: resultInfo.id };
-        row.ruleId = { value: resultInfo.ruleId };
-        row.ruleName = { value: resultInfo.ruleName };
-        row.runId = { value: resultInfo.runId };
 
-        const run = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
-        row.automationCat = { value: run.automationCategory };
-        row.automationId = { value: run.automationIdentifier };
-        row.sarifFile = { value: run.sarifFileName, tooltip: run.sarifFileFullPath };
-        row.tool = { value: run.toolName, tooltip: run.toolFullName };
+        const run: RunInfo = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
 
-        let baselineOrder: BaselineOrder;
+        let baselineOrder: BaselineOrder = BaselineOrder.absent;
         switch (resultInfo.baselineState) {
             case "absent": baselineOrder = BaselineOrder.absent; break;
             case "new": baselineOrder = BaselineOrder.new; break;
             case "unchanged": baselineOrder = BaselineOrder.unchanged; break;
             case "updated": baselineOrder = BaselineOrder.updated; break;
         }
-        row.baselineState = { order: baselineOrder, isBaseLine: true, value: resultInfo.baselineState };
 
-        let kindOrder: KindOrder;
+        let kindOrder: KindOrder = KindOrder.fail;
         switch (resultInfo.kind) {
             case "fail": kindOrder = KindOrder.fail; break;
             case "notApplicable": kindOrder = KindOrder.notApplicable; break;
@@ -298,41 +287,56 @@ export class ResultsListController {
             case "pass": kindOrder = KindOrder.pass; break;
             case "review": kindOrder = KindOrder.review; break;
         }
-        row.kind = { isKind: true, order: kindOrder, value: resultInfo.kind };
 
-        let sevOrder: SeverityLevelOrder;
+        let sevOrder: SeverityLevelOrder = SeverityLevelOrder.error;
         switch (resultInfo.severityLevel) {
             case "error": sevOrder = SeverityLevelOrder.error; break;
             case "warning": sevOrder = SeverityLevelOrder.warning; break;
             case "none": sevOrder = SeverityLevelOrder.none; break;
             case "note": sevOrder = SeverityLevelOrder.note; break;
         }
-        row.severityLevel = { isSeverity: true, order: sevOrder, value: resultInfo.severityLevel };
 
-        if (resultInfo.locations[0] !== undefined) {
-            const loc = resultInfo.locations[0];
-            if (loc.uri !== undefined) {
-                row.resultFile = { value: loc.fileName, tooltip: loc.uri.fsPath };
-                const position = loc.range.start;
-                row.resultStartPos = {
-                    pos: position,
-                    value: `(${position.line + 1}, ${position.character + 1})`,
-                };
+        let resultFileName: string | undefined;
+        let resultFsPath: string | undefined;
+        let logicalLocation: string | undefined;
+        let startPosition: Position | undefined;
+        let startPositionString: string | undefined;
+
+        if (resultInfo.locations[0]) {
+            const loc: Location = resultInfo.locations[0];
+            if (loc.uri) {
+                resultFileName = loc.fileName;
+                resultFsPath = loc.uri.fsPath;
+
+                if (loc.range) {
+                    startPosition = loc.range.start;
+                    startPositionString = `(${startPosition.line + 1}, ${startPosition.character + 1})`;
+                }
             }
 
-            let logLocation = "";
-            if (loc.logicalLocations !== undefined) {
-                logLocation = loc.logicalLocations[0];
+            if (loc.logicalLocations) {
+                logicalLocation = loc.logicalLocations[0];
             }
-            row.logicalLocation = { value: logLocation };
-
-        } else {
-            row.resultFile = { value: "" };
-            row.resultStartPos = { pos: new Position(0, 0), value: `` };
-            row.logicalLocation = { value: "" };
         }
 
-        return row;
+        return {
+            baselineState: { customOrderType: 'Baseline', order: baselineOrder, value: resultInfo.baselineState },
+            kind: { customOrderType: 'Kind', order: kindOrder, value: resultInfo.kind },
+            severityLevel: { customOrderType: 'Severity', order: sevOrder, value: resultInfo.severityLevel },
+            message: { value: resultInfo.message.text },
+            resultStartPos:  {pos: startPosition, value: startPositionString },
+            resultId: { value: resultInfo.id },
+            ruleId: { value: resultInfo.ruleId },
+            ruleName: { value: resultInfo.ruleName },
+            runId: { value: resultInfo.runId },
+            automationCat: { value: run.automationCategory },
+            automationId:  { value: run.automationIdentifier },
+            sarifFile: { value: run.sarifFileName, tooltip: run.sarifFileFullPath },
+            tool: { value: run.toolName, tooltip: run.toolFullName },
+            resultFile: { tooltip: resultFsPath, value: resultFileName },
+            logicalLocation: { value: logicalLocation },
+            rank: { value: resultInfo.rank },
+        };
     }
 
     /**
@@ -356,18 +360,18 @@ export class ResultsListController {
      * @param regExp RegExp based on the filter settings, use generateFilterRegex() to create
      */
     private applyFilterToRow(row: ResultsListRow, regExp: RegExp): boolean {
-        if (regExp.test(row.automationCat.value) ||
-            regExp.test(row.automationId.value) ||
-            regExp.test(row.baselineState.value) ||
-            regExp.test(row.message.value) ||
-            regExp.test(row.ruleId.value) ||
-            regExp.test(row.ruleName.value) ||
-            regExp.test(row.severityLevel.value) ||
-            regExp.test(row.kind.value) ||
-            regExp.test(row.resultFile.value) ||
-            regExp.test(row.sarifFile.value) ||
-            regExp.test(row.tool.value) ||
-            regExp.test(row.logicalLocation.value)) {
+        if ((row['automationCat'].value && regExp.test(row['automationCat'].value)) ||
+            (row['automationId'].value && regExp.test(row['automationId'].value)) ||
+            (row['baselineState'].value && regExp.test(row['baselineState'].value)) ||
+            (row['message'].value && regExp.test(row['message'].value)) ||
+            (row['ruleId'].value && regExp.test(row['ruleId'].value)) ||
+            (row['ruleName'].value && regExp.test(row['ruleName'].value)) ||
+            (row['severityLevel'].value && regExp.test(row['severityLevel'].value)) ||
+            (row['kind'].value && regExp.test(row['kind'].value)) ||
+            (row['resultFile'].value && regExp.test(row['resultFile'].value)) ||
+            (row['sarifFile'].value && regExp.test(row['sarifFile'].value)) ||
+            (row['tool'].value && regExp.test(row['tool'].value)) ||
+            (row['logicalLocation'].value && regExp.test(row['logicalLocation'].value))) {
             return true;
         }
 
@@ -460,9 +464,9 @@ export class ResultsListController {
                     }
                 } else if (valueB === undefined || valueB.value === undefined) {
                     comp = 1;
-                } else if ((valueA as ResultsListPositionValue).pos !== undefined) {
-                    const posA = (valueA as ResultsListPositionValue).pos;
-                    const posB = (valueB as ResultsListPositionValue).pos;
+                } else if ((valueA as ResultsListPositionValue).pos !== undefined && (valueB as ResultsListPositionValue).pos !== undefined) {
+                    const posA: Position = (valueA as ResultsListPositionValue).pos!;
+                    const posB: Position = (valueB as ResultsListPositionValue).pos!;
                     comp = posA.line - posB.line;
                     if (comp === 0) {
                         comp = posA.character - posB.character;
@@ -488,51 +492,70 @@ export class ResultsListController {
      */
     private initializeColumns(): void {
         this.columns = {
-            baselineState: {
+            baselineState: <ResultsListColumn>{
                 description: "The state of a result relative to a baseline of a previous run.",
                 hide: false, title: "Baseline",
-            } as ResultsListColumn,
-            message: { description: "Result message", hide: false, title: "Message" } as ResultsListColumn,
-            resultFile: { description: "Result file location ", hide: false, title: "File" } as ResultsListColumn,
-            resultStartPos: {
+            },
+            message: <ResultsListColumn>{
+                description: "Result message", hide: false, title: "Message"
+            },
+
+            resultFile: <ResultsListColumn>{
+                description: "Result file location ", hide: false, title: "File" },
+
+                resultStartPos: <ResultsListColumn>{
                 description: "Results position in the file", hide: false, title: "Position",
-            } as ResultsListColumn,
+            },
 
             // Space above is needed to keep the order without tslint complaining
-            logicalLocation: {
+            logicalLocation: <ResultsListColumn>{
                 description: "Logical Location", hide: false, title: "Logical Location",
-            } as ResultsListColumn,
-            ruleId: { description: "Rule Id", hide: false, title: "Rule Id" } as ResultsListColumn,
-            ruleName: { description: "Rule Name", hide: false, title: "Rule Name" } as ResultsListColumn,
-            runId: {
+            },
+
+            ruleId: <ResultsListColumn>{
+                description: "Rule Id", hide: false, title: "Rule Id"
+            },
+
+            ruleName: <ResultsListColumn>{
+                description: "Rule Name", hide: false, title: "Rule Name"
+            },
+
+            runId: <ResultsListColumn>{
                 description: "Run Id generated based on order in the Sarif file", hide: false, title: "Run Id",
-            } as ResultsListColumn,
-            sarifFile: {
+            },
+
+            sarifFile: <ResultsListColumn>{
                 description: "Sarif file the result data is from", hide: false, title: "Sarif File",
-            } as ResultsListColumn,
-            severityLevel: { description: "Severity Level", hide: false, title: "Severity" } as ResultsListColumn,
+            },
+
+            severityLevel: <ResultsListColumn>{
+                description: "Severity Level", hide: false, title: "Severity"
+            },
 
             // Space above is needed to keep the order without tslint complaining
-            kind: {
+            kind: <ResultsListColumn>{
                 description: "Specifies the nature of the result", hide: false, title: "Kind",
-            } as ResultsListColumn,
-            rank: {
+            },
+
+            rank: <ResultsListColumn>{
                 description: "Value representing the priority or importance of the result", hide: false, title: "Rank",
-            } as ResultsListColumn,
-            tool: {
+            },
+
+            tool: <ResultsListColumn>{
                 description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
-            } as ResultsListColumn,
+            },
 
             // Space above is needed to keep the order without tslint complaining
-            automationCat: {
+            automationCat: <ResultsListColumn>{
                 description: "The automation category this results run belongs to",
                 hide: false, title: "Automation Cat",
-            } as ResultsListColumn,
-            automationId: {
+            },
+
+            automationId: <ResultsListColumn>{
                 description: "The unique automation id of this results run," +
                     " used within the automation category if present",
                 hide: false, title: "Automation Id",
-            } as ResultsListColumn,
+            }
         };
     }
 }
