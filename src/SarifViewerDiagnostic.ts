@@ -9,7 +9,8 @@ import { Result } from 'sarif';
 export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic implements SarifViewerDiagnostic {
     public constructor(
         public readonly resultInfo: ResultInfo,
-        public readonly rawResult: Result, range: vscode.Range,
+        public readonly rawResult: Result,
+        range: vscode.Range,
         message: string,
         severity?: vscode.DiagnosticSeverity) {
         super(range, message, severity);

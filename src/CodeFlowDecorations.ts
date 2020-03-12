@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument,
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
@@ -37,7 +37,10 @@ export class CodeFlowDecorations {
         const activeSVDiagnostic: SarifViewerVsCodeDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
         if (activeSVDiagnostic !== undefined) {
             for (const editor of window.visibleTextEditors) {
-                if (activeSVDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
+                if (activeSVDiagnostic.resultInfo &&
+                    activeSVDiagnostic.resultInfo.assignedLocation &&
+                    activeSVDiagnostic.resultInfo.assignedLocation.uri &&
+                    activeSVDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
                     const errorDecoration: Range[] = [];
                     const warningDecoration: Range[] = [];
                     const infoDecoration: Range[] = [];
@@ -107,15 +110,23 @@ export class CodeFlowDecorations {
      */
     public static async updateAttachmentSelection(attachmentId: number, regionId: number): Promise<void> {
         const svDiagnostic: SarifViewerVsCodeDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-        const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
-        const sarifPhysicalLocation: sarif.PhysicalLocation = {
-            artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
-            region: svDiagnostic.rawResult.attachments[attachmentId].regions[regionId],
-        };
+        if (svDiagnostic.rawResult && svDiagnostic.rawResult.attachments) {
+            const attachment: sarif.Attachment | undefined = svDiagnostic.rawResult.attachments[attachmentId];
+            if (attachment && attachment.regions) {
+                const region: sarif.Region | undefined =  attachment.regions[regionId];
+                if (region) {
+                    const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
+                    const sarifPhysicalLocation: sarif.PhysicalLocation = {
+                        artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
+                        region: region,
+                    };
 
-        const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
+                    const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
 
-        await CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+                    await CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
+                }
+            }
+        }
     }
 
     /**
@@ -204,14 +215,29 @@ export class CodeFlowDecorations {
 
         if (id) {
             const diagnostic: SarifViewerDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
+            if (!diagnostic.rawResult.codeFlows || !diagnostic.resultInfo.codeFlows) {
+                return;
+            }
+            const resultInfoCodeFlow: CodeFlow | undefined = diagnostic.resultInfo.codeFlows[id.cFId];
+            if (!resultInfoCodeFlow || !resultInfoCodeFlow.threads) {
+                return;
+            }
 
-            return CodeFlowDecorations.updateSelectionHighlight(
-                diagnostic.resultInfo.codeFlows[id.cFId].threads[id.tFId].steps[id.stepId].location,
-                diagnostic.rawResult.codeFlows[id.cFId].threadFlows[id.tFId].locations[id.stepId].location,
-            );
+            const rawResultCodeFlow: sarif.CodeFlow | undefined = diagnostic.rawResult.codeFlows[id.cFId];
+            if (!rawResultCodeFlow || !rawResultCodeFlow.threadFlows) {
+                return;
+            }
+
+            const rawResultLocation: sarif.Location | undefined = rawResultCodeFlow.threadFlows[id.tFId].locations[id.stepId].location;
+            if (!rawResultLocation) {
+                return;
+            }
+
+            await  CodeFlowDecorations.updateSelectionHighlight(
+                resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location,
+                rawResultLocation);
+            CodeFlowDecorations.lastCodeFlowSelected = id;
         }
-
-        CodeFlowDecorations.lastCodeFlowSelected = id;
     }
 
     /**
@@ -225,22 +251,20 @@ export class CodeFlowDecorations {
             sarifLocation,
             ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId);
 
-        if (remappedLocation && remappedLocation.mapped) {
-            let locRange: Range = remappedLocation.range;
-            if (remappedLocation.endOfLine === true) {
+        if (remappedLocation && remappedLocation.mapped && remappedLocation.uri) {
+            let locRange: Range | undefined = remappedLocation.range;
+            if (!locRange) {
+                return;
+            }
+
+            if (remappedLocation.endOfLine) {
                 locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
             }
 
-            return workspace.openTextDocument(remappedLocation.uri).then((doc) => {
-                return window.showTextDocument(doc, ViewColumn.One, true);
-            }).then((editor) => {
-                editor.setDecorations(CodeFlowDecorations.SelectionDecorationType,
-                    [{ range: locRange }]);
-                editor.revealRange(remappedLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-            }, (reason) => {
-                // Failed to map after asking the user, fail silently as there's no location to add the selection
-                return Promise.resolve();
-            });
+            const textDocument: TextDocument = await  workspace.openTextDocument(remappedLocation.uri);
+            const textEditor: TextEditor = await   window.showTextDocument(textDocument, ViewColumn.One, true);
+            textEditor.setDecorations(CodeFlowDecorations.SelectionDecorationType, [{ range: locRange }]);
+            textEditor.revealRange(locRange, TextEditorRevealType.InCenterIfOutsideViewport);
         }
     }
 
@@ -323,43 +347,44 @@ export class CodeFlowDecorations {
      * @param editor text editor we check if the location exists in
      */
     private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions | undefined {
-        let decoration: DecorationOptions | undefined;
-        if (step.location.uri && step.location.mapped &&
-            step.location.uri.toString() === editor.document.uri.toString()) {
-            let stepRange: Range = step.location.range;
-            if (step.location.endOfLine === true) {
-                stepRange = new Range(stepRange.start, new Position(stepRange.end.line - 1, Number.MAX_VALUE));
-            }
+        if (!step.location.uri ||
+            !step.location.mapped ||
+            !step.location.range ||
+            step.location.uri.toString() !== editor.document.uri.toString()) {
+            return undefined;
+        }
+        let stepRange: Range = step.location.range;
 
-            let beforeDecoration: DecorationInstanceRenderOptions | undefined;
-            if (step.beforeIcon) {
-                const beforePath: Uri = Uri.file(step.beforeIcon);
-
-                beforeDecoration = {
-                    before: {
-                        height: "16px",
-                        width: "16px",
-                    },
-                    dark: {
-                        before: {
-                            contentIconPath: beforePath,
-                        },
-                    },
-                    light: {
-                        before: {
-                            contentIconPath: beforePath,
-                        },
-                    },
-                };
-            }
-
-            decoration = {
-                hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
-                range: stepRange,
-                renderOptions: beforeDecoration,
-            } as DecorationOptions;
+        if (step.location.endOfLine === true) {
+            stepRange = new Range(stepRange.start, new Position(stepRange.end.line - 1, Number.MAX_VALUE));
         }
 
-        return decoration;
+        let beforeDecoration: DecorationInstanceRenderOptions | undefined;
+        if (step.beforeIcon) {
+            const beforePath: Uri = Uri.file(step.beforeIcon);
+
+            beforeDecoration = {
+                before: {
+                    height: "16px",
+                    width: "16px",
+                },
+                dark: {
+                    before: {
+                        contentIconPath: beforePath,
+                    },
+                },
+                light: {
+                    before: {
+                        contentIconPath: beforePath,
+                    },
+                },
+            };
+        }
+
+        return {
+            hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
+            range: stepRange,
+            renderOptions: beforeDecoration,
+        };
     }
 }

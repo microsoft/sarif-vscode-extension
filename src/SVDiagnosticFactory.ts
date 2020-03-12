@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import { DiagnosticSeverity } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { ResultInfo } from "./common/Interfaces";
+import { ResultInfo, Location } from "./common/Interfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
@@ -20,16 +20,19 @@ export class SVDiagnosticFactory {
 
     /**
      * Creates a new SarifViewerDiagnostic
-     * @param resultinfo processed result info
-     * @param result sarif result info from the sarif file
+     * @param resultInfo processed result info
+     * @param rawResult sarif result info from the sarif file
      */
-    public static create(resultinfo: ResultInfo, result: sarif.Result): SarifViewerVsCodeDiagnostic {
-        const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(resultinfo.assignedLocation.range, resultinfo.message.text);
-        svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultinfo.severityLevel);
-        svDiagnostic.code = resultinfo.ruleId;
-        svDiagnostic.resultInfo = resultinfo;
-        svDiagnostic.rawResult = result;
-        svDiagnostic.source = SVDiagnosticCollection.Instance.getRunInfo(resultinfo.runId).toolName;
+    public static create(resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
+        if (!resultInfo.assignedLocation.range ||
+            !resultInfo.message.text) {
+            throw new Error('Cannot represent a diagnostic without a range in the document and the diagnostic text to display to the user.');
+        }
+
+        const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(resultInfo, rawResult, resultInfo.assignedLocation.range, resultInfo.message.text);
+        svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultInfo.severityLevel);
+        svDiagnostic.code = resultInfo.ruleId;
+        svDiagnostic.source = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId).toolName;
 
         svDiagnostic.message = SVDiagnosticFactory.updateMessage(svDiagnostic);
 
@@ -40,37 +43,42 @@ export class SVDiagnosticFactory {
      * Tries to remap the locations for this diagnostic
      */
     public static async tryToRemapLocations(diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
-        const runId = diagnostic.resultInfo.runId;
-        if (diagnostic.resultInfo.codeFlows !== undefined) {
+        const runId: number = diagnostic.resultInfo.runId;
+        if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
             await CodeFlows.tryRemapCodeFlows(diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
         }
 
-        await ResultInfoFactory.parseLocations(diagnostic.rawResult.relatedLocations, runId).then((locations) => {
-            for (const index in locations) {
-                if (locations[index] !== undefined && diagnostic.resultInfo.relatedLocs[index] !== locations[index]) {
-                    diagnostic.resultInfo.relatedLocs[index] = locations[index];
+        if (diagnostic.rawResult.relatedLocations) {
+            const parsedLocations: Location[] = await await ResultInfoFactory.parseLocations(diagnostic.rawResult.relatedLocations, runId);
+            for (const index in parsedLocations) {
+                if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
+                    diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
                 }
             }
-        });
+        }
 
-        return ResultInfoFactory.parseLocations(diagnostic.rawResult.locations, runId).then((locations) => {
-            for (const index in locations) {
-                if (locations[index] !== undefined && diagnostic.resultInfo.locations[index] !== locations[index]) {
-                    diagnostic.resultInfo.locations[index] = locations[index];
+        if (diagnostic.rawResult.locations) {
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(diagnostic.rawResult.locations, runId);
+            for (const index in parsedLocations) {
+                if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
+                    diagnostic.resultInfo.locations[index] = parsedLocations[index];
                 }
             }
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
-            const firstLocation = diagnostic.resultInfo.locations[0];
-            if (firstLocation !== undefined && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
+            const firstLocation: Location = diagnostic.resultInfo.locations[0];
+            if (firstLocation && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
-                diagnostic.range = firstLocation.range;
+                if (firstLocation.range) {
+                    diagnostic.range = firstLocation.range;
+                }
+
                 diagnostic.message = SVDiagnosticFactory.updateMessage(diagnostic);
-                return Promise.resolve(true);
-            } else {
-                return Promise.resolve(false);
+                return true;
             }
-        });
+        }
+
+        return false;
     }
 
     /**
@@ -95,7 +103,7 @@ export class SVDiagnosticFactory {
      * And Unmapped if the result has not been mapped
      */
     private static updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
-        let message = diagnostic.resultInfo.message.text;
+        let message: string = diagnostic.resultInfo.message.text || '';
 
         if (!diagnostic.resultInfo.assignedLocation.mapped) {
             message = `[Unmapped] ${message}`;
