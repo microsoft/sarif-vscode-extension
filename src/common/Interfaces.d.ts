@@ -49,7 +49,7 @@ export interface Location {
     uriBase?: string;
 }
 
-export interface SarifViewerDiagnostic {
+export interface SarifViewerDiagnostic extends Diagnostic {
     resultInfo: ResultInfo;
     rawResult: sarif.Result;
 }
@@ -209,10 +209,10 @@ export interface ResultsListData {
     columns: { [key: string]: ResultsListColumn },
     filterCaseMatch: boolean,
     filterText: string,
-    groupBy: string,
+    groupBy?: string,
     groups: ResultsListGroup[],
     resultCount: number,
-    sortBy: ResultsListSortBy,
+    sortBy?: ResultsListSortBy,
 }
 
 export interface ResultsListGroup {
@@ -238,6 +238,7 @@ export interface ResultsListRow {
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
     tool: ResultsListStringValue,
+    readonly [key: string]: ResultsListValue;
 }
 
 export interface ResultsListValue {

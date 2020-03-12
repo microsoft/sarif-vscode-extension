@@ -4,13 +4,13 @@
 
 import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
-    WorkspaceConfiguration, Uri
+    WorkspaceConfiguration, Uri, TextDocument, TextEditor, Diagnostic
 } from "vscode";
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
-    WebviewMessage,
+    WebviewMessage, SarifViewerDiagnostic, Location
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
@@ -24,9 +24,16 @@ import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 export class ResultsListController {
     private static instance: ResultsListController;
 
-    private columns: { [key: string]: ResultsListColumn };
-    private groupBy: string;
-    private sortBy: ResultsListSortBy;
+    private columns: { [key: string]: ResultsListColumn } = {};
+
+    private groupBy: string = ResultsListController.defaultGroupBy;
+    private static defaultGroupBy: string = "resultFile";
+
+    private static defaultSortBy: ResultsListSortBy = {
+        ascending: true,
+        column: "severityLevel"
+    };
+    private sortBy: ResultsListSortBy = ResultsListController.defaultSortBy;
 
     private resultsListRows: Map<string, ResultsListRow>;
 
@@ -66,25 +73,25 @@ export class ResultsListController {
      * @param diags Array of diags that need to be updated
      * @param remove flag to remove the diags in the array, otherwise they will be udpated
      */
-    public updateResultsListData(diags: SarifViewerVsCodeDiagnostic[], remove?: boolean) {
-        if (remove === true) {
+    public updateResultsListData(diags: SarifViewerVsCodeDiagnostic[], remove?: boolean): void {
+        if (remove) {
             for (const key of diags.keys()) {
-                const id = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
+                const id: string = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
                 this.resultsListRows.delete(id);
-                const index = this.postFilterListRows.indexOf(id);
+                const index: number = this.postFilterListRows.indexOf(id);
                 if (index !== -1) {
                     this.postFilterListRows.splice(index, 1);
                 }
             }
         } else {
-            const regEx = this.generateFilterRegExp();
+            const regEx: RegExp = this.generateFilterRegExp();
             for (const key of diags.keys()) {
-                const row = this.createResultsListRow(diags[key].resultInfo);
-                const id = `${row.runId.value}_${row.resultId.value}`;
+                const row: ResultsListRow = this.createResultsListRow(diags[key].resultInfo);
+                const id: string = `${row.runId.value}_${row.resultId.value}`;
                 this.resultsListRows.set(id, row);
 
-                const index = this.postFilterListRows.indexOf(id);
-                if (this.applyFilterToRow(row, regEx) === true) {
+                const index: number = this.postFilterListRows.indexOf(id);
+                if (this.applyFilterToRow(row, regEx)) {
                     if (index === -1) {
                         this.postFilterListRows.push(id);
                     }
@@ -99,21 +106,21 @@ export class ResultsListController {
      * Called by the ExplorerController when a message comes from the results list in the webview
      * @param msg message from the web view
      */
-    public onResultsListMessage(msg: WebviewMessage) {
-        const sarifConfig = workspace.getConfiguration(Utilities.configSection);
+    public async onResultsListMessage(msg: WebviewMessage): Promise<void> {
+        const sarifConfig: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
         switch (msg.type) {
             case MessageType.ResultsListColumnToggled:
-                const hideColsConfig = sarifConfig.get(this.configHideColumns) as string[];
-                const index = hideColsConfig.indexOf(msg.data);
+                const hideColsConfig: string[] = sarifConfig.get(this.configHideColumns, []);
+                const index: number = hideColsConfig.indexOf(msg.data);
                 if (index !== -1) {
                     hideColsConfig.splice(index, 1);
                 } else {
                     hideColsConfig.push(msg.data);
                 }
-                sarifConfig.update(this.configHideColumns, hideColsConfig, true);
+                await sarifConfig.update(this.configHideColumns, hideColsConfig, true);
                 break;
             case MessageType.ResultsListFilterApplied:
-                const input = msg.data.trim();
+                const input: string = msg.data.trim();
                 if (input !== this.filterText) {
                     this.filterText = input;
                     this.updateFilteredRowsList();
@@ -125,38 +132,44 @@ export class ResultsListController {
                 this.updateFilteredRowsList();
                 this.postDataToExplorer();
                 break;
+
             case MessageType.ResultsListGroupChanged:
-                let groupByConfig = sarifConfig.get(this.configGroupBy) as string;
+                let groupByConfig: string | undefined = sarifConfig.get(this.configGroupBy);
                 if (groupByConfig !== msg.data) {
                     groupByConfig = msg.data;
                 }
-                sarifConfig.update(this.configGroupBy, groupByConfig, true);
+                await sarifConfig.update(this.configGroupBy, groupByConfig, true);
                 break;
+
             case MessageType.ResultsListResultSelected:
-                const id = JSON.parse(msg.data);
-                const diagnostic = SVDiagnosticCollection.Instance.getResultInfo(id.resultId, id.runId);
-                const diagLocation = diagnostic.resultInfo.assignedLocation;
-                workspace.openTextDocument(diagLocation.uri).then((doc) => {
-                    return window.showTextDocument(doc, ViewColumn.One, true);
-                }).then((editor) => {
-                    editor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-                    editor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
-                    SVCodeActionProvider.Instance.provideCodeActions(undefined, undefined,
-                        { diagnostics: [diagnostic] }, undefined);
-                }, (reason) => {
-                    // Failed to map after asking the user, fail silently as there's no location to add the selection
-                    return Promise.resolve();
-                });
+                // What is the proper type if "id"?
+                const id: { resultId: number; runId: number} = JSON.parse(msg.data);
+                const diagnostic: SarifViewerDiagnostic = SVDiagnosticCollection.Instance.getResultInfo(id.resultId, id.runId);
+                const diagLocation: Location | undefined = diagnostic.resultInfo.assignedLocation;
+
+                if (diagLocation && diagLocation.uri) {
+                    const textDocument: TextDocument = await workspace.openTextDocument(diagLocation.uri);
+                    const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
+                    await window.showTextDocument(textDocument, ViewColumn.One, true);
+                    if (diagLocation.range) {
+                        textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
+                        textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
+                        await SVCodeActionProvider.Instance.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
+                    }
+                }
                 break;
+
             case MessageType.ResultsListSortChanged:
-                const sortByConfig = sarifConfig.get(this.configSortBy) as ResultsListSortBy;
+                const sortByConfig: ResultsListSortBy = sarifConfig.get(this.configSortBy, {
+                    ascending: true,
+                    column: msg.data
+                });
+
                 if (sortByConfig.column === msg.data) {
                     sortByConfig.ascending = !sortByConfig.ascending;
-                } else {
-                    sortByConfig.column = msg.data;
-                    sortByConfig.ascending = true;
                 }
-                sarifConfig.update(this.configSortBy, sortByConfig, true);
+
+                await sarifConfig.update(this.configSortBy, sortByConfig, true);
                 break;
         }
     }
@@ -165,11 +178,11 @@ export class ResultsListController {
      * Event handler when settings are changed, handles hide columns, groupby, and sortby changes
      * @param event configuration change event
      */
-    public onSettingsChanged(event: ConfigurationChangeEvent) {
-        if (event === undefined || event.affectsConfiguration(Utilities.configSection)) {
-            const sarifConfig = workspace.getConfiguration(Utilities.configSection);
+    public onSettingsChanged(event: ConfigurationChangeEvent): void {
+        if (event.affectsConfiguration(Utilities.configSection)) {
+            const sarifConfig: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
 
-            let changed = false;
+            let changed: boolean = false;
             if (this.checkIfColumnsChanged(sarifConfig) === true) {
                 changed = true;
             }
@@ -189,7 +202,7 @@ export class ResultsListController {
     /**
      * Gets the latest Result data, grouped and sorted and sends it to the Explorer Controller to send to the Explorer
      */
-    public postDataToExplorer() {
+    public postDataToExplorer(): void {
         const data: ResultsListData = this.getResultData();
         ExplorerController.Instance.setResultsListData(data);
     }
@@ -199,12 +212,12 @@ export class ResultsListController {
      * @param sarifConfig config object with the sarif settings
      */
     private checkIfColumnsChanged(sarifConfig: WorkspaceConfiguration): boolean {
-        let changed = false;
-        const hideCols = sarifConfig.get(this.configHideColumns) as string[];
+        let changed: boolean = false;
+        const hideCols: string[] = sarifConfig.get(this.configHideColumns, []);
 
         for (const col in this.columns) {
             if (this.columns.hasOwnProperty(col)) {
-                let shouldHide = false;
+                let shouldHide: boolean = false;
                 if (hideCols.indexOf(col) !== -1) {
                     shouldHide = true;
                 }
@@ -224,8 +237,8 @@ export class ResultsListController {
      * @param sarifConfig config object with the sarif settings
      */
     private checkIfGroupByChanged(sarifConfig: WorkspaceConfiguration): boolean {
-        let changed = false;
-        const group = sarifConfig.get(this.configGroupBy) as string;
+        let changed: boolean = false;
+        const group: string = sarifConfig.get(this.configGroupBy, ResultsListController.defaultGroupBy);
 
         if (group !== this.groupBy) {
             this.groupBy = group;
@@ -239,8 +252,8 @@ export class ResultsListController {
      * @param sarifConfig config object with the sarif settings
      */
     private checkIfSortByChanged(sarifConfig: WorkspaceConfiguration): boolean {
-        let changed = false;
-        const sort = sarifConfig.get(this.configSortBy) as ResultsListSortBy;
+        let changed: boolean = false;
+        const sort: ResultsListSortBy  = sarifConfig.get(this.configSortBy, ResultsListController.defaultSortBy);
 
         if (sort !== this.sortBy) {
             this.sortBy = sort;
@@ -325,10 +338,10 @@ export class ResultsListController {
     /**
      * Applies the latest filter text and settings to the resultslistrows and adds any matching rows to filteredlistrows
      */
-    private updateFilteredRowsList() {
+    private updateFilteredRowsList(): void {
         this.postFilterListRows = [];
 
-        const regEx = this.generateFilterRegExp();
+        const regEx: RegExp = this.generateFilterRegExp();
 
         this.resultsListRows.forEach((row: ResultsListRow, key: string) => {
             if (this.filterText === "" || this.applyFilterToRow(row, regEx) === true) {
@@ -365,15 +378,12 @@ export class ResultsListController {
      * generates the filter regexp based on the filter settings and text
      */
     private generateFilterRegExp(): RegExp {
-        let flags: string;
+        let flags: string | undefined;
         if (!this.filterCaseMatch) {
             flags = "i";
         }
 
-        let pattern: string;
-        if (this.filterText !== "") {
-            pattern = this.filterText;
-        }
+        const pattern: string = this.filterText !== "" ? this.filterText : ".*";
 
         return new RegExp(pattern, flags);
     }
@@ -382,7 +392,7 @@ export class ResultsListController {
      * Gets a set of the Resultslist data grouped and sorted based on the settings values
      */
     private getResultData(): ResultsListData {
-        const data = {
+        const data: ResultsListData = {
             columns: this.columns,
             filterCaseMatch: this.filterCaseMatch,
             filterText: this.filterText,
@@ -390,27 +400,37 @@ export class ResultsListController {
             groups: [],
             resultCount: this.resultsListRows.size,
             sortBy: this.sortBy,
-        } as ResultsListData;
+        };
 
-        const groups = new Map<string, ResultsListGroup>();
-        this.postFilterListRows.forEach((id: string) => {
-            const row = this.resultsListRows.get(id);
-            const resultsListValue = (row[this.groupBy] as ResultsListValue);
-            let key = resultsListValue.value;
+        const groups: Map<string, ResultsListGroup> = new Map<string, ResultsListGroup>();
+        for (const postFilterRow in this.postFilterListRows) {
+            const row: ResultsListRow | undefined = this.resultsListRows.get(postFilterRow);
+            if (!row) {
+                continue;
+            }
+
+            if (!this.groupBy) {
+                continue;
+            }
+
+            const resultsListValue: ResultsListValue = row[this.groupBy];
+            // tslint:disable-next-line: no-any
+            let key: any = resultsListValue.value;
 
             // special case for the columns that only show the file name of a uri, we need to sort on the full path
             if (this.groupBy === "sarifFile" || this.groupBy === "resultFile") {
                 key = resultsListValue.tooltip;
             }
 
-            if (groups.has(key)) {
-                groups.get(key).rows.push(row);
+            const resultsListGroup: ResultsListGroup | undefined = groups.get(key);
+            if (resultsListGroup) {
+                resultsListGroup.rows.push(row);
             } else {
                 groups.set(key, {
                     rows: [row], text: resultsListValue.value, tooltip: resultsListValue.tooltip,
                 } as ResultsListGroup);
             }
-        });
+        }
 
         data.groups = Array.from(groups.values());
 
@@ -466,7 +486,7 @@ export class ResultsListController {
     /**
      * Initializes the columns header values
      */
-    private initializeColumns() {
+    private initializeColumns(): void {
         this.columns = {
             baselineState: {
                 description: "The state of a result relative to a baseline of a previous run.",

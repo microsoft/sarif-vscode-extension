@@ -56,7 +56,7 @@ export class SVCodeActionProvider implements CodeActionProvider {
         document: TextDocument,
         range: Range,
         context: CodeActionContext,
-        token: CancellationToken): Promise<CodeAction[]> {
+        token?: CancellationToken): Promise<CodeAction[]> {
         const index: number = context.diagnostics.findIndex((x) => (<SarifViewerVsCodeDiagnostic>x).resultInfo !== undefined);
         if (!context.only && index !== -1) {
             const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
