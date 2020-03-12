@@ -183,9 +183,9 @@ export class FileMapper {
         if (files) {
             for (const fileIndex of files.keys()) {
                 const file: sarif.Artifact = files[fileIndex];
-                const fileLocation: sarif.Location | undefined = file.location;
+                const fileLocation: sarif.ArtifactLocation | undefined = file.location;
 
-                if (fileLocation) {
+                if (fileLocation && fileLocation.uri) {
                     const uriBase: string | undefined = Utilities.getUriBase(fileLocation, runId);
                     const uriWithBase: Uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 

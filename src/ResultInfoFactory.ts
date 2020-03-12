@@ -119,9 +119,9 @@ export class ResultInfoFactory {
     }
 
     /**
-     * Itterates through the sarif locations and creates Locations for each
+     * Iterates through the sarif locations and creates Locations for each
      * Sets undefined placeholders in the returned array for those that can't be mapped
-     * @param sarifLocations sarif locations that need to be procesed
+     * @param sarifLocations sarif locations that need to be processed
      * @param runId id of the run this result is from
      */
     public static async parseLocations(sarifLocations: sarif.Location[] | undefined, runId: number): Promise<Location[]> {
@@ -146,7 +146,7 @@ export class ResultInfoFactory {
      */
     private static async parseAttachments(sarifAttachments: sarif.Attachment[] | undefined, runId: number): Promise<Attachment[]> {
         if (!sarifAttachments) {
-            return []
+            return [];
         }
 
         const attachments: Attachment[] = [];

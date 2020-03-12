@@ -55,20 +55,20 @@ export interface SarifViewerDiagnostic extends Diagnostic {
 }
 
 export interface RunInfo {
-    additionalProperties: { [key: string]: string };
-    automationCategory: string;
-    automationIdentifier: string;
-    cmdLine: string;
-    id: number;
+    additionalProperties?: { [key: string]: string };
+    automationCategory?: string;
+    automationIdentifier?: string;
+    cmdLine?: string;
+    // id: number;
     sarifFileFullPath: string;
     sarifFileName: string;
-    startUtc: string;
-    timeDuration: string;
-    toolFileName: string;
-    toolFullName: string;
+    startUtc?: string;
+    timeDuration?: string;
+    toolFileName?: string;
+    toolFullName?: string;
     toolName: string;
-    uriBaseIds: { [key: string]: string };
-    workingDir: string;
+    uriBaseIds?: { [key: string]: string };
+    workingDir?: string;
 }
 
 export interface ResultInfo {

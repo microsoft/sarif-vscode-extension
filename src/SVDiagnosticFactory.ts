@@ -24,7 +24,8 @@ export class SVDiagnosticFactory {
      * @param rawResult sarif result info from the sarif file
      */
     public static create(resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
-        if (!resultInfo.assignedLocation.range ||
+        if (!resultInfo.assignedLocation ||
+            !resultInfo.assignedLocation.range ||
             !resultInfo.message.text) {
             throw new Error('Cannot represent a diagnostic without a range in the document and the diagnostic text to display to the user.');
         }
@@ -67,7 +68,7 @@ export class SVDiagnosticFactory {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation: Location = diagnostic.resultInfo.locations[0];
-            if (firstLocation && firstLocation.mapped && !diagnostic.resultInfo.assignedLocation.mapped) {
+            if (firstLocation && firstLocation.mapped && (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped)) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
                 if (firstLocation.range) {
                     diagnostic.range = firstLocation.range;
@@ -105,7 +106,7 @@ export class SVDiagnosticFactory {
     private static updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
         let message: string = diagnostic.resultInfo.message.text || '';
 
-        if (!diagnostic.resultInfo.assignedLocation.mapped) {
+        if (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped) {
             message = `[Unmapped] ${message}`;
         }
 

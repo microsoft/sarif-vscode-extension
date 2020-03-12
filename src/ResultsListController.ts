@@ -4,7 +4,7 @@
 
 import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
-    WorkspaceConfiguration, Uri, TextDocument, TextEditor, Diagnostic
+    WorkspaceConfiguration, Uri, TextDocument, TextEditor
 } from "vscode";
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
 import {

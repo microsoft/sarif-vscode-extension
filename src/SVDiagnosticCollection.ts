@@ -3,7 +3,7 @@
  */
 
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
-import { RunInfo } from "./common/Interfaces";
+import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
@@ -16,7 +16,7 @@ import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
  * And lets us easily try to map those that weren't mapped previously
  */
 export class SVDiagnosticCollection {
-    private static MaxDiagCollectionSize;
+    private static MaxDiagCollectionSize: number;
 
     private static instance: SVDiagnosticCollection;
 
@@ -41,7 +41,7 @@ export class SVDiagnosticCollection {
     /**
      * Syncs the collection of Diagnostics added with those displayed in the problems panel.
      */
-    public syncDiagnostics() {
+    public syncDiagnostics(): void {
         this.diagnosticCollection.clear();
 
         this.addToDiagnosticCollection(this.issuesCollection);
@@ -55,7 +55,7 @@ export class SVDiagnosticCollection {
      * After you finish adding all of the new diagnostics, call syncDiagnostics to get them added to the problems panel
      * @param issue diagnostic to add to the problems panel
      */
-    public add(issue: SarifViewerVsCodeDiagnostic) {
+    public add(issue: SarifViewerVsCodeDiagnostic): void {
         if (issue.resultInfo.assignedLocation.mapped) {
             this.addToCollection(this.issuesCollection, issue);
         } else {
@@ -175,7 +175,7 @@ export class SVDiagnosticCollection {
      * Goes through the diagnostics and tries to remap their locations, if not able to it gets left in the unmapped
      * Also goes through the codeflow locations, to update the locations
      */
-    public async mappingChanged() {
+    public async mappingChanged(): Promise<void> {
         for (const key of this.issuesCollection.keys()) {
             const issues = this.issuesCollection.get(key);
             for (const index of issues.keys()) {
@@ -274,11 +274,11 @@ export class SVDiagnosticCollection {
      * @param runsToRemove array of runids to be removed
      * @param collection diagnostic collection to search for matching runids
      */
-    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>) {
-        let diagnosticsRemoved = [];
+    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>) : void {
+        let diagnosticsRemoved: SarifViewerDiagnostic[] = [];
         for (const key of collection.keys()) {
-            const diagnostics = collection.get(key);
-            for (let i = diagnostics.length - 1; i >= 0; i--) {
+            const diagnostics: SarifViewerVsCodeDiagnostic[] = collection.get(key) || [];
+            for (let i: number = diagnostics.length - 1; i >= 0; i--) {
                 for (const runId of runsToRemove) {
                     if (diagnostics[i].resultInfo.runId === runId) {
                         diagnosticsRemoved = diagnosticsRemoved.concat(diagnostics.splice(i, 1));

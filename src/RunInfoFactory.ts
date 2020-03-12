@@ -18,51 +18,63 @@ export class RunInfoFactory {
      * @param sarifFileName path and file name of the sarif file this run is in
      */
     public static Create(run: sarif.Run, sarifFileName: string): RunInfo {
-        const runInfo = {} as RunInfo;
-        const tool = run.tool.driver;
-        runInfo.toolName = tool.name;
-        if (runInfo.toolFullName !== undefined) {
-            runInfo.toolFullName = tool.fullName;
-        } else if (tool.semanticVersion !== undefined) {
-            runInfo.toolFullName = `${tool.name} ${tool.semanticVersion}`;
-        } else {
-            runInfo.toolFullName = tool.name;
+        const tool: sarif.ToolComponent  = run.tool.driver;
+
+        let toolFullName: string = tool.fullName || tool.name;
+
+        if (tool.semanticVersion) {
+            toolFullName += `(${tool.semanticVersion})`;
         }
 
-        if (run.invocations !== undefined && run.invocations[0] !== undefined) {
-            const invocation = run.invocations[0];
-            runInfo.cmdLine = invocation.commandLine;
-            if (invocation.executableLocation !== undefined) {
-                runInfo.toolFileName = invocation.executableLocation.uri;
+        let toolFileName: string | undefined;
+        let workingDir: string | undefined;
+        let cmdLine: string | undefined;
+        let startUtc: string | undefined;
+        let timeDuration: string | undefined;
+        let automationIdentifier: string | undefined;
+        let automationCategory: string | undefined;
+
+        if (run.invocations && run.invocations[0]) {
+            const invocation: sarif.Invocation = run.invocations[0];
+            cmdLine = invocation.commandLine;
+            if (invocation.executableLocation) {
+                toolFileName = invocation.executableLocation.uri;
             }
 
-            if (invocation.workingDirectory !== undefined) {
-                runInfo.workingDir = invocation.workingDirectory.uri;
+            if (invocation.workingDirectory) {
+                workingDir = invocation.workingDirectory.uri;
             }
 
-            runInfo.startUtc = invocation.startTimeUtc;
-            runInfo.timeDuration = Utilities.calcDuration(invocation.startTimeUtc, invocation.endTimeUtc);
+            startUtc = invocation.startTimeUtc;
+            timeDuration = Utilities.calcDuration(invocation.startTimeUtc, invocation.endTimeUtc);
         }
-
-        runInfo.additionalProperties = run.properties;
-        runInfo.uriBaseIds = Utilities.expandBaseIds(run.originalUriBaseIds);
-
-        runInfo.sarifFileFullPath = sarifFileName;
-        runInfo.sarifFileName = path.basename(sarifFileName);
 
         if (run.automationDetails !== undefined && run.automationDetails.id !== undefined) {
-            const splitId = run.automationDetails.id.split("/");
-            const identifier = splitId.pop();
+            const splitId: string[] = run.automationDetails.id.split("/");
+            const identifier: string | undefined = splitId.pop();
             if (identifier !== "") {
-                runInfo.automationIdentifier = identifier;
+                automationIdentifier = identifier;
             }
 
-            const category = splitId.join("/");
+            const category: string = splitId.join("/");
             if (identifier !== "") {
-                runInfo.automationCategory = category;
+                automationCategory = category;
             }
         }
 
-        return runInfo;
+        return {
+            toolName: tool.name,
+            toolFullName: toolFullName,
+            toolFileName: toolFileName,
+            workingDir: workingDir,
+            cmdLine: cmdLine,
+            timeDuration: timeDuration,
+            additionalProperties: run.properties,
+            uriBaseIds: Utilities.expandBaseIds(run.originalUriBaseIds),
+            sarifFileFullPath: sarifFileName,
+            sarifFileName: path.basename(sarifFileName),
+            automationCategory: automationCategory,
+            automationIdentifier: automationIdentifier
+        };
     }
 }
