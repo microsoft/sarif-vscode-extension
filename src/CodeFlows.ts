@@ -18,15 +18,14 @@ export class CodeFlows {
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
      * @param runId id of the run this result is from
      */
-    public static async create(sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<CodeFlow[]> {
+    public static async create(sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
+        if (!sarifCodeFlows) {
+            return [];
+        }
+
         const codeFlows: CodeFlow[] = [];
-        if (sarifCodeFlows !== undefined && sarifCodeFlows.length !== 0) {
-            for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-                await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`, runId).then(
-                    (codeFlow: CodeFlow) => {
-                        codeFlows.push(codeFlow);
-                    });
-            }
+        for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
+            codeFlows.push(await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
         }
 
         return codeFlows;

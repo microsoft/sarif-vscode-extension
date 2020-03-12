@@ -72,10 +72,10 @@ export interface RunInfo {
 }
 
 export interface ResultInfo {
-    additionalProperties: { [key: string]: string };
-    assignedLocation: Location;
+    additionalProperties?: { [key: string]: string };
+    assignedLocation?: Location;
     attachments: Attachment[];
-    baselineState: sarif.Result.baselineState;
+    baselineState?: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
     fixes: Fix[];
     id: number;
@@ -83,13 +83,13 @@ export interface ResultInfo {
     locationInSarifFile: Location;
     locations: Location[];
     message: Message;
-    messageHTML: HTMLLabelElement;
-    rank: number;
+    messageHTML?: HTMLLabelElement;
+    rank?: number;
     relatedLocs: Location[];
-    ruleHelpUri: string;
-    ruleId: string;
-    ruleName: string;
-    ruleDescription: Message;
+    ruleHelpUri?: string;
+    ruleId?: string;
+    ruleName?: string;
+    ruleDescription?: Message;
     runId: number;
     severityLevel: sarif.Result.level;
     stacks: Stacks;
@@ -143,7 +143,7 @@ export interface Frame {
     message: Message;
     name: string;
     parameters: string[];
-    threadId: number;
+    threadId?: number;
 }
 
 export interface Message {
@@ -169,7 +169,7 @@ export interface FixFile {
 
 export interface FixChange {
     delete: Range,
-    insert: string
+    insert?: string
 }
 
 export interface TreeNodeOptions {
