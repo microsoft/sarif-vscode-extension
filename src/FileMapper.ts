@@ -7,20 +7,21 @@ import * as path from "path";
 import * as sarif from "sarif";
 import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, QuickInputButton, Uri,
-    window, workspace, WorkspaceConfiguration, InputBox,
+    window, workspace, WorkspaceConfiguration, InputBox, commands
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * Handles mapping file locations if the file is not in the location specified in the sarif file
  * Maintains a mapping of the files that have been remapped
  * Maintains a mapping of the base of the remapped files to try to apply to files that can't be found
  */
-export class FileMapper {
-    public static readonly MapCommand = "extension.sarif.Map";
+export class FileMapper implements Disposable {
+    private disposables: Disposable[] = [];
 
-    private static instance: FileMapper;
+    public static readonly MapCommand = "extension.sarif.Map";
 
     private baseRemapping: Map<string, string>;
     private fileRemapping: Map<string, Uri>;
@@ -30,20 +31,16 @@ export class FileMapper {
     private rootpaths: string[] = [];
     private readonly rootpathSample = "c:\\sample\\path";
     private readonly configRootpaths = "rootpaths";
-    private changeConfigDisposable: Disposable;
 
-    private constructor() {
+    public constructor(private readonly diagnosticCollection: SVDiagnosticCollection) {
         this.baseRemapping = new Map<string, string>();
         this.fileRemapping = new Map<string, Uri>();
         this.fileIndexKeyMapping = new Map<string, string>();
         this.onMappingChanged = new EventEmitter<Uri>();
 
         this.updateRootPaths();
-        this.changeConfigDisposable = workspace.onDidChangeConfiguration(this.updateRootPaths, this);
-    }
-
-    public static get Instance(): FileMapper {
-        return FileMapper.instance || (FileMapper.instance = new FileMapper());
+        this.disposables.push(workspace.onDidChangeConfiguration(this.updateRootPaths, this));
+        this.disposables.push(commands.registerCommand(FileMapper.MapCommand, this.mapFileCommand.bind(this)));
     }
 
     public get OnMappingChanged(): Event<Uri> {
@@ -54,7 +51,7 @@ export class FileMapper {
      * For disposing on extension close
      */
     public dispose(): void {
-        this.changeConfigDisposable.dispose();
+        Disposable.from(...this.disposables).dispose();
     }
 
     /**
@@ -186,7 +183,7 @@ export class FileMapper {
                 const fileLocation: sarif.ArtifactLocation | undefined = file.location;
 
                 if (fileLocation && fileLocation.uri) {
-                    const uriBase: string | undefined = Utilities.getUriBase(fileLocation, runId);
+                    const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
                     const uriWithBase: Uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
 
                     const key: string = Utilities.getFsPathWithFragment(uriWithBase);
@@ -521,5 +518,15 @@ export class FileMapper {
         if (remapped) {
             this.onMappingChanged.fire();
         }
+    }
+
+    private async mapFileCommand(fileLocation: sarif.ArtifactLocation, runId: number): Promise<void>  {
+        const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
+        if (!uriBase || !fileLocation.uri) {
+            return;
+        }
+
+        const uri: Uri  = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
+        await this.getUserToChooseFile(uri, uriBase);
     }
 }

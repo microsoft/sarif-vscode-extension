@@ -8,6 +8,7 @@ import { ExplorerController } from "./ExplorerController";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { FileMapper } from "./FileMapper";
 
 export interface SVDiagnosticsChangedEvent {
     diagnostics?: SarifViewerVsCodeDiagnostic[]; // Undefined on synchronize
@@ -35,6 +36,8 @@ export class SVDiagnosticCollection implements Disposable {
         return this.diagnosticCollectionChangedEventEmitter.event;
     }
 
+    public readonly fileMapper: FileMapper;
+
     public constructor(private readonly explorerController: ExplorerController) {
         this.disposables.push(this.diagnosticCollectionChangedEventEmitter);
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
@@ -45,6 +48,9 @@ export class SVDiagnosticCollection implements Disposable {
         this.issuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
         this.unmappedIssuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
         this.runInfoCollection = [];
+
+        this.fileMapper = new FileMapper(this);
+        this.disposables.push(this.fileMapper);
     }
 
     public dispose(): void {
@@ -188,7 +194,7 @@ export class SVDiagnosticCollection implements Disposable {
             }
 
             for (const index of issues.keys()) {
-                await SVDiagnosticFactory.tryToRemapLocations(issues[index]);
+                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, issues[index]);
             }
         }
 
@@ -206,7 +212,7 @@ export class SVDiagnosticCollection implements Disposable {
             const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
             for (const index of issues.keys()) {
                 const diag: SarifViewerVsCodeDiagnostic = issues[index];
-                await SVDiagnosticFactory.tryToRemapLocations(diag).then((remapped) => {
+                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, diag).then((remapped) => {
                     if (remapped) {
                         this.add(diag);
                         this.diagnosticCollectionChangedEventEmitter.fire({
@@ -304,7 +310,7 @@ export class SVDiagnosticCollection implements Disposable {
      * @param runsToRemove array of runids to be removed
      * @param collection diagnostic collection to search for matching runids
      */
-    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>) : void {
+    private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>): void {
         let diagnosticsRemoved: SarifViewerDiagnostic[] = [];
         for (const key of collection.keys()) {
             const diagnostics: SarifViewerVsCodeDiagnostic[] = collection.get(key) || [];

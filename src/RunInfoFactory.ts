@@ -75,7 +75,8 @@ export class RunInfoFactory {
             sarifFileFullPath: sarifFileName,
             sarifFileName: path.basename(sarifFileName),
             automationCategory: automationCategory,
-            automationIdentifier: automationIdentifier
+            automationIdentifier: automationIdentifier,
+            startUtc: startUtc
         };
     }
 }

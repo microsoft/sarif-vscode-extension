@@ -13,6 +13,7 @@ import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlows } from "./CodeFlows";
+import { FileMapper } from "./FileMapper";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
@@ -137,7 +138,7 @@ export class CodeFlowDecorations {
     /**
      * Selects the next CodeFlow step
      */
-    public static async selectNextCFStep(explorerController: ExplorerController): Promise<void>  {
+    public static async selectNextCFStep(explorerController: ExplorerController, fileMapper: FileMapper): Promise<void>  {
         const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
@@ -274,6 +275,7 @@ export class CodeFlowDecorations {
         }
 
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
+            explorerController,
             location,
             sarifLocation,
             diagnostic.resultInfo.runId);

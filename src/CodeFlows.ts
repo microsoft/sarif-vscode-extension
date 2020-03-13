@@ -18,14 +18,14 @@ export class CodeFlows {
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
      * @param runId id of the run this result is from
      */
-    public static async create(sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
+    public static async create(explorerController: ExplorerController, sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
         if (!sarifCodeFlows) {
             return [];
         }
 
         const codeFlows: CodeFlow[] = [];
         for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-            codeFlows.push(await CodeFlows.createCodeFlow(sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
+            codeFlows.push(await CodeFlows.createCodeFlow(explorerController, sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
         }
 
         return codeFlows;
@@ -72,7 +72,7 @@ export class CodeFlows {
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
      * @param runId used for mapping uribaseids
      */
-    public static async tryRemapCodeFlows(codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
+    public static async tryRemapCodeFlows(explorerController: ExplorerController, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
         for (const cFKey of codeFlows.keys()) {
             const codeFlow: CodeFlow = codeFlows[cFKey];
             for (const tFKey of codeFlow.threads.keys()) {
@@ -82,7 +82,7 @@ export class CodeFlows {
                     if (step.location && step.location.mapped) {
                         const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
                         if (sarifLoc) {
-                            await LocationFactory.create(sarifLoc, runId).then((location: Location) => {
+                            await LocationFactory.create(explorerController, sarifLoc, runId).then((location: Location) => {
                                 codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                             });
                         }
@@ -100,7 +100,7 @@ export class CodeFlows {
      * @param indexId The id based on the index in the codeflow array
      * @param runId id of the run this result is from
      */
-    private static async createCodeFlow(sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
+    private static async createCodeFlow(explorerController: ExplorerController, sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
             message: undefined,
             threads: [],
@@ -110,7 +110,7 @@ export class CodeFlows {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlows.createThreadFlow(sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
+            await CodeFlows.createThreadFlow(explorerController, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -125,7 +125,7 @@ export class CodeFlows {
      * @param indexId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
      * @param runId id of the run this result is from
      */
-    private static async createThreadFlow(sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
+    private static async createThreadFlow(explorerController: ExplorerController, sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
     ): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
@@ -139,7 +139,7 @@ export class CodeFlows {
         }
 
         for (let index: number = 0; index < sarifTF.locations.length; index++) {
-            await CodeFlows.createCodeFlowStep(sarifTF.locations[index], sarifTF.locations[index + 1],
+            await CodeFlows.createCodeFlowStep(explorerController, sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
@@ -174,6 +174,7 @@ export class CodeFlows {
      * @param runId id of the run this result is from
      */
     private static async createCodeFlowStep(
+        explorerController: ExplorerController,
         tFLocOrig: sarif.ThreadFlowLocation,
         nextTFLocOrig: sarif.ThreadFlowLocation,
         indexId: string,
@@ -215,7 +216,7 @@ export class CodeFlows {
         let loc: Location | undefined;
         let message: Message | undefined;
         if (tFLoc && tFLoc.location) {
-            loc = await LocationFactory.create(tFLoc.location, runId);
+            loc = await LocationFactory.create(explorerController, tFLoc.location, runId);
             message = Utilities.parseSarifMessage(tFLoc.location.message);
         }
 

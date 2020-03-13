@@ -9,6 +9,7 @@ import { ResultInfo, Location, RunInfo } from "./common/Interfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { ExplorerController } from "./ExplorerController";
 
 /**
  * Object that is used to display a problem in the Problems panel
@@ -45,14 +46,14 @@ export class SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    public static async tryToRemapLocations(diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
+    public static async tryToRemapLocations(explorerController: ExplorerController, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         const runId: number = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlows.tryRemapCodeFlows(diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
+            await CodeFlows.tryRemapCodeFlows(explorerController, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await await ResultInfoFactory.parseLocations(diagnostic.rawResult.relatedLocations, runId);
+            const parsedLocations: Location[] = await await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.relatedLocations, runId);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -61,7 +62,7 @@ export class SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.locations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(diagnostic.rawResult.locations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.locations, runId);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.locations[index] = parsedLocations[index];

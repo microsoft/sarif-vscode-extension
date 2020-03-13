@@ -12,6 +12,7 @@ import {
 import { LocationFactory } from "./LocationFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { FileMapper } from "./FileMapper";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -72,6 +73,12 @@ export class ExplorerController implements Disposable {
         return this.onWebViewMessageEventEmitter.event;
     }
 
+    public readonly diagnosticCollection: SVDiagnosticCollection;
+
+    public get fileMapper(): FileMapper {
+        return this.diagnosticCollection.fileMapper;
+    }
+
     private activeTab: string | undefined;
     private selectedRow: string | undefined;
     private wvPanel: WebviewPanel | undefined;
@@ -86,6 +93,9 @@ export class ExplorerController implements Disposable {
         this.disposables.push(window.onDidChangeVisibleTextEditors(CodeFlowDecorations.onVisibleTextEditorsChanged, this));
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
         this.disposables.push(commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, this.SendCFSelectionToExplorerCommand.bind(this)));
+
+        this.diagnosticCollection = new SVDiagnosticCollection(this);
+        this.disposables.push(this.diagnosticCollection);
     }
 
     public dispose(): void {
@@ -149,9 +159,10 @@ export class ExplorerController implements Disposable {
                     }
 
                     const location: Location | undefined = await LocationFactory.getOrRemap(
+                        this,
                         diagnostic.resultInfo.attachments[attachmentId].file,
                         diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        diagnostic.resultInfo.runId,
+                        diagnostic.resultInfo.runId
                     );
 
                     if (!location) {
@@ -175,7 +186,7 @@ export class ExplorerController implements Disposable {
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
                 };
-                await CodeFlowDecorations.updateSelectionHighlight(this, location, undefined);
+                await CodeFlowDecorations.updateSelectionHighlight(this,  location, undefined);
                 break;
 
                 case MessageType.VerbosityChanged:
@@ -311,7 +322,7 @@ export class ExplorerController implements Disposable {
     }
 
     /**
-     * Creates the webview message based on the current active dialog and saved state and sends to the webview
+     * Creates the webview message based on the current active diagnostic and saved state and sends to the webview
      * @param focus flag for setting focus to the webview
      */
     private sendActiveDiagnostic(focus: boolean): void {
@@ -325,7 +336,7 @@ export class ExplorerController implements Disposable {
             diagData = {
                 ...diagData,
                 resultInfo: this.activeDiagnostic.resultInfo,
-                runInfo: SVDiagnosticCollection.Instance.getRunInfo(this.activeDiagnostic.resultInfo.runId),
+                runInfo: this.diagnosticCollection.getRunInfo(this.activeDiagnostic.resultInfo.runId),
             };
         }
 
@@ -351,7 +362,7 @@ export class ExplorerController implements Disposable {
     }
 
     private async SendCFSelectionToExplorerCommand(id: string): Promise<void> {
-        await CodeFlowDecorations.updateCodeFlowSelection(this, id);
+        await CodeFlowDecorations.updateCodeFlowSelection(this,  id);
         this.setSelectedCodeFlow(id);
     }
 }

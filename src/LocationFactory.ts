@@ -4,13 +4,13 @@
 
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
-import { Location, Message } from "./common/Interfaces";
-import { FileMapper } from "./FileMapper";
+import { Location, Message, JsonMapping } from "./common/Interfaces";
 import { LogReader } from "./LogReader";
 import { Utilities } from "./Utilities";
+import { ExplorerController } from "./ExplorerController";
 
 /**
- * Class that processes and creates a location object from a results physicallocation
+ * Class that processes and creates a location object from a results physical location
  */
 export class LocationFactory {
     /**
@@ -18,7 +18,7 @@ export class LocationFactory {
      * @param sarifLocation location from result in sarif file
      * @param runId used for mapping uribaseids
      */
-    public static async create(sarifLocation: sarif.Location, runId: number): Promise<Location> {
+    public static async create(explorerController: ExplorerController, sarifLocation: sarif.Location, runId: number): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -31,9 +31,9 @@ export class LocationFactory {
 
         if (physLocation  && physLocation.artifactLocation) {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
-            uriBase = Utilities.getUriBase(artifactLocation, runId);
+            uriBase = Utilities.getUriBase(explorerController.diagnosticCollection, artifactLocation, runId);
 
-            uri = await FileMapper.Instance.get(artifactLocation, runId, uriBase);
+            uri = await explorerController.fileMapper.get(artifactLocation, runId, uriBase);
 
             if (uri) {
                 uri = Utilities.fixUriCasing(uri);
@@ -82,19 +82,23 @@ export class LocationFactory {
      * @param sarifLocation raw sarif Location of the file
      * @param runId used for mapping uribaseids
      */
-    public static async getOrRemap(location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
-        if (!location || !location.mapped) {
-            if (sarifLocation && sarifLocation.physicalLocation) {
-                const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
-                if (physLoc.artifactLocation && physLoc.artifactLocation.uri) {
-                    const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location && location.uriBase);
-                    await FileMapper.Instance.getUserToChooseFile(uri, location.uriBase).then(() => {
-                        return LocationFactory.create(sarifLocation, runId);
-                    }).then((remappedLocation) => {
-                        location = remappedLocation;
-                    });
-                }
-            }
+    public static async getOrRemap(explorerController: ExplorerController, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
+        if (location && !location.mapped) {
+            return location;
+        }
+
+        if (!sarifLocation || !sarifLocation.physicalLocation) {
+            return undefined;
+        }
+        const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
+
+        if (physLoc.artifactLocation && physLoc.artifactLocation.uri) {
+            const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location && location.uriBase);
+            await explorerController.fileMapper.getUserToChooseFile(uri, location.uriBase).then(() => {
+                return LocationFactory.create(explorerController, sarifLocation, runId);
+            }).then((remappedLocation) => {
+                location = remappedLocation;
+            });
         }
 
         return undefined;
@@ -106,12 +110,26 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileLocation(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
-        const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
-        const result = sarifMapping.data.runs[runIndex].results[resultIndex];
-        const locations = result.locations;
-        let resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
-        if (locations !== undefined && locations[0].physicalLocation !== undefined) {
+    public static mapToSarifFileLocation(sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+        if (!sarifMapping) {
+            return undefined;
+        }
+
+        const sarifLog: sarif.Log = sarifMapping.data;
+        if (runIndex >= sarifLog.runs.length) {
+            return undefined;
+        }
+
+        const sarifRun: sarif.Run = sarifLog.runs[runIndex];
+        if (!sarifRun.results) {
+            return undefined;
+        }
+
+        const result: sarif.Result = sarifRun.results[resultIndex];
+        const locations: sarif.Location[] | undefined = result.locations;
+        let resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
+        if (locations  && locations.length !== 0 && locations[0].physicalLocation) {
             resultPath = resultPath + "/locations/0/physicalLocation";
         } else if (result.analysisTarget !== undefined) {
             resultPath = resultPath + "/analysisTarget";
@@ -126,8 +144,8 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileResult(sarifUri: Uri, runIndex: number, resultIndex: number): Location {
-        const resultPath = "/runs/" + runIndex + "/results/" + resultIndex;
+    public static mapToSarifFileResult(sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+        const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
         return LocationFactory.createLocationOfMapping(sarifUri, resultPath, true);
     }
 
@@ -137,21 +155,25 @@ export class LocationFactory {
      * @param resultPath the pointer to the JsonMapping
      * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
      */
-    public static createLocationOfMapping(sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location {
-        const sarifMapping = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+    public static createLocationOfMapping(sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+        if (!sarifMapping) {
+            return undefined;
+        }
+
         const locationMapping = sarifMapping.pointers[resultPath];
         if (insertionPtr === true) {
             locationMapping.valueEnd = locationMapping.value;
         }
 
-        const resultLocation = {
+        const resultLocation: Location = {
             endOfLine: false,
             fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
             mapped: false,
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
             uri: sarifUri,
-        } as Location;
+        };
 
         return resultLocation;
     }
@@ -161,11 +183,11 @@ export class LocationFactory {
      * @param region region the result is located
      */
     public static parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
-        let startline = 0;
-        let startcol = 0;
-        let endline = 0;
-        let endcol = 1;
-        let eol = false;
+        let startline: number = 0;
+        let startcol: number = 0;
+        let endline: number = 0;
+        let endcol: number = 1;
+        let eol: boolean = false;
 
         if (region !== undefined) {
             if (region.startLine !== undefined) {

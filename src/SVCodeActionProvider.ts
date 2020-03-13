@@ -18,7 +18,8 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
     private isFirstCall = true;
     private disposables: vscode.Disposable[] = [];
 
-    public constructor(private readonly explorerController: ExplorerController, private readonly diagnosticCollection: SVDiagnosticCollection) {
+    public constructor(private readonly explorerController: ExplorerController,
+                    private readonly diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
     }
 
