@@ -200,22 +200,24 @@ export class CodeFlows {
                 }
             }
 
-            if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
+            if (tFLoc && tFLoc.nestingLevel &&
+                nextTFLoc && nextTFLoc.nestingLevel) {
+                if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
                 (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
-                isParentFlag = true;
-            } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
-                (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
-                isLastChildFlag = true;
+                    isParentFlag = true;
+                } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
+                    (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
+                    isLastChildFlag = true;
+                }
             }
         }
 
-        let loc: Location;
-        let message: Message;
-        await LocationFactory.create(tFLoc.location, runId).then((location: Location) => {
-            loc = location;
-        });
-
-        message = Utilities.parseSarifMessage(tFLoc.location.message);
+        let loc: Location | undefined;
+        let message: Message | undefined;
+        if (tFLoc && tFLoc.location) {
+            loc = await LocationFactory.create(tFLoc.location, runId);
+            message = Utilities.parseSarifMessage(tFLoc.location.message);
+        }
 
         let messageText: string;
         if (message !== undefined && message.text !== undefined) {

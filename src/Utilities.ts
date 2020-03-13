@@ -240,7 +240,7 @@ export class Utilities {
     public static getUriBase(fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
         let uriBase: string | undefined;
         if (fileLocation && fileLocation.uriBaseId && runId) {
-            const runUriBaseIds: { [key: string]: string } = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
+            const runUriBaseIds: { [key: string]: string } | undefined = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
             if (runUriBaseIds) {
                 uriBase = runUriBaseIds[fileLocation.uriBaseId];
             }

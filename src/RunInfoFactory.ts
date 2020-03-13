@@ -63,6 +63,7 @@ export class RunInfoFactory {
         }
 
         return {
+            id: 0,
             toolName: tool.name,
             toolFullName: toolFullName,
             toolFileName: toolFileName,

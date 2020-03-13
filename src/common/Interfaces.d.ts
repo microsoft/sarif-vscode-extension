@@ -59,7 +59,7 @@ export interface RunInfo {
     automationCategory?: string;
     automationIdentifier?: string;
     cmdLine?: string;
-    // id: number;
+    id: number;
     sarifFileFullPath: string;
     sarifFileName: string;
     startUtc?: string;
@@ -119,12 +119,12 @@ export interface CodeFlowStep {
     importance: sarif.ThreadFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
-    location: Location;
+    location?: Location;
     message: string;
     messageWithStep: string;
     nestingLevel: number;
-    state: object;
-    stepId: number;
+    state?: object;
+    stepId?: number;
     traversalId: string;
 }
 
@@ -191,8 +191,8 @@ export interface WebviewMessage {
 
 export interface DiagnosticData {
     activeTab?: any,
-    resultInfo: ResultInfo,
-    runInfo: RunInfo,
+    resultInfo?: ResultInfo,
+    runInfo?: RunInfo,
     selectedRow?: string,
     selectedVerbosity?: any
 }
@@ -265,8 +265,8 @@ export interface ResultsListCustomOrderValue extends ResultsListValue {
     value?: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
 }
 
-customOrderType: 'Baseline',
-    export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
+export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
+    customOrderType: 'Baseline',
     order: BaselineOrder
 }
 

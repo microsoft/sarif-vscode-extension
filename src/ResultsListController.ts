@@ -21,8 +21,8 @@ import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
  */
-export class ResultsListController {
-    private static instance: ResultsListController;
+export class ResultsListController implements Disposable {
+    private disposables: Disposable[] = [];
 
     private columns: { [key: string]: ResultsListColumn } = {};
 
@@ -45,27 +45,23 @@ export class ResultsListController {
     private readonly configGroupBy = "resultsListGroupBy";
     private readonly configSortBy = "resultsListSortBy";
 
-    private changeSettingsDisposable: Disposable;
-
-    private constructor() {
+    public constructor(private readonly explorerController: ExplorerController, private readonly codeActionProvider: SVCodeActionProvider) {
         this.resultsListRows = new Map<string, ResultsListRow>();
         this.postFilterListRows = [];
         this.filterCaseMatch = false;
         this.filterText = "";
         this.initializeColumns();
         this.onSettingsChanged({ affectsConfiguration: (section: string, resource?: Uri) => true});
-        this.changeSettingsDisposable = workspace.onDidChangeConfiguration(this.onSettingsChanged, this);
-    }
-
-    public static get Instance(): ResultsListController {
-        return ResultsListController.instance || (ResultsListController.instance = new ResultsListController());
+        this.disposables.push(workspace.onDidChangeConfiguration(this.onSettingsChanged, this));
+        this.disposables.push(explorerController.onWebViewMessage(this.onResultsListMessage.bind(this)));
     }
 
     /**
      * For disposing on extension close
      */
     public dispose(): void {
-        this.changeSettingsDisposable.dispose();
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     /**
@@ -119,6 +115,7 @@ export class ResultsListController {
                 }
                 await sarifConfig.update(this.configHideColumns, hideColsConfig, true);
                 break;
+
             case MessageType.ResultsListFilterApplied:
                 const input: string = msg.data.trim();
                 if (input !== this.filterText) {
@@ -127,6 +124,7 @@ export class ResultsListController {
                     this.postDataToExplorer();
                 }
                 break;
+
             case MessageType.ResultsListFilterCaseToggled:
                 this.filterCaseMatch = !this.filterCaseMatch;
                 this.updateFilteredRowsList();
@@ -154,7 +152,7 @@ export class ResultsListController {
                     if (diagLocation.range) {
                         textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                         textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
-                        await SVCodeActionProvider.Instance.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
+                        await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
                     }
                 }
                 break;
@@ -204,7 +202,7 @@ export class ResultsListController {
      */
     public postDataToExplorer(): void {
         const data: ResultsListData = this.getResultData();
-        ExplorerController.Instance.setResultsListData(data);
+        this.explorerController.setResultsListData(data);
     }
 
     /**

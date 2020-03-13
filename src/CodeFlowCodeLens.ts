@@ -7,35 +7,28 @@ import {
     TextDocument,
 } from "vscode";
 import { ExplorerController } from "./ExplorerController";
-import { CodeFlow, ThreadFlow, CodeFlowStep, Location } from "./common/Interfaces";
+import { CodeFlow, ThreadFlow, CodeFlowStep, Location, SarifViewerDiagnostic } from "./common/Interfaces";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
  */
-export class CodeFlowCodeLensProvider implements CodeLensProvider {
-    private static instance: CodeFlowCodeLensProvider;
-
-    private codeLensProvider: Disposable;
+export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
+    private disposables: Disposable[]  = [];
     private onDidChangeCodeLensesEmitter: EventEmitter<void> = new EventEmitter<void>();
 
-    private constructor() {
-        this.codeLensProvider = languages.registerCodeLensProvider("*", this);
-    }
-
-    static get Instance(): CodeFlowCodeLensProvider {
-        if (!CodeFlowCodeLensProvider.instance) {
-            CodeFlowCodeLensProvider.instance = new CodeFlowCodeLensProvider();
-        }
-
-        return CodeFlowCodeLensProvider.instance;
+    public constructor(private readonly explorerController: ExplorerController) {
+        this.disposables.push(this.onDidChangeCodeLensesEmitter);
+        this.disposables.push(languages.registerCodeLensProvider("*", this));
+        this.disposables.push(explorerController.onDidChangeVerbosity(this.onDidChangeVerbosity.bind(this)));
+        this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }
 
     /**
      * For disposing on extension close
      */
     public dispose(): void {
-        this.onDidChangeCodeLensesEmitter.dispose();
-        this.codeLensProvider.dispose();
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     public get onDidChangeCodeLenses(): Event<void> {
@@ -50,28 +43,27 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
      * @param token A cancellation token.
      */
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
-        const codeLenses: CodeLens[] = [];
-        const explorerController: ExplorerController = ExplorerController.Instance;
-        const verbosity: string = explorerController.selectedVerbosity || "important";
 
-        if (explorerController.activeSVDiagnostic) {
-            const codeFlows: CodeFlow[] = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
-            if (codeFlows) {
-                for (const cFIndex of codeFlows.keys()) {
-                    const codeFlow: CodeFlow = codeFlows[cFIndex];
-                    for (const tFIndex of codeFlow.threads.keys()) {
-                        const threadFlow: ThreadFlow = codeFlow.threads[tFIndex];
-                        for (const stepIndex of threadFlow.steps.keys()) {
-                            const step: CodeFlowStep = threadFlow.steps[stepIndex];
-                            const stepLoc: Location = step.location;
-                            if (stepLoc.uri && stepLoc.range && stepLoc.uri.toString() === document.uri.toString()) {
-                                if (step.importance === "essential" ||
-                                    verbosity === "unimportant" ||
-                                    step.importance === verbosity) {
-                                    const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
-                                    codeLenses.push(codeLens);
-                                }
-                            }
+        if (!this.explorerController.activeDiagnostic) {
+            return [];
+        }
+
+        const codeLenses: CodeLens[] = [];
+        const verbosity: string = this.explorerController.selectedVerbosity || "important";
+        const codeFlows: CodeFlow[] = this.explorerController.activeDiagnostic.resultInfo.codeFlows;
+        for (const cFIndex of codeFlows.keys()) {
+            const codeFlow: CodeFlow = codeFlows[cFIndex];
+            for (const tFIndex of codeFlow.threads.keys()) {
+                const threadFlow: ThreadFlow = codeFlow.threads[tFIndex];
+                for (const stepIndex of threadFlow.steps.keys()) {
+                    const step: CodeFlowStep = threadFlow.steps[stepIndex];
+                    const stepLoc: Location | undefined = step.location;
+                    if (stepLoc && stepLoc.uri && stepLoc.range && stepLoc.uri.toString() === document.uri.toString()) {
+                        if (step.importance === "essential" ||
+                            verbosity === "unimportant" ||
+                            step.importance === verbosity) {
+                            const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
+                            codeLenses.push(codeLens);
                         }
                     }
                 }
@@ -84,7 +76,14 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     /**
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
-    public triggerCodeLensRefresh(): void {
+    private onDidChangeVerbosity(verbosity: string | undefined): void {
+        this.onDidChangeCodeLensesEmitter.fire();
+    }
+
+    /**
+     * Use to trigger a refresh of the CodeFlow CodeLenses
+     */
+    public onDidChangeActiveDiagnostic(diagnostic: SarifViewerDiagnostic | undefined): void {
         this.onDidChangeCodeLensesEmitter.fire();
     }
 }

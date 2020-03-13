@@ -25,81 +25,84 @@ export class CodeFlowDecorations {
     /**
      * Updates the decorations when there is a change in the visible text editors
      */
-    public static onVisibleTextEditorsChanged(): void {
-        CodeFlowDecorations.updateStepsHighlight();
-        CodeFlowDecorations.updateResultGutterIcon();
+    public static onVisibleTextEditorsChanged(this: ExplorerController): void {
+        CodeFlowDecorations.updateStepsHighlight(this);
+        CodeFlowDecorations.updateResultGutterIcon(this);
     }
 
     /**
      * Updates the GutterIcon for the current active Diagnostic
      */
-    public static updateResultGutterIcon(): void {
-        const activeSVDiagnostic: SarifViewerVsCodeDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-        if (activeSVDiagnostic !== undefined) {
-            for (const editor of window.visibleTextEditors) {
-                if (activeSVDiagnostic.resultInfo &&
-                    activeSVDiagnostic.resultInfo.assignedLocation &&
-                    activeSVDiagnostic.resultInfo.assignedLocation.uri &&
-                    activeSVDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
-                    const errorDecoration: Range[] = [];
-                    const warningDecoration: Range[] = [];
-                    const infoDecoration: Range[] = [];
-                    const iconRange: Range = new Range(activeSVDiagnostic.range.start, activeSVDiagnostic.range.start);
-                    switch (activeSVDiagnostic.severity) {
-                        case DiagnosticSeverity.Error:
-                            errorDecoration.push(iconRange);
-                            break;
-                        case DiagnosticSeverity.Warning:
-                            warningDecoration.push(iconRange);
-                            break;
-                        case DiagnosticSeverity.Information:
-                            infoDecoration.push(iconRange);
-                            break;
-                        default:
-                            // What should the default be exactly?
-                            // There are 'hints' as well in VSCode.
-                            warningDecoration.push(iconRange);
-                            break;
-                    }
+    public static updateResultGutterIcon(explorerController: ExplorerController): void {
+        const activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+        if (!activeDiagnostic) {
+            return;
+        }
 
-                    editor.setDecorations(CodeFlowDecorations.GutterErrorDecorationType, errorDecoration);
-                    editor.setDecorations(CodeFlowDecorations.GutterWarningDecorationType, warningDecoration);
-                    editor.setDecorations(CodeFlowDecorations.GutterInfoDecorationType, infoDecoration);
-
-                    break;
+        for (const editor of window.visibleTextEditors) {
+            if (activeDiagnostic.resultInfo &&
+                activeDiagnostic.resultInfo.assignedLocation &&
+                activeDiagnostic.resultInfo.assignedLocation.uri &&
+                activeDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
+                const errorDecoration: Range[] = [];
+                const warningDecoration: Range[] = [];
+                const infoDecoration: Range[] = [];
+                const iconRange: Range = new Range(activeDiagnostic.range.start, activeDiagnostic.range.start);
+                switch (activeDiagnostic.severity) {
+                    case DiagnosticSeverity.Error:
+                        errorDecoration.push(iconRange);
+                        break;
+                    case DiagnosticSeverity.Warning:
+                        warningDecoration.push(iconRange);
+                        break;
+                    case DiagnosticSeverity.Information:
+                        infoDecoration.push(iconRange);
+                        break;
+                    default:
+                        // What should the default be exactly?
+                        // There are 'hints' as well in VSCode.
+                        warningDecoration.push(iconRange);
+                        break;
                 }
-            }
 
+                editor.setDecorations(CodeFlowDecorations.GutterErrorDecorationType, errorDecoration);
+                editor.setDecorations(CodeFlowDecorations.GutterWarningDecorationType, warningDecoration);
+                editor.setDecorations(CodeFlowDecorations.GutterInfoDecorationType, infoDecoration);
+
+                break;
+            }
         }
     }
 
     /**
      * Updates the decorations for the steps in the Code Flow tree
      */
-    public static updateStepsHighlight(): void {
-        const activeSVDiagnostic: SarifViewerVsCodeDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-        if (activeSVDiagnostic && activeSVDiagnostic.resultInfo.codeFlows !== undefined) {
-            // for each visible editor add any of the codeflow locations that match it's Uri
-            for (const editor of window.visibleTextEditors) {
-                const decorations: DecorationOptions[] = [];
-                const unimportantDecorations: DecorationOptions[] = [];
-                for (const codeflow of activeSVDiagnostic.resultInfo.codeFlows) {
-                    // For now we only support one threadFlow in the code flow
-                    for (const step of codeflow.threads[0].steps) {
-                        const decoration: DecorationOptions | undefined = CodeFlowDecorations.createHighlightDecoration(step, editor);
-                        if (decoration) {
-                            if (step.importance === "unimportant") {
-                                unimportantDecorations.push(decoration);
-                            } else {
-                                decorations.push(decoration);
-                            }
+    public static updateStepsHighlight(explorerController: ExplorerController): void {
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+        if (!diagnostic || !diagnostic.resultInfo.codeFlows) {
+            return;
+        }
+
+        // for each visible editor add any of the codeflow locations that match it's Uri
+        for (const editor of window.visibleTextEditors) {
+            const decorations: DecorationOptions[] = [];
+            const unimportantDecorations: DecorationOptions[] = [];
+            for (const codeflow of diagnostic.resultInfo.codeFlows) {
+                // For now we only support one threadFlow in the code flow
+                for (const step of codeflow.threads[0].steps) {
+                    const decoration: DecorationOptions | undefined = CodeFlowDecorations.createHighlightDecoration(step, editor);
+                    if (decoration) {
+                        if (step.importance === "unimportant") {
+                            unimportantDecorations.push(decoration);
+                        } else {
+                            decorations.push(decoration);
                         }
                     }
                 }
-
-                editor.setDecorations(CodeFlowDecorations.LocationDecorationType, decorations);
-                editor.setDecorations(CodeFlowDecorations.UnimportantLocationDecorationType, unimportantDecorations);
             }
+
+            editor.setDecorations(CodeFlowDecorations.LocationDecorationType, decorations);
+            editor.setDecorations(CodeFlowDecorations.UnimportantLocationDecorationType, unimportantDecorations);
         }
     }
 
@@ -108,23 +111,25 @@ export class CodeFlowDecorations {
      * @param attachmentId Id of the attachment selected
      * @param regionId Id of the region selected
      */
-    public static async updateAttachmentSelection(attachmentId: number, regionId: number): Promise<void> {
-        const svDiagnostic: SarifViewerVsCodeDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-        if (svDiagnostic.rawResult && svDiagnostic.rawResult.attachments) {
-            const attachment: sarif.Attachment | undefined = svDiagnostic.rawResult.attachments[attachmentId];
-            if (attachment && attachment.regions) {
-                const region: sarif.Region | undefined =  attachment.regions[regionId];
-                if (region) {
-                    const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
-                    const sarifPhysicalLocation: sarif.PhysicalLocation = {
-                        artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        region: region,
-                    };
+    public static async updateAttachmentSelection(explorerController: ExplorerController, attachmentId: number, regionId: number): Promise<void> {
+        const svDiagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+        if (!svDiagnostic || !svDiagnostic.rawResult.attachments) {
+            return;
+        }
 
-                    const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
+        const attachment: sarif.Attachment | undefined = svDiagnostic.rawResult.attachments[attachmentId];
+        if (attachment && attachment.regions) {
+            const region: sarif.Region | undefined =  attachment.regions[regionId];
+            if (region) {
+                const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
+                const sarifPhysicalLocation: sarif.PhysicalLocation = {
+                    artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
+                    region: region,
+                };
 
-                    await CodeFlowDecorations.updateSelectionHighlight(location, sarifLocation);
-                }
+                const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
+
+                await CodeFlowDecorations.updateSelectionHighlight(explorerController, location, sarifLocation);
             }
         }
     }
@@ -132,11 +137,17 @@ export class CodeFlowDecorations {
     /**
      * Selects the next CodeFlow step
      */
-    public static async selectNextCFStep(): Promise<void>  {
+    public static async selectNextCFStep(explorerController: ExplorerController): Promise<void>  {
+        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+        if (!diagnostic) {
+            return;
+        }
+
         if (CodeFlowDecorations.lastCodeFlowSelected) {
             const nextId: CodeFlowStepId = CodeFlowDecorations.lastCodeFlowSelected;
             nextId.stepId++;
-            const codeFlows: CodeFlow[] = ExplorerController.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+
+            const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
             if (nextId.stepId >= codeFlows[nextId.cFId].threads[nextId.tFId].steps.length) {
                 nextId.stepId = 0;
                 nextId.tFId++;
@@ -148,15 +159,13 @@ export class CodeFlowDecorations {
                     }
                 }
             }
-            await CodeFlowDecorations.updateCodeFlowSelection(undefined, nextId);
-            ExplorerController.Instance.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
+            await CodeFlowDecorations.updateCodeFlowSelection(explorerController, undefined, nextId);
+            explorerController.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
         } else {
-            const activeDiag: SarifViewerDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-            if (activeDiag !== undefined && activeDiag.resultInfo !== undefined &&
-                activeDiag.resultInfo.codeFlows !== undefined && activeDiag.resultInfo.codeFlows.length > 0) {
+            if (diagnostic.resultInfo.codeFlows.length > 0) {
                 const firstStepId: string = "0_0_0";
-                await CodeFlowDecorations.updateCodeFlowSelection(firstStepId);
-                ExplorerController.Instance.setSelectedCodeFlow(firstStepId);
+                await CodeFlowDecorations.updateCodeFlowSelection(explorerController, firstStepId);
+                explorerController.setSelectedCodeFlow(firstStepId);
             }
         }
     }
@@ -164,11 +173,16 @@ export class CodeFlowDecorations {
     /**
      * Selects the previous CodeFlow step
      */
-    public static async selectPrevCFStep(): Promise<void> {
+    public static async selectPrevCFStep(explorerController: ExplorerController): Promise<void> {
+        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+        if (!diagnostic) {
+            return;
+        }
+
         if (CodeFlowDecorations.lastCodeFlowSelected) {
             const prevId: CodeFlowStepId = CodeFlowDecorations.lastCodeFlowSelected;
             prevId.stepId--;
-            const codeFlows: CodeFlow[] = ExplorerController.Instance.activeSVDiagnostic.resultInfo.codeFlows;
+            const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
             if (prevId.stepId < 0) {
                 prevId.tFId--;
                 if (prevId.tFId < 0) {
@@ -181,20 +195,17 @@ export class CodeFlowDecorations {
                 prevId.stepId = codeFlows[prevId.cFId].threads[prevId.tFId].steps.length - 1;
             }
 
-            await CodeFlowDecorations.updateCodeFlowSelection(undefined, prevId);
-            ExplorerController.Instance.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
+            await CodeFlowDecorations.updateCodeFlowSelection(explorerController, undefined, prevId);
+            explorerController.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
         } else {
-            const activeDiag: SarifViewerDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-            if (activeDiag !== undefined && activeDiag.resultInfo !== undefined) {
-                const codeflows: CodeFlow[] = activeDiag.resultInfo.codeFlows;
-                if (codeflows !== undefined && codeflows.length > 0) {
-                    const cFId: number = activeDiag.resultInfo.codeFlows.length - 1;
-                    const tFId: number = activeDiag.resultInfo.codeFlows[cFId].threads.length - 1;
-                    const stepId: number = activeDiag.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
-                    const lastStepId: string = `${cFId}_${tFId}_${stepId}`;
-                    await CodeFlowDecorations.updateCodeFlowSelection(lastStepId);
-                    ExplorerController.Instance.setSelectedCodeFlow(lastStepId);
-                }
+            const codeflows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
+            if (codeflows.length > 0) {
+                const cFId: number = diagnostic.resultInfo.codeFlows.length - 1;
+                const tFId: number = diagnostic.resultInfo.codeFlows[cFId].threads.length - 1;
+                const stepId: number = diagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
+                const lastStepId: string = `${cFId}_${tFId}_${stepId}`;
+                await CodeFlowDecorations.updateCodeFlowSelection(explorerController, lastStepId);
+                explorerController.setSelectedCodeFlow(lastStepId);
             }
         }
     }
@@ -205,7 +216,7 @@ export class CodeFlowDecorations {
      * @param idText text version of the id of the Code Flow, set to undefined if using id
      * @param idCFStep Id object of the Code Flow, set to undefined if using idText
      */
-    public static async updateCodeFlowSelection(idText?: string, idCFStep?: CodeFlowStepId): Promise<void> {
+    public static async updateCodeFlowSelection(explorerController: ExplorerController, idText?: string, idCFStep?: CodeFlowStepId): Promise<void> {
         let id: CodeFlowStepId | undefined;
         if (idText) {
             id = CodeFlows.parseCodeFlowId(idText);
@@ -214,7 +225,11 @@ export class CodeFlowDecorations {
         }
 
         if (id) {
-            const diagnostic: SarifViewerDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
+            const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+            if (!diagnostic) {
+                return;
+            }
+
             if (!diagnostic.rawResult.codeFlows || !diagnostic.resultInfo.codeFlows) {
                 return;
             }
@@ -233,8 +248,14 @@ export class CodeFlowDecorations {
                 return;
             }
 
+            const resultInfoLocation: Location | undefined = resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location;
+            if (!resultInfoLocation) {
+                return;
+            }
+
             await  CodeFlowDecorations.updateSelectionHighlight(
-                resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location,
+                explorerController,
+                resultInfoLocation,
                 rawResultLocation);
             CodeFlowDecorations.lastCodeFlowSelected = id;
         }
@@ -245,11 +266,17 @@ export class CodeFlowDecorations {
      * @param location processed location to put the highlight at
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
-    public static async updateSelectionHighlight(location: Location, sarifLocation: sarif.Location): Promise<void> {
+    public static async updateSelectionHighlight(explorerController: ExplorerController, location: Location, sarifLocation?: sarif.Location): Promise<void> {
+        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+
+        if (!diagnostic) {
+            return;
+        }
+
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
             location,
             sarifLocation,
-            ExplorerController.Instance.activeSVDiagnostic.resultInfo.runId);
+            diagnostic.resultInfo.runId);
 
         if (remappedLocation && remappedLocation.mapped && remappedLocation.uri) {
             let locRange: Range | undefined = remappedLocation.range;
@@ -347,7 +374,8 @@ export class CodeFlowDecorations {
      * @param editor text editor we check if the location exists in
      */
     private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions | undefined {
-        if (!step.location.uri ||
+        if (!step.location ||
+            !step.location.uri ||
             !step.location.mapped ||
             !step.location.range ||
             step.location.uri.toString() !== editor.document.uri.toString()) {

@@ -12,6 +12,7 @@ import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
+import { ResultsListController } from "./ResultsListController";
 
 /**
  * This method is called when the extension is activated.
@@ -22,14 +23,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
-    // Create the launch Explorer command
-    context.subscriptions.push(
-        commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
-            ExplorerController.Instance.createWebview();
-        }));
+    const explorerController: ExplorerController = new ExplorerController(context);
+    context.subscriptions.push(explorerController);
 
-    context.subscriptions.push(
-        commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, SendCFSelectionToExplorerCommand));
+    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController);
+    context.subscriptions.push(codeActionProvider);
+
+    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider));
+    context.subscriptions.push(new SVCodeActionProvider(explorerController));
+    context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
 
     // Create File mapper command
     context.subscriptions.push(commands.registerCommand(FileMapper.MapCommand, mapFileCommand));
@@ -42,8 +44,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     );
 
     // Instantiate the providers and file mapper which will register their listeners and register their disposables
-    context.subscriptions.push(SVCodeActionProvider.Instance);
-    context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
     context.subscriptions.push(FileMapper.Instance);
 
     // Read the initial set of open SARIF files
@@ -52,11 +52,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     // TODO: Need to add "Start floating promise" utility function here
     await reader.readAll();
-}
-
-async function SendCFSelectionToExplorerCommand(id: string): Promise<void> {
-    await CodeFlowDecorations.updateCodeFlowSelection(id);
-    ExplorerController.Instance.setSelectedCodeFlow(id);
 }
 
 function mapFileCommand(fileLocation: sarif.ArtifactLocation, runId: number): Promise<void>  {

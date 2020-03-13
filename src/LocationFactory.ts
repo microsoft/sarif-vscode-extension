@@ -82,7 +82,7 @@ export class LocationFactory {
      * @param sarifLocation raw sarif Location of the file
      * @param runId used for mapping uribaseids
      */
-    public static async getOrRemap(location: Location | undefined, sarifLocation: sarif.Location, runId: number): Promise<Location | undefined> {
+    public static async getOrRemap(location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
         if (!location || !location.mapped) {
             if (sarifLocation && sarifLocation.physicalLocation) {
                 const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
