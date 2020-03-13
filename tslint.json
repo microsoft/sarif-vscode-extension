@@ -60,7 +60,9 @@
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {
         "exclude": [
-            "**/vscode.proposed.d.ts"
+            "**/vscode.proposed.d.ts",
+            "src/test/*",
+            "src/explorer/*"
         ]
     }
 }

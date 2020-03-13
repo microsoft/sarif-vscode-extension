@@ -268,16 +268,19 @@ export interface ResultsListCustomOrderValue extends ResultsListValue {
 export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
     customOrderType: 'Baseline',
     order: BaselineOrder
+    value?: sarif.Result.baselineState;
 }
 
 export interface ResultsListKindValue extends ResultsListCustomOrderValue {
     customOrderType: 'Kind',
     order: KindOrder
+    value?: sarif.Result.kind;
 }
 
 export interface ResultsListSeverityValue extends ResultsListCustomOrderValue {
     customOrderType: 'Severity',
     order: SeverityLevelOrder
+    value?: sarif.Result.level,
 }
 
 export interface ResultsListColumn {

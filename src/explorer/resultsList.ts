@@ -389,11 +389,11 @@ class ResultsList {
                     textAndTooltip.text = colData.value || "";
                     textAndTooltip.tooltip = colData.tooltip || textAndTooltip.text;
 
-                    if ((colData as ResultsListSeverityValue).isSeverity && colData.value !== undefined) {
+                    if ((colData as ResultsListSeverityValue).customOrderType === 'Severity' && colData.value !== undefined) {
                         textAndTooltip = this.webview.severityTextAndTooltip(colData.value);
-                    } else if ((colData as ResultsListBaselineValue).isBaseLine && colData.value !== undefined) {
+                    } else if ((colData as ResultsListBaselineValue).customOrderType === 'Baseline'  && colData.value !== undefined) {
                         textAndTooltip = this.webview.baselineStateTextAndTooltip(colData.value);
-                    } else if ((colData as ResultsListKindValue).isKind && colData.value !== undefined) {
+                    } else if ((colData as ResultsListKindValue).customOrderType === 'Kind' && colData.value !== undefined) {
                         textAndTooltip = this.webview.kindTextAndTooltip(colData.value);
                     }
                 }
