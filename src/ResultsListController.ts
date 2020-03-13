@@ -14,9 +14,8 @@ import {
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -45,7 +44,9 @@ export class ResultsListController implements Disposable {
     private readonly configGroupBy = "resultsListGroupBy";
     private readonly configSortBy = "resultsListSortBy";
 
-    public constructor(private readonly explorerController: ExplorerController, private readonly codeActionProvider: SVCodeActionProvider) {
+    public constructor(private readonly explorerController: ExplorerController,
+                       private readonly codeActionProvider: SVCodeActionProvider,
+                       private readonly diagnosticCollection: SVDiagnosticCollection) {
         this.resultsListRows = new Map<string, ResultsListRow>();
         this.postFilterListRows = [];
         this.filterCaseMatch = false;
@@ -54,6 +55,7 @@ export class ResultsListController implements Disposable {
         this.onSettingsChanged({ affectsConfiguration: (section: string, resource?: Uri) => true});
         this.disposables.push(workspace.onDidChangeConfiguration(this.onSettingsChanged, this));
         this.disposables.push(explorerController.onWebViewMessage(this.onResultsListMessage.bind(this)));
+        this.disposables.push(diagnosticCollection.diagnosticCollectionChanged(this.onDiagnosticCollectionChanged.bind(this)));
     }
 
     /**
@@ -69,10 +71,14 @@ export class ResultsListController implements Disposable {
      * @param diags Array of diags that need to be updated
      * @param remove flag to remove the diags in the array, otherwise they will be udpated
      */
-    public updateResultsListData(diags: SarifViewerVsCodeDiagnostic[], remove?: boolean): void {
-        if (remove) {
-            for (const key of diags.keys()) {
-                const id: string = `${diags[key].resultInfo.runId}_${diags[key].resultInfo.id}`;
+    public updateResultsListData(diagnosticsChangedEvent: SVDiagnosticsChangedEvent): void {
+        if (!diagnosticsChangedEvent.diagnostics) {
+            throw new Error ("Should always have changed diagnostics");
+        }
+
+        if (diagnosticsChangedEvent.type === 'Remove') {
+            for (const key of diagnosticsChangedEvent.diagnostics.keys()) {
+                const id: string = `${diagnosticsChangedEvent.diagnostics[key].resultInfo.runId}_${diagnosticsChangedEvent.diagnostics[key].resultInfo.id}`;
                 this.resultsListRows.delete(id);
                 const index: number = this.postFilterListRows.indexOf(id);
                 if (index !== -1) {
@@ -81,8 +87,8 @@ export class ResultsListController implements Disposable {
             }
         } else {
             const regEx: RegExp = this.generateFilterRegExp();
-            for (const key of diags.keys()) {
-                const row: ResultsListRow = this.createResultsListRow(diags[key].resultInfo);
+            for (const key of diagnosticsChangedEvent.diagnostics.keys()) {
+                const row: ResultsListRow = this.createResultsListRow(diagnosticsChangedEvent.diagnostics[key].resultInfo);
                 const id: string = `${row.runId.value}_${row.resultId.value}`;
                 this.resultsListRows.set(id, row);
 
@@ -142,7 +148,11 @@ export class ResultsListController implements Disposable {
             case MessageType.ResultsListResultSelected:
                 // What is the proper type if "id"?
                 const id: { resultId: number; runId: number} = JSON.parse(msg.data);
-                const diagnostic: SarifViewerDiagnostic = SVDiagnosticCollection.Instance.getResultInfo(id.resultId, id.runId);
+                const diagnostic: SarifViewerDiagnostic | undefined = this.diagnosticCollection.getResultInfo(id.resultId, id.runId);
+                if (!diagnostic) {
+                    break;
+                }
+
                 const diagLocation: Location | undefined = diagnostic.resultInfo.assignedLocation;
 
                 if (diagLocation && diagLocation.uri) {
@@ -267,7 +277,7 @@ export class ResultsListController implements Disposable {
      */
     private createResultsListRow(resultInfo: ResultInfo): ResultsListRow {
 
-        const run: RunInfo = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId);
+        const run: RunInfo | undefined = this.diagnosticCollection.getRunInfo(resultInfo.runId);
 
         let baselineOrder: BaselineOrder = BaselineOrder.absent;
         switch (resultInfo.baselineState) {
@@ -327,10 +337,10 @@ export class ResultsListController implements Disposable {
             ruleId: { value: resultInfo.ruleId },
             ruleName: { value: resultInfo.ruleName },
             runId: { value: resultInfo.runId },
-            automationCat: { value: run.automationCategory },
-            automationId:  { value: run.automationIdentifier },
-            sarifFile: { value: run.sarifFileName, tooltip: run.sarifFileFullPath },
-            tool: { value: run.toolName, tooltip: run.toolFullName },
+            automationCat: { value: run && run.automationCategory },
+            automationId:  { value: run && run.automationIdentifier },
+            sarifFile: { value: run && run.sarifFileName, tooltip: run && run.sarifFileFullPath },
+            tool: { value: run && run.toolName, tooltip: run && run.toolFullName },
             resultFile: { tooltip: resultFsPath, value: resultFileName },
             logicalLocation: { value: logicalLocation },
             rank: { value: resultInfo.rank },
@@ -555,5 +565,18 @@ export class ResultsListController implements Disposable {
                 hide: false, title: "Automation Id",
             }
         };
+    }
+
+    private onDiagnosticCollectionChanged(diagnosticChangeEvent: SVDiagnosticsChangedEvent): void {
+    switch (diagnosticChangeEvent.type) {
+        case 'Synchronize':
+            this.postDataToExplorer();
+            break;
+
+        case 'Add':
+        case 'Remove':
+            this.updateResultsListData(diagnosticChangeEvent);
+            break;
+        }
     }
 }

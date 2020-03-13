@@ -18,7 +18,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
     private isFirstCall = true;
     private disposables: vscode.Disposable[] = [];
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly explorerController: ExplorerController, private readonly diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
     }
 
@@ -94,7 +94,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
 
                 const action: vscode.CodeAction = {
                     command: cmd,
-                    diagnostics: SVDiagnosticCollection.Instance.getAllUnmappedDiagnostics(),
+                    diagnostics:  this.diagnosticCollection.getAllUnmappedDiagnostics(),
                     kind: vscode.CodeActionKind.QuickFix,
                     title: "Map To Source",
                 } ;

@@ -8,7 +8,7 @@ import * as sarif from "sarif";
 import * as os from "os";
 import * as vscode from "vscode";
 
-import { Location, Message } from "./common/Interfaces";
+import { Location, Message, RunInfo } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
@@ -237,17 +237,25 @@ export class Utilities {
      * @param fileLocation File Location which contains the uriBaseId
      * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
+    public static getUriBase(diagnosticCollection: SVDiagnosticCollection, fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
         let uriBase: string | undefined;
-        if (fileLocation && fileLocation.uriBaseId && runId) {
-            const runUriBaseIds: { [key: string]: string } | undefined = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
-            if (runUriBaseIds) {
-                uriBase = runUriBaseIds[fileLocation.uriBaseId];
-            }
 
-            if (!uriBase) {
-                uriBase = fileLocation.uriBaseId;
-            }
+        if (!fileLocation || !fileLocation.uriBaseId || !runId) {
+            return undefined;
+        }
+
+        const runInfo: RunInfo | undefined = diagnosticCollection.getRunInfo(runId);
+        if (!runInfo) {
+            return undefined;
+        }
+
+        const runUriBaseIds: { [key: string]: string } | undefined = runInfo.uriBaseIds;
+        if (runUriBaseIds) {
+            uriBase = runUriBaseIds[fileLocation.uriBaseId];
+        }
+
+        if (!uriBase) {
+            uriBase = fileLocation.uriBaseId;
         }
 
         return uriBase;

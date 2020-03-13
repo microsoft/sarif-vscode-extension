@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import { DiagnosticSeverity } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { ResultInfo, Location } from "./common/Interfaces";
+import { ResultInfo, Location, RunInfo } from "./common/Interfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
@@ -23,7 +23,7 @@ export class SVDiagnosticFactory {
      * @param resultInfo processed result info
      * @param rawResult sarif result info from the sarif file
      */
-    public static create(resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
+    public static create(diagnosticCollection: SVDiagnosticCollection, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
         if (!resultInfo.assignedLocation ||
             !resultInfo.assignedLocation.range ||
             !resultInfo.message.text) {
@@ -33,7 +33,9 @@ export class SVDiagnosticFactory {
         const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(resultInfo, rawResult, resultInfo.assignedLocation.range, resultInfo.message.text);
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultInfo.severityLevel);
         svDiagnostic.code = resultInfo.ruleId;
-        svDiagnostic.source = SVDiagnosticCollection.Instance.getRunInfo(resultInfo.runId).toolName;
+
+        const runInfo: RunInfo | undefined = diagnosticCollection.getRunInfo(resultInfo.runId);
+        svDiagnostic.source = runInfo ? runInfo.toolName : "Unknown tool";
 
         svDiagnostic.message = SVDiagnosticFactory.updateMessage(svDiagnostic);
 

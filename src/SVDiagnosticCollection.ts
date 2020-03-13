@@ -2,40 +2,54 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range } from "vscode";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable } from "vscode";
 import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
-import { ResultsListController } from "./ResultsListController";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+
+export interface SVDiagnosticsChangedEvent {
+    diagnostics?: SarifViewerVsCodeDiagnostic[]; // Undefined on synchronize
+    type: 'Add' | 'Remove' | 'Synchronize';
+}
 
 /**
  * Manager for the Diagnostic Collection contianing the sarif result diagnostics
  * Allows us to control which diagnostics we send to the Problems panel, so we can show a custom message on max entries
  * And lets us easily try to map those that weren't mapped previously
  */
-export class SVDiagnosticCollection {
-    private static MaxDiagCollectionSize: number;
+export class SVDiagnosticCollection implements Disposable {
+    private disposables: Disposable[] = [];
 
-    private static instance: SVDiagnosticCollection;
+    private static MaxDiagCollectionSize: number;
 
     private diagnosticCollection: DiagnosticCollection;
     private issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
     private runInfoCollection: RunInfo[];
     private unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
 
-    public static get Instance(): SVDiagnosticCollection {
-        return SVDiagnosticCollection.instance || (SVDiagnosticCollection.instance = new SVDiagnosticCollection());
+    private diagnosticCollectionChangedEventEmitter: EventEmitter<SVDiagnosticsChangedEvent> = new EventEmitter<SVDiagnosticsChangedEvent>();
+
+    public get diagnosticCollectionChanged(): Event<SVDiagnosticsChangedEvent> {
+        return this.diagnosticCollectionChangedEventEmitter.event;
     }
 
-    private constructor() {
+    public constructor(private readonly explorerController: ExplorerController) {
+        this.disposables.push(this.diagnosticCollectionChangedEventEmitter);
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
+        this.disposables.push(this.diagnosticCollection);
+
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
         this.issuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
         this.unmappedIssuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
         this.runInfoCollection = [];
+    }
+
+    public dispose(): void {
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     /**
@@ -47,22 +61,27 @@ export class SVDiagnosticCollection {
         this.addToDiagnosticCollection(this.issuesCollection);
         this.addToDiagnosticCollection(this.unmappedIssuesCollection);
 
-        ResultsListController.Instance.postDataToExplorer();
+        this.diagnosticCollectionChangedEventEmitter.fire({
+            type: 'Synchronize'
+        });
     }
 
     /**
-     * Adds the diagnostic to the collection of diagnostics, seperates them into mapped and umapped diagnositcs
+     * Adds the diagnostic to the collection of diagnostics, separates them into mapped and unmapped diagnostics
      * After you finish adding all of the new diagnostics, call syncDiagnostics to get them added to the problems panel
      * @param issue diagnostic to add to the problems panel
      */
     public add(issue: SarifViewerVsCodeDiagnostic): void {
-        if (issue.resultInfo.assignedLocation.mapped) {
+        if (issue.resultInfo.assignedLocation && issue.resultInfo.assignedLocation.mapped) {
             this.addToCollection(this.issuesCollection, issue);
         } else {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
 
-        ResultsListController.Instance.updateResultsListData([issue]);
+        this.diagnosticCollectionChangedEventEmitter.fire({
+            diagnostics: [issue],
+            type: 'Add'
+        });
     }
 
     /**
@@ -91,14 +110,7 @@ export class SVDiagnosticCollection {
     }
 
     /**
-     * For disposing on extension close
-     */
-    public dispose(): void {
-        this.diagnosticCollection.dispose();
-    }
-
-    /**
-     * Gets a flat array of all the diaganostics (includes mapped and unmapped)
+     * Gets a flat array of all the diagnostics (includes mapped and unmapped)
      */
     public getAllDiagnostics(): SarifViewerVsCodeDiagnostic[] {
         const allDiags: SarifViewerVsCodeDiagnostic[] = [];
@@ -130,25 +142,21 @@ export class SVDiagnosticCollection {
      * @param resultId Id of the result
      * @param runId Id of the run the results from
      */
-    public getResultInfo(resultId: number, runId: number): SarifViewerVsCodeDiagnostic {
-        let result: SarifViewerVsCodeDiagnostic;
+    public getResultInfo(resultId: number, runId: number): SarifViewerVsCodeDiagnostic | undefined {
+        let result: SarifViewerVsCodeDiagnostic | undefined;
         this.unmappedIssuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-            if (result === undefined) {
+            if (!result) {
                 result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                    if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
-                        return true;
-                    }
+                    return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
                 });
             }
         });
 
-        if (result === undefined) {
+        if (!result) {
             this.issuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-                if (result === undefined) {
+                if (!result) {
                     result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                        if (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId) {
-                            return true;
-                        }
+                        return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
                     });
                 }
             });
@@ -161,12 +169,9 @@ export class SVDiagnosticCollection {
      * Returns the runinfo from the runinfo collection corresponding to the id
      * @param id Id of the runinfo to return
      */
-    public getRunInfo(id: number): RunInfo {
-        return this.runInfoCollection.find((value: RunInfo, index: number, obj: RunInfo[]) => {
-            if (value.id === id) {
-                return true;
-            }
-            return false;
+    public getRunInfo(id: number): RunInfo | undefined {
+        return this.runInfoCollection.find((runInfo) => {
+            return (runInfo.id === id);
         });
     }
 
@@ -177,25 +182,40 @@ export class SVDiagnosticCollection {
      */
     public async mappingChanged(): Promise<void> {
         for (const key of this.issuesCollection.keys()) {
-            const issues = this.issuesCollection.get(key);
+            const issues: SarifViewerDiagnostic[] | undefined = this.issuesCollection.get(key);
+            if (!issues) {
+                continue;
+            }
+
             for (const index of issues.keys()) {
                 await SVDiagnosticFactory.tryToRemapLocations(issues[index]);
             }
         }
 
+        const explorerDiag: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        if (!explorerDiag) {
+            return;
+        }
+
         for (const key of this.unmappedIssuesCollection.keys()) {
-            const remainingUnmappedIssues = [];
-            const explorerDiag = ExplorerController.Instance.activeSVDiagnostic;
-            const issues = this.unmappedIssuesCollection.get(key);
+            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.unmappedIssuesCollection.get(key);
+            if (!issues) {
+                return;
+            }
+
+            const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
             for (const index of issues.keys()) {
-                const diag = issues[index];
+                const diag: SarifViewerVsCodeDiagnostic = issues[index];
                 await SVDiagnosticFactory.tryToRemapLocations(diag).then((remapped) => {
                     if (remapped) {
                         this.add(diag);
-                        ResultsListController.Instance.updateResultsListData([diag]);
+                        this.diagnosticCollectionChangedEventEmitter.fire({
+                            diagnostics: [diag],
+                            type: 'Add'
+                        });
                         if (explorerDiag !== undefined && explorerDiag.resultInfo.runId === diag.resultInfo.runId &&
                             explorerDiag.resultInfo.id === diag.resultInfo.id) {
-                            ExplorerController.Instance.setActiveDiagnostic(diag, true);
+                            this.explorerController.setActiveDiagnostic(diag, true);
                         }
                     } else {
                         remainingUnmappedIssues.push(issues[index]);
@@ -217,18 +237,18 @@ export class SVDiagnosticCollection {
      * Itterates through the issue collections and removes any results that originated from the file
      * @param path Path (including file) of the file that has the runs to be removed
      */
-    public removeRuns(path: string) {
-        const runsToRemove = new Array<number>();
-        for (let i = SVDiagnosticCollection.Instance.runInfoCollection.length - 1; i >= 0; i--) {
-            if (SVDiagnosticCollection.Instance.runInfoCollection[i].sarifFileFullPath === path) {
-                runsToRemove.push(SVDiagnosticCollection.Instance.runInfoCollection[i].id);
-                SVDiagnosticCollection.Instance.runInfoCollection.splice(i, 1);
+    public removeRuns(path: string): void {
+        const runsToRemove: number[] = [];
+        for (let i: number = this.runInfoCollection.length - 1; i >= 0; i--) {
+            if (this.runInfoCollection[i].sarifFileFullPath === path) {
+                runsToRemove.push(this.runInfoCollection[i].id);
+                this.runInfoCollection.splice(i, 1);
             }
         }
 
-        this.removeResults(runsToRemove, SVDiagnosticCollection.Instance.issuesCollection);
-        this.removeResults(runsToRemove, SVDiagnosticCollection.Instance.unmappedIssuesCollection);
-        SVDiagnosticCollection.Instance.syncDiagnostics();
+        this.removeResults(runsToRemove, this.issuesCollection);
+        this.removeResults(runsToRemove, this.unmappedIssuesCollection);
+        this.syncDiagnostics();
     }
 
     /**
@@ -236,10 +256,16 @@ export class SVDiagnosticCollection {
      * @param collection dictionary to add the diagnostic to
      * @param issue diagnostic that needs to be added to dictionary
      */
-    private addToCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>, issue: SarifViewerVsCodeDiagnostic) {
-        const key = Utilities.getFsPathWithFragment(issue.resultInfo.assignedLocation.uri);
-        if (collection.has(key)) {
-            collection.get(key).push(issue);
+    private addToCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>, issue: SarifViewerVsCodeDiagnostic): void {
+        if (!issue.resultInfo.assignedLocation || !issue.resultInfo.assignedLocation.uri) {
+            return;
+        }
+
+        const key: string = Utilities.getFsPathWithFragment(issue.resultInfo.assignedLocation.uri);
+        const diagnostics: SarifViewerVsCodeDiagnostic[] | undefined = collection.get(key);
+
+        if (diagnostics) {
+            diagnostics.push(issue);
         } else {
             collection.set(key, [issue]);
         }
@@ -250,14 +276,18 @@ export class SVDiagnosticCollection {
      * Handles if the size is larger then the max we stop 1 short and add our custom message as the final diagnostic
      * @param collection dictionary of diagnostics that need to be added to the panel
      */
-    private addToDiagnosticCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>) {
+    private addToDiagnosticCollection(collection: Map<string, SarifViewerVsCodeDiagnostic[]>): void {
         for (const issues of collection.values()) {
             let diags: Diagnostic[];
-            const key = issues[0].resultInfo.assignedLocation.uri;
+            if (!issues[0].resultInfo.assignedLocation || !issues[0].resultInfo.assignedLocation.uri) {
+                continue;
+            }
+
+            const key: Uri = issues[0].resultInfo.assignedLocation.uri;
             if (issues.length > SVDiagnosticCollection.MaxDiagCollectionSize) {
-                const msg = `Only displaying ${SVDiagnosticCollection.MaxDiagCollectionSize} of the total
+                const msg: string = `Only displaying ${SVDiagnosticCollection.MaxDiagCollectionSize} of the total
                     ${issues.length} results in the SARIF log.`;
-                const maxReachedDiag = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
+                const maxReachedDiag: Diagnostic = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
                 maxReachedDiag.code = SVDiagnosticFactory.Code;
                 maxReachedDiag.source = "SARIFViewer";
                 diags = [maxReachedDiag].concat(issues.slice(0, SVDiagnosticCollection.MaxDiagCollectionSize));
@@ -295,7 +325,10 @@ export class SVDiagnosticCollection {
         }
 
         if (diagnosticsRemoved.length > 0) {
-            ResultsListController.Instance.updateResultsListData(diagnosticsRemoved, true);
+            this.diagnosticCollectionChangedEventEmitter.fire( {
+                diagnostics: diagnosticsRemoved,
+                type: 'Remove'
+            });
         }
     }
 }

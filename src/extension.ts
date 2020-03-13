@@ -13,6 +13,7 @@ import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
 import { ResultsListController } from "./ResultsListController";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * This method is called when the extension is activated.
@@ -26,11 +27,16 @@ export async function activate(context: ExtensionContext): Promise<void> {
     const explorerController: ExplorerController = new ExplorerController(context);
     context.subscriptions.push(explorerController);
 
-    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController);
+    const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection(explorerController);
+    context.subscriptions.push(diagnosticCollection);
+
+    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController, diagnosticCollection);
     context.subscriptions.push(codeActionProvider);
 
-    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider));
-    context.subscriptions.push(new SVCodeActionProvider(explorerController));
+    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider, diagnosticCollection));
+    context.subscriptions.push(diagnosticCollection);
+
+    context.subscriptions.push(new SVCodeActionProvider(explorerController, diagnosticCollection));
     context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
 
     // Create File mapper command
