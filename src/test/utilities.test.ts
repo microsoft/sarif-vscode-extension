@@ -297,7 +297,7 @@ suite("getUirBase", () => {
     };
     
     const explorerController: ExplorerController = new ExplorerController(new MockExtensionContext());
-    const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection(explorerController);
+    const diagnosticCollection: SVDiagnosticCollection = explorerController.diagnosticCollection;
 
     const runIdTest: number  = diagnosticCollection.addRunInfo(runInfoTest);
 

@@ -351,38 +351,29 @@ export class FileConverter {
     private static parseVersion(version: string): SarifVersion {
         const splitVer: string[] = version.split(".");
 
-        const original: string = version.toString();
-        const major: number = parseInt(splitVer[0], 10);
-        const minor: number = parseInt(splitVer[1], 10);
-        let sub: number | undefined;
-        let rtm: number | undefined;
-        let csd: number | undefined;
-        let csdDate: Date | undefined;
+        const sarifVersion: SarifVersion = {
+            major: parseInt(splitVer[0], 10),
+            minor: parseInt(splitVer[1], 10),
+            sub: parseInt(splitVer[1], 10),
+            original: version.toString()
+        };
 
         if (splitVer[2].indexOf("-csd") !== -1) {
             const splitSub: string[] = splitVer[2].split("-");
-            sub = parseInt(splitSub[0], 10);
-            csd = parseInt(splitVer[3], 10);
+            sarifVersion.sub = parseInt(splitSub[0], 10);
+            sarifVersion.csd = parseInt(splitVer[3], 10);
             const splitDate: string[] = splitVer[5].split("-");
-            csdDate = new Date(parseInt(splitDate[0], 10), parseInt(splitDate[1], 10),
+            sarifVersion.csdDate = new Date(parseInt(splitDate[0], 10), parseInt(splitDate[1], 10),
                 parseInt(splitDate[2], 10));
         } else if (splitVer[2].indexOf("-rtm") !== -1) {
             const splitSub: string[] = splitVer[2].split("-");
-            sub = parseInt(splitSub[0], 10);
-            rtm = parseInt(splitVer[3], 10);
+            sarifVersion.sub = parseInt(splitSub[0], 10);
+            sarifVersion.rtm = parseInt(splitVer[3], 10);
         } else {
-            sub = parseInt(splitVer[2], 10);
+            sarifVersion.sub = parseInt(splitVer[2], 10);
         }
 
-        return {
-            major: major,
-            minor: minor,
-            original: original,
-            sub: sub,
-            csd: csd,
-            csdDate: csdDate,
-            rtm: rtm
-        };
+        return sarifVersion;
     }
 
     /**

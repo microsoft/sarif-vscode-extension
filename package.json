@@ -193,7 +193,7 @@
         "@types/glob": "^7.1.1",
         "@types/jquery": "^3.3.30",
         "@types/markdown-it": "0.0.8",
-        "@types/mocha": "^2.2.42",
+        "@types/mocha": "^7.0.2",
         "@types/node": "^7.10.7",
         "@types/sarif": "^2.1.2",
         "@types/vscode": "^1.36.0",

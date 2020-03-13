@@ -9,10 +9,15 @@ export function run(): Promise<void> {
     // Create the mocha test
     const mocha: Mocha = new Mocha({
         ui: "tdd",
+
+        fullStackTrace: true,
+
+        // Do not allow uncaught exceptions.
+        allowUncaught: false
     });
     mocha.useColors(true);
 
-    const testsRoot: string = path.resolve(__dirname, "..");
+    const testsRoot: string = __dirname;
 
     return new Promise((c, e) => {
         glob("**/**.test.js", { cwd: testsRoot }, (err: Error | null, files: string[]) => {
@@ -23,18 +28,14 @@ export function run(): Promise<void> {
             // Add files to the test suite
             files.forEach((file: string) => mocha.addFile(path.resolve(testsRoot, file)));
 
-            try {
-                // Run the mocha test
-                mocha.run((failures) => {
-                    if (failures > 0) {
-                        e(new Error(`${failures} tests failed.`));
-                    } else {
-                        c();
-                    }
-                });
-            } catch (err) {
-                e(err);
-            }
+            // Run the mocha test
+            mocha.run((failures) => {
+                if (failures > 0) {
+                    e(new Error(`${failures} tests failed.`));
+                } else {
+                    c();
+                }
+            });
         });
     });
 }

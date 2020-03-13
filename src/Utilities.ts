@@ -268,7 +268,7 @@ export class Utilities {
      * @param locations only needed if your message supports embedded links
      */
     public static parseSarifMessage(sarifMessage?: sarif.Message, locations?: Location[]): Message {
-        if (sarifMessage) {
+        if (sarifMessage && (sarifMessage.markdown !== undefined || sarifMessage.text !== undefined)) {
             let mdText: string | undefined = sarifMessage.markdown;
             let msgText: string | undefined = sarifMessage.text;
 

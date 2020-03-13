@@ -127,10 +127,10 @@ suite("parseVersion", () => {
 
     test("full csd version", () => {
         const version = "2.0.0-csd.2.beta.2018-9-10";
-        const parsedVer = callParseVersion(version);
+        const parsedVer: SarifVersion = callParseVersion(version);
         assert.deepEqual(parsedVer, {
             csd: 2, csdDate: new Date(2018, 9, 10), major: 2, minor: 0, original: version, sub: 0,
-        } as SarifVersion);
+        });
     });
 
     test("rtm version", () => {
