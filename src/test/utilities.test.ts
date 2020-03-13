@@ -12,6 +12,8 @@ import { Range, Uri, Position } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
 import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { Utilities } from "../Utilities";
+import { ExplorerController } from "../ExplorerController";
+import { MockExtensionContext } from "./mockExtensionContext";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema: string = "file";
@@ -160,9 +162,9 @@ suite("parseSarifMessages", () => {
     test("Simple embedded link", () => {
         const inputText: string = "A string with [Embedded](0) links";
         const outputText: string = "A string with Embedded(file:///c:/folder/file.ext) links";
-        const start: Position  = locations1[0].range.start;
-        const end: Position = locations1[0].range.end;
-        const file: string = locations1[0].uri.toString(true);
+        const start: Position  = locations1[0].range!.start;
+        const end: Position = locations1[0].range!.end;
+        const file: string = locations1[0].uri!.toString(true);
         const outputHtml: string  =
             `<p>A string with <a href="#0" class="sourcelink" data-file="${file}" ` +
             `data-sLine="${start.line}" data-sCol="${start.character}" ` +
@@ -179,9 +181,9 @@ suite("parseSarifMessages", () => {
         const inputText: string = "[Embedded](0) Links: A string with duplicate [Embedded](0) links";
         const outputText: string = "Embedded(file:///c:/folder/file.ext) Links: " +
             "A string with duplicate Embedded(file:///c:/folder/file.ext) links";
-        const start: Position = locations1[0].range.start;
-        const end: Position = locations1[0].range.end;
-        const file: string = locations1[0].uri.toString(true);
+        const start: Position = locations1[0].range!.start;
+        const end: Position = locations1[0].range!.end;
+        const file: string = locations1[0].uri!.toString(true);
         const outputHtml: string  =
             `<p><a href="#0" class="sourcelink" data-file="${file}" ` +
             `data-sLine="${start.line}" data-sCol="${start.character}" ` +
@@ -203,12 +205,12 @@ suite("parseSarifMessages", () => {
         const inputText: string = "A string with two Embedded Links: [link1](1) [link2](0)";
         const outputText: string = "A string with two Embedded Links: link1(file:///c:/folder/file.ext)" +
             " link2(file:///c:/folder1/file1.ext)";
-        const start1: Position = locations2[0].range.start;
-        const end1: Position = locations2[0].range.end;
-        const file1: string = locations2[0].uri.toString(true);
-        const start2: Position = locations2[1].range.start;
-        const end2: Position = locations2[1].range.end;
-        const file2: string = locations2[1].uri.toString(true);
+        const start1: Position = locations2[0].range!.start;
+        const end1: Position = locations2[0].range!.end;
+        const file1: string = locations2[0].uri!.toString(true);
+        const start2: Position = locations2[1].range!.start;
+        const end2: Position = locations2[1].range!.end;
+        const file2: string = locations2[1].uri!.toString(true);
         const outputHtml: string  =
             `<p>A string with two Embedded Links: <a href="#0" class="sourcelink" data-file="${file1}" ` +
             `data-sLine="${start1.line}" data-sCol="${start1.character}" ` +
@@ -230,9 +232,9 @@ suite("parseSarifMessages", () => {
         const inputText: string = "Bracketed links: \\[[outside bracket](0)\\], [\\[inside bracket\\]](0)";
         const outputText: string = "Bracketed links: [outside bracket(file:///c:/folder/file.ext)]," +
             " [inside bracket](file:///c:/folder/file.ext)";
-        const start: Position = locations1[0].range.start;
-        const end: Position = locations1[0].range.end;
-        const file: string = locations1[0].uri.toString(true);
+        const start: Position = locations1[0].range!.start;
+        const end: Position = locations1[0].range!.end;
+        const file: string = locations1[0].uri!.toString(true);
         const outputHtml: string =
             `<p>Bracketed links: [` +
             `<a href="#0" class="sourcelink" data-file="${file}" ` +
@@ -266,9 +268,9 @@ suite("parseSarifMessages", () => {
         const inputText: string = "A string with {0} argument and an [Embedded](0) link.";
         const inputArguments: string[] = ["1"];
         const outputText: string = "A string with 1 argument and an Embedded(file:///c:/folder/file.ext) link.";
-        const start: Position = locations1[0].range.start;
-        const end: Position = locations1[0].range.end;
-        const file: string = locations1[0].uri.toString(true);
+        const start: Position = locations1[0].range!.start;
+        const end: Position = locations1[0].range!.end;
+        const file: string = locations1[0].uri!.toString(true);
         const outputHtml: string  =
             `<p>A string with 1 argument and an ` +
             `<a href="#0" class="sourcelink" data-file="${file}" ` +
@@ -285,33 +287,40 @@ suite("parseSarifMessages", () => {
 
 suite("getUirBase", () => {
     const runInfoTest: RunInfo = {
+        id: 0,
+        toolName: "Test Tool Name",
+        sarifFileName: "test.sarif",
+        sarifFileFullPath: "file:///c:/test.sarif",
         uriBaseIds: {
             test1: "file:///c:/folder1", test2: "file:///c:/folder2"
         }
     };
+    
+    const explorerController: ExplorerController = new ExplorerController(new MockExtensionContext());
+    const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection(explorerController);
 
-    const runIdTest: number  = SVDiagnosticCollection.Instance.addRunInfo(runInfoTest);
+    const runIdTest: number  = diagnosticCollection.addRunInfo(runInfoTest);
 
     test("Undefined fileLocation", () => {
-        const base: string | undefined = Utilities.getUriBase(undefined, undefined);
+        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, undefined, undefined);
         assert.equal(base, undefined);
     });
 
     test("Undefined uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "file:///c:/folder/file.ext" };
-        const base: string | undefined = Utilities.getUriBase(sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
         assert.equal(base, undefined);
     });
 
     test("UriBase match", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "test2" };
-        const base: string | undefined = Utilities.getUriBase(sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
         assert.equal(base, "file:///c:/folder2");
     });
 
     test("No matching uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "noTest" };
-        const base: string | undefined = Utilities.getUriBase(sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
         assert.equal(base, "noTest");
     });
 });

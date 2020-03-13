@@ -41,11 +41,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
     );
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = LogReader.Instance;
+    const reader: LogReader = (new LogReader(explorerController));
     context.subscriptions.push(reader);
 
-    // TODO: Need to add "Start floating promise" utility function here
-    await reader.readAll();
+    // We do not need to block extension startup for reading any open documents.
+    // tslint:disable-next-line: no-floating-promises
+    reader.readAll();
 }
 
 /**
