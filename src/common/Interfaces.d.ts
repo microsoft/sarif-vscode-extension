@@ -80,7 +80,7 @@ export interface ResultInfo {
     fixes: Fix[];
     id: number;
     kind: sarif.Result.kind;
-    locationInSarifFile: Location;
+    locationInSarifFile?: Location;
     locations: Location[];
     message: Message;
     messageHTML?: HTMLLabelElement;
@@ -304,4 +304,19 @@ export interface SarifVersion {
 export interface JsonMapping {
     data: sarif.Log,
     pointers: any,
+}
+
+export interface JsonPointer {
+    value: {
+        line: number;
+        column: number;
+    };
+    valueEnd: {
+        line: number;
+        column: number;
+    };
+}
+
+export interface JsonMap {
+    parse: (json: string) => JsonMapping;
 }

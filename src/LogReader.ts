@@ -6,21 +6,21 @@ import * as path from "path";
 import * as sarif from "sarif";
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
 import { CodeFlows } from "./CodeFlows";
-import { JsonMapping, ResultInfo, RunInfo } from "./common/Interfaces";
+import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
-import { FileMapper } from "./FileMapper";
 import { LocationFactory } from "./LocationFactory";
 import { ProgressHelper } from "./ProgressHelper";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { RunInfoFactory } from "./RunInfoFactory";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
+import { ExplorerController } from "./ExplorerController";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
  */
-export class LogReader {
-    private static instance: LogReader;
+export class LogReader implements Disposable {
+    private disposables: Disposable[] = [];
 
     /**
      * Helper method to check if the document provided is a sarif file
@@ -32,45 +32,23 @@ export class LogReader {
 
     public sarifJSONMapping: Map<string, JsonMapping>;
 
-    private closeListenerDisposable: Disposable;
-    private openListenerDisposable: Disposable;
-    private jsonMap;
+    private readonly jsonMap: JsonMap;
 
-    public static get Instance(): LogReader {
-        if (LogReader.instance === undefined) {
-            LogReader.instance = new LogReader();
-        }
-
-        return LogReader.instance;
-    }
-
-    private constructor() {
-        this.sarifJSONMapping = new Map<string, any>();
-
+    public constructor(private readonly explorerController: ExplorerController) {
+        this.sarifJSONMapping = new Map<string, JsonMapping>();
         this.jsonMap = require("json-source-map");
 
-        FileMapper.Instance.OnMappingChanged(SVDiagnosticCollection.Instance.mappingChanged,
-            SVDiagnosticCollection.Instance);
-
         // Listen for new sarif files to open or close
-        this.openListenerDisposable = workspace.onDidOpenTextDocument(this.onDocumentOpened);
-        this.closeListenerDisposable = workspace.onDidCloseTextDocument(this.onDocumentClosed);
-    }
-
-    /**
-     * Clears the all of the issues that get displayed in the problems panel
-     */
-    public clearList(): void {
-        SVDiagnosticCollection.Instance.clear();
+        this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened));
+        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed));
     }
 
     /**
      * For disposing on extension close
      */
     public dispose(): void {
-        SVDiagnosticCollection.Instance.dispose();
-        this.openListenerDisposable.dispose();
-        this.closeListenerDisposable.dispose();
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     /**
@@ -80,7 +58,7 @@ export class LogReader {
      */
     public onDocumentClosed(doc: TextDocument): void {
         if (LogReader.isSarifFile(doc)) {
-            SVDiagnosticCollection.Instance.removeRuns(doc.fileName);
+            this.explorerController.diagnosticCollection.removeRuns(doc.fileName);
             return;
         }
     }
@@ -89,9 +67,9 @@ export class LogReader {
      * When a sarif document opens we read it and sync to the list of issues to add it to the problems panel
      * @param doc document that was opened
      */
-    public onDocumentOpened(doc: TextDocument): void {
+    public async onDocumentOpened(doc: TextDocument): Promise<void> {
         if (LogReader.isSarifFile(doc)) {
-            LogReader.Instance.read(doc, true);
+            await this.read(doc, true);
         }
     }
 
@@ -100,9 +78,9 @@ export class LogReader {
      */
     public async readAll(): Promise<void> {
         // Get all the documents and read them
-        const docs = workspace.textDocuments;
+        const docs: TextDocument[] = workspace.textDocuments;
 
-        let needsSync = false;
+        let needsSync: boolean = false;
         for (const doc of docs) {
             if (!needsSync && LogReader.isSarifFile(doc)) {
                 needsSync = true;
@@ -111,7 +89,7 @@ export class LogReader {
         }
 
         if (needsSync) {
-            SVDiagnosticCollection.Instance.syncDiagnostics();
+            this.explorerController.diagnosticCollection.syncDiagnostics();
         }
     }
 
@@ -122,54 +100,65 @@ export class LogReader {
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
         if (LogReader.isSarifFile(doc)) {
-            const pOptions = {
+            const pOptions: ProgressOptions = {
                 cancellable: false,
                 location: ProgressLocation.Notification,
                 title: "Processing " + path.basename(doc.fileName),
-            } as ProgressOptions;
+            };
 
             return window.withProgress(pOptions,
-                async (progress: Progress<{ message?: string; increment?: number; }>, cancleToken): Promise<void> => {
+                async (progress: Progress<{ message?: string; increment?: number }>, cancleToken): Promise<void> => {
                     ProgressHelper.Instance.Progress = progress;
                     let runInfo: RunInfo;
-                    let log: sarif.Log;
 
                     let docMapping: JsonMapping;
                     await ProgressHelper.Instance.setProgressReport("Parsing Sarif file");
                     try {
                         docMapping = this.jsonMap.parse(doc.getText()) as JsonMapping;
                     } catch (error) {
-                        window.showErrorMessage(`Sarif Viewer:
+                        await window.showErrorMessage(`Sarif Viewer:
                         Cannot display results for '${doc.fileName}' because: ${error.message}`);
                         return;
                     }
 
                     this.sarifJSONMapping.set(doc.uri.toString(), docMapping);
-                    log = docMapping.data;
+                    const log: sarif.Log = docMapping.data;
+
+                    if (!log.$schema) {
+                        await window.showErrorMessage(`Sarif Viewer:
+                        Cannot display results for '${doc.fileName}' because the shema was not defined.`);
+                        return;
+                    }
 
                     if (FileConverter.tryUpgradeSarif(log.version, log.$schema, doc)) {
                         return;
                     }
 
-                    for (let runIndex = 0; runIndex < log.runs.length; runIndex++) {
-                        const run = log.runs[runIndex];
+                    for (let runIndex: number = 0; runIndex < log.runs.length; runIndex++) {
+                        const run: sarif.Run = log.runs[runIndex];
                         runInfo = RunInfoFactory.Create(run, doc.fileName);
-                        const runId = SVDiagnosticCollection.Instance.addRunInfo(runInfo);
-                        CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runId);
+                        const runId: number = this.explorerController.diagnosticCollection.addRunInfo(runInfo);
 
-                        await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                        await FileMapper.Instance.mapFiles(run.artifacts, runId);
+                        if (run.threadFlowLocations) {
+                            CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runId);
+                        }
 
-                        await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
-                        await this.readResults(run.results, run.tool, runId, doc.uri, runIndex);
+                        if (run.artifacts) {
+                            await ProgressHelper.Instance.setProgressReport("Mapping Files");
+                            await this.explorerController.fileMapper.mapFiles(run.artifacts, runId);
+                        }
+
+                        if (run.results) {
+                            await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
+                            await this.readResults(run.results, run.tool, runId, doc.uri, runIndex);
+                        }
                     }
 
                     if (sync) {
-                        SVDiagnosticCollection.Instance.syncDiagnostics();
+                        this.explorerController.diagnosticCollection.syncDiagnostics();
                     }
 
                     ProgressHelper.Instance.Progress = undefined;
-                    return Promise.resolve();
                 });
         }
     }
@@ -184,32 +173,37 @@ export class LogReader {
      */
     private async readResults(
         results: sarif.Result[], tool: sarif.Tool, runId: number, docUri: Uri, runIndex: number,
-    ) {
-        const showIncrement = results.length > 1000;
-        let percent = 0;
+    ): Promise<void> {
+        const showIncrement: boolean = results.length > 1000;
+        let percent: number = 0;
         let interval: number;
         let nextIncrement: number;
         if (showIncrement) {
             interval = Math.floor(results.length / 10);
             nextIncrement = interval;
+        } else {
+            interval = 1;
+            nextIncrement = 1;
         }
-        for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
+
+        for (let resultIndex: number = 0; resultIndex < results.length; resultIndex++) {
             if (showIncrement && resultIndex >= nextIncrement) {
                 nextIncrement = nextIncrement + interval;
                 percent = percent + 10;
-                const progressMsg = `Loading ${results.length} Results: ${percent}% completed`;
+                const progressMsg: string = `Loading ${results.length} Results: ${percent}% completed`;
                 await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
             }
-            const sarifResult = results[resultIndex];
-            await ResultInfoFactory.create(sarifResult, runId, tool).then((resultInfo: ResultInfo) => {
-                resultInfo.id = resultIndex;
-                resultInfo.locationInSarifFile = LocationFactory.mapToSarifFileResult(docUri, runIndex, resultIndex);
-                if (resultInfo.assignedLocation === undefined || !resultInfo.assignedLocation.mapped) {
-                    resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(docUri, runIndex, resultIndex);
-                }
-                const diagnostic = SVDiagnosticFactory.create(resultInfo, sarifResult);
-                SVDiagnosticCollection.Instance.add(diagnostic);
-            });
+            const sarifResult: sarif.Result = results[resultIndex];
+            const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this, docUri, runIndex, resultIndex);
+
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.explorerController, sarifResult, runId, tool, resultIndex, locationInSarifFile);
+
+            if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
+                resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this, docUri, runIndex, resultIndex);
+            }
+
+            const diagnostic: SarifViewerVsCodeDiagnostic  = SVDiagnosticFactory.create(this.explorerController.diagnosticCollection, resultInfo, sarifResult);
+            this.explorerController.diagnosticCollection.add(diagnostic);
         }
     }
 }

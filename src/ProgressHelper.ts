@@ -11,8 +11,7 @@ export class ProgressHelper {
     private static instance: ProgressHelper;
 
     private progress: Progress<{ message?: string; increment?: number}> | undefined;
-    private progressMsg: string | undefined;
-    private progressInc: number | undefined;
+    private currentProgress: { message?: string; increment?: number} | undefined;
 
     public static get Instance(): ProgressHelper {
         if (!ProgressHelper.instance) {
@@ -23,17 +22,15 @@ export class ProgressHelper {
     }
 
     public get CurrentMessage(): string | undefined {
-        return this.progressMsg;
+        return this.currentProgress && this.currentProgress.message;
     }
 
     public get CurrentIncrement(): number | undefined {
-        return this.progressInc;
+        return this.currentProgress && this.currentProgress.increment;
     }
 
-    public set Progress(progress: Progress<{ message?: string; increment?: number }>) {
+    public set Progress(progress: Progress<{ message?: string; increment?: number }> | undefined) {
         this.progress = progress;
-        this.progressMsg = undefined;
-        this.progressInc = undefined;
     }
 
     /**
@@ -43,15 +40,10 @@ export class ProgressHelper {
      */
     public async setProgressReport(message?: string, increment?: number): Promise<void> {
         if (this.progress) {
-            const update: { message?: string; increment?: number} = {};
-            if (message) {
-                this.progressMsg = message;
-                update.message = message;
-            }
-            if (increment) {
-                this.progressInc = increment;
-                update.increment = increment;
-            }
+            const update: { message?: string; increment?: number} = {
+                message: message,
+                increment: increment
+            };
             this.progress.report(update);
             return new Promise((resolve) => {
                 setTimeout(() => {

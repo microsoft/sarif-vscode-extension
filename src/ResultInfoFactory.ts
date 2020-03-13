@@ -25,7 +25,7 @@ export class ResultInfoFactory {
      * @param id Identifier used to identify this result.
      * @param locationInSarifFile the location in the SARIF file
      */
-    public static async create(explorerController: ExplorerController, result: sarif.Result, runId: number, tool: sarif.Tool, id: number, locationInSarifFile: Location): Promise<ResultInfo> {
+    public static async create(explorerController: ExplorerController, result: sarif.Result, runId: number, tool: sarif.Tool, id: number, locationInSarifFile?: Location): Promise<ResultInfo> {
         const locations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.locations, runId);
         const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.relatedLocations, runId);
         const attachments: Attachment[] = await ResultInfoFactory.parseAttachments(explorerController, result.attachments, runId);

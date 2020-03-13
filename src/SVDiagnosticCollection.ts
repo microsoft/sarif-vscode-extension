@@ -51,6 +51,8 @@ export class SVDiagnosticCollection implements Disposable {
 
         this.fileMapper = new FileMapper(this);
         this.disposables.push(this.fileMapper);
+
+        this.disposables.push(this.fileMapper.OnMappingChanged(this.mappingChanged.bind(this)));
     }
 
     public dispose(): void {

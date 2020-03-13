@@ -4,7 +4,7 @@
 
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
-import { Location, Message, JsonMapping } from "./common/Interfaces";
+import { Location, Message, JsonMapping, JsonPointer } from "./common/Interfaces";
 import { LogReader } from "./LogReader";
 import { Utilities } from "./Utilities";
 import { ExplorerController } from "./ExplorerController";
@@ -83,25 +83,29 @@ export class LocationFactory {
      * @param runId used for mapping uribaseids
      */
     public static async getOrRemap(explorerController: ExplorerController, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
-        if (location && !location.mapped) {
+        // If it's already mapped, then just return it.
+        if (location && location.mapped) {
             return location;
         }
 
-        if (!sarifLocation || !sarifLocation.physicalLocation) {
+        // We can't remap a location without a uri base. (I think)
+        if (!location || !location.uriBase) {
             return undefined;
         }
-        const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
 
-        if (physLoc.artifactLocation && physLoc.artifactLocation.uri) {
-            const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location && location.uriBase);
-            await explorerController.fileMapper.getUserToChooseFile(uri, location.uriBase).then(() => {
-                return LocationFactory.create(explorerController, sarifLocation, runId);
-            }).then((remappedLocation) => {
-                location = remappedLocation;
-            });
+        if (!sarifLocation || !sarifLocation.physicalLocation) {
+            return location;
         }
 
-        return undefined;
+        const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
+
+        if (!physLoc.artifactLocation || !physLoc.artifactLocation.uri) {
+            return location;
+        }
+
+        const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
+        await explorerController.fileMapper.getUserToChooseFile(uri, location.uriBase);
+        return await LocationFactory.create(explorerController, sarifLocation, runId);
     }
 
     /**
@@ -110,8 +114,8 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileLocation(sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
-        const sarifMapping: JsonMapping | undefined = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+    public static mapToSarifFileLocation(logReader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = logReader.sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
         }
@@ -135,7 +139,7 @@ export class LocationFactory {
             resultPath = resultPath + "/analysisTarget";
         }
 
-        return LocationFactory.createLocationOfMapping(sarifUri, resultPath);
+        return LocationFactory.createLocationOfMapping(logReader, sarifUri, resultPath);
     }
 
     /**
@@ -144,9 +148,9 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileResult(sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+    public static mapToSarifFileResult(logRader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
         const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
-        return LocationFactory.createLocationOfMapping(sarifUri, resultPath, true);
+        return LocationFactory.createLocationOfMapping(logRader, sarifUri, resultPath, true);
     }
 
     /**
@@ -155,13 +159,14 @@ export class LocationFactory {
      * @param resultPath the pointer to the JsonMapping
      * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
      */
-    public static createLocationOfMapping(sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
-        const sarifMapping: JsonMapping | undefined = LogReader.Instance.sarifJSONMapping.get(sarifUri.toString());
+    public static createLocationOfMapping(logRader: LogReader, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = logRader.sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
         }
 
-        const locationMapping = sarifMapping.pointers[resultPath];
+        const locationMapping: JsonPointer = sarifMapping.pointers[resultPath];
+
         if (insertionPtr === true) {
             locationMapping.valueEnd = locationMapping.value;
         }

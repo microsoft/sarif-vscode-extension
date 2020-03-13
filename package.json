@@ -206,6 +206,7 @@
     },
     "dependencies": {
         "json-source-map": "^0.4.0",
+        "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1"
     }
 }

@@ -1,8 +1,6 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
 
 /** Updating this also requires an update to the matching enum in the explorer folder */
 export enum MessageType {
