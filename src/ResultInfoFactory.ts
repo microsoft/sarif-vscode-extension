@@ -90,9 +90,16 @@ export class ResultInfoFactory {
             }
         }
 
-        const resultMessage: sarif.Message = {
-            text: ruleMessage || "No Message Provided"
+        let resultMessage: sarif.Message = {
+            ...result.message
         };
+
+        if (result.message.text === undefined ) {
+            resultMessage = {
+                ...resultMessage,
+                text: "No Message Provided"
+            };
+        }
 
         return {
             id: id,

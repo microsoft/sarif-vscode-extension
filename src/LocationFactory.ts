@@ -29,7 +29,7 @@ export class LocationFactory {
         let message: Message | undefined;
         let logicalLocations: string[] | undefined;
 
-        if (physLocation  && physLocation.artifactLocation) {
+        if (physLocation && physLocation.artifactLocation) {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
             uriBase = Utilities.getUriBase(explorerController.diagnosticCollection, artifactLocation, runId);
 
@@ -44,11 +44,11 @@ export class LocationFactory {
 
                 fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
             }
+        }
 
-            if (physLocation.region) {
-                parsedRange = LocationFactory.parseRange(physLocation.region);
-                message = Utilities.parseSarifMessage(physLocation.region.message);
-            }
+        if (physLocation && physLocation.region) {
+            parsedRange = LocationFactory.parseRange(physLocation.region);
+            message = Utilities.parseSarifMessage(physLocation.region.message);
         }
 
         const logLocations: sarif.LogicalLocation[] | undefined = sarifLocation.logicalLocations;

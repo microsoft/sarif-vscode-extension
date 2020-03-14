@@ -39,8 +39,8 @@ export class LogReader implements Disposable {
         this.jsonMap = require("json-source-map");
 
         // Listen for new sarif files to open or close
-        this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened));
-        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed));
+        this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
+        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
     }
 
     /**
@@ -130,7 +130,7 @@ export class LogReader implements Disposable {
                         return;
                     }
 
-                    if (FileConverter.tryUpgradeSarif(log.version, log.$schema, doc)) {
+                    if (await FileConverter.sarifUpgradeNeeded(log.version, log.$schema, doc)) {
                         return;
                     }
 
