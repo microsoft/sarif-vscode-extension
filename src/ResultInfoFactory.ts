@@ -13,19 +13,28 @@ import * as vscode from "vscode";
 import { ExplorerController } from "./ExplorerController";
 
 /**
- * Class that holds the result information processed from the Sarif result
+ * Class that holds the result information processed from the Sarif result.
+ * This code transofrms the SARIF JSON into a "flatter" data model that is used
+ * by the rest of the viewer code.
  */
 export class ResultInfoFactory {
 
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
-     * @param result sarif result object to be processed
+     * @param explorerController The controller class that coordinates all aspects of the viewer.
+     * @param result The original sarif result object to be processed.
      * @param runId id of the run this result is from
      * @param tool tool object that is used for the rules
      * @param id Identifier used to identify this result.
      * @param locationInSarifFile the location in the SARIF file
      */
-    public static async create(explorerController: ExplorerController, result: sarif.Result, runId: number, tool: sarif.Tool, id: number, locationInSarifFile?: Location): Promise<ResultInfo> {
+    public static async create(
+        explorerController: ExplorerController,
+        result: sarif.Result,
+        runId: number,
+        tool: sarif.Tool,
+        id: number,
+        locationInSarifFile?: Location): Promise<ResultInfo> {
         const locations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.locations, runId);
         const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.relatedLocations, runId);
         const attachments: Attachment[] = await ResultInfoFactory.parseAttachments(explorerController, result.attachments, runId);
@@ -70,7 +79,8 @@ export class ResultInfoFactory {
 
                 helpUri = rule.helpUri;
                 ruleName = rule.name;
-                ruleDescription = Utilities.parseSarifMessage(rule.fullDescription || rule.shortDescription,
+                ruleDescription = Utilities.parseSarifMessage(
+                    rule.fullDescription || rule.shortDescription,
                     allLocations);
 
                 ruleId = rule.id || ruleId;

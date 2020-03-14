@@ -415,7 +415,7 @@ export class ResultsListController implements Disposable {
         };
 
         const groups: Map<string, ResultsListGroup> = new Map<string, ResultsListGroup>();
-        for (const postFilterRow in this.postFilterListRows) {
+        for (const postFilterRow of this.postFilterListRows) {
             const row: ResultsListRow | undefined = this.resultsListRows.get(postFilterRow);
             if (!row) {
                 continue;

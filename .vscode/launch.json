@@ -13,7 +13,10 @@
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceRoot}/out/**/*.js"
+                "${workspaceRoot}/out/*.js",
+                "${workspaceRoot}/out/common/*.js",
+                "${workspaceRoot}/out/explorer/common/*.js",
+                "${workspaceRoot}/out/explorer/explorer/*.js",
             ],
             "preLaunchTask": "npm: watch"
         },

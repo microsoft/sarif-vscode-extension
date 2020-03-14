@@ -49,7 +49,7 @@ export class RunInfoFactory {
             timeDuration = Utilities.calcDuration(invocation.startTimeUtc, invocation.endTimeUtc);
         }
 
-        if (run.automationDetails !== undefined && run.automationDetails.id !== undefined) {
+        if (run.automationDetails  && run.automationDetails.id !== undefined) {
             const splitId: string[] = run.automationDetails.id.split("/");
             const identifier: string | undefined = splitId.pop();
             if (identifier !== "") {

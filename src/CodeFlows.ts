@@ -116,7 +116,7 @@ export class CodeFlows {
                 });
         }
 
-        return Promise.resolve(codeFlow);
+        return codeFlow;
     }
 
     /**
@@ -162,7 +162,7 @@ export class CodeFlows {
         threadFlow.lvlsFirstStepIsNested = CodeFlows.getLevelsFirstStepIsNested(threadFlow.steps[0],
             hasUndefinedNestingLevel, hasZeroNestingLevel);
 
-        return Promise.resolve(threadFlow);
+        return threadFlow;
     }
 
     /**
@@ -257,7 +257,7 @@ export class CodeFlows {
             traversalId: indexId,
         };
 
-        return Promise.resolve(step);
+        return step;
     }
 
     /**
