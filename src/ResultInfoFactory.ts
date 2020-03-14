@@ -107,7 +107,7 @@ export class ResultInfoFactory {
         if (result.message.text === undefined ) {
             resultMessage = {
                 ...resultMessage,
-                text: "No Message Provided"
+                text: ruleMessage || "No Message Provided"
             };
         }
 

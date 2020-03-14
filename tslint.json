@@ -61,8 +61,7 @@
     "linterOptions": {
         "exclude": [
             "**/vscode.proposed.d.ts",
-            "src/test/*",
-            "src/explorer/*"
+            "src/test/*"
         ]
     }
 }

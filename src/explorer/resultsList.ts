@@ -6,65 +6,46 @@
 import * as sarif from "sarif";
 import {
     ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListKindValue, ResultsListRow,
-    ResultsListSeverityValue, ResultsListValue, WebviewMessage,
+    ResultsListSeverityValue, ResultsListValue, DiagnosticData,
 } from "../common/Interfaces";
+
+import { ExplorerWebview, TextAndTooltip } from "./webview";
 
 /**
  * This class handles generating and providing the HTML content for the Results List in the Explorer
  */
-class ResultsList {
+export class ResultsList {
     public colResizeObj = {
         disabledColumns: [0], headerOnly: true, liveDrag: true, minWidth: 26, partialRefresh: true, postbackSafe: true,
     };
-    private collapsedGroups: any[];
-    private onCollapseAllGroupsBind;
-    private onExpandAllGroupsBind;
-    private onFilterInputBind;
-    private onGroupByChangedBind;
-    private onRowClickedBind;
-    private onShowChangedBind;
-    private onSortClickedBind;
-    private onToggleFilterCaseMatchBind;
-    private onToggleFilterInputBind;
-    private onToggleGroupBind;
+    private collapsedGroups: string[];
     private data: ResultsListData;
 
-    private webview;
-    private severityIconHTMLEles: Map<sarif.Result.level, HTMLDivElement>;
+    private readonly webview: ExplorerWebview;
+    private severityIconHTMLEles: Map<sarif.Result.level, HTMLElement>;
 
-    public constructor(explorer) {
+    public constructor(explorer: ExplorerWebview) {
         this.webview = explorer;
-        this.onCollapseAllGroupsBind = this.onCollapseAllGroups.bind(this);
-        this.onExpandAllGroupsBind = this.onExpandAllGroups.bind(this);
-        this.onFilterInputBind = this.onFilterInput.bind(this);
-        this.onGroupByChangedBind = this.onGroupByChanged.bind(this);
-        this.onRowClickedBind = this.onRowClicked.bind(this);
-        this.onShowChangedBind = this.onShowChanged.bind(this);
-        this.onSortClickedBind = this.onSortClicked.bind(this);
-        this.onToggleFilterCaseMatchBind = this.onToggleFilterCaseMatch.bind(this);
-        this.onToggleFilterInputBind = this.onToggleFilterInput.bind(this);
-        this.onToggleGroupBind = this.onToggleGroup.bind(this);
-
         this.collapsedGroups = [];
         this.createResultsListHeader();
         this.createResultsListPanelButtons();
 
-        this.severityIconHTMLEles = new Map<sarif.Result.level, HTMLDivElement>();
-        const sevEle = this.webview.createElement("div", { className: "severityiconwrapper" });
+        this.severityIconHTMLEles = new Map<sarif.Result.level, HTMLElement>();
+        const sevEle: HTMLDivElement = this.webview.createElement("div", { className: "severityiconwrapper" });
         sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
             <circle cx="8" cy="8" r="6" fill="#1e1e1e"/>
             <path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5 -2.2-5-5-5Zm3 7l-1 1 -2-2 -2 2 -1-1 2-2L5
                 6l1-1 2 2 2-2 1 1 -2 2L11 10Z" fill="#f48771"/>
             <path d="M11 6l-1-1 -2 2 -2-2 -1 1 2 2L5 10l1 1 2-2 2 2 1-1 -2-2Z" fill="#252526"/>
         </svg>`;
-        this.severityIconHTMLEles.set("error", sevEle.cloneNode(true));
+        this.severityIconHTMLEles.set("error", <HTMLElement>sevEle.cloneNode(true));
 
         sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
             <path d="M7.5 2L2 12l2 2h9l2-2L9.5 2Z" fill="#1e1e1e"/>
             <path d="M9 3H8l-4.5 9 1 1h8l1-1L9 3Zm0 9H8v-1h1v1Zm0-2H8V6h1v4Z" fill="#fc0"/>
             <path d="M9 10H8V6h1v4Zm0 1H8v1h1v-1Z"/>
         </svg>`;
-        this.severityIconHTMLEles.set("warning", sevEle.cloneNode(true));
+        this.severityIconHTMLEles.set("warning", <HTMLElement>sevEle.cloneNode(true));
 
         sevEle.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
             <circle cx="8.5" cy="7.5" r="5.5" fill="#1e1e1e"/>
@@ -77,10 +58,10 @@ class ResultsList {
     }
 
     public set Data(value: ResultsListData) {
-        if (this.collapsedGroups[0] !== value.groupBy || this.data.resultCount !== value.resultCount) {
+        if (value.groupBy !== undefined && (this.collapsedGroups[0] !== value.groupBy || this.data.resultCount !== value.resultCount)) {
             this.collapsedGroups = [value.groupBy];
             if (value.groups.length > 1) {
-                for (let index = 0; index < value.groups.length; index++) {
+                for (let index: number = 0; index < value.groups.length; index++) {
                     if (value.groups[index].rows.length > 25) {
                         this.collapsedGroups.push(`${index}`);
                     }
@@ -96,16 +77,19 @@ class ResultsList {
     /**
      * Updates the selected row in the table
      */
-    public updateSelection() {
-        const diag = this.webview.diagnostic;
-        const id = JSON.stringify({ resultId: diag.resultInfo.id, runId: diag.resultInfo.runId });
-        const curSelected = document.getElementsByClassName("listtablerow selected");
+    public updateSelection(): void {
+        const diag: DiagnosticData = this.webview.diagnostic;
+        if (!diag.resultInfo) {
+            return;
+        }
+
+        const id: string = JSON.stringify({ resultId: diag.resultInfo.id, runId: diag.resultInfo.runId });
+        const curSelected: HTMLCollectionOf<Element> = document.getElementsByClassName("listtablerow selected");
         while (curSelected.length > 0) {
             curSelected[0].classList.remove("selected");
         }
 
-        const rows = document.getElementsByClassName("listtablerow") as HTMLCollectionOf<HTMLElement>;
-        // @ts-ignore: compiler complains even though results can be iterated
+        const rows: HTMLCollectionOf<HTMLElement> = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName("listtablerow");
         for (const row of rows) {
             if (row.dataset.id === id) {
                 row.classList.add("selected");
@@ -116,14 +100,13 @@ class ResultsList {
     /**
      * Creates the content that shows in the results list header of the Explorer window
      */
-    private createResultsListHeader() {
-        const header = document.getElementById("resultslistheader") as HTMLDivElement;
+    private createResultsListHeader(): void {
+        const header: HTMLDivElement = <HTMLDivElement>document.getElementById("resultslistheader");
 
-        let resultCount = 0;
-        if (this.data !== undefined) {
+        let resultCount: number = 0;
+        if (this.data) {
             resultCount = this.data.resultCount;
         }
-        const countElement = document.getElementById("resultslistheadercount");
         header.appendChild(this.webview.createElement("label", {
             id: "resultslistheadertitle",
             text: `Results List`,
@@ -141,97 +124,97 @@ class ResultsList {
     /**
      * Creates the results list panel buttons for manipulating the results list table
      */
-    private createResultsListPanelButtons() {
-        const buttons = document.getElementById("resultslistbuttonbar");
-        if (buttons.children.length === 0) {
+    private createResultsListPanelButtons(): void {
+        const buttonBar: HTMLElement | null = document.getElementById("resultslistbuttonbar");
+        if (buttonBar && buttonBar.children.length === 0) {
             // Show/Hide column button
-            const showColButton = this.webview.createElement("select", {
+            const showColButton: HTMLElement = this.webview.createElement("select", {
                 className: "svgIconMasking", id: "resultslistshowcol", tooltip: "Show or hide Columns",
             }) as HTMLSelectElement;
             showColButton.appendChild(this.webview.createElement("option", {
                 attributes: { disabled: null, hidden: null, selected: null },
             }));
-            showColButton.addEventListener("change", this.onShowChangedBind);
-            buttons.appendChild(showColButton);
+            showColButton.addEventListener("change", this.onShowChanged.bind(this));
+            buttonBar.appendChild(showColButton);
 
             // Toggle Filter button
-            const toggleFilterButtonCont = this.webview.createElement("span", {
+            const toggleFilterButtonContent: HTMLElement = this.webview.createElement("span", {
                 id: "resultslistfilterbuttoncontainer",
                 tooltip: "Filter Results List",
             }) as HTMLSpanElement;
-            toggleFilterButtonCont.addEventListener("click", this.onToggleFilterInputBind);
-            const toggleFilterButtonIcon = this.webview.createElement("span", {
+            toggleFilterButtonContent.addEventListener("click", this.onToggleFilterInput.bind(this));
+            const toggleFilterButtonIcon: HTMLElement = this.webview.createElement("span", {
                 className: "svgIconMasking",
                 id: "resultslistfilterbuttonsvg",
             });
-            toggleFilterButtonCont.appendChild(toggleFilterButtonIcon);
-            buttons.appendChild(toggleFilterButtonCont);
+            toggleFilterButtonContent.appendChild(toggleFilterButtonIcon);
+            buttonBar.appendChild(toggleFilterButtonContent);
 
             // Expand All button
-            const expandAllButton = this.webview.createElement("span", {
+            const expandAllButton: HTMLElement = this.webview.createElement("span", {
                 className: "tabcontentheaderbutton",
                 text: "+",
                 tooltip: "Expand all groups",
             }) as HTMLSpanElement;
-            expandAllButton.addEventListener("click", this.onExpandAllGroupsBind);
-            buttons.appendChild(expandAllButton);
+            expandAllButton.addEventListener("click", this.onExpandAllGroups.bind(this));
+            buttonBar.appendChild(expandAllButton);
 
             // Collapse All button
-            const collapseAllButton = expandAllButton.cloneNode() as HTMLSpanElement;
+            const collapseAllButton: HTMLSpanElement = <HTMLSpanElement>expandAllButton.cloneNode();
             collapseAllButton.textContent = "-";
             collapseAllButton.title = "Collapse all groups";
-            collapseAllButton.addEventListener("click", this.onCollapseAllGroupsBind);
-            buttons.appendChild(collapseAllButton);
+            collapseAllButton.addEventListener("click", this.onCollapseAllGroups.bind(this));
+            buttonBar.appendChild(collapseAllButton);
 
-            buttons.appendChild(this.webview.createElement("span", { className: "headercontentseperator", text: "|" }));
+            buttonBar.appendChild(this.webview.createElement("span", { className: "headercontentseperator", text: "|" }));
 
             // Group By label and button
-            buttons.appendChild(this.webview.createElement("label", {
+            buttonBar.appendChild(this.webview.createElement("label", {
                 attributes: { for: "resultslistgroupby" }, id: "resultslistgroupbylabel", text: "Group by: ",
             }));
-            const groupByButton = this.webview.createElement("select", {
+            const groupByButton: HTMLSelectElement = this.webview.createElement("select", {
                 id: "resultslistgroupby", tooltip: "Group by",
-            }) as HTMLSelectElement;
+            });
             groupByButton.appendChild(this.webview.createElement("option", {
                 attributes: { disabled: null, hidden: null },
             }));
-            groupByButton.addEventListener("change", this.onGroupByChangedBind);
-            buttons.appendChild(groupByButton);
+            groupByButton.addEventListener("change", this.onGroupByChanged.bind(this));
+            buttonBar.appendChild(groupByButton);
 
             // Filter Input container
-            const filterInputContainer = this.webview.createElement("form", {
+            const filterInputContainer: HTMLFormElement = this.webview.createElement("form", {
                 className: "hidden",
                 id: "resultslistfilterinputcontainer",
             });
 
-            const filterInput = this.webview.createElement("input", {
+            const filterInput: HTMLInputElement = this.webview.createElement("input", {
                 attributes: { placeholder: "Filter. Eg: text", required: "", type: "text" },
                 id: "resultslistfilterinput",
             });
-            filterInput.addEventListener("input", this.onFilterInputBind);
+            filterInput.addEventListener("input", this.onFilterInput.bind(this));
             filterInputContainer.appendChild(filterInput);
 
             filterInputContainer.addEventListener("reset", () => {
                 (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
-                setTimeout(this.onFilterInputBind, 0);
+                setTimeout(this.onFilterInput.bind(this), 0);
             });
 
-            const filterInputClear = this.webview.createElement("button", {
+            const filterInputClear: HTMLButtonElement  = this.webview.createElement("button", {
                 attributes: { type: "reset" },
                 id: "filterinputclearbutton",
                 tooltip: "Clear filter",
             });
             filterInputContainer.appendChild(filterInputClear);
 
-            const filterInputCaseMatchButton = this.webview.createElement("button", {
+            const filterInputCaseMatchButton: HTMLButtonElement = this.webview.createElement("button", {
                 attributes: {},
                 id: "filterinputcasebutton",
                 tooltip: "Match Case",
             });
-            filterInputCaseMatchButton.addEventListener("click", this.onToggleFilterCaseMatchBind);
+            filterInputCaseMatchButton.addEventListener("click", this.onToggleFilterCaseMatch.bind(this));
             filterInputContainer.appendChild(filterInputCaseMatchButton);
 
-            buttons.appendChild(filterInputContainer);
+            buttonBar.appendChild(filterInputContainer);
         }
     }
 
@@ -240,18 +223,18 @@ class ResultsList {
      * @param columns the tables header column elements
      */
     private createTableBody(columns: HTMLCollection): HTMLBodyElement {
-        const tableBody = this.webview.createElement("tbody") as HTMLBodyElement;
-        for (let groupIndex = 0; groupIndex < this.data.groups.length; groupIndex++) {
-            const group = this.data.groups[groupIndex];
-            let groupState = ToggleState.expanded;
+        const tableBody: HTMLBodyElement = this.webview.createElement("tbody");
+        for (let groupIndex: number = 0; groupIndex < this.data.groups.length; groupIndex++) {
+            const group: ResultsListGroup = this.data.groups[groupIndex];
+            let groupState: ToggleState = ToggleState.expanded;
             if (this.collapsedGroups.indexOf(`${groupIndex}`) !== -1) {
                 groupState = ToggleState.collapsed;
             }
 
-            const groupRow = this.createTableGroupRow(columns, groupIndex, group, groupState);
+            const groupRow: HTMLTableRowElement = this.createTableGroupRow(columns, groupIndex, group, groupState);
             tableBody.appendChild(groupRow);
 
-            const rows = this.createTableResultRows(columns, group.rows, groupIndex, groupState);
+            const rows: DocumentFragment = this.createTableResultRows(columns, group.rows, groupIndex, groupState);
             tableBody.appendChild(rows);
         }
 
@@ -267,34 +250,34 @@ class ResultsList {
      */
     private createTableGroupRow(cols: HTMLCollection, groupId: number, group: ResultsListGroup, state: ToggleState):
         HTMLTableRowElement {
-        const groupRow = this.webview.createElement("tr", {
+        const groupRow: HTMLTableRowElement = this.webview.createElement("tr", {
             attributes: { "data-group": groupId, "tabindex": "0" },
             className: `listtablegroup ${state}`,
-        }) as HTMLTableRowElement;
-        groupRow.addEventListener("click", this.onToggleGroupBind);
+        });
+        groupRow.addEventListener("click", this.onToggleGroup.bind(this));
 
-        let groupText = group.text;
-        let groupTooltip = group.tooltip || group.text;
+        let groupText: string = group.text;
+        let groupTooltip: string = group.tooltip || group.text;
         if (this.data.groupBy === "severityLevel") {
-            const sevInfo = this.webview.severityTextAndTooltip(groupText);
+            const sevInfo: TextAndTooltip = this.webview.severityTextAndTooltip(<sarif.Result.level>groupText);
             groupText = sevInfo.text;
             groupTooltip = sevInfo.tooltip;
         } else if (this.data.groupBy === "baselineState") {
-            const baselineState = this.webview.baselineStateTextAndTooltip(groupText);
+            const baselineState: TextAndTooltip = this.webview.baselineStateTextAndTooltip(<sarif.Result.baselineState>groupText);
             groupText = baselineState.text;
             groupTooltip = baselineState.tooltip;
         }
 
-        const groupCell = this.webview.createElement("th", {
+        const groupCell: HTMLTableDataCellElement = this.webview.createElement("th", {
             attributes: { colspan: `${cols.length}` },
             text: groupText,
             tooltip: groupTooltip,
-        }) as HTMLTableDataCellElement;
+        });
 
-        const countBadge = this.webview.createElement("div", {
+        const countBadge: HTMLDivElement = this.webview.createElement("div", {
             className: "countbadge",
             text: `${group.rows.length}`,
-        }) as HTMLDivElement;
+        });
         groupCell.appendChild(countBadge);
 
         groupRow.appendChild(groupCell);
@@ -306,17 +289,17 @@ class ResultsList {
      * Creates the header for the resultslist table
      */
     private createTableHeader(): HTMLHeadElement {
-        const headerRow = this.webview.createElement("tr") as HTMLTableRowElement;
+        const headerRow: HTMLTableRowElement = this.webview.createElement("tr");
         headerRow.appendChild(this.webview.createElement("th"));
         for (const colName in this.data.columns) {
             if (!this.data.columns[colName].hide && this.data.groupBy !== colName) {
-                const cell = this.webview.createElement("th", {
+                const cell: HTMLTableHeaderCellElement  = this.webview.createElement("th", {
                     attributes: {
                         "data-name": colName,
                     },
                 });
-                if (this.data.sortBy.column === colName) {
-                    let sortClass = "ascending";
+                if (this.data.sortBy && this.data.sortBy.column === colName) {
+                    let sortClass: string = "ascending";
                     if (this.data.sortBy.ascending) {
                         sortClass = "descending";
                     }
@@ -334,12 +317,12 @@ class ResultsList {
                     text: this.data.columns[colName].title,
                     tooltip: this.data.columns[colName].description,
                 }) as HTMLDivElement);
-                cell.addEventListener("click", this.onSortClickedBind);
+                cell.addEventListener("click", this.onSortClicked.bind(this));
                 headerRow.appendChild(cell);
             }
         }
 
-        const tableHead = this.webview.createElement("thead") as HTMLHeadElement;
+        const tableHead: HTMLHeadElement = this.webview.createElement("thead");
         tableHead.appendChild(headerRow);
 
         return tableHead;
@@ -352,38 +335,38 @@ class ResultsList {
      * @param groupId group id
      * @param state expanded or collapsed state
      */
-    private createTableResultRows(cols: HTMLCollection, rows: ResultsListRow[], groupId: number, state: ToggleState) {
-        const frag = document.createDocumentFragment();
-        const resultRowBase = this.webview.createElement("tr", {
+    private createTableResultRows(cols: HTMLCollection, rows: ResultsListRow[], groupId: number, state: ToggleState): DocumentFragment {
+        const frag: DocumentFragment = document.createDocumentFragment();
+        const resultRowBase: HTMLTableRowElement = this.webview.createElement("tr", {
             attributes: { "data-group": groupId, "tabindex": "0" },
             className: `listtablerow`,
-        }) as HTMLTableRowElement;
+        });
 
-        const rowCellBase = this.webview.createElement("td") as HTMLTableDataCellElement;
+        const rowCellBase: HTMLTableDataCellElement = this.webview.createElement("td");
 
         for (const row of rows) {
-            const resultRow = resultRowBase.cloneNode() as HTMLTableRowElement;
+            const resultRow: HTMLTableRowElement = <HTMLTableRowElement>resultRowBase.cloneNode();
             resultRow.dataset.id = JSON.stringify({ resultId: row.resultId.value, runId: row.runId.value });
             if (state === ToggleState.collapsed) {
                 resultRow.classList.add("hidden");
             }
 
-            const diag = this.webview.diagnostic;
+            const diag: DiagnosticData = this.webview.diagnostic;
             if (diag !== undefined && diag.resultInfo.runId === row.runId.value &&
                 diag.resultInfo.id === row.resultId.value) {
                 resultRow.classList.add("selected");
             }
 
-            const iconCell = rowCellBase.cloneNode() as HTMLTableCellElement;
+            const iconCell: HTMLTableCellElement = <HTMLTableCellElement>rowCellBase.cloneNode();
             iconCell.classList.add("severityiconcell");
             iconCell.appendChild(this.severityIconHTMLEles.get(row.severityLevel.value).cloneNode(true));
             resultRow.appendChild(iconCell);
 
-            for (let index = 1; index < cols.length; index++) {
-                const col = cols[index] as HTMLTableHeaderCellElement;
-                const columnName = col.dataset.name;
-                const colData = row[columnName] as ResultsListValue;
-                let textAndTooltip = { text: "", tooltip: "" };
+            for (let index: number = 1; index < cols.length; index++) {
+                const col: HTMLTableHeaderCellElement = <HTMLTableHeaderCellElement>cols[index];
+                const columnName: string = col.dataset.name;
+                const colData: ResultsListValue = row[columnName];
+                let textAndTooltip: TextAndTooltip = { text: "", tooltip: "" };
 
                 if (colData !== undefined) {
                     textAndTooltip.text = colData.value || "";
@@ -398,13 +381,13 @@ class ResultsList {
                     }
                 }
 
-                const rowCell = rowCellBase.cloneNode() as HTMLTableDataCellElement;
+                const rowCell: HTMLTableDataCellElement = <HTMLTableDataCellElement>rowCellBase.cloneNode();
                 rowCell.textContent = textAndTooltip.text;
                 rowCell.title = textAndTooltip.tooltip;
                 resultRow.appendChild(rowCell);
             }
 
-            resultRow.addEventListener("click", this.onRowClickedBind, true);
+            resultRow.addEventListener("click", this.onRowClicked.bind(this), true);
             frag.appendChild(resultRow);
         }
 
@@ -415,7 +398,7 @@ class ResultsList {
      * Handler when collapse all is clicked
      * @param event event for click
      */
-    private onCollapseAllGroups(event) {
+    private onCollapseAllGroups(event: Event): void {
         this.toggleAllGroups(ToggleState.expanded);
     }
 
@@ -423,7 +406,7 @@ class ResultsList {
      * Handler when expand all button is clicked
      * @param event event for click
      */
-    private onExpandAllGroups(event) {
+    private onExpandAllGroups(event: Event): void  {
         this.toggleAllGroups(ToggleState.collapsed);
     }
 
@@ -431,13 +414,13 @@ class ResultsList {
      * Handler when value is changed in the filter input
      * @param event event for value changed in input
      */
-    private onFilterInput(event) {
-        const filterText = (document.getElementById("resultslistfilterinput") as HTMLInputElement).value;
-        this.webview.sendMessage({ data: filterText, type: MessageType.ResultsListFilterApplied } as WebviewMessage);
+    private onFilterInput(event: Event): void  {
+        const filterText: string = (<HTMLInputElement>document.getElementById("resultslistfilterinput")).value;
+        this.webview.sendMessage({ data: filterText, type: MessageType.ResultsListFilterApplied });
 
-        const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
-        const activatedClass = "activated";
-        const activeTooltip = ": Active";
+        const filterIconContainer: HTMLElement = document.getElementById("resultslistfilterbuttoncontainer");
+        const activatedClass: string = "activated";
+        const activeTooltip: string = ": Active";
         if (filterText !== "") {
             if (filterIconContainer.classList.contains(activatedClass) !== true) {
                 filterIconContainer.classList.add(activatedClass);
@@ -453,56 +436,58 @@ class ResultsList {
      * Handler when a group by is changed
      * @param event event for change
      */
-    private onGroupByChanged(event) {
-        const index = (event.srcElement as HTMLSelectElement).selectedIndex;
-        const col = event.srcElement.children[index].value;
-        this.webview.sendMessage({ data: col, type: MessageType.ResultsListGroupChanged } as WebviewMessage);
+    private onGroupByChanged(event: Event): void {
+        const srcElement: HTMLSelectElement = <HTMLSelectElement>(event.srcElement);
+        const index: number = srcElement.selectedIndex;
+        const col: string = (<HTMLOptionElement>srcElement.children[index]).value;
+        this.webview.sendMessage({ data: col, type: MessageType.ResultsListGroupChanged });
     }
 
     /**
      * Handler when a result row is clicked, moves selection highlight and msg sends to extension
      * @param event event for row click
      */
-    private onRowClicked(event) {
-        const row = event.currentTarget as HTMLTableRowElement;
-        const curSelected = row.parentElement.getElementsByClassName("listtablerow selected");
+    private onRowClicked(event: Event): void {
+        const row: HTMLTableRowElement = <HTMLTableRowElement>event.currentTarget;
+        const curSelected: HTMLCollectionOf<Element> = row.parentElement.getElementsByClassName("listtablerow selected");
         while (curSelected.length > 0) {
             curSelected[0].classList.remove("selected");
         }
         row.classList.add("selected");
 
-        const resultId = row.dataset.id;
-        this.webview.sendMessage({ data: resultId, type: MessageType.ResultsListResultSelected } as WebviewMessage);
+        const resultId: string = row.dataset.id;
+        this.webview.sendMessage({ data: resultId, type: MessageType.ResultsListResultSelected });
     }
 
     /**
      * Handler when hide/show selections is changed, resets the selection to 0 so value doesn't show over the icon
      * @param event event for the change
      */
-    private onShowChanged(event) {
-        const index = (event.srcElement as HTMLSelectElement).selectedIndex;
-        const option = event.srcElement.children[index] as HTMLOptionElement;
+    private onShowChanged(event: Event): void {
+        const selectElement: HTMLSelectElement = <HTMLSelectElement>event.srcElement;
+        const index: number = selectElement.selectedIndex;
+        const option: HTMLOptionElement = <HTMLOptionElement>selectElement.children[index];
 
-        (event.srcElement as HTMLSelectElement).selectedIndex = 0;
-        this.webview.sendMessage({ data: option.value, type: MessageType.ResultsListColumnToggled } as WebviewMessage);
+        selectElement.selectedIndex = 0;
+        this.webview.sendMessage({ data: option.value, type: MessageType.ResultsListColumnToggled });
     }
 
     /**
      * Handles toggling case match
      * @param event event for the toggle
      */
-    private onToggleFilterCaseMatch(event) {
-        (document.getElementById("resultslistfilterinput") as HTMLInputElement).focus();
-        this.webview.sendMessage({ data: "", type: MessageType.ResultsListFilterCaseToggled } as WebviewMessage);
+    private onToggleFilterCaseMatch(event: Event): void {
+        (<HTMLInputElement>document.getElementById("resultslistfilterinput")).focus();
+        this.webview.sendMessage({ data: "", type: MessageType.ResultsListFilterCaseToggled });
     }
 
     /**
      * Handles toggling visibility of the filter input
      * @param event event for the toggle
      */
-    private onToggleFilterInput(event) {
-        const hiddenClass = "hidden";
-        const filterInput = document.getElementById("resultslistfilterinputcontainer") as HTMLInputElement;
+    private onToggleFilterInput(event: Event): void  {
+        const hiddenClass: string = "hidden";
+        const filterInput: HTMLInputElement = <HTMLInputElement>document.getElementById("resultslistfilterinputcontainer");
         if (filterInput.classList.contains(hiddenClass) === true) {
             filterInput.classList.remove(hiddenClass);
             document.getElementById("resultslistfilterinput").focus();
@@ -515,39 +500,39 @@ class ResultsList {
      * Handler when sort is changed
      * @param event event for the header clicked
      */
-    private onSortClicked(event) {
-        const col = event.srcElement.dataset.name;
-        this.webview.sendMessage({ data: col, type: MessageType.ResultsListSortChanged } as WebviewMessage);
+    private onSortClicked(event: Event): void {
+        const col: string = (<HTMLTableHeaderCellElement>event.srcElement).dataset.name;
+        this.webview.sendMessage({ data: col, type: MessageType.ResultsListSortChanged });
     }
 
     /**
      * Handler when a group row is clicked
      * @param event event for click
      */
-    private onToggleGroup(event: Event) {
-        this.toggleGroup(event.currentTarget as HTMLTableRowElement);
+    private onToggleGroup(event: Event): void {
+        this.toggleGroup(<HTMLTableRowElement>event.currentTarget);
     }
 
     /**
      * Populates the Results list table, removes all rows, creates the header and body
      */
-    private populateResultsListTable() {
+    private populateResultsListTable(): void {
         // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
         $("#resultslisttable").colResizable({ disable: true });
 
         // remove the rows of the table
-        const table = document.getElementById("resultslisttable") as HTMLTableElement;
+        const table: HTMLTableElement = <HTMLTableElement>document.getElementById("resultslisttable");
         while (table.children.length > 0) {
             table.removeChild(table.children[0]);
         }
 
-        const tableHead = this.createTableHeader();
+        const tableHead: HTMLHeadElement = this.createTableHeader();
         table.appendChild(tableHead);
 
         // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
         $("#resultslisttable").colResizable(this.colResizeObj);
 
-        const tableBody = this.createTableBody(tableHead.children[0].children);
+        const tableBody: HTMLBodyElement = this.createTableBody(tableHead.children[0].children);
         table.appendChild(tableBody);
     }
 
@@ -555,9 +540,9 @@ class ResultsList {
      * Toggles all of the groups to either all collasped or all expaneded
      * @param stateToToggle The state either expanded or collapsed to toggle all groups to
      */
-    private toggleAllGroups(stateToToggle: ToggleState) {
-        const className = `listtablegroup ${stateToToggle}`;
-        const groups = document.getElementsByClassName(className) as HTMLCollectionOf<HTMLTableRowElement>;
+    private toggleAllGroups(stateToToggle: ToggleState): void {
+        const className: string = `listtablegroup ${stateToToggle}`;
+        const groups: HTMLCollectionOf<HTMLTableRowElement> = <HTMLCollectionOf<HTMLTableRowElement>>document.getElementsByClassName(className);
 
         while (groups.length > 0) {
             this.toggleGroup(groups[0]);
@@ -568,8 +553,8 @@ class ResultsList {
      * Toggles the group row as well as any result rows that match the group
      * @param row Group row to toggled
      */
-    private toggleGroup(row: HTMLTableRowElement) {
-        let hideRow = false;
+    private toggleGroup(row: HTMLTableRowElement): void {
+        let hideRow: boolean = false;
         if (row.classList.contains(`${ToggleState.expanded}`)) {
             row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
             this.collapsedGroups.push(row.dataset.group);
@@ -579,7 +564,7 @@ class ResultsList {
             this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
         }
 
-        const results = document.querySelectorAll("#resultslisttable > tbody > .listtablerow") as NodeListOf<Element>;
+        const results: NodeListOf<Element> = document.querySelectorAll("#resultslisttable > tbody > .listtablerow");
 
         // @ts-ignore: compiler complains even though results can be iterated
         for (const result of results) {
@@ -597,32 +582,33 @@ class ResultsList {
     /**
      * Updates the Results List header's count of all results
      */
-    private updateResultsListHeader() {
-        let resultCount = 0;
-        if (this.data !== undefined) {
+    private updateResultsListHeader(): void {
+        let resultCount: number = 0;
+        if (this.data) {
             resultCount = this.data.resultCount;
         }
 
-        const countElement = document.getElementById("resultslistheadercount");
+        const countElement: HTMLElement = document.getElementById("resultslistheadercount");
         countElement.textContent = `${resultCount}`;
     }
 
     /**
      * Updates the group by and sort by options selected and checked, if no options exist adds them from the columns
      */
-    private updateResultsListPanelButtons() {
-        const groupByButton = document.getElementById("resultslistgroupby");
-        const showColButton = document.getElementById("resultslistshowcol");
+    private updateResultsListPanelButtons(): void {
+        const groupByButton: HTMLElement = document.getElementById("resultslistgroupby");
+        const showColButton: HTMLElement = document.getElementById("resultslistshowcol");
 
         if (groupByButton.children.length === 1) {
             for (const col in this.data.columns) {
                 if (this.data.columns.hasOwnProperty(col)) {
-                    const groupOption = this.webview.createElement("option", {
+                    const groupOption: HTMLOptionElement = this.webview.createElement("option", {
                         attributes: { value: col }, text: this.data.columns[col].title,
-                    }) as HTMLOptionElement;
+                    });
 
-                    const showOption = groupOption.cloneNode(true) as HTMLOptionElement;
-                    showOption.textContent = "  " + showOption.textContent;
+                    const showOption: HTMLOptionElement = <HTMLOptionElement>groupOption.cloneNode(true);
+                    // tslint:disable-next-line: no-irregular-whitespace
+                    showOption.textContent = `  ${showOption.textContent}`;
 
                     groupByButton.appendChild(groupOption);
                     showColButton.appendChild(showOption);
@@ -632,39 +618,48 @@ class ResultsList {
             if (this.data.filterText !== "") {
                 (document.getElementById("resultslistfilterinput") as HTMLInputElement).value = this.data.filterText;
 
-                const filterIconContainer = document.getElementById("resultslistfilterbuttoncontainer");
-                if (filterIconContainer.classList.contains("activated") !== true) {
+                const filterIconContainer: HTMLElement | null = document.getElementById("resultslistfilterbuttoncontainer");
+                if (filterIconContainer && filterIconContainer.classList.contains("activated") !== true) {
                     filterIconContainer.classList.add("activated");
                     filterIconContainer.title = filterIconContainer.title + ": Activated";
                 }
             }
         }
 
-        for (let index = 1; index < groupByButton.children.length; index++) {
-            const groupOption = groupByButton.children[index] as HTMLOptionElement;
-            const colKey = groupOption.value;
+        for (let index: number = 1; index < groupByButton.children.length; index++) {
+            const groupOption: HTMLOptionElement = <HTMLOptionElement>groupByButton.children[index];
+            const colKey: string = groupOption.value;
 
-            if (colKey === this.data.groupBy) {
-                groupOption.selected = true;
-            } else {
-                groupOption.selected = undefined;
-            }
+            groupOption.selected = colKey === this.data.groupBy;
 
-            const showOption = showColButton.children[index];
+            const showOption: Element = showColButton.children[index];
             if (this.data.columns[colKey].hide === true) {
                 if (showOption.getAttribute("checked") !== null) {
                     showOption.removeAttribute("checked");
-                    showOption.textContent = showOption.textContent.replace("✓", " ");
+                    if (!showOption.textContent) {
+                        showOption.textContent = "✓";
+
+                    } else {
+                        // tslint:disable-next-line: no-irregular-whitespace
+                        showOption.textContent = showOption.textContent.replace("✓", " ");
+                    }
                 }
             } else {
                 if (showOption.getAttribute("checked") === null) {
                     showOption.setAttribute("checked", "");
-                    showOption.textContent = showOption.textContent.replace(" ", "✓");
+                    // tslint:disable-next-line: no-irregular-whitespace
+                    if (!showOption.textContent) {
+                        showOption.textContent = " ";
+
+                    } else {
+                        // tslint:disable-next-line: no-irregular-whitespace
+                        showOption.textContent = showOption.textContent.replace(" ", "✓");
+                    }
                 }
             }
         }
 
-        const caseButton = document.getElementById("filterinputcasebutton") as HTMLButtonElement;
+        const caseButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("filterinputcasebutton");
         if (this.data.filterCaseMatch === true) {
             caseButton.classList.add("active");
         } else {

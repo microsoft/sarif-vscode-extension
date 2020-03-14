@@ -7,14 +7,21 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage,
+    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, SarifVersion,
 } from "../common/Interfaces";
+
+export interface TextAndTooltip {
+    text: string;
+    tooltip: string;
+}
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
  */
-class ExplorerWebview {
-    private diagnostic: DiagnosticData;
+export class ExplorerWebview {
+    public diagnostic: DiagnosticData;
+    public onHeaderClickedBind;
+
     private hasCodeFlows: boolean;
     private hasAttachments: boolean;
     private hasFixes: boolean;
@@ -24,7 +31,6 @@ class ExplorerWebview {
     private onCollapseAllClickedBind;
     private onExpandAllClickedBind;
     private onFixClickedBind;
-    private onHeaderClickedBind;
     private onMessageBind;
     private onSourceLinkClickedBind;
     private onTabClickedBind;
@@ -87,8 +93,9 @@ class ExplorerWebview {
      * @param tagName Type of element to create(div, label, etc.)
      * @param options Additional properties to set on the new element
      */
-    public createElement(tagName: string, options?: HTMLElementOptions): HTMLElement {
-        const ele = document.createElement(tagName);
+    public createElement<T extends HTMLElement>(tagName: string, options?: HTMLElementOptions): T {
+        const ele: T = <T>document.createElement(tagName);
+
         if (options !== undefined) {
             if (options.text !== undefined) { ele.textContent = options.text; }
             if (options.id !== undefined) { ele.id = options.id; }
@@ -1230,27 +1237,24 @@ class ExplorerWebview {
      * Gets the text and tooltip(a reduced version of the specs description) based on the result's kind
      * @param kind the results kind
      */
-    private kindTextAndTooltip(kind: sarif.Result.kind) {
-        const value = { text: kind || "", tooltip: KindTooltip[kind] || "" };
-        return value;
+    public kindTextAndTooltip(kind: sarif.Result.kind): TextAndTooltip {
+        return { text: kind || "", tooltip: KindTooltip[kind] || "" };
     }
 
     /**
      * Gets the text and tooltip(from the specs description) based on the result's baselineState
      * @param baselineState the results severity level
      */
-    private baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState) {
-        const value = { text: baselineState || "", tooltip: BaselineStateTooltip[baselineState] || "" };
-        return value;
+    public baselineStateTextAndTooltip(baselineState: sarif.Result.baselineState): TextAndTooltip {
+        return { text: baselineState || "", tooltip: BaselineStateTooltip[baselineState] || "" };
     }
 
     /**
      * Gets the text and tooltip(a reduced version of the specs description) based on the result's severity level
      * @param severity the results severity level
      */
-    private severityTextAndTooltip(severity: sarif.Result.level) {
-        const value = { text: severity || "", tooltip: SeverityTooltip[severity] || "" };
-        return value;
+    public severityTextAndTooltip(severity: sarif.Result.level): TextAndTooltip {
+        return { text: severity || "", tooltip: SeverityTooltip[severity] || "" };
     }
 
     /**
