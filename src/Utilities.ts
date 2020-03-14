@@ -51,43 +51,43 @@ export class Utilities {
      * @param start string representing the start time in utc format
      * @param end string representing the end time in utc format
      */
-    public static calcDuration(start?: string, end?: string): string | undefined {
-        let duration: string | undefined;
+    public static calcDuration(start?: string, end?: string): string | undefined  {
+        if (!start || !end) {
+            return undefined;
+        }
 
-        if (start && end) {
-            duration = "";
+        let duration: string = "";
 
-            const diff: number = new Date(end).getTime() - new Date(start).getTime();
-            if (diff > 0) {
-                const msDiff: number = diff % 1000;
-                const sDiff: number = Math.floor((diff / 1000) % 60);
-                const mDiff: number = Math.floor((diff / 60000) % 60);
-                const hDiff: number = Math.floor(diff / 3600000);
+        const diff: number = new Date(end).getTime() - new Date(start).getTime();
+        if (diff > 0) {
+            const msDiff: number = diff % 1000;
+            const sDiff: number = Math.floor((diff / 1000) % 60);
+            const mDiff: number = Math.floor((diff / 60000) % 60);
+            const hDiff: number = Math.floor(diff / 3600000);
 
-                if (hDiff > 0) {
-                    const label: string = (hDiff === 1) ? "hr" : "hrs";
-                    duration = `${hDiff} ${label}`;
-                }
-
-                if (mDiff > 0) {
-                    const label: string = (mDiff === 1) ? "min" : "mins";
-                    duration = `${duration} ${mDiff} ${label}`;
-                }
-
-                if (sDiff > 0) {
-                    const label: string = (sDiff === 1) ? "sec" : "secs";
-                    duration = `${duration} ${sDiff} ${label}`;
-                }
-
-                if (msDiff > 0) {
-                    duration = `${duration} ${msDiff} ms`;
-                }
-
-                duration = duration.trim();
-
-            } else {
-                duration = `0 ms`;
+            if (hDiff > 0) {
+                const label: string = (hDiff === 1) ? "hr" : "hrs";
+                duration = `${hDiff} ${label}`;
             }
+
+            if (mDiff > 0) {
+                const label: string = (mDiff === 1) ? "min" : "mins";
+                duration = `${duration} ${mDiff} ${label}`;
+            }
+
+            if (sDiff > 0) {
+                const label: string = (sDiff === 1) ? "sec" : "secs";
+                duration = `${duration} ${sDiff} ${label}`;
+            }
+
+            if (msDiff > 0) {
+                duration = `${duration} ${msDiff} ms`;
+            }
+
+            duration = duration.trim();
+
+        } else {
+            duration = `0 ms`;
         }
 
         return duration;
@@ -240,7 +240,7 @@ export class Utilities {
     public static getUriBase(diagnosticCollection: SVDiagnosticCollection, fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
         let uriBase: string | undefined;
 
-        if (!fileLocation || !fileLocation.uriBaseId || !runId) {
+        if (!fileLocation || !fileLocation.uriBaseId || runId === undefined) {
             return undefined;
         }
 

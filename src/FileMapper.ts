@@ -154,7 +154,7 @@ export class FileMapper implements Disposable {
             return Promise.resolve();
         }
 
-        if (uriBase && this.tryConfigRootpathsUri(uri, uriBase)) {
+        if (uriBase !== undefined && this.tryConfigRootpathsUri(uri, uriBase)) {
             return Promise.resolve();
         }
 
@@ -165,7 +165,7 @@ export class FileMapper implements Disposable {
         }
 
         // If not able to remap using other means, we need to ask the user to enter a path for remapping
-        if (uriBase) {
+        if (uriBase !== undefined) {
             await this.getUserToChooseFile(uri, uriBase);
         }
     }
@@ -391,7 +391,7 @@ export class FileMapper implements Disposable {
     private saveBasePath(originalUri: Uri, remappedUri: Uri, uriBase?: string): void {
         const oPath: string = originalUri.toString(true);
         const rPath: string = remappedUri.toString(true);
-        if (uriBase) {
+        if (uriBase !== undefined) {
             const relativePath: string = oPath.substring(oPath.indexOf(uriBase) + uriBase.length);
             const index: number = rPath.indexOf(relativePath);
             if (index !== -1) {

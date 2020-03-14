@@ -2,10 +2,7 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
-import {
-    CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult,
-    TextDocument,
-} from "vscode";
+import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
 import { ExplorerController } from "./ExplorerController";
 import { CodeFlow, ThreadFlow, CodeFlowStep, Location, SarifViewerDiagnostic } from "./common/Interfaces";
 
