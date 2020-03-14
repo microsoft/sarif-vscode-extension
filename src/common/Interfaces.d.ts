@@ -191,7 +191,7 @@ export interface WebviewMessage {
 
 export interface DiagnosticData {
     activeTab?: any,
-    resultInfo?: ResultInfo,
+    resultInfo: ResultInfo,
     runInfo?: RunInfo,
     selectedRow?: string,
     selectedVerbosity?: any
@@ -268,19 +268,19 @@ export interface ResultsListCustomOrderValue extends ResultsListValue {
 export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
     customOrderType: 'Baseline',
     order: BaselineOrder
-    value?: sarif.Result.baselineState;
+    value: sarif.Result.baselineState;
 }
 
 export interface ResultsListKindValue extends ResultsListCustomOrderValue {
     customOrderType: 'Kind',
     order: KindOrder
-    value?: sarif.Result.kind;
+    value: sarif.Result.kind;
 }
 
 export interface ResultsListSeverityValue extends ResultsListCustomOrderValue {
     customOrderType: 'Severity',
     order: SeverityLevelOrder
-    value?: sarif.Result.level,
+    value: sarif.Result.level,
 }
 
 export interface ResultsListColumn {

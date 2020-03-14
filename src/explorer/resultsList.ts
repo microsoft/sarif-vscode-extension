@@ -29,6 +29,13 @@ export class ResultsList {
         this.collapsedGroups = [];
         this.createResultsListHeader();
         this.createResultsListPanelButtons();
+        this.data = {
+            columns: {},
+            filterCaseMatch: false,
+            filterText: "",
+            groups: [],
+            resultCount: 0
+        };
 
         this.severityIconHTMLEles = new Map<sarif.Result.level, HTMLElement>();
         const sevEle: HTMLDivElement = this.webview.createElement("div", { className: "severityiconwrapper" });
@@ -90,6 +97,7 @@ export class ResultsList {
         }
 
         const rows: HTMLCollectionOf<HTMLElement> = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName("listtablerow");
+        // @ts-ignore: compiler complains even though results can be iterated
         for (const row of rows) {
             if (row.dataset.id === id) {
                 row.classList.add("selected");
@@ -359,16 +367,22 @@ export class ResultsList {
 
             const iconCell: HTMLTableCellElement = <HTMLTableCellElement>rowCellBase.cloneNode();
             iconCell.classList.add("severityiconcell");
-            iconCell.appendChild(this.severityIconHTMLEles.get(row.severityLevel.value).cloneNode(true));
+            const severityIcon: HTMLElement | undefined = this.severityIconHTMLEles.get(row.severityLevel.value);
+            if (!severityIcon) {
+                throw new Error("Expected to be able to find severity icon.");
+            }
+
+            iconCell.appendChild(severityIcon.cloneNode(true));
             resultRow.appendChild(iconCell);
 
             for (let index: number = 1; index < cols.length; index++) {
                 const col: HTMLTableHeaderCellElement = <HTMLTableHeaderCellElement>cols[index];
-                const columnName: string = col.dataset.name;
-                const colData: ResultsListValue = row[columnName];
+                const columnName: string | undefined = col.dataset.name;
+
+                const colData: ResultsListValue | undefined = columnName !== undefined ? row[columnName] : undefined;
                 let textAndTooltip: TextAndTooltip = { text: "", tooltip: "" };
 
-                if (colData !== undefined) {
+                if (colData) {
                     textAndTooltip.text = colData.value || "";
                     textAndTooltip.tooltip = colData.tooltip || textAndTooltip.text;
 
@@ -418,7 +432,11 @@ export class ResultsList {
         const filterText: string = (<HTMLInputElement>document.getElementById("resultslistfilterinput")).value;
         this.webview.sendMessage({ data: filterText, type: MessageType.ResultsListFilterApplied });
 
-        const filterIconContainer: HTMLElement = document.getElementById("resultslistfilterbuttoncontainer");
+        const filterIconContainer: HTMLElement | null = document.getElementById("resultslistfilterbuttoncontainer");
+        if (!filterIconContainer) {
+            return;
+        }
+
         const activatedClass: string = "activated";
         const activeTooltip: string = ": Active";
         if (filterText !== "") {
@@ -449,13 +467,21 @@ export class ResultsList {
      */
     private onRowClicked(event: Event): void {
         const row: HTMLTableRowElement = <HTMLTableRowElement>event.currentTarget;
+        if (!row.parentElement) {
+            return;
+        }
+
         const curSelected: HTMLCollectionOf<Element> = row.parentElement.getElementsByClassName("listtablerow selected");
         while (curSelected.length > 0) {
             curSelected[0].classList.remove("selected");
         }
         row.classList.add("selected");
 
-        const resultId: string = row.dataset.id;
+        const resultId: string | undefined = row.dataset.id;
+        if (resultId === undefined) {
+            throw new Error("Expected resul id to be valid");
+        }
+
         this.webview.sendMessage({ data: resultId, type: MessageType.ResultsListResultSelected });
     }
 
@@ -490,7 +516,10 @@ export class ResultsList {
         const filterInput: HTMLInputElement = <HTMLInputElement>document.getElementById("resultslistfilterinputcontainer");
         if (filterInput.classList.contains(hiddenClass) === true) {
             filterInput.classList.remove(hiddenClass);
-            document.getElementById("resultslistfilterinput").focus();
+            const htmlElementToFocus: HTMLElement | null = document.getElementById("resultslistfilterinput");
+            if (htmlElementToFocus) {
+                htmlElementToFocus.focus();
+            }
         } else {
             filterInput.classList.add(hiddenClass);
         }
@@ -501,7 +530,11 @@ export class ResultsList {
      * @param event event for the header clicked
      */
     private onSortClicked(event: Event): void {
-        const col: string = (<HTMLTableHeaderCellElement>event.srcElement).dataset.name;
+        const col: string | undefined = (<HTMLTableHeaderCellElement>event.srcElement).dataset.name;
+        if (col === undefined) {
+            throw new Error("Expected to have sorting column.");
+        }
+
         this.webview.sendMessage({ data: col, type: MessageType.ResultsListSortChanged });
     }
 
@@ -554,6 +587,11 @@ export class ResultsList {
      * @param row Group row to toggled
      */
     private toggleGroup(row: HTMLTableRowElement): void {
+
+        if (row.dataset.group === undefined) {
+            throw new Error("Expected to have collapse group.");
+        }
+
         let hideRow: boolean = false;
         if (row.classList.contains(`${ToggleState.expanded}`)) {
             row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
@@ -588,7 +626,11 @@ export class ResultsList {
             resultCount = this.data.resultCount;
         }
 
-        const countElement: HTMLElement = document.getElementById("resultslistheadercount");
+        const countElement: HTMLElement | null = document.getElementById("resultslistheadercount");
+        if (!countElement) {
+            return;
+        }
+
         countElement.textContent = `${resultCount}`;
     }
 
@@ -596,8 +638,16 @@ export class ResultsList {
      * Updates the group by and sort by options selected and checked, if no options exist adds them from the columns
      */
     private updateResultsListPanelButtons(): void {
-        const groupByButton: HTMLElement = document.getElementById("resultslistgroupby");
-        const showColButton: HTMLElement = document.getElementById("resultslistshowcol");
+        const groupByButton: HTMLElement | null = document.getElementById("resultslistgroupby");
+        const showColButton: HTMLElement | null = document.getElementById("resultslistshowcol");
+
+        if (!groupByButton) {
+            throw new Error("Epxected to find group by button.");
+        }
+
+        if (!showColButton) {
+            throw new Error("Epxected to find show column button.");
+        }
 
         if (groupByButton.children.length === 1) {
             for (const col in this.data.columns) {

@@ -326,16 +326,21 @@ export class ExplorerController implements Disposable {
      * @param focus flag for setting focus to the webview
      */
     private sendActiveDiagnostic(focus: boolean): void {
+
+        if (!this.activeDiagnostic) {
+            return;
+        }
+
         let diagData: DiagnosticData = {
             activeTab: this.activeTab,
             selectedRow: this.selectedRow,
             selectedVerbosity: this.selectedVerbosity,
+            resultInfo: this.activeDiagnostic.resultInfo,
         };
 
         if (this.activeDiagnostic) {
             diagData = {
                 ...diagData,
-                resultInfo: this.activeDiagnostic.resultInfo,
                 runInfo: this.diagnosticCollection.getRunInfo(this.activeDiagnostic.resultInfo.runId),
             };
         }
