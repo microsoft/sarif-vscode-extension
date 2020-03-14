@@ -85,8 +85,8 @@ export class ResultsList {
      * Updates the selected row in the table
      */
     public updateSelection(): void {
-        const diag: DiagnosticData = this.webview.diagnostic;
-        if (!diag.resultInfo) {
+        const diag: DiagnosticData | undefined = this.webview.diagnostic;
+        if (!diag || !diag.resultInfo) {
             return;
         }
 
@@ -126,7 +126,8 @@ export class ResultsList {
             text: `${resultCount}`,
         }));
 
-        header.addEventListener("click", this.webview.onHeaderClickedBind);
+        // The bind to web-view's "this" is intentional, we want the click to run in the context of the web-view.
+        header.addEventListener("click", this.webview.onHeaderClicked.bind(this.webview));
     }
 
     /**
@@ -359,8 +360,8 @@ export class ResultsList {
                 resultRow.classList.add("hidden");
             }
 
-            const diag: DiagnosticData = this.webview.diagnostic;
-            if (diag !== undefined && diag.resultInfo.runId === row.runId.value &&
+            const diag: DiagnosticData | undefined = this.webview.diagnostic;
+            if (diag && diag.resultInfo.runId === row.runId.value &&
                 diag.resultInfo.id === row.resultId.value) {
                 resultRow.classList.add("selected");
             }

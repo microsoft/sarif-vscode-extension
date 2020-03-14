@@ -65,4 +65,5 @@ enum KindTooltip {
     review = "The result requires review by a human user to decide if it represents a problem.",
     open = "The rule was evaluated," +
     "and the tool concluded that there was insufficient information to decide whether a problem exists",
+    informational = "The rule was evaluated, and the problem is informational."
 }

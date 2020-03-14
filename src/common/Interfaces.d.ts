@@ -34,7 +34,9 @@ export interface HTMLElementOptions {
     /**
      * object filled with any attributes to set on the element
      */
-    attributes?: object;
+    attributes?: {
+        readonly [key: string]: any;
+    }
 }
 
 export interface Location {

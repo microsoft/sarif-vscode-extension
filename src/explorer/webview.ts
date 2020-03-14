@@ -10,6 +10,8 @@ import {
     ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, SarifVersion,
 } from "../common/Interfaces";
 
+import { ResultsList } from "./resultsList";
+
 export interface TextAndTooltip {
     text: string;
     tooltip: string;
@@ -19,43 +21,21 @@ export interface TextAndTooltip {
  * This class handles generating and providing the HTML content for the Explorer panel
  */
 export class ExplorerWebview {
-    public diagnostic: DiagnosticData;
-    public onHeaderClickedBind;
+    public diagnostic?: DiagnosticData;
 
-    private hasCodeFlows: boolean;
-    private hasAttachments: boolean;
-    private hasFixes: boolean;
-    private hasStacks: boolean;
-    private onAttachmentClickedBind;
-    private onCodeFlowTreeClickedBind;
-    private onCollapseAllClickedBind;
-    private onExpandAllClickedBind;
-    private onFixClickedBind;
-    private onMessageBind;
-    private onSourceLinkClickedBind;
-    private onTabClickedBind;
-    private onToggleStackGroupBind;
-    private onVerbosityChangeBind;
+    private hasCodeFlows: boolean = false;
+    private hasAttachments: boolean = false;
+    private hasFixes: boolean = false;
+    private hasStacks: boolean = false;
     private vscode;
-    private resultsList;
+    private resultsList: ResultsList;
 
     public constructor() {
-        this.onAttachmentClickedBind = this.onAttachmentClicked.bind(this);
-        this.onCodeFlowTreeClickedBind = this.onCodeFlowTreeClicked.bind(this);
-        this.onCollapseAllClickedBind = this.onCollapseAllClicked.bind(this);
-        this.onExpandAllClickedBind = this.onExpandAllClicked.bind(this);
-        this.onFixClickedBind = this.onFixClicked.bind(this);
-        this.onHeaderClickedBind = this.onHeaderClicked.bind(this);
-        this.onMessageBind = this.onMessage.bind(this);
-        this.onSourceLinkClickedBind = this.onSourceLinkClicked.bind(this);
-        this.onToggleStackGroupBind = this.onToggleStackGroup.bind(this);
-        this.onTabClickedBind = this.onTabClicked.bind(this);
-        this.onVerbosityChangeBind = this.onVerbosityChange.bind(this);
-
         // @ts-ignore ResultsList is a defined class but can't import becuase it's not a module
         this.resultsList = new ResultsList(this);
 
-        window.addEventListener("message", this.onMessageBind);
+        window.addEventListener("message", this.onMessage.bind(this));
+
         // @ts-ignore: acquireVsCodeApi function is provided real time in the webview
         this.vscode = acquireVsCodeApi();
     }
@@ -64,8 +44,9 @@ export class ExplorerWebview {
      * Called when the extension sends a message to the webview, this handles reacting to the message
      * @param event event sent from the extension, that has the WebviewMessage in it's data property
      */
-    public onMessage(event: any) {
-        const message = event.data as WebviewMessage;
+    // tslint:disable-next-line: no-any
+    public onMessage(event: any): void {
+        const message: WebviewMessage = event.data as WebviewMessage;
         switch (message.type) {
             case MessageType.NewDiagnostic:
                 this.setDiagnostic(message.data);
@@ -84,7 +65,7 @@ export class ExplorerWebview {
      * handles sending the webviewmessage to the extension
      * @param message message to send to the extension
      */
-    public sendMessage(message: WebviewMessage) {
+    public sendMessage(message: WebviewMessage): void {
         this.vscode.postMessage(message);
     }
 
@@ -148,34 +129,34 @@ export class ExplorerWebview {
         const tabContainer = document.getElementById("tabcontainer");
         if (tabContainer !== null) {
             for (let i = 0; i < tabContainer.children.length; i++) {
-                tabContainer.children.item(i).removeEventListener("click", this.onTabClickedBind);
+                tabContainer.children.item(i).removeEventListener("click", this.onTabClicked.bind(this));
             }
         }
 
         const sourceLinks = document.getElementsByClassName("sourcelink");
         for (let i = 0; i < sourceLinks.length; i++) {
-            sourceLinks.item(i).removeEventListener("click", this.onSourceLinkClickedBind);
+            sourceLinks.item(i).removeEventListener("click", this.onSourceLinkClicked.bind(this));
         }
 
         if (this.hasCodeFlows) {
             const codeFlowTrees = document.getElementsByClassName("codeflowtreeroot");
             for (let i = 0; i < codeFlowTrees.length; i++) {
-                codeFlowTrees.item(i).removeEventListener("click", this.onCodeFlowTreeClickedBind);
+                codeFlowTrees.item(i).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             }
 
             let element = document.getElementById("expandallcodeflow");
             if (element !== null) {
-                element.removeEventListener("click", this.onExpandAllClickedBind);
+                element.removeEventListener("click", this.onExpandAllClicked.bind(this));
             }
 
             element = document.getElementById("collapseallcodeflow");
             if (element !== null) {
-                element.removeEventListener("click", this.onCollapseAllClickedBind);
+                element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
             }
 
             element = document.getElementById("codeflowverbosity");
             if (element !== null) {
-                element.removeEventListener("click", this.onVerbosityChangeBind);
+                element.removeEventListener("click", this.onVerbosityChange.bind(this));
             }
         }
 
@@ -239,7 +220,7 @@ export class ExplorerWebview {
             const rootEle = this.createElement("ul", { className: "codeflowtreeroot" }) as HTMLUListElement;
             const thread = codeflow.threads[0];
             this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
-            rootEle.addEventListener("click", this.onCodeFlowTreeClickedBind);
+            rootEle.addEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             container.appendChild(rootEle);
         }
 
@@ -272,7 +253,7 @@ export class ExplorerWebview {
         }
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
-        header.addEventListener("click", this.onHeaderClickedBind);
+        header.addEventListener("click", this.onHeaderClicked.bind(this));
     }
 
     /**
@@ -477,7 +458,7 @@ export class ExplorerWebview {
                 rootEle.appendChild(parent);
             }
 
-            rootEle.addEventListener("click", this.onAttachmentClickedBind);
+            rootEle.addEventListener("click", this.onAttachmentClicked.bind(this));
             panel.appendChild(rootEle);
         }
         return panel;
@@ -495,13 +476,13 @@ export class ExplorerWebview {
             const expandAll = this.createElement("div", {
                 className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
             });
-            expandAll.addEventListener("click", this.onExpandAllClickedBind);
+            expandAll.addEventListener("click", this.onExpandAllClicked.bind(this));
             headerEle.appendChild(expandAll);
 
             const collapseAll = this.createElement("div", {
                 className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
             });
-            collapseAll.addEventListener("click", this.onCollapseAllClickedBind);
+            collapseAll.addEventListener("click", this.onCollapseAllClicked.bind(this));
             headerEle.appendChild(collapseAll);
 
             headerEle.appendChild(this.createElement("div", { className: "headercontentseperator", text: "|" }));
@@ -509,7 +490,7 @@ export class ExplorerWebview {
             const verbosity = this.createElement("input", {
                 attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
             });
-            verbosity.addEventListener("change", this.onVerbosityChangeBind);
+            verbosity.addEventListener("change", this.onVerbosityChange.bind(this));
             headerEle.appendChild(verbosity);
             panel.appendChild(headerEle);
 
@@ -607,7 +588,7 @@ export class ExplorerWebview {
                 }
             }
 
-            rootEle.addEventListener("click", this.onFixClickedBind);
+            rootEle.addEventListener("click", this.onFixClicked.bind(this));
             panel.appendChild(rootEle);
         }
         return panel;
@@ -765,7 +746,7 @@ export class ExplorerWebview {
                     attributes: { colspan: `${columnCount}` },
                     text: stack.message.text,
                 }));
-                msgRow.addEventListener("click", this.onToggleStackGroupBind);
+                msgRow.addEventListener("click", this.onToggleStackGroup.bind(this));
                 tableBodyEle.appendChild(msgRow);
 
                 const tdTag = "td";
@@ -790,7 +771,7 @@ export class ExplorerWebview {
                     });
 
                     if (file !== undefined) {
-                        fRow.addEventListener("click", this.onSourceLinkClickedBind);
+                        fRow.addEventListener("click", this.onSourceLinkClicked.bind(this));
                     }
 
                     const fLine = fLocation.range[0].line.toString();
@@ -889,7 +870,7 @@ export class ExplorerWebview {
                 }, className: "sourcelink", text: linkText, tooltip: file,
             }) as HTMLAnchorElement;
 
-            sourceLink.addEventListener("click", this.onSourceLinkClickedBind);
+            sourceLink.addEventListener("click", this.onSourceLinkClicked.bind(this));
         }
 
         return sourceLink;
@@ -905,7 +886,7 @@ export class ExplorerWebview {
         const returnEle = this.createElement("div",
             { className: "tab", id: tabId, tooltip: tabTooltip }) as HTMLDivElement;
         returnEle.appendChild(this.createElement("label", { className: "tablabel", text: tabText }));
-        returnEle.addEventListener("click", this.onTabClickedBind);
+        returnEle.addEventListener("click", this.onTabClicked.bind(this));
         return returnEle;
     }
 
@@ -1012,7 +993,7 @@ export class ExplorerWebview {
      * Callback when user clicks on the header, for showing and hiding the Results list or Results Details sections
      * @param event event fired when user clicked a header
      */
-    private onHeaderClicked(event: MouseEvent) {
+    public onHeaderClicked(event: MouseEvent) {
         let ele = event.srcElement as HTMLElement;
         while (!ele.classList.contains("headercontainer")) {
             ele = ele.parentElement as HTMLElement;
@@ -1186,9 +1167,9 @@ export class ExplorerWebview {
      * Selects the codeflow node, includes unselecting any already selected codeflow nodes
      * @param ele the codeflow node element to select
      */
-    private selectCodeFlowNode(ele: HTMLElement) {
-        const codeFlowSelectedClass = "codeflowselected";
-        const cfSelected = document.getElementsByClassName(codeFlowSelectedClass);
+    private selectCodeFlowNode(ele: HTMLElement): void {
+        const codeFlowSelectedClass: string = "codeflowselected";
+        const cfSelected: HTMLCollectionOf<Element> = document.getElementsByClassName(codeFlowSelectedClass);
         while (cfSelected.length > 0) {
             cfSelected[0].classList.remove(codeFlowSelectedClass);
         }
@@ -1199,9 +1180,9 @@ export class ExplorerWebview {
      * Sets the diagnostic to display the info. Also sets the default values if they exist in the data parameter
      * @param data json stringify'd version of the diagnosticdata to be set
      */
-    private setDiagnostic(data: string) {
+    private setDiagnostic(data: string): void {
         this.cleanUpResultDetails();
-        const diagnosticData = JSON.parse(data) as DiagnosticData;
+        const diagnosticData: DiagnosticData = JSON.parse(data);
         this.diagnostic = diagnosticData;
         this.loadResultDetails();
 
@@ -1224,12 +1205,17 @@ export class ExplorerWebview {
      * @param type type of the tree node("important" or "unimportant")
      * @param state verbosity show state to set the matching nodes to ("verbosityshow" or "verbosityhide")
      */
-    private setVerbosityShowState(type: string, state: string) {
-        const elements = document.getElementsByClassName(type);
-        for (let i = 0; i < elements.length; i++) {
-            const classes = elements.item(i).className.split(" ");
+    private setVerbosityShowState(type: string, state: string): void {
+        const elements: HTMLCollectionOf<Element> = document.getElementsByClassName(type);
+        for (let i: number = 0; i < elements.length; i++) {
+            const verbosityElement: Element | null = elements.item(i);
+            if (!verbosityElement) {
+                continue;
+            }
+
+            const classes: string[] = verbosityElement.className.split(" ");
             classes[TreeClassNames.VerbosityShowState] = state;
-            elements.item(i).className = classes.join(" ");
+            verbosityElement.className = classes.join(" ");
         }
     }
 
@@ -1262,19 +1248,21 @@ export class ExplorerWebview {
      * @param treeNodeId the id of the tree node to show
      * @param select flag if true the tree node will be selected after it's parents are expanded
      */
-    private showTreeNode(treeNodeId: string, select: boolean) {
-        const node = document.getElementById(treeNodeId);
-        if (node !== null) {
-            let parent = node.parentElement;
-            while (!parent.classList.contains("codeflowtreeroot")) {
-                parent.classList.replace(ToggleState.collapsed, ToggleState.expanded);
-                parent = parent.parentElement;
-            }
+    private showTreeNode(treeNodeId: string, select: boolean): void {
+        const node: HTMLElement | null = document.getElementById(treeNodeId);
+        if (!node) {
+            return;
+        }
 
-            if (select) {
-                this.selectCodeFlowNode(node);
-                node.focus();
-            }
+        let parent: HTMLElement | null = node.parentElement;
+        while (parent && parent.classList.contains("codeflowtreeroot")) {
+            parent.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+            parent = parent.parentElement;
+        }
+
+        if (select) {
+            this.selectCodeFlowNode(node);
+            node.focus();
         }
     }
 
@@ -1283,8 +1271,8 @@ export class ExplorerWebview {
      * @param ele element that needs to toggle
      * @param toggleToState state to toggle it to, if not defined it will determine it based on the current state
      */
-    private toggleTreeElement(ele: HTMLElement, toggleToState?: ToggleState) {
-        const classNames = ele.className.split(" ");
+    private toggleTreeElement(ele: HTMLElement, toggleToState?: ToggleState): void {
+        const classNames: string[] = ele.className.split(" ");
         if (toggleToState === undefined) {
             if (classNames[TreeClassNames.ExpandState] === ToggleState.expanded) {
                 toggleToState = ToggleState.collapsed;
@@ -1302,12 +1290,17 @@ export class ExplorerWebview {
      * @param stateToToggle which state needs to be toggled
      * @param toggleToState which state elements will be toggled to
      */
-    private toggleTreeElements(stateToToggle, toggleToState) {
-        const treeroots = document.getElementsByClassName("codeflowtreeroot");
-        for (let i = 0; i < treeroots.length; i++) {
-            const elements = treeroots.item(i).getElementsByClassName(stateToToggle);
+    private toggleTreeElements(stateToToggle: ToggleState, toggleToState: ToggleState): void {
+        const treeroots: HTMLCollectionOf<Element> = document.getElementsByClassName("codeflowtreeroot");
+        for (let i: number = 0; i < treeroots.length; i++) {
+            const treeRootElement: Element | null = treeroots.item(i);
+            if (!treeRootElement) {
+                continue;
+            }
+
+            const elements: HTMLCollectionOf<Element> = treeRootElement.getElementsByClassName(stateToToggle);
             while (elements.length > 0) {
-                this.toggleTreeElement(elements[0] as HTMLElement, toggleToState);
+                this.toggleTreeElement(<HTMLElement>elements[0], toggleToState);
             }
         }
     }
@@ -1315,13 +1308,18 @@ export class ExplorerWebview {
     /**
      * Updates the CodeFlow trees to only show the nodes based on the current verbosity setting
      */
-    private updateTreeVerbosity() {
-        const hide = "verbosityhide";
-        const show = "verbosityshow";
-        const value = (document.getElementById("codeflowverbosity") as HTMLInputElement).value;
-        let importantClass;
-        let unimportantClass;
-        let verbosityRequest;
+    private updateTreeVerbosity(): void {
+        const hide: string = "verbosityhide";
+        const show: string = "verbosityshow";
+        const verbosityElement: HTMLElement | null = document.getElementById("codeflowverbosity");
+        if (!verbosityElement) {
+            throw new Error("Cannot find code-flow verbosity element.");
+        }
+
+        const value: string = (<HTMLInputElement>verbosityElement).value;
+        let importantClass: string | undefined;
+        let unimportantClass: string | undefined;
+        let verbosityRequest: string | undefined;
 
         switch (value) {
             case "0":
@@ -1339,6 +1337,8 @@ export class ExplorerWebview {
                 unimportantClass = show;
                 verbosityRequest = "unimportant";
                 break;
+            default:
+                throw new Error("Unhandled value for code flow verbosity.");
         }
 
         this.setVerbosityShowState("important", importantClass);
@@ -1350,5 +1350,5 @@ export class ExplorerWebview {
 }
 
 // @ts-ignore: This is used to instantiate the main class
-const explorerWebview = new ExplorerWebview();
+const explorerWebview: ExplorerWebview = new ExplorerWebview();
 explorerWebview.sendMessage({ data: "", type: MessageType.ExplorerLoaded } as WebviewMessage);
