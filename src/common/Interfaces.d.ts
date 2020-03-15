@@ -77,7 +77,7 @@ export interface ResultInfo {
     additionalProperties?: { [key: string]: string };
     assignedLocation?: Location;
     attachments: Attachment[];
-    baselineState?: sarif.Result.baselineState;
+    baselineState: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
     fixes: Fix[];
     id: number;

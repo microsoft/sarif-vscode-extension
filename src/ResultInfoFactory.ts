@@ -115,7 +115,7 @@ export class ResultInfoFactory {
             id: id,
             locationInSarifFile: locationInSarifFile,
             runId: runId,
-            baselineState: result.baselineState,
+            baselineState: result.baselineState || "new",
             locations: locations,
             assignedLocation: locations.length > 0 ? locations[0] : undefined,
             codeFlows: codeFlows,

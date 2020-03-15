@@ -9,7 +9,8 @@ import {
     ResultsListSeverityValue, ResultsListValue, DiagnosticData,
 } from "../common/Interfaces";
 
-import { ExplorerWebview, TextAndTooltip } from "./webview";
+import { ExplorerWebview } from "./webview";
+import { TextAndTooltip } from "./textAndTooltip";
 
 /**
  * This class handles generating and providing the HTML content for the Results List in the Explorer
