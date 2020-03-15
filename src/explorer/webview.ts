@@ -7,27 +7,27 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, SarifVersion, FixFile, FixChange
+    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, FixFile, FixChange,
+    ThreadFlow
 } from "../common/Interfaces";
 
 import { ResultsList } from "./resultsList";
-
-export interface TextAndTooltip {
-    text: string;
-    tooltip: string;
-}
+import { TextAndTooltip } from "./textAndTooltip";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
  */
 export class ExplorerWebview {
+    private vscode: {
+        postMessage: (message: WebviewMessage) => void;
+    };
+
     public diagnostic?: DiagnosticData;
 
     private hasCodeFlows: boolean = false;
     private hasAttachments: boolean = false;
     private hasFixes: boolean = false;
     private hasStacks: boolean = false;
-    private vscode;
     private resultsList: ResultsList;
 
     public constructor() {
@@ -124,58 +124,76 @@ export class ExplorerWebview {
     /**
      * Cleans up the result details section, removing event handlers and elements
      */
-    private cleanUpResultDetails() {
+    private cleanUpResultDetails(): void {
         // Remove event handlers
-        const tabContainer = document.getElementById("tabcontainer");
-        if (tabContainer !== null) {
-            for (let i = 0; i < tabContainer.children.length; i++) {
-                tabContainer.children.item(i).removeEventListener("click", this.onTabClicked.bind(this));
+        const tabContainer: HTMLElement | null = document.getElementById("tabcontainer");
+        if (tabContainer) {
+            for (let i: number = 0; i < tabContainer.children.length; i++) {
+                const tabContainerElement: Element | null = tabContainer.children.item(i);
+                if (tabContainerElement) {
+                    (<HTMLDivElement>tabContainerElement).removeEventListener("click", this.onTabClicked.bind(this));
+                }
             }
         }
 
-        const sourceLinks = document.getElementsByClassName("sourcelink");
-        for (let i = 0; i < sourceLinks.length; i++) {
-            sourceLinks.item(i).removeEventListener("click", this.onSourceLinkClicked.bind(this));
+        const sourceLinks: HTMLCollectionOf<Element> = document.getElementsByClassName("sourcelink");
+        for (let i: number = 0; i < sourceLinks.length; i++) {
+            const sourceLinkElement: Element | null = sourceLinks.item(i);
+            if (sourceLinkElement) {
+                (<HTMLAnchorElement>sourceLinkElement).removeEventListener("click", this.onSourceLinkClicked.bind(this));
+            }
         }
 
         if (this.hasCodeFlows) {
-            const codeFlowTrees = document.getElementsByClassName("codeflowtreeroot");
-            for (let i = 0; i < codeFlowTrees.length; i++) {
-                codeFlowTrees.item(i).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
+            const codeFlowTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("codeflowtreeroot");
+            for (let i: number = 0; i < codeFlowTrees.length; i++) {
+                const codeFlowTree: Element | null = codeFlowTrees.item(i);
+                if (codeFlowTree) {
+                    (<HTMLUListElement>codeFlowTree).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
+                }
             }
 
-            let element = document.getElementById("expandallcodeflow");
-            if (element !== null) {
+            let element: Element | null = document.getElementById("expandallcodeflow");
+            if (element) {
                 element.removeEventListener("click", this.onExpandAllClicked.bind(this));
             }
 
             element = document.getElementById("collapseallcodeflow");
-            if (element !== null) {
+            if (element) {
                 element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
             }
 
             element = document.getElementById("codeflowverbosity");
-            if (element !== null) {
+            if (element) {
                 element.removeEventListener("click", this.onVerbosityChange.bind(this));
             }
         }
 
         if (this.hasAttachments) {
-            const attachmentTrees = document.getElementsByClassName("attachmentstreeroot");
-            for (let i = 0; i < attachmentTrees.length; i++) {
-                attachmentTrees.item(i).removeEventListener("click", this.onAttachmentClicked);
+            const attachmentTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("attachmentstreeroot");
+            for (let i: number = 0; i < attachmentTrees.length; i++) {
+                const attachmentTree: Element | null = attachmentTrees.item(i);
+                if (attachmentTree) {
+                    (<HTMLUListElement>attachmentTree).removeEventListener("click", this.onAttachmentClicked.bind(this));
+                }
             }
         }
 
         // Clear Result Details
-        const header = document.getElementById("resultdetailsheader");
-        while (header.children.length > 0) {
-            header.removeChild(header.children.item(0));
+        const header: Element | null = document.getElementById("resultdetailsheader");
+        while (header && header.children.length > 0) {
+            const childHeaderItem: Element | null = header.children.item(0);
+            if (childHeaderItem) {
+                header.removeChild(childHeaderItem);
+            }
         }
 
-        const container = document.getElementById("resultdetailscontainer");
-        while (container.children.length > 0) {
-            container.removeChild(container.children.item(0));
+        const container: Element | null = document.getElementById("resultdetailscontainer");
+        while (container && container.children.length > 0) {
+            const containerChildItem: Element | null = container.children.item(0);
+            if (containerChildItem) {
+                container.removeChild(containerChildItem);
+            }
         }
     }
 
@@ -186,7 +204,7 @@ export class ExplorerWebview {
     private createCodeFlowNode(step: CodeFlowStep): HTMLLIElement {
         let treeNodeOptions: TreeNodeOptions;
         if (step !== undefined) {
-            const nodeClass = `${step.importance || "important"} verbosityshow`;
+            const nodeClass: string = `${step.importance || "important"} verbosityshow`;
             treeNodeOptions = {
                 isParent: step.isParent,
                 liClass: nodeClass,
@@ -214,11 +232,11 @@ export class ExplorerWebview {
      * @param codeflows array of code flows that need to be displayed
      */
     private createCodeFlowTrees(codeflows: CodeFlow[]): HTMLDivElement {
-        const container = this.createElement("div", { id: "codeflowtreecontainer" }) as HTMLDivElement;
+        const container: HTMLDivElement = this.createElement("div", { id: "codeflowtreecontainer" });
 
         for (const codeflow of codeflows) {
-            const rootEle = this.createElement("ul", { className: "codeflowtreeroot" }) as HTMLUListElement;
-            const thread = codeflow.threads[0];
+            const rootEle: HTMLUListElement = this.createElement("ul", { className: "codeflowtreeroot" });
+            const thread: ThreadFlow = codeflow.threads[0];
             this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
             rootEle.addEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             container.appendChild(rootEle);
@@ -230,30 +248,34 @@ export class ExplorerWebview {
     /**
      * Creates the content that shows in the results details header of the Explorer window
      */
-    private createResultDetailsHeader(resultInfo: ResultInfo) {
-        const header = document.getElementById("resultdetailsheader");
+    private createResultDetailsHeader(resultInfo: ResultInfo): void {
+        const header: Element | null = document.getElementById("resultdetailsheader");
+
+        if (!header) {
+            throw new Error("Could not find the result details header");
+        }
 
         if (resultInfo.ruleId !== undefined || resultInfo.ruleName !== undefined) {
             header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
             header.appendChild(this.createElement("label", { id: "titlerulename", text: resultInfo.ruleName }));
         } else {
-            const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
+            const severity: TextAndTooltip = this.severityTextAndTooltip(resultInfo.severityLevel);
             header.appendChild(this.createElement("label", { id: "titlerulename", text: severity.text }));
         }
         header.appendChild(this.createElement("label", { text: " | " }));
 
-        let filenameandline = "No Location";
-        const resultLocation = resultInfo.locations[0];
-        if (resultLocation !== null && resultLocation !== undefined) {
-            if (resultLocation.uri !== undefined) {
-                filenameandline = `${resultLocation.fileName} (${resultLocation.range[0].line + 1/*Convert 0 based*/})`;
+        let filenameandline: string = "No Location";
+        const resultLocation: Location = resultInfo.locations[0];
+        if (resultLocation) {
+            if (resultLocation.uri && resultLocation.range) {
+                filenameandline = `${resultLocation.fileName} (${resultLocation.range?.start.line + 1/*Convert 0 based*/})`;
             } else if (resultLocation.logicalLocations !== undefined && resultLocation.logicalLocations.length > 0) {
                 filenameandline = resultLocation.logicalLocations[0];
             }
         }
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
-        header.addEventListener("click", this.onHeaderClicked.bind(this));
+        (<HTMLDivElement>header).addEventListener("click", this.onHeaderClicked.bind(this));
     }
 
     /**
@@ -289,15 +311,15 @@ export class ExplorerWebview {
      * @param rowName name to show up on the left side of the row
      * @param locations Array of Locations to be added to the Html
      */
-    private createLogicalLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement {
-        const cellContents = this.createElement("div") as HTMLDivElement;
+    private createLogicalLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement | undefined {
+        const cellContents: HTMLDivElement = this.createElement("div");
 
-        let locationsAdded = 0;
+        let locationsAdded: number = 0;
         for (const loc of locations) {
             if (loc !== undefined && loc !== null) {
                 if (loc.logicalLocations !== undefined) {
                     for (const logLoc of loc.logicalLocations) {
-                        const text = this.createElement("span", { text: logLoc });
+                        const text: HTMLSpanElement = this.createElement("span", { text: logLoc });
                         cellContents.appendChild(text);
                         cellContents.appendChild(this.createElement("br"));
                         locationsAdded++;
@@ -321,16 +343,16 @@ export class ExplorerWebview {
      * @param valueTooltip tooltip to show over the value in right column
      * @param isHtml flag to set if the @param value is html so it gets set via innerHtml *note* only set on safe values
      */
-    private createNameValueRow(name: string, value: string, valueTooltip?: string, isHtml?: boolean) {
-        const row = this.createElement("tr") as HTMLTableRowElement;
+    private createNameValueRow(name: string, value: string, valueTooltip?: string, isHtml?: boolean): HTMLTableRowElement {
+        const row: HTMLTableRowElement = this.createElement("tr");
         row.appendChild(this.createElement("td", { className: "td-contentname", text: name }));
         if (valueTooltip === undefined) { valueTooltip = value; }
         if (isHtml === true) {
-            const cont = this.createElement("td", { className: "td-contentvalue", tooltip: valueTooltip });
+            const cont: HTMLTableCellElement = this.createElement("td", { className: "td-contentvalue", tooltip: valueTooltip });
             cont.innerHTML = value;
             row.appendChild(cont);
         } else {
-            const cont = this.createElement("td", { className: "td-contentvalue", text: value, tooltip: valueTooltip });
+            const cont: HTMLTableCellElement = this.createElement("td", { className: "td-contentvalue", text: value, tooltip: valueTooltip });
             row.appendChild(cont);
         }
 
@@ -350,7 +372,7 @@ export class ExplorerWebview {
 
         if (options.location !== undefined) {
             if (options.logicalLocation === undefined) {
-                const optLogLocs = options.location.logicalLocations;
+                const optLogLocs: string[] | undefined = options.location.logicalLocations;
                 if (optLogLocs !== undefined && optLogLocs.length > 0) {
                     options.logicalLocation = optLogLocs[0];
                 }
@@ -360,12 +382,12 @@ export class ExplorerWebview {
                 options.locationText = options.location.fileName;
             }
 
-            if (options.locationText !== undefined && options.locationLine === undefined) {
-                const locRange = options.location.range[0];
+            if (options.location.range && options.locationText !== undefined && options.locationLine === undefined) {
+                const locRange: Position = options.location.range.start;
                 options.locationLine = `(${locRange.line + 1},${locRange.character + 1})`;
             }
 
-            if (options.message === undefined) {
+            if (options.location.message && options.message === undefined) {
                 options.message = options.location.message.text;
             }
 
@@ -395,11 +417,11 @@ export class ExplorerWebview {
             options.tooltip = options.message;
         }
 
-        const node = this.createElement("li", {
+        const node: HTMLLIElement = this.createElement("li", {
             attributes: { tabindex: "0" }, className: options.liClass, id: options.requestId, tooltip: options.tooltip,
-        }) as HTMLLIElement;
+        });
 
-        const locationTooltip = options.locationText + options.locationLine;
+        const locationTooltip: string | undefined = options.locationText + options.locationLine;
         node.appendChild(this.createElement("span", {
             className: "treenodeline", text: options.locationLine, tooltip: locationTooltip,
         }));
@@ -424,31 +446,31 @@ export class ExplorerWebview {
      * @param attachments Array of Attachment objects to create the panel with
      */
     private createPanelAttachments(attachments: Attachment[]): HTMLDivElement {
-        const panel = this.createPanel(tabNames.attachments);
+        const panel: HTMLDivElement = this.createPanel(tabNames.attachments);
 
         if (attachments !== undefined) {
-            const rootEle = this.createElement("ul", { className: "attachmentstreeroot" }) as HTMLUListElement;
+            const rootEle: HTMLUListElement = this.createElement("ul", { className: "attachmentstreeroot" });
             for (const aIndex of attachments.keys()) {
-                let isAParent = false;
-                const attachment = attachments[aIndex];
+                let isAParent: boolean = false;
+                const attachment: Attachment = attachments[aIndex];
                 if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
-                let treeNodeOptions = {
+                const treeNodeOptions: TreeNodeOptions = {
                     isParent: isAParent,
                     location: attachment.file,
                     message: attachment.description.text,
                     requestId: `${aIndex}`,
-                } as TreeNodeOptions;
-                const parent = this.createNode(treeNodeOptions);
+                };
+                const parent: HTMLLIElement = this.createNode(treeNodeOptions);
                 if (isAParent) {
-                    const childrenContainer = this.createElement("ul") as HTMLUListElement;
+                    const childrenContainer: HTMLUListElement = this.createElement("ul");
                     for (const rIndex of attachment.regionsOfInterest.keys()) {
-                        const region = attachment.regionsOfInterest[rIndex];
-                        treeNodeOptions = {
+                        const region: Location = attachment.regionsOfInterest[rIndex];
+                        const treeNodeOptions: TreeNodeOptions = {
                             isParent: false,
                             locationText: "",
-                            message: region.message.text,
+                            message: region.message && region.message.text,
                             requestId: `${aIndex}_${rIndex}`,
-                        } as TreeNodeOptions;
+                        };
 
                         childrenContainer.appendChild(this.createNode(treeNodeOptions));
                     }
@@ -469,17 +491,17 @@ export class ExplorerWebview {
      * @param codeFlows Array of code flows to create the content from
      */
     private createPanelCodeFlow(codeFlows: CodeFlow[]): HTMLDivElement {
-        const panel = this.createPanel(tabNames.codeflow);
+        const panel: HTMLDivElement = this.createPanel(tabNames.codeflow);
         if (codeFlows !== undefined) {
-            const headerEle = this.createElement("div", { className: "tabcontentheader" }) as HTMLDivElement;
+            const headerEle: HTMLDivElement = this.createElement("div", { className: "tabcontentheader" });
 
-            const expandAll = this.createElement("div", {
+            const expandAll: HTMLDivElement = this.createElement("div", {
                 className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
             });
             expandAll.addEventListener("click", this.onExpandAllClicked.bind(this));
             headerEle.appendChild(expandAll);
 
-            const collapseAll = this.createElement("div", {
+            const collapseAll: HTMLDivElement = this.createElement("div", {
                 className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
             });
             collapseAll.addEventListener("click", this.onCollapseAllClicked.bind(this));
@@ -487,7 +509,7 @@ export class ExplorerWebview {
 
             headerEle.appendChild(this.createElement("div", { className: "headercontentseperator", text: "|" }));
 
-            const verbosity = this.createElement("input", {
+            const verbosity: HTMLInputElement = this.createElement("input", {
                 attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
             });
             verbosity.addEventListener("change", this.onVerbosityChange.bind(this));
@@ -867,7 +889,7 @@ export class ExplorerWebview {
                     "data-eLine": location.range.end.line.toString(),
                     "data-file": file,
                     "data-sCol": location.range.start.character.toString(),
-                    "data-sLine": location.rangestart.line.toString(),
+                    "data-sLine": location.range.start.line.toString(),
                     "href": "#0",
                 }, className: "sourcelink", text: linkText, tooltip: file,
             }) as HTMLAnchorElement;
