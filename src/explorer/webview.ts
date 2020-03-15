@@ -7,7 +7,7 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, SarifVersion,
+    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, SarifVersion, FixFile, FixChange
 } from "../common/Interfaces";
 
 import { ResultsList } from "./resultsList";
@@ -103,12 +103,12 @@ export class ExplorerWebview {
      * @param start Starting point in the Array, if negative it will create placeholders(used when first step is nested)
      */
     private addNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number): number {
-        for (let index = start; index < steps.length; index++) {
-            const node = this.createCodeFlowNode(steps[index]);
+        for (let index: number = start; index < steps.length; index++) {
+            const node: HTMLLIElement = this.createCodeFlowNode(steps[index]);
             parent.appendChild(node);
             if (index < 0 || steps[index].isParent) {
                 index++;
-                const childrenContainer = this.createElement("ul") as HTMLUListElement;
+                const childrenContainer: HTMLUListElement = this.createElement("ul");
                 index = this.addNodes(childrenContainer, steps, index);
                 node.appendChild(childrenContainer);
             } else if (steps[index].isLastChild) {
@@ -261,14 +261,14 @@ export class ExplorerWebview {
      * @param rowName name to show up on the left side of the row
      * @param locations Array of Locations to be added to the Html
      */
-    private createLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement {
-        const cellContents = this.createElement("div") as HTMLDivElement;
+    private createLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement | undefined {
+        const cellContents: HTMLDivElement = this.createElement("div");
 
-        let locationsAdded = 0;
+        let locationsAdded: number = 0;
         for (const loc of locations) {
-            if (loc !== undefined && loc !== null) {
-                const text = `${loc.fileName} (${(loc.range[0].line + 1)})`;
-                const link = this.createSourceLink(loc, text);
+            if (loc && loc.range) {
+                const text: string = `${loc.fileName} (${(loc.range.start.line + 1)})`;
+                const link: HTMLAnchorElement | undefined = this.createSourceLink(loc, text);
                 if (link !== undefined) {
                     cellContents.appendChild(link);
                     cellContents.appendChild(this.createElement("br"));
@@ -505,81 +505,81 @@ export class ExplorerWebview {
      * @param fixes Array of Fixes objects to create the panel with
      */
     private createPanelFixes(fixes: Fix[]): HTMLDivElement {
-        const panel = this.createPanel(tabNames.fixes);
+        const panel: HTMLDivElement = this.createPanel(tabNames.fixes);
 
         if (fixes !== undefined) {
-            const rootEle = this.createElement("ul", { className: "fixestreeroot" }) as HTMLUListElement;
+            const rootEle: HTMLUListElement = this.createElement("ul", { className: "fixestreeroot" });
             for (const index of fixes.keys()) {
-                const fix = fixes[index];
-                const hasFiles = fix.files !== undefined && fix.files.length > 0;
-                const fixRootNodeOptions = {
+                const fix: Fix = fixes[index];
+                const hasFiles: boolean = fix.files !== undefined && fix.files.length > 0;
+                const fixRootNodeOptions: TreeNodeOptions = {
                     isParent: hasFiles,
                     locationText: "",
                     message: fix.description.text,
                     requestId: `${index}`,
-                } as TreeNodeOptions;
-                const fixRootNode = this.createNode(fixRootNodeOptions);
+                };
+                const fixRootNode: HTMLLIElement = this.createNode(fixRootNodeOptions);
                 rootEle.appendChild(fixRootNode);
 
                 if (hasFiles) {
-                    const filesContainer = this.createElement("ul") as HTMLUListElement;
+                    const filesContainer: HTMLUListElement = this.createElement("ul");
                     fixRootNode.appendChild(filesContainer);
                     for (const filesIndex of fix.files.keys()) {
-                        const file = fix.files[filesIndex];
-                        const hasChanges = file.changes !== undefined && file.changes.length > 0;
-                        const fileNodeOptions = {
+                        const file: FixFile = fix.files[filesIndex];
+                        const hasChanges: boolean = file.changes !== undefined && file.changes.length > 0;
+                        const fileNodeOptions: TreeNodeOptions = {
                             isParent: true, locationText: "", message: file.location.fileName,
-                            requestId: `${index}`, tooltip: file.location.uri.fsPath,
-                        } as TreeNodeOptions;
-                        const fileNode = this.createNode(fileNodeOptions);
+                            requestId: `${index}`, tooltip: file.location.uri ? file.location.uri.fsPath : "",
+                        };
+                        const fileNode: HTMLLIElement = this.createNode(fileNodeOptions);
                         filesContainer.appendChild(fileNode);
 
                         if (hasChanges) {
-                            const changesContainer = this.createElement("ul") as HTMLUListElement;
+                            const changesContainer: HTMLUListElement = this.createElement("ul");
                             fileNode.appendChild(changesContainer);
                             for (const changeIndex of file.changes.keys()) {
-                                const change = file.changes[changeIndex];
-                                const changeMsg = `Change ${changeIndex + 1}`;
-                                const changeNodeOptions = {
+                                const change: FixChange = file.changes[changeIndex];
+                                const changeMsg: string  = `Change ${changeIndex + 1}`;
+                                const changeNodeOptions: TreeNodeOptions = {
                                     isParent: true,
                                     locationText: "",
                                     message: changeMsg,
                                     requestId: `${index}`,
-                                } as TreeNodeOptions;
-                                const changeNode = this.createNode(changeNodeOptions);
+                                };
+                                const changeNode: HTMLLIElement = this.createNode(changeNodeOptions);
                                 changesContainer.appendChild(changeNode);
 
-                                const changeDetailsContainer = this.createElement("ul") as HTMLUListElement;
+                                const changeDetailsContainer: HTMLUListElement = this.createElement("ul");
                                 changeNode.appendChild(changeDetailsContainer);
 
-                                const start = change.delete[0] as Position;
-                                const end = change.delete[1] as Position;
+                                const start: Position = change.delete.start;
+                                const end: Position = change.delete.end;
                                 if (start.line !== end.line || start.character !== end.character) {
-                                    let delMsg = `Delete Ln ${start.line + 1}, Col ${start.character + 1}`;
+                                    let delMsg: string = `Delete Ln ${start.line + 1}, Col ${start.character + 1}`;
                                     if (start.line !== end.line) {
                                         delMsg = `${delMsg} - Ln ${end.line + 1}, Col ${end.character + 1}`;
                                     } else {
                                         delMsg = delMsg + `-${end.character + 1}`;
                                     }
 
-                                    const deleteNodeOptions = {
+                                    const deleteNodeOptions: TreeNodeOptions = {
                                         isParent: false,
                                         locationText: "",
                                         message: delMsg,
                                         requestId: `${index}`,
-                                    } as TreeNodeOptions;
+                                    };
                                     changeDetailsContainer.appendChild(this.createNode(deleteNodeOptions));
                                 }
 
                                 if (change.insert !== undefined) {
-                                    const msg = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
+                                    const msg: string = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
                                         `"${change.insert}"`;
-                                    const insertNodeOptions = {
+                                    const insertNodeOptions: TreeNodeOptions = {
                                         isParent: false,
                                         locationText: "",
                                         message: msg,
                                         requestId: `${index}`,
-                                    } as TreeNodeOptions;
+                                    };
                                     changeDetailsContainer.appendChild(this.createNode(insertNodeOptions));
                                 }
                             }
@@ -599,21 +599,21 @@ export class ExplorerWebview {
      * @param resultInfo Result info to create the tab content from
      */
     private createPanelResultInfo(resultInfo: ResultInfo): HTMLDivElement {
-        const panel = this.createPanel(tabNames.resultinfo);
-        const tableEle = this.createElement("table") as HTMLTableElement;
+        const panel: HTMLDivElement = this.createPanel(tabNames.resultinfo);
+        const tableEle: HTMLTableElement = this.createElement("table");
 
-        if (resultInfo.ruleDescription !== undefined) {
-            const ruleDesc = resultInfo.ruleDescription;
+        if (resultInfo.ruleDescription) {
+            const ruleDesc: Message = resultInfo.ruleDescription;
             if (ruleDesc.html !== undefined && ruleDesc.html !== resultInfo.message.html) {
                 tableEle.appendChild(this.createNameValueRow("Rule Description:", ruleDesc.html, ruleDesc.text, true));
             }
         }
 
-        const severity = this.severityTextAndTooltip(resultInfo.severityLevel);
+        const severity: TextAndTooltip = this.severityTextAndTooltip(resultInfo.severityLevel);
         tableEle.appendChild(this.createNameValueRow("Severity level:", severity.text, severity.tooltip));
 
         if (resultInfo.kind !== undefined) {
-            const kind = this.kindTextAndTooltip(resultInfo.kind);
+            const kind: TextAndTooltip = this.kindTextAndTooltip(resultInfo.kind);
             tableEle.appendChild(this.createNameValueRow("Kind:", kind.text, kind.tooltip));
         }
 
@@ -621,44 +621,46 @@ export class ExplorerWebview {
             tableEle.appendChild(this.createNameValueRow("Rank:", resultInfo.rank.toString(10)));
         }
 
-        if (resultInfo.baselineState !== undefined) {
-            const baselineState = this.baselineStateTextAndTooltip(resultInfo.baselineState);
+        if (resultInfo.baselineState) {
+            const baselineState: TextAndTooltip = this.baselineStateTextAndTooltip(resultInfo.baselineState);
             tableEle.appendChild(this.createNameValueRow("Baseline state:", baselineState.text, baselineState.tooltip));
         }
 
         if (resultInfo.ruleHelpUri !== undefined) {
-            const cellContents = this.createElement("a", { text: resultInfo.ruleHelpUri }) as HTMLAnchorElement;
+            const cellContents: HTMLAnchorElement = this.createElement("a", { text: resultInfo.ruleHelpUri });
             cellContents.href = resultInfo.ruleHelpUri;
             tableEle.appendChild(this.createRowWithContents("Help: ", cellContents));
         }
 
-        let row = this.createLocationsRow("Locations: ", resultInfo.locations);
-        if (row !== undefined) {
+        let row: HTMLTableRowElement | undefined = this.createLocationsRow("Locations: ", resultInfo.locations);
+        if (row) {
             tableEle.appendChild(row);
         }
 
         row = this.createLogicalLocationsRow("Logical Locations: ", resultInfo.locations);
-        if (row !== undefined) {
+        if (row) {
             tableEle.appendChild(row);
         }
 
         row = this.createLocationsRow("Related: ", resultInfo.relatedLocs);
-        if (row !== undefined) {
+        if (row) {
             tableEle.appendChild(row);
         }
 
         row = this.createLogicalLocationsRow("Related Logical Locations: ", resultInfo.relatedLocs);
-        if (row !== undefined) {
+        if (row) {
             tableEle.appendChild(row);
         }
 
-        if (resultInfo.additionalProperties !== undefined) {
+        if (resultInfo.additionalProperties) {
             tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
         }
 
-        row = this.createLocationsRow("Location in Log: ", [resultInfo.locationInSarifFile]);
-        if (row !== undefined) {
-            tableEle.appendChild(row);
+        if (resultInfo.locationInSarifFile) {
+            row = this.createLocationsRow("Location in Log: ", [resultInfo.locationInSarifFile]);
+            if (row) {
+                tableEle.appendChild(row);
+            }
         }
 
         panel.appendChild(tableEle);
@@ -671,11 +673,11 @@ export class ExplorerWebview {
      * @param runInfo Run info to create the tab content from
      */
     private createPanelRunInfo(runInfo: RunInfo): HTMLDivElement {
-        const panel = this.createPanel(tabNames.runinfo);
-        const tableEle = this.createElement("table") as HTMLTableElement;
+        const panel: HTMLDivElement = this.createPanel(tabNames.runinfo);
+        const tableEle: HTMLTableElement = this.createElement("table");
 
-        if (runInfo.toolName !== undefined) {
-            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName));
+        if (runInfo.toolName !== undefined || runInfo.toolFullName !== undefined) {
+            tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName || runInfo.toolName));
         }
         if (runInfo.cmdLine !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
@@ -716,29 +718,29 @@ export class ExplorerWebview {
      * @param stacks Array of Stack objects to create the panel with
      */
     private createPanelStacks(stacks: Stacks): HTMLDivElement {
-        const panel = this.createPanel(tabNames.stacks);
+        const panel: HTMLDivElement = this.createPanel(tabNames.stacks);
         if (stacks !== undefined) {
-            const tableEle = this.createElement("table",
-                { id: "stackstable", className: "listtable" }) as HTMLTableElement;
+            const tableEle: HTMLTableElement = this.createElement("table",
+                { id: "stackstable", className: "listtable" });
 
-            const headerNames = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
-            const headerRow = this.createElement("tr") as HTMLTableRowElement;
-            let columnCount = 0;
-            for (let index = 0; index < headerNames.length; index++) {
+            const headerNames: string []  = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
+            const headerRow: HTMLTableRowElement = this.createElement("tr");
+            let columnCount: number = 0;
+            for (let index: number  = 0; index < headerNames.length; index++) {
                 if (stacks.columnsWithContent[index] === true) {
-                    const headerEle = this.createElement("th", { text: headerNames[index] });
+                    const headerEle: HTMLTableHeaderCellElement = this.createElement("th", { text: headerNames[index] });
                     headerRow.appendChild(headerEle);
                     columnCount++;
                 }
             }
-            const tableHeadEle = this.createElement("thead") as HTMLHeadElement;
+            const tableHeadEle: HTMLHeadElement = this.createElement("thead");
             tableHeadEle.appendChild(headerRow);
             tableEle.appendChild(tableHeadEle);
 
-            const tableBodyEle = this.createElement("tbody") as HTMLBodyElement;
-            for (let stackIndex = 0; stackIndex < stacks.stacks.length; stackIndex++) {
-                const stack = stacks.stacks[stackIndex];
-                const msgRow = this.createElement("tr", {
+            const tableBodyEle: HTMLBodyElement = this.createElement("tbody");
+            for (let stackIndex: number = 0; stackIndex < stacks.stacks.length; stackIndex++) {
+                const stack: Stack = stacks.stacks[stackIndex];
+                const msgRow: HTMLTableRowElement = this.createElement("tr", {
                     attributes: { "data-group": stackIndex, "tabindex": "0" },
                     className: `listtablegroup ${ToggleState.expanded}`,
                 });
@@ -749,23 +751,23 @@ export class ExplorerWebview {
                 msgRow.addEventListener("click", this.onToggleStackGroup.bind(this));
                 tableBodyEle.appendChild(msgRow);
 
-                const tdTag = "td";
+                const tdTag: string = "td";
                 for (const frame of stack.frames) {
-                    const fLocation = frame.location;
-                    let file: string;
-                    if (fLocation.uri !== undefined) {
+                    const fLocation: Location = frame.location;
+                    let file: string | undefined;
+                    if (fLocation.uri) {
                         // @ts-ignore external exist on the webview side
                         file = fLocation.uri.external.replace("%3A", ":");
                     }
 
-                    const fRow = this.createElement("tr", {
+                    const fRow: HTMLTableRowElement = this.createElement("tr", {
                         attributes: {
-                            "data-eCol": fLocation.range[1].character.toString(),
-                            "data-eLine": fLocation.range[1].line.toString(),
+                            "data-eCol": fLocation.range !== undefined ? fLocation.range.end.character.toString() : 0,
+                            "data-eLine": fLocation.range !== undefined ? fLocation.range.end.line.toString() : 0,
                             "data-file": file,
                             "data-group": stackIndex,
-                            "data-sCol": fLocation.range[0].character.toString(),
-                            "data-sLine": fLocation.range[0].line.toString(),
+                            "data-sCol": fLocation.range !== undefined ? fLocation.range.start.character.toString() : 0,
+                            "data-sLine": fLocation.range !== undefined ? fLocation.range.start.line.toString() : 0,
                         },
                         className: "listtablerow",
                     });
@@ -774,14 +776,14 @@ export class ExplorerWebview {
                         fRow.addEventListener("click", this.onSourceLinkClicked.bind(this));
                     }
 
-                    const fLine = fLocation.range[0].line.toString();
-                    const fParameters = frame.parameters.toString();
-                    let fMsg = "";
+                    const fLine: string = fLocation.range !== undefined ? fLocation.range.start.line.toString() : "";
+                    const fParameters: string = frame.parameters.toString();
+                    let fMsg: string = "";
                     if (frame.message !== undefined && frame.message.text !== undefined) {
                         fMsg = frame.message.text;
                     }
 
-                    let fThreadId = "";
+                    let fThreadId: string = "";
                     if (frame.threadId !== undefined) {
                         fThreadId = frame.threadId.toString();
                     }
@@ -823,10 +825,10 @@ export class ExplorerWebview {
      * @param properties the properties object that has the bag of additional properties
      */
     private createPropertiesRow(properties: { [key: string]: string }): HTMLTableRowElement {
-        const cellContents = this.createElement("div") as HTMLDivElement;
+        const cellContents: HTMLDivElement = this.createElement("div");
         for (const propName in properties) {
             if (properties.hasOwnProperty(propName)) {
-                const propText = `${propName}: ${properties[propName]}`;
+                const propText: string = `${propName}: ${properties[propName]}`;
                 cellContents.appendChild(this.createElement("label", { text: propText, tooltip: propText }));
                 cellContents.appendChild(this.createElement("br"));
             }
@@ -841,9 +843,9 @@ export class ExplorerWebview {
      * @param contents html element to add to the value cell
      */
     private createRowWithContents(rowName: string, contents: HTMLElement): HTMLTableRowElement {
-        const row = this.createElement("tr") as HTMLTableRowElement;
+        const row: HTMLTableRowElement = this.createElement("tr");
         row.appendChild(this.createElement("td", { className: "td-contentname", text: rowName }));
-        const cell = this.createElement("td", { className: "td-contentvalue" }) as HTMLTableDataCellElement;
+        const cell: HTMLTableDataCellElement = this.createElement("td", { className: "td-contentvalue" });
         cell.appendChild(contents);
         row.appendChild(cell);
         return row;
@@ -854,18 +856,18 @@ export class ExplorerWebview {
      * @param location The location object that represents where the link points to
      * @param linkText The text to display on the link
      */
-    private createSourceLink(location: Location, linkText: string): HTMLAnchorElement {
-        let sourceLink: HTMLAnchorElement;
-        if (location.uri !== undefined) {
+    private createSourceLink(location: Location, linkText: string): HTMLAnchorElement | undefined {
+        let sourceLink: HTMLAnchorElement | undefined;
+        if (location.uri && location.range) {
             // @ts-ignore external exist on the webview side
-            const file = location.uri.external.replace("%3A", ":");
+            const file: string = location.uri.external.replace("%3A", ":");
             sourceLink = this.createElement("a", {
                 attributes: {
-                    "data-eCol": location.range[1].character.toString(),
-                    "data-eLine": location.range[1].line.toString(),
+                    "data-eCol": location.range.end.character.toString(),
+                    "data-eLine": location.range.end.line.toString(),
                     "data-file": file,
-                    "data-sCol": location.range[0].character.toString(),
-                    "data-sLine": location.range[0].line.toString(),
+                    "data-sCol": location.range.start.character.toString(),
+                    "data-sLine": location.rangestart.line.toString(),
                     "href": "#0",
                 }, className: "sourcelink", text: linkText, tooltip: file,
             }) as HTMLAnchorElement;
@@ -883,8 +885,8 @@ export class ExplorerWebview {
      * @param tabText text that shows on the tab
      */
     private createTabElement(tabId: tabNames, tabTooltip: string, tabText: string): HTMLDivElement {
-        const returnEle = this.createElement("div",
-            { className: "tab", id: tabId, tooltip: tabTooltip }) as HTMLDivElement;
+        const returnEle: HTMLDivElement = this.createElement("div",
+            { className: "tab", id: tabId, tooltip: tabTooltip });
         returnEle.appendChild(this.createElement("label", { className: "tablabel", text: tabText }));
         returnEle.addEventListener("click", this.onTabClicked.bind(this));
         return returnEle;
@@ -896,7 +898,7 @@ export class ExplorerWebview {
      * @param hasAttachments Flag to include the Attachments tab in the set of tabs
      */
     private createTabHeaderContainer(): HTMLDivElement {
-        const container = this.createElement("div", { id: "tabcontainer" }) as HTMLDivElement;
+        const container: HTMLDivElement = this.createElement("div", { id: "tabcontainer" });
 
         container.appendChild(this.createTabElement(tabNames.resultinfo, "Results info", "RESULT INFO"));
         if (this.hasCodeFlows) {
@@ -920,8 +922,8 @@ export class ExplorerWebview {
      * Sets the open tab in the explorer, if no tab is passed in, defaults to codeflowtab or resultinfo
      * @param activeTab the active tab to set on the initialized state
      */
-    private initializeOpenedTab(activeTab?: tabNames) {
-        let tab = activeTab;
+    private initializeOpenedTab(activeTab?: tabNames): void {
+        let tab: tabNames | undefined = activeTab;
         if (tab === undefined) {
             if (this.hasCodeFlows) {
                 tab = tabNames.codeflow;
@@ -936,8 +938,12 @@ export class ExplorerWebview {
     /**
      * builds the result details section of the viewer, using the currently set diagnostic
      */
-    private loadResultDetails() {
-        const resultInfo = this.diagnostic.resultInfo;
+    private loadResultDetails(): void {
+        if (!this.diagnostic) {
+            return;
+        }
+
+        const resultInfo: ResultInfo = this.diagnostic.resultInfo;
         this.hasCodeFlows = resultInfo.codeFlows !== undefined;
         this.hasAttachments = resultInfo.attachments !== undefined;
         this.hasFixes = resultInfo.fixes !== undefined;
@@ -945,9 +951,12 @@ export class ExplorerWebview {
 
         this.createResultDetailsHeader(resultInfo);
 
-        const resultDetailsContainer = document.getElementById("resultdetailscontainer") as HTMLDivElement;
+        const resultDetailsContainer: HTMLDivElement | null = <HTMLDivElement | null>document.getElementById("resultdetailscontainer");
+        if (!resultDetailsContainer) {
+            return;
+        }
 
-        const resultDetails = this.createElement("div", { id: "resultdescription" }) as HTMLDivElement;
+        const resultDetails: HTMLDivElement = this.createElement("div", { id: "resultdescription" });
         if (resultInfo.message.html !== undefined) {
             resultDetails.innerHTML = resultInfo.message.html;
         }
@@ -956,10 +965,14 @@ export class ExplorerWebview {
         resultDetailsContainer.appendChild(this.createTabHeaderContainer());
 
         // Create and add the panels
-        const panelContainer = this.createElement("div", { id: "tabcontentcontainer" }) as HTMLDivElement;
+        const panelContainer: HTMLDivElement = this.createElement("div", { id: "tabcontentcontainer" });
         panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
         panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
-        panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
+
+        if (this.diagnostic.runInfo) {
+            panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
+        }
+
         panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
         panelContainer.appendChild(this.createPanelFixes(resultInfo.fixes));
         panelContainer.appendChild(this.createPanelStacks(resultInfo.stacks));
@@ -976,10 +989,14 @@ export class ExplorerWebview {
      * Callback when user clicks on the Attachment tree
      * @param event event fired when user clicked the attachment tree
      */
-    private onAttachmentClicked(event: MouseEvent) {
-        let ele = event.srcElement as HTMLElement;
+    private onAttachmentClicked(event: MouseEvent): void {
+        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
         if (ele.classList.contains("treenodelocation")) {
             ele = ele.parentElement;
+        }
+
+        if (!ele) {
+            return;
         }
 
         if (!ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
@@ -993,28 +1010,34 @@ export class ExplorerWebview {
      * Callback when user clicks on the header, for showing and hiding the Results list or Results Details sections
      * @param event event fired when user clicked a header
      */
-    public onHeaderClicked(event: MouseEvent) {
-        let ele = event.srcElement as HTMLElement;
+    public onHeaderClicked(event: MouseEvent): void {
+        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
         while (!ele.classList.contains("headercontainer")) {
             ele = ele.parentElement as HTMLElement;
         }
 
-        let otherHeaderId = "resultslistheader";
+        let otherHeaderId: string = "resultslistheader";
         if (ele.id === "resultslistheader") {
             otherHeaderId = "resultdetailsheader";
         }
 
-        const otherHeaderEle = document.getElementById(otherHeaderId);
+        const otherHeaderEle: Element | null = document.getElementById(otherHeaderId);
         if (ele.classList.contains(ToggleState.collapsed)) {
             ele.classList.replace(ToggleState.collapsed, ToggleState.expanded);
-            otherHeaderEle.classList.replace(ToggleState.expanded, ToggleState.collapsed);
+
+            if (otherHeaderEle) {
+                otherHeaderEle.classList.replace(ToggleState.expanded, ToggleState.collapsed);
+            }
         } else if (ele.classList.contains(ToggleState.expanded)) {
             ele.classList.replace(ToggleState.expanded, ToggleState.collapsed);
-            otherHeaderEle.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+            if (otherHeaderEle) {
+                otherHeaderEle.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+            }
         }
 
-        if (document.getElementById("resultslistheader").classList.contains(ToggleState.expanded)) {
-            const table = $("#resultslisttable");
+        const resultsListHeader: Element | null = document.getElementById("resultslistheader");
+        if (resultsListHeader && resultsListHeader.classList.contains(ToggleState.expanded)) {
+            const table: JQuery<HTMLElement> = $("#resultslisttable");
             // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
             table.colResizable({ disable: true });
             // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
@@ -1027,10 +1050,14 @@ export class ExplorerWebview {
      * Callback when user clicks on the CodeFlow tree
      * @param event event fired when user clicked the codeflow tree
      */
-    private onCodeFlowTreeClicked(event: MouseEvent) {
-        let ele = event.srcElement as HTMLElement;
+    private onCodeFlowTreeClicked(event: MouseEvent): void {
+        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
         if (ele.classList.contains("treenodelocation")) {
             ele = ele.parentElement;
+        }
+
+        if (!ele) {
+            return;
         }
 
         if (!ele.classList.contains("unexpandable") && event.offsetX < 17 /*width of expand/collapse arrows*/) {
@@ -1045,7 +1072,7 @@ export class ExplorerWebview {
      * Callback when the user clicks the Collapse all button
      * @param event event fired when user clicked Collapse all button
      */
-    private onCollapseAllClicked() {
+    private onCollapseAllClicked(): void {
         this.toggleTreeElements(ToggleState.expanded, ToggleState.collapsed);
     }
 
@@ -1053,7 +1080,7 @@ export class ExplorerWebview {
      * Callback when the user clicks the Expand all button
      * @param event event fired when user clicked Expand all button
      */
-    private onExpandAllClicked() {
+    private onExpandAllClicked(): void {
         this.toggleTreeElements(ToggleState.collapsed, ToggleState.expanded);
     }
 
@@ -1061,13 +1088,13 @@ export class ExplorerWebview {
      * Callback when user clicks on the Fix tree
      * @param event event fired when user clicked the fix tree
      */
-    private onFixClicked(event: MouseEvent) {
-        let ele = event.srcElement as HTMLElement;
+    private onFixClicked(event: MouseEvent): void {
+        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
         if (ele.classList.contains("treenodelocation")) {
             ele = ele.parentElement;
         }
 
-        if (!ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+        if (ele && !ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
             this.toggleTreeElement(ele);
         }
     }
@@ -1076,20 +1103,31 @@ export class ExplorerWebview {
      * Callback when a source link is clicked, sends the call back to the extension to handle opening the source file
      * @param event event fired when a sourcelink was clicked
      */
-    private onSourceLinkClicked(event: MouseEvent) {
-        const ele = event.currentTarget as HTMLElement;
-        const msgData = {
-            eCol: ele.dataset.ecol, eLine: ele.dataset.eline, file: ele.dataset.file, sCol: ele.dataset.scol,
-            sLine: ele.dataset.sline,
-        } as LocationData;
-        this.sendMessage({ data: JSON.stringify(msgData), type: MessageType.SourceLinkClicked } as WebviewMessage);
+    private onSourceLinkClicked(event: MouseEvent): void {
+        const ele: HTMLElement = <HTMLElement>event.currentTarget;
+        if (ele.dataset.ecol === undefined ||
+            ele.dataset.eline === undefined ||
+            ele.dataset.file === undefined ||
+            ele.dataset.scol === undefined ||
+            ele.dataset.sline === undefined) {
+            throw new Error("Source file information is not correct");
+        }
+
+        const msgData: LocationData = {
+            eCol: ele.dataset.ecol,
+            eLine: ele.dataset.eline,
+            file: ele.dataset.file,
+            sCol: ele.dataset.scol,
+            sLine: ele.dataset.sline
+        };
+        this.sendMessage({ data: JSON.stringify(msgData), type: MessageType.SourceLinkClicked });
     }
 
     /**
      * Callback when a tab(Result Info, Code Flow, etc.) is clicked
      * @param event event fired when user clicked a tab
      */
-    private onTabClicked(event: MouseEvent) {
+    private onTabClicked(event: MouseEvent): void {
         // @ts-ignore: id does exist on the currentTarget property
         this.openTab(event.currentTarget.id);
     }
@@ -1098,9 +1136,9 @@ export class ExplorerWebview {
      * Toggles the group row as well as any stacks list rows that match the group
      * @param row Group row to toggled
      */
-    private onToggleStackGroup(event: Event) {
-        const row = event.currentTarget as HTMLTableRowElement;
-        let hideRow = false;
+    private onToggleStackGroup(event: Event): void {
+        const row: HTMLTableRowElement = <HTMLTableRowElement>event.currentTarget;
+        let hideRow: boolean = false;
         if (row.classList.contains(`${ToggleState.expanded}`)) {
             row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
             hideRow = true;
@@ -1108,11 +1146,10 @@ export class ExplorerWebview {
             row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
         }
 
-        const results = document.querySelectorAll("#stackstable > tbody > .listtablerow") as NodeListOf<Element>;
+        const results: NodeListOf<Element> = document.querySelectorAll("#stackstable > tbody > .listtablerow");
 
         // @ts-ignore: compiler complains even though results can be iterated
         for (const result of results) {
-            // @ts-ignore: compiler complains even though results have a dataset
             if (result.dataset.group === row.dataset.group) {
                 if (hideRow) {
                     result.classList.add("hidden");
@@ -1127,7 +1164,7 @@ export class ExplorerWebview {
      * Callback when the verbosity setting is changed
      * @param event event fired when user changed the verbosity setting
      */
-    private onVerbosityChange(event: Event) {
+    private onVerbosityChange(event: Event): void {
         this.updateTreeVerbosity();
     }
 
@@ -1136,19 +1173,27 @@ export class ExplorerWebview {
      * And add it to the tab that was clicked
      * @param id id of the tab that was clicked
      */
-    private openTab(id: string) {
-        const activetab = document.getElementsByClassName("tab tabactive")[0];
-        if (activetab !== undefined && activetab.id !== id) {
-            activetab.classList.remove("tabactive");
-            document.getElementById(activetab.id + "content").classList.remove("tabcontentactive");
+    private openTab(id: string): void {
+        const activeTabs: HTMLCollectionOf<Element>  = document.getElementsByClassName("tab tabactive");
+
+        if (activeTabs.length === 0) {
+            return;
         }
 
-        document.getElementById(id).classList.add("tabactive");
-        document.getElementById(id + "content").classList.add("tabcontentactive");
+        const activetab: Element = activeTabs[0];
+
+        if (activetab !== undefined && activetab.id !== id) {
+            activetab.classList.remove("tabactive");
+
+            const tabContent: Element | null = document.getElementById(activetab.id + "content");
+            if (tabContent) {
+                tabContent.classList.remove("tabcontentactive");
+            }
+        }
 
         if (id === tabNames.stacks) {
-            const table = $("#stackstable");
-            if (table !== null) {
+            const table: JQuery<HTMLElement> | null = $("#stackstable");
+            if (table) {
                 // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it
                 table.colResizable({ disable: true });
                 // @ts-ignore: colResizeable comes from the colResizable plugin, but there is no types file for it

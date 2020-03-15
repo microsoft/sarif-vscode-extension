@@ -176,7 +176,7 @@ export interface FixChange {
 
 export interface TreeNodeOptions {
     isParent: boolean,
-    liClass: string,
+    liClass?: string,
     location?: Location,
     locationLine?: string,
     locationText?: string,
