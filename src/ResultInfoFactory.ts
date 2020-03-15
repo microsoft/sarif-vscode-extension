@@ -150,7 +150,9 @@ export class ResultInfoFactory {
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
-            locations.push({});
+            locations.push({
+                toJSON: () => {}
+            });
         }
 
         return locations;

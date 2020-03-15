@@ -78,7 +78,7 @@ export class LogReader implements Disposable {
      */
     public async readAll(): Promise<void> {
         // Get all the documents and read them
-        const docs: TextDocument[] = workspace.textDocuments;
+        const docs: readonly TextDocument[] = workspace.textDocuments;
 
         let needsSync: boolean = false;
         for (const doc of docs) {

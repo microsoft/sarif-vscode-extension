@@ -13,6 +13,7 @@ import { LocationFactory } from "./LocationFactory";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
+import { Utilities } from "./Utilities";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -96,6 +97,7 @@ export class ExplorerController implements Disposable {
 
         this.diagnosticCollection = new SVDiagnosticCollection(this);
         this.disposables.push(this.diagnosticCollection);
+
     }
 
     public dispose(): void {
@@ -117,6 +119,7 @@ export class ExplorerController implements Disposable {
                 {
                     enableScripts: true,
                     localResourceRoots: [
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("node_modules", "requirejs"))),
                         Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("resources", "explorer"))),
                         Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("out", "explorer"))),
                     ],
@@ -125,7 +128,7 @@ export class ExplorerController implements Disposable {
 
             this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage, this);
             this.wvPanel.onDidDispose(this.onWebviewDispose, this);
-            this.wvPanel.webview.html = this.getWebviewContent();
+            this.wvPanel.webview.html = this.getWebviewContent(this.wvPanel);
         }
         return this.wvPanel;
     }
@@ -185,6 +188,7 @@ export class ExplorerController implements Disposable {
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
+                    toJSON: Utilities.LocationToJson
                 };
                 await CodeFlowDecorations.updateSelectionHighlight(this,  location, undefined);
                 break;
@@ -265,12 +269,11 @@ export class ExplorerController implements Disposable {
 
     /**
      * Joins the path and converts it to a vscode resource schema
-     * @param path relative path to the file from the extension folder
-     * @param file name of the file
+     * @param pathParts The path parts to join
      */
-    private getVSCodeResourcePath(directory: string, file: string): Uri {
+    private getVSCodeResourcePath(...pathParts: string[]): Uri {
         const vscodeResource: string = "vscode-resource";
-        const diskPath: string = this.extensionContext.asAbsolutePath(path.posix.join(directory, file));
+        const diskPath: string = this.extensionContext.asAbsolutePath(path.join(...pathParts));
         const uri: Uri = Uri.file(diskPath);
         return uri.with({ scheme: vscodeResource });
     }
@@ -278,19 +281,23 @@ export class ExplorerController implements Disposable {
     /**
      * defines the default webview html content
      */
-    private getWebviewContent(): string {
-        const resourcesPath: string = "resources/explorer/";
-        const scriptsPath: string = "out/explorer/";
+    private getWebviewContent(webViewPanel: WebviewPanel): string {
+        const resourcesPath: string[] = ["resources", "explorer"];
+        //const scriptsPath: string = "out/explorer/";
 
-        const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "explorer.css");
-        const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "listTable.css");
-        const cssResultsListDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "resultsList.css");
-        const jQueryDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "jquery-3.3.1.min.js");
-        const colResizeDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "colResizable-1.6.min.js");
+        const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "explorer.css");
+        const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "listTable.css");
+        const cssResultsListDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "resultsList.css");
+        const jQueryDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "jquery-3.3.1.min.js");
+        const colResizeDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "colResizable-1.6.min.js");
+        const requireJsPath: Uri = this.getVSCodeResourcePath("node_modules", "requirejs", "require.js");
+        const explorerPath: Uri = this.getVSCodeResourcePath("out", "explorer", "systemExplorer.js");
 
-        const webviewDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "webview.js");
-        const resultsListDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "resultsList.js");
-        const enumDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "enums.js");
+        // const webviewDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "webview.js");
+        // const resultsListDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "resultsList.js");
+        // const enumDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "enums.js");
+        // const explorerCodePath: Uri = this.getVSCodeResourcePath(scriptsPath, "systemExplorer.js");
+        //             <script>System.import('${explorerCodePath}')</script>
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -301,8 +308,10 @@ export class ExplorerController implements Disposable {
             <link rel="stylesheet" type="text/css" href = "${cssListTableDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssExplorerDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssResultsListDiskPath}">
+            <srcipt src="./node_modules/systemjs/dist/system.js"></script>
             <script src="${jQueryDiskPath}"></script>
             <script src="${colResizeDiskPath}"></script>
+            <script data-main="${explorerPath}" src="${requireJsPath}"></script>
         </head>
         <body>
             <div id="resultslistheader" class="headercontainer expanded"></div>
@@ -314,9 +323,18 @@ export class ExplorerController implements Disposable {
             </div>
             <div id="resultdetailsheader" class="headercontainer expanded"></div>
             <div id="resultdetailscontainer"></div>
-            <script src="${enumDiskPath}"></script>
-            <script src="${resultsListDiskPath}"></script>
-            <script src="${webviewDiskPath}"></script>
+            <script>
+               console.debug("Trying to load web view.");
+               requirejs(['systemExplorer'], function () {
+                 console.debug("Here 1");
+                 var testMe = require(["explorer/webview"], function(webView) {
+                    console.debug("Here 2");
+                    console.debug(webView);
+                    webView.startExplorer();
+                 });
+                 console.debug("webview started");
+               });
+            </script>
         </body>
         </html>`;
     }
@@ -345,9 +363,8 @@ export class ExplorerController implements Disposable {
             };
         }
 
-        this.sendMessage({
-            data: JSON.stringify(diagData), type: MessageType.NewDiagnostic,
-        }, focus);
+        const dataString: string = JSON.stringify(diagData);
+        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic}, focus);
     }
 
     /**

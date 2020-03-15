@@ -9,7 +9,7 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, ResultsListData, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, FixFile, FixChange,
+    ResultInfo, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, FixFile, FixChange,
     ThreadFlow
 } from "../common/Interfaces";
 
@@ -58,7 +58,7 @@ export class ExplorerWebview {
                 this.showTreeNode(message.data, true);
                 break;
             case MessageType.ResultsListDataSet:
-                this.resultsList.Data = JSON.parse(message.data) as ResultsListData;
+                this.resultsList.Data = JSON.parse(message.data);
                 break;
         }
     }
@@ -270,7 +270,7 @@ export class ExplorerWebview {
         const resultLocation: Location = resultInfo.locations[0];
         if (resultLocation) {
             if (resultLocation.uri && resultLocation.range) {
-                filenameandline = `${resultLocation.fileName} (${resultLocation.range?.start.line + 1/*Convert 0 based*/})`;
+                filenameandline = `${resultLocation.fileName} (${resultLocation.range.start.line + 1/*Convert 0 based*/})`;
             } else if (resultLocation.logicalLocations !== undefined && resultLocation.logicalLocations.length > 0) {
                 filenameandline = resultLocation.logicalLocations[0];
             }
@@ -968,10 +968,10 @@ export class ExplorerWebview {
         }
 
         const resultInfo: ResultInfo = this.diagnostic.resultInfo;
-        this.hasCodeFlows = resultInfo.codeFlows !== undefined;
-        this.hasAttachments = resultInfo.attachments !== undefined;
-        this.hasFixes = resultInfo.fixes !== undefined;
-        this.hasStacks = resultInfo.stacks !== undefined;
+        this.hasCodeFlows = resultInfo.codeFlows !== undefined && resultInfo.codeFlows.length > 0;
+        this.hasAttachments = resultInfo.attachments !== undefined && resultInfo.attachments.length > 0;
+        this.hasFixes = resultInfo.fixes !== undefined && resultInfo.fixes.length > 0;
+        this.hasStacks = resultInfo.stacks !== undefined && resultInfo.stacks.stacks.length > 0;
 
         this.createResultDetailsHeader(resultInfo);
 
@@ -1174,6 +1174,7 @@ export class ExplorerWebview {
 
         // @ts-ignore: compiler complains even though results can be iterated
         for (const result of results) {
+            // @ts-ignore: compiler complains even though results have a dataset
             if (result.dataset.group === row.dataset.group) {
                 if (hideRow) {
                     result.classList.add("hidden");
@@ -1200,18 +1201,25 @@ export class ExplorerWebview {
     private openTab(id: string): void {
         const activeTabs: HTMLCollectionOf<Element>  = document.getElementsByClassName("tab tabactive");
 
-        if (activeTabs.length === 0) {
-            return;
+        if (activeTabs.length >= 0) {
+            for (let activeTabIndex: number = 0; activeTabIndex < activeTabs.length; activeTabIndex++) {
+                const activeTab: Element | null  = activeTabs.item(activeTabIndex);
+                if (activeTab) {
+                    activeTab.classList.remove("tabactive");
+                    const activeTablContet: Element | null = document.getElementById(activeTab.id + "content");
+                    if (activeTablContet) {
+                        activeTablContet.classList.remove("tabcontentactive");
+                    }
+                }
+            }
         }
 
-        const activetab: Element = activeTabs[0];
-
-        if (activetab !== undefined && activetab.id !== id) {
-            activetab.classList.remove("tabactive");
-
-            const tabContent: Element | null = document.getElementById(activetab.id + "content");
-            if (tabContent) {
-                tabContent.classList.remove("tabcontentactive");
+        const tabToActivate: Element | null = document.getElementById(id);
+        if (tabToActivate) {
+            tabToActivate.classList.add("tabactive");
+            const activeTablContet: Element | null = document.getElementById(tabToActivate.id + "content");
+            if (activeTablContet) {
+                activeTablContet.classList.add("tabcontentactive");
             }
         }
 
@@ -1418,6 +1426,11 @@ export class ExplorerWebview {
 
 }
 
-// @ts-ignore: This is used to instantiate the main class
-const explorerWebview: ExplorerWebview = new ExplorerWebview();
-explorerWebview.sendMessage({ data: "", type: MessageType.ExplorerLoaded } as WebviewMessage);
+let explorerWebview: ExplorerWebview | undefined;
+
+export function startExplorer(): void {
+    if (!explorerWebview) {
+        explorerWebview = new ExplorerWebview();
+        explorerWebview.sendMessage({ data: "", type: MessageType.ExplorerLoaded } as WebviewMessage);
+    }
+}

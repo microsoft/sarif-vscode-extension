@@ -78,6 +78,7 @@ suite("parseSarifMessages", () => {
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
+            toJSON: Utilities.LocationToJson
         },
     ];
 
@@ -91,6 +92,7 @@ suite("parseSarifMessages", () => {
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
+            toJSON: Utilities.LocationToJson
         },
         {
             endOfLine: false,
@@ -101,6 +103,7 @@ suite("parseSarifMessages", () => {
             range: new Range(3, 3, 4, 4),
             uri: Uri.file("c:/folder1/file1.ext"),
             uriBase: undefined,
+            toJSON: Utilities.LocationToJson
         },
     ];
 

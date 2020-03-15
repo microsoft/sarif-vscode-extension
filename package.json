@@ -25,7 +25,7 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.36.0"
+        "vscode": "^1.43.0"
     },
     "activationEvents": [
         "onLanguage:json",
@@ -182,6 +182,7 @@
     },
     "scripts": {
         "buildExplorer": "tsc --b tsconfig.explorer.json",
+        "buildExplorerWatch": "tsc --b tsconfig.explorer.json -watch" ,
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
@@ -196,19 +197,20 @@
         "@types/mocha": "^7.0.2",
         "@types/node": "^7.10.7",
         "@types/sarif": "^2.1.2",
-        "@types/vscode": "^1.36.0",
+        "@types/vscode": "^1.43.0",
         "@types/markdown-it": "0.0.9",
         "mocha": "^6.2.0",
         "tslint": "^5.18.0",
         "typescript": "^3.8.3",
         "vscode-test": "^1.0.2",
         "tslint-microsoft-contrib": "^6.0.0",
-        "tslint-no-unused-expression-chai": "^0.1.4",
-        "markdown-it": "^9.0.1"
+        "tslint-no-unused-expression-chai": "^0.1.4"
     },
     "dependencies": {
         "json-source-map": "^0.4.0",
         "jsonpointer": "4.0.1",
-        "markdown-it": "^9.0.1"
+        "markdown-it": "^9.0.1",
+        "systemjs": "^6.2.5",
+        "requirejs": "^2.3.6"
     }
 }

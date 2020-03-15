@@ -473,4 +473,20 @@ export class Utilities {
     private static unescapeBrackets(text: string): string {
         return text.split("\\[").join("[").split("\\]").join("]");
     }
+
+    // tslint:disable-next-line: no-any
+    public static LocationToJson(this: Location, key: any, value: any): any {
+        if (!this.range) {
+            return value;
+        }
+
+        return {
+            ...this,
+            range: {
+                ...this.range,
+                start: this.range.start,
+                end: this.range.end
+            }
+        };
+    }
 }

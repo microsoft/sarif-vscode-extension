@@ -72,7 +72,8 @@ export class LocationFactory {
             range: parsedRange?.range,
             uri: uri,
             uriBase: uriBase,
-            message: message
+            message: message,
+            toJSON: Utilities.LocationToJson
         };
     }
 
@@ -178,6 +179,7 @@ export class LocationFactory {
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
             uri: sarifUri,
+            toJSON: Utilities.LocationToJson
         };
 
         return resultLocation;

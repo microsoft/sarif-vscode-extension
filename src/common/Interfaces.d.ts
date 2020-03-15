@@ -39,6 +39,7 @@ export interface HTMLElementOptions {
     }
 }
 
+
 export interface Location {
     id?: number;
     endOfLine?: boolean;
@@ -49,6 +50,7 @@ export interface Location {
     range?: Range;
     uri?: Uri;
     uriBase?: string;
+    toJSON(this: Location, key: any, value: any): any
 }
 
 export interface SarifViewerDiagnostic extends Diagnostic {
