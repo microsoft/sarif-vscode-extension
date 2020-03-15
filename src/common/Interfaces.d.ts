@@ -50,6 +50,14 @@ export interface Location {
     range?: Range;
     uri?: Uri;
     uriBase?: string;
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the location being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
+     * @param value The current location value.
+     */
     toJSON(this: Location, key: any, value: any): any
 }
 
@@ -174,6 +182,15 @@ export interface FixFile {
 export interface FixChange {
     delete: Range,
     insert?: string
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the FixChange being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
+     * @param value The current location value.
+     */
+    toJSON(this: FixChange, key: any, value: any): any
 }
 
 export interface TreeNodeOptions {

@@ -230,7 +230,8 @@ export class ResultInfoFactory {
                         for (const sarifReplacement of sarifChange.replacements) {
                             fixChanges.push({
                                 delete: LocationFactory.parseRange(sarifReplacement.deletedRegion).range,
-                                insert: sarifReplacement.insertedContent && sarifReplacement.insertedContent.text
+                                insert: sarifReplacement.insertedContent && sarifReplacement.insertedContent.text,
+                                toJSON: Utilities.FixChangeToJson
                             });
                         }
                     }

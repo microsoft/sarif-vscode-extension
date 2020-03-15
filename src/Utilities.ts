@@ -9,7 +9,7 @@ import * as os from "os";
 import * as vscode from "vscode";
 import * as markdownit from "markdown-it";
 
-import { Location, Message, RunInfo } from "./common/Interfaces";
+import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
@@ -474,6 +474,13 @@ export class Utilities {
         return text.split("\\[").join("[").split("\\]").join("]");
     }
 
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the location being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
+     * @param value The current location value.
+     */
     // tslint:disable-next-line: no-any
     public static LocationToJson(this: Location, key: any, value: any): any {
         if (!this.range) {
@@ -486,6 +493,29 @@ export class Utilities {
                 ...this.range,
                 start: this.range.start,
                 end: this.range.end
+            }
+        };
+    }
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the FixChange being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
+     * @param value The current location value.
+     */
+    // tslint:disable-next-line: no-any
+    public static FixChangeToJson(this: FixChange, key: any, value: any): any {
+        if (!this.delete) {
+            return value;
+        }
+
+        return {
+            ...this,
+            delete: {
+                ...this.delete,
+                start: this.delete.start,
+                end: this.delete.end
             }
         };
     }
