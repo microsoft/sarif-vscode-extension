@@ -22,7 +22,8 @@
         "node_modules",
         ".vscode-test",
         "out",
-        "resources",
-        "sariftypesgenerator"
+        "resources/**",
+        "sariftypesgenerator",
+        "src/explorer"
     ]
 }

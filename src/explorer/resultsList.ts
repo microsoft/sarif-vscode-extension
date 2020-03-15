@@ -3,6 +3,8 @@
  */
 
 /// <reference path="./enums.ts" />
+/// <reference path="./webview.ts" />
+
 import * as sarif from "sarif";
 import {
     ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListKindValue, ResultsListRow,

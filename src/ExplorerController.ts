@@ -280,7 +280,7 @@ export class ExplorerController implements Disposable {
      */
     private getWebviewContent(): string {
         const resourcesPath: string = "resources/explorer/";
-        const scriptsPath: string = "out/explorer/explorer/";
+        const scriptsPath: string = "out/explorer/";
 
         const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "explorer.css");
         const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(resourcesPath, "listTable.css");

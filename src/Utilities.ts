@@ -7,6 +7,7 @@ import * as path from "path";
 import * as sarif from "sarif";
 import * as os from "os";
 import * as vscode from "vscode";
+import * as markdownit from "markdown-it";
 
 import { Location, Message, RunInfo } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";

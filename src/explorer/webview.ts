@@ -3,6 +3,8 @@
  */
 
 /// <reference path="./enums.ts" />
+/// <reference path="./resultsList.ts" />
+
 import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
