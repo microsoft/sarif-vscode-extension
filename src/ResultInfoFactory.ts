@@ -9,7 +9,6 @@ import {
 } from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
-import * as vscode from "vscode";
 import { ExplorerController } from "./ExplorerController";
 
 /**
