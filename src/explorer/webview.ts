@@ -143,7 +143,6 @@ export class ExplorerWebview {
         // Remove event handlers
         const tabContainer: HTMLDivElement | undefined = getOptionalDocumentElementById(document, "tabcontainer", HTMLDivElement);
         if (tabContainer) {
-            debugger;
             for (const tabContainerElement of getElementChildren(tabContainer, HTMLDivElement)) {
                 tabContainerElement.removeEventListener("click", this.onTabClicked.bind(this));
             }
