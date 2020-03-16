@@ -182,7 +182,7 @@
     },
     "scripts": {
         "buildExplorer": "tsc --b tsconfig.explorer.json",
-        "buildExplorerWatch": "tsc --b tsconfig.explorer.json -watch" ,
+        "buildExplorerWatch": "tsc --b tsconfig.explorer.json -watch",
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",

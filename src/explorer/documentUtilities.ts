@@ -41,7 +41,7 @@ export function getDocumentElementsByClassName<T extends Element>(document: Docu
     return <HTMLCollectionOf<T>>collection;
 }
 
-export function getElementChildren<T extends Element>(element: Element,  constructor: { new (): T } ): HTMLCollectionOf<T> {
+export function getElementChildren<T extends Element>(element: Element, constructor: { new (): T }): HTMLCollectionOf<T> {
     const children: HTMLCollectionOf<Element>  = element.children;
 
     // This is harmless since there isn't anything to iterate over.
@@ -56,7 +56,7 @@ export function getElementChildren<T extends Element>(element: Element,  constru
     return <HTMLCollectionOf<T>>children;
 }
 
-export function removeElementChildren(element?: Element): void {
+export function removeElementChildren(element: Element | undefined | null): void {
     if (!element) {
         return;
     }

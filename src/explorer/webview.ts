@@ -9,8 +9,7 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, FixFile, FixChange,
-    ThreadFlow
+    ResultInfo, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, ThreadFlow
 } from "../common/Interfaces";
 
 import { ResultsList } from "./resultsList";
@@ -117,14 +116,14 @@ export class ExplorerWebview {
      * @param steps Array of all of the locations in the tree
      * @param start Starting point in the Array, if negative it will create placeholders(used when first step is nested)
      */
-    private addNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number): number {
+    private addCodeFlowNodes(parent: HTMLUListElement, steps: CodeFlowStep[], start: number): number {
         for (let index: number = start; index < steps.length; index++) {
             const node: HTMLLIElement = this.createCodeFlowNode(steps[index]);
             parent.appendChild(node);
             if (index < 0 || steps[index].isParent) {
                 index++;
                 const childrenContainer: HTMLUListElement = this.createElement("ul");
-                index = this.addNodes(childrenContainer, steps, index);
+                index = this.addCodeFlowNodes(childrenContainer, steps, index);
                 node.appendChild(childrenContainer);
             } else if (steps[index].isLastChild) {
                 // if it's a callReturn we want to pop out of the recursion returning the index we stopped at
@@ -221,7 +220,7 @@ export class ExplorerWebview {
         for (const codeflow of codeflows) {
             const rootEle: HTMLUListElement = this.createElement("ul", { className: "codeflowtreeroot" });
             const thread: ThreadFlow = codeflow.threads[0];
-            this.addNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
+            this.addCodeFlowNodes(rootEle, thread.steps, 0 - thread.lvlsFirstStepIsNested);
             rootEle.addEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             container.appendChild(rootEle);
         }
@@ -255,7 +254,7 @@ export class ExplorerWebview {
         }
 
         header.appendChild(this.createElement("label", { text: filenameandline }));
-        (<HTMLDivElement>header).addEventListener("click", this.onHeaderClicked.bind(this));
+        header.addEventListener("click", this.onHeaderClicked.bind(this));
     }
 
     /**
@@ -425,41 +424,44 @@ export class ExplorerWebview {
     private createPanelAttachments(attachments: Attachment[]): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.attachments);
 
-        if (attachments !== undefined) {
-            const rootEle: HTMLUListElement = this.createElement("ul", { className: "attachmentstreeroot" });
-            for (const aIndex of attachments.keys()) {
-                let isAParent: boolean = false;
-                const attachment: Attachment = attachments[aIndex];
-                if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
-                const treeNodeOptions: TreeNodeOptions = {
-                    isParent: isAParent,
-                    location: attachment.file,
-                    message: attachment.description.text,
-                    requestId: `${aIndex}`,
-                };
-                const parent: HTMLLIElement = this.createNode(treeNodeOptions);
-                if (isAParent) {
-                    const childrenContainer: HTMLUListElement = this.createElement("ul");
-                    for (const rIndex of attachment.regionsOfInterest.keys()) {
-                        const region: Location = attachment.regionsOfInterest[rIndex];
-                        const treeNodeOptions: TreeNodeOptions = {
-                            isParent: false,
-                            locationText: "",
-                            message: region.message && region.message.text,
-                            requestId: `${aIndex}_${rIndex}`,
-                        };
-
-                        childrenContainer.appendChild(this.createNode(treeNodeOptions));
-                    }
-
-                    parent.appendChild(childrenContainer);
-                }
-                rootEle.appendChild(parent);
-            }
-
-            rootEle.addEventListener("click", this.onAttachmentClicked.bind(this));
-            panel.appendChild(rootEle);
+        if (attachments.length === 0) {
+            return panel;
         }
+
+        const rootEle: HTMLUListElement = this.createElement("ul", { className: "attachmentstreeroot" });
+        for (const aIndex of attachments.keys()) {
+            let isAParent: boolean = false;
+            const attachment: Attachment = attachments[aIndex];
+            if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
+            const treeNodeOptions: TreeNodeOptions = {
+                isParent: isAParent,
+                location: attachment.file,
+                message: attachment.description.text,
+                requestId: `${aIndex}`,
+            };
+            const parent: HTMLLIElement = this.createNode(treeNodeOptions);
+            if (isAParent) {
+                const childrenContainer: HTMLUListElement = this.createElement("ul");
+                for (const rIndex of attachment.regionsOfInterest.keys()) {
+                    const region: Location = attachment.regionsOfInterest[rIndex];
+                    const treeNodeOptions: TreeNodeOptions = {
+                        isParent: false,
+                        locationText: "",
+                        message: region.message && region.message.text,
+                        requestId: `${aIndex}_${rIndex}`,
+                    };
+
+                    childrenContainer.appendChild(this.createNode(treeNodeOptions));
+                }
+
+                parent.appendChild(childrenContainer);
+            }
+            rootEle.appendChild(parent);
+        }
+
+        rootEle.addEventListener("click", this.onAttachmentClicked.bind(this));
+        panel.appendChild(rootEle);
+
         return panel;
     }
 
@@ -469,32 +471,33 @@ export class ExplorerWebview {
      */
     private createPanelCodeFlow(codeFlows: CodeFlow[]): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.codeflow);
-        if (codeFlows !== undefined) {
-            const headerEle: HTMLDivElement = this.createElement("div", { className: "tabcontentheader" });
-
-            const expandAll: HTMLDivElement = this.createElement("div", {
-                className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
-            });
-            expandAll.addEventListener("click", this.onExpandAllClicked.bind(this));
-            headerEle.appendChild(expandAll);
-
-            const collapseAll: HTMLDivElement = this.createElement("div", {
-                className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
-            });
-            collapseAll.addEventListener("click", this.onCollapseAllClicked.bind(this));
-            headerEle.appendChild(collapseAll);
-
-            headerEle.appendChild(this.createElement("div", { className: "headercontentseperator", text: "|" }));
-
-            const verbosity: HTMLInputElement = this.createElement("input", {
-                attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
-            });
-            verbosity.addEventListener("change", this.onVerbosityChange.bind(this));
-            headerEle.appendChild(verbosity);
-            panel.appendChild(headerEle);
-
-            panel.appendChild(this.createCodeFlowTrees(codeFlows));
+        if (codeFlows.length === 0) {
+            return panel;
         }
+        const headerEle: HTMLDivElement = this.createElement("div", { className: "tabcontentheader" });
+
+        const expandAll: HTMLDivElement = this.createElement("div", {
+            className: "tabcontentheaderbutton", id: "expandallcodeflow", text: "+", tooltip: "Expand All",
+        });
+        expandAll.addEventListener("click", this.onExpandAllClicked.bind(this));
+        headerEle.appendChild(expandAll);
+
+        const collapseAll: HTMLDivElement = this.createElement("div", {
+            className: "tabcontentheaderbutton", id: "collapseallcodeflow", text: "-", tooltip: "Collapse All",
+        });
+        collapseAll.addEventListener("click", this.onCollapseAllClicked.bind(this));
+        headerEle.appendChild(collapseAll);
+
+        headerEle.appendChild(this.createElement("div", { className: "headercontentseperator", text: "|" }));
+
+        const verbosity: HTMLInputElement = this.createElement("input", {
+            attributes: { max: "2", type: "range" }, id: "codeflowverbosity", tooltip: "Tree Verbosity",
+        });
+        verbosity.addEventListener("change", this.onVerbosityChange.bind(this));
+        headerEle.appendChild(verbosity);
+        panel.appendChild(headerEle);
+
+        panel.appendChild(this.createCodeFlowTrees(codeFlows));
 
         return panel;
     }
@@ -506,90 +509,94 @@ export class ExplorerWebview {
     private createPanelFixes(fixes: Fix[]): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.fixes);
 
-        if (fixes !== undefined) {
-            const rootEle: HTMLUListElement = this.createElement("ul", { className: "fixestreeroot" });
-            for (const index of fixes.keys()) {
-                const fix: Fix = fixes[index];
-                const hasFiles: boolean = fix.files !== undefined && fix.files.length > 0;
-                const fixRootNodeOptions: TreeNodeOptions = {
-                    isParent: hasFiles,
-                    locationText: "",
-                    message: fix.description.text,
-                    requestId: `${index}`,
+        if (fixes.length === 0) {
+            return panel;
+        }
+
+        const rootEle: HTMLUListElement = this.createElement("ul", { className: "fixestreeroot" });
+        for (const [fixIndex, fix] of fixes.entries()) {
+            const hasFiles: boolean = fix.files !== undefined && fix.files.length > 0;
+            const fixRootNodeOptions: TreeNodeOptions = {
+                isParent: hasFiles,
+                locationText: "",
+                message: fix.description.text,
+                requestId: `${fixIndex}`,
+            };
+            const fixRootNode: HTMLLIElement = this.createNode(fixRootNodeOptions);
+            rootEle.appendChild(fixRootNode);
+
+            if (!hasFiles) {
+                continue;
+            }
+
+            const filesContainer: HTMLUListElement = this.createElement("ul");
+            fixRootNode.appendChild(filesContainer);
+            for (const fixFile of fix.files.values()) {
+                const hasChanges: boolean = fixFile.changes !== undefined && fixFile.changes.length > 0;
+                const fileNodeOptions: TreeNodeOptions = {
+                    isParent: true, locationText: "", message: fixFile.location.fileName,
+                    requestId: `${fixIndex}`, tooltip: fixFile.location.uri ? fixFile.location.uri.fsPath : "",
                 };
-                const fixRootNode: HTMLLIElement = this.createNode(fixRootNodeOptions);
-                rootEle.appendChild(fixRootNode);
+                const fileNode: HTMLLIElement = this.createNode(fileNodeOptions);
+                filesContainer.appendChild(fileNode);
 
-                if (hasFiles) {
-                    const filesContainer: HTMLUListElement = this.createElement("ul");
-                    fixRootNode.appendChild(filesContainer);
-                    for (const filesIndex of fix.files.keys()) {
-                        const file: FixFile = fix.files[filesIndex];
-                        const hasChanges: boolean = file.changes !== undefined && file.changes.length > 0;
-                        const fileNodeOptions: TreeNodeOptions = {
-                            isParent: true, locationText: "", message: file.location.fileName,
-                            requestId: `${index}`, tooltip: file.location.uri ? file.location.uri.fsPath : "",
-                        };
-                        const fileNode: HTMLLIElement = this.createNode(fileNodeOptions);
-                        filesContainer.appendChild(fileNode);
+                if (!hasChanges) {
+                    continue;
+                }
+                const changesContainer: HTMLUListElement = this.createElement("ul");
+                fileNode.appendChild(changesContainer);
 
-                        if (hasChanges) {
-                            const changesContainer: HTMLUListElement = this.createElement("ul");
-                            fileNode.appendChild(changesContainer);
-                            for (const changeIndex of file.changes.keys()) {
-                                const change: FixChange = file.changes[changeIndex];
-                                const changeMsg: string  = `Change ${changeIndex + 1}`;
-                                const changeNodeOptions: TreeNodeOptions = {
-                                    isParent: true,
-                                    locationText: "",
-                                    message: changeMsg,
-                                    requestId: `${index}`,
-                                };
-                                const changeNode: HTMLLIElement = this.createNode(changeNodeOptions);
-                                changesContainer.appendChild(changeNode);
+                for (const [changeIndex, change] of fixFile.changes.entries()) {
+                    const changeMsg: string  = `Change ${changeIndex + 1}`;
+                    const changeNodeOptions: TreeNodeOptions = {
+                        isParent: true,
+                        locationText: "",
+                        message: changeMsg,
+                        requestId: `${fixIndex}`,
+                    };
+                    const changeNode: HTMLLIElement = this.createNode(changeNodeOptions);
+                    changesContainer.appendChild(changeNode);
 
-                                const changeDetailsContainer: HTMLUListElement = this.createElement("ul");
-                                changeNode.appendChild(changeDetailsContainer);
+                    const changeDetailsContainer: HTMLUListElement = this.createElement("ul");
+                    changeNode.appendChild(changeDetailsContainer);
 
-                                const start: Position = change.delete.start;
-                                const end: Position = change.delete.end;
-                                if (start.line !== end.line || start.character !== end.character) {
-                                    let delMsg: string = `Delete Ln ${start.line + 1}, Col ${start.character + 1}`;
-                                    if (start.line !== end.line) {
-                                        delMsg = `${delMsg} - Ln ${end.line + 1}, Col ${end.character + 1}`;
-                                    } else {
-                                        delMsg = delMsg + `-${end.character + 1}`;
-                                    }
-
-                                    const deleteNodeOptions: TreeNodeOptions = {
-                                        isParent: false,
-                                        locationText: "",
-                                        message: delMsg,
-                                        requestId: `${index}`,
-                                    };
-                                    changeDetailsContainer.appendChild(this.createNode(deleteNodeOptions));
-                                }
-
-                                if (change.insert !== undefined) {
-                                    const msg: string = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
-                                        `"${change.insert}"`;
-                                    const insertNodeOptions: TreeNodeOptions = {
-                                        isParent: false,
-                                        locationText: "",
-                                        message: msg,
-                                        requestId: `${index}`,
-                                    };
-                                    changeDetailsContainer.appendChild(this.createNode(insertNodeOptions));
-                                }
-                            }
+                    const start: Position = change.delete.start;
+                    const end: Position = change.delete.end;
+                    if (start.line !== end.line || start.character !== end.character) {
+                        let delMsg: string = `Delete Ln ${start.line + 1}, Col ${start.character + 1}`;
+                        if (start.line !== end.line) {
+                            delMsg = `${delMsg} - Ln ${end.line + 1}, Col ${end.character + 1}`;
+                        } else {
+                            delMsg = delMsg + `-${end.character + 1}`;
                         }
+
+                        const deleteNodeOptions: TreeNodeOptions = {
+                            isParent: false,
+                            locationText: "",
+                            message: delMsg,
+                            requestId: `${fixIndex}`,
+                        };
+                        changeDetailsContainer.appendChild(this.createNode(deleteNodeOptions));
+                    }
+
+                    if (change.insert !== undefined) {
+                        const msg: string = `Insert at Ln ${start.line + 1}, Col ${start.character + 1}:` +
+                            `"${change.insert}"`;
+                        const insertNodeOptions: TreeNodeOptions = {
+                            isParent: false,
+                            locationText: "",
+                            message: msg,
+                            requestId: `${fixIndex}`,
+                        };
+                        changeDetailsContainer.appendChild(this.createNode(insertNodeOptions));
                     }
                 }
             }
-
-            rootEle.addEventListener("click", this.onFixClicked.bind(this));
-            panel.appendChild(rootEle);
         }
+
+        rootEle.addEventListener("click", this.onFixClicked.bind(this));
+        panel.appendChild(rootEle);
+
         return panel;
     }
 
@@ -673,24 +680,28 @@ export class ExplorerWebview {
      */
     private createPanelRunInfo(runInfo: RunInfo): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.runinfo);
-        const tableEle: HTMLTableElement = this.createElement("table");
+        const tableEle: HTMLTableElement = document.createElement("table");
 
         if (runInfo.toolName !== undefined || runInfo.toolFullName !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Tool:", runInfo.toolFullName || runInfo.toolName));
         }
+
         if (runInfo.cmdLine !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Command line:", runInfo.cmdLine));
         }
+
         if (runInfo.toolFileName !== undefined) {
             tableEle.appendChild(this.createNameValueRow("File name:", runInfo.toolFileName));
         }
         if (runInfo.workingDir !== undefined) {
+
             tableEle.appendChild(this.createNameValueRow("Working directory:", runInfo.workingDir));
         }
 
         if (runInfo.startUtc !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Start Time:", new Date(runInfo.startUtc).toUTCString()));
         }
+
         if (runInfo.timeDuration !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Duration:", runInfo.timeDuration));
         }
@@ -698,6 +709,7 @@ export class ExplorerWebview {
         if (runInfo.automationCategory !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Automation Category:", runInfo.automationCategory));
         }
+
         if (runInfo.automationIdentifier !== undefined) {
             tableEle.appendChild(this.createNameValueRow("Automation Identifier:", runInfo.automationIdentifier));
         }
@@ -718,103 +730,105 @@ export class ExplorerWebview {
      */
     private createPanelStacks(stacks: Stacks): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.stacks);
-        if (stacks !== undefined) {
-            const tableEle: HTMLTableElement = this.createElement("table",
-                { id: "stackstable", className: "listtable" });
-
-            const headerNames: string []  = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
-            const headerRow: HTMLTableRowElement = this.createElement("tr");
-            let columnCount: number = 0;
-            for (let index: number  = 0; index < headerNames.length; index++) {
-                if (stacks.columnsWithContent[index] === true) {
-                    const headerEle: HTMLTableHeaderCellElement = this.createElement("th", { text: headerNames[index] });
-                    headerRow.appendChild(headerEle);
-                    columnCount++;
-                }
-            }
-            const tableHeadEle: HTMLHeadElement = this.createElement("thead");
-            tableHeadEle.appendChild(headerRow);
-            tableEle.appendChild(tableHeadEle);
-
-            const tableBodyEle: HTMLBodyElement = this.createElement("tbody");
-            for (let stackIndex: number = 0; stackIndex < stacks.stacks.length; stackIndex++) {
-                const stack: Stack = stacks.stacks[stackIndex];
-                const msgRow: HTMLTableRowElement = this.createElement("tr", {
-                    attributes: { "data-group": stackIndex, "tabindex": "0" },
-                    className: `listtablegroup ${ToggleState.expanded}`,
-                });
-                msgRow.appendChild(this.createElement("th", {
-                    attributes: { colspan: `${columnCount}` },
-                    text: stack.message.text,
-                }));
-                msgRow.addEventListener("click", this.onToggleStackGroup.bind(this));
-                tableBodyEle.appendChild(msgRow);
-
-                const tdTag: string = "td";
-                for (const frame of stack.frames) {
-                    const fLocation: Location = frame.location;
-                    let file: string | undefined;
-                    if (fLocation.uri) {
-                        // @ts-ignore external exist on the webview side
-                        file = fLocation.uri.external.replace("%3A", ":");
-                    }
-
-                    const fRow: HTMLTableRowElement = this.createElement("tr", {
-                        attributes: {
-                            "data-eCol": fLocation.range !== undefined ? fLocation.range.end.character.toString() : 0,
-                            "data-eLine": fLocation.range !== undefined ? fLocation.range.end.line.toString() : 0,
-                            "data-file": file,
-                            "data-group": stackIndex,
-                            "data-sCol": fLocation.range !== undefined ? fLocation.range.start.character.toString() : 0,
-                            "data-sLine": fLocation.range !== undefined ? fLocation.range.start.line.toString() : 0,
-                        },
-                        className: "listtablerow",
-                    });
-
-                    if (file !== undefined) {
-                        fRow.addEventListener("click", this.onSourceLinkClicked.bind(this));
-                    }
-
-                    const fLine: string = fLocation.range !== undefined ? fLocation.range.start.line.toString() : "";
-                    const fParameters: string = frame.parameters.toString();
-                    let fMsg: string = "";
-                    if (frame.message !== undefined && frame.message.text !== undefined) {
-                        fMsg = frame.message.text;
-                    }
-
-                    let fThreadId: string = "";
-                    if (frame.threadId !== undefined) {
-                        fThreadId = frame.threadId.toString();
-                    }
-
-                    fRow.appendChild(this.createElement(tdTag));
-                    if (stacks.columnsWithContent[1] === true) {
-                        fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
-                    }
-                    if (stacks.columnsWithContent[2] === true) {
-                        fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
-                    }
-                    if (stacks.columnsWithContent[3] === true) {
-                        fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
-                    }
-                    if (stacks.columnsWithContent[4] === true) {
-                        fRow.appendChild(this.createElement(tdTag,
-                            { text: frame.location.fileName, tooltip: fLocation.fileName }));
-                    }
-                    if (stacks.columnsWithContent[5] === true) {
-                        fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
-                    }
-                    if (stacks.columnsWithContent[6] === true) {
-                        fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
-                    }
-
-                    tableBodyEle.appendChild(fRow);
-                }
-            }
-            tableEle.appendChild(tableBodyEle);
-
-            panel.appendChild(tableEle);
+        if (stacks.stacks.length !== 0) {
+            return panel;
         }
+
+        const tableEle: HTMLTableElement = this.createElement("table",
+            { id: "stackstable", className: "listtable" });
+
+        const headerNames: string []  = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
+        const headerRow: HTMLTableRowElement = this.createElement("tr");
+        let columnCount: number = 0;
+        for (let index: number  = 0; index < headerNames.length; index++) {
+            if (stacks.columnsWithContent[index] === true) {
+                const headerEle: HTMLTableHeaderCellElement = this.createElement("th", { text: headerNames[index] });
+                headerRow.appendChild(headerEle);
+                columnCount++;
+            }
+        }
+        const tableHeadEle: HTMLHeadElement = this.createElement("thead");
+        tableHeadEle.appendChild(headerRow);
+        tableEle.appendChild(tableHeadEle);
+
+        const tableBodyEle: HTMLBodyElement = this.createElement("tbody");
+        for (let stackIndex: number = 0; stackIndex < stacks.stacks.length; stackIndex++) {
+            const stack: Stack = stacks.stacks[stackIndex];
+            const msgRow: HTMLTableRowElement = this.createElement("tr", {
+                attributes: { "data-group": stackIndex, "tabindex": "0" },
+                className: `listtablegroup ${ToggleState.expanded}`,
+            });
+            msgRow.appendChild(this.createElement("th", {
+                attributes: { colspan: `${columnCount}` },
+                text: stack.message.text,
+            }));
+            msgRow.addEventListener("click", this.onToggleStackGroup.bind(this));
+            tableBodyEle.appendChild(msgRow);
+
+            const tdTag: string = "td";
+            for (const frame of stack.frames) {
+                const fLocation: Location = frame.location;
+                let file: string | undefined;
+                if (fLocation.uri) {
+                    // @ts-ignore external exist on the webview side
+                    file = fLocation.uri.external.replace("%3A", ":");
+                }
+
+                const fRow: HTMLTableRowElement = this.createElement("tr", {
+                    attributes: {
+                        "data-eCol": fLocation.range !== undefined ? fLocation.range.end.character.toString() : 0,
+                        "data-eLine": fLocation.range !== undefined ? fLocation.range.end.line.toString() : 0,
+                        "data-file": file,
+                        "data-group": stackIndex,
+                        "data-sCol": fLocation.range !== undefined ? fLocation.range.start.character.toString() : 0,
+                        "data-sLine": fLocation.range !== undefined ? fLocation.range.start.line.toString() : 0,
+                    },
+                    className: "listtablerow",
+                });
+
+                if (file !== undefined) {
+                    fRow.addEventListener("click", this.onSourceLinkClicked.bind(this));
+                }
+
+                const fLine: string = fLocation.range !== undefined ? fLocation.range.start.line.toString() : "";
+                const fParameters: string = frame.parameters.toString();
+                let fMsg: string = "";
+                if (frame.message !== undefined && frame.message.text !== undefined) {
+                    fMsg = frame.message.text;
+                }
+
+                let fThreadId: string = "";
+                if (frame.threadId !== undefined) {
+                    fThreadId = frame.threadId.toString();
+                }
+
+                fRow.appendChild(this.createElement(tdTag));
+                if (stacks.columnsWithContent[1] === true) {
+                    fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
+                }
+                if (stacks.columnsWithContent[2] === true) {
+                    fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
+                }
+                if (stacks.columnsWithContent[3] === true) {
+                    fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
+                }
+                if (stacks.columnsWithContent[4] === true) {
+                    fRow.appendChild(this.createElement(tdTag,
+                        { text: frame.location.fileName, tooltip: fLocation.fileName }));
+                }
+                if (stacks.columnsWithContent[5] === true) {
+                    fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
+                }
+                if (stacks.columnsWithContent[6] === true) {
+                    fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
+                }
+
+                tableBodyEle.appendChild(fRow);
+            }
+        }
+        tableEle.appendChild(tableBodyEle);
+
+        panel.appendChild(tableEle);
 
         return panel;
     }
