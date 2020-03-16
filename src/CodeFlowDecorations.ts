@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import {
     DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
@@ -13,29 +13,45 @@ import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlows } from "./CodeFlows";
-import { FileMapper } from "./FileMapper";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
  */
-export class CodeFlowDecorations {
+export class CodeFlowDecorations implements Disposable {
+    private disposables: Disposable[] = [];
 
     public static readonly selectNextCFStepCommand = "extension.sarif.nextCodeFlowStep";
     public static readonly selectPrevCFStepCommand = "extension.sarif.previousCodeFlowStep";
 
+    public constructor(private readonly explorerController: ExplorerController) {
+        this.disposables.push(window.onDidChangeVisibleTextEditors(this.onVisibleTextEditorsChanged.bind(this)));
+        this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
+    }
+
+    public dispose(): void {
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
+    }
+
     /**
      * Updates the decorations when there is a change in the visible text editors
      */
-    public static onVisibleTextEditorsChanged(this: ExplorerController): void {
-        CodeFlowDecorations.updateStepsHighlight(this);
-        CodeFlowDecorations.updateResultGutterIcon(this);
+    private onVisibleTextEditorsChanged(): void {
+        this.updateStepsHighlight();
+        this.updateResultGutterIcon();
+    }
+
+    private async onActiveDiagnosticChanged(diagnostic: SarifViewerVsCodeDiagnostic | undefined): Promise<void> {
+        this.updateStepsHighlight();
+        this.updateResultGutterIcon();
+        await CodeFlowDecorations.updateCodeFlowSelection(this.explorerController);
     }
 
     /**
      * Updates the GutterIcon for the current active Diagnostic
      */
-    public static updateResultGutterIcon(explorerController: ExplorerController): void {
-        const activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+    public updateResultGutterIcon(): void {
+        const activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!activeDiagnostic) {
             return;
         }
@@ -78,8 +94,8 @@ export class CodeFlowDecorations {
     /**
      * Updates the decorations for the steps in the Code Flow tree
      */
-    public static updateStepsHighlight(explorerController: ExplorerController): void {
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+    private updateStepsHighlight(): void {
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic || !diagnostic.resultInfo.codeFlows) {
             return;
         }
@@ -138,7 +154,7 @@ export class CodeFlowDecorations {
     /**
      * Selects the next CodeFlow step
      */
-    public static async selectNextCFStep(explorerController: ExplorerController, fileMapper: FileMapper): Promise<void>  {
+    public static async selectNextCFStep(explorerController: ExplorerController): Promise<void>  {
         const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;

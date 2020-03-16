@@ -25,10 +25,10 @@ export class SVDiagnosticCollection implements Disposable {
 
     private static MaxDiagCollectionSize: number;
 
-    private diagnosticCollection: DiagnosticCollection;
-    private issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
-    private runInfoCollection: RunInfo[];
-    private unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]>;
+    private readonly diagnosticCollection: DiagnosticCollection;
+    private readonly issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
+    private readonly unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
+    private runInfoCollection: RunInfo[] = [];
 
     private diagnosticCollectionChangedEventEmitter: EventEmitter<SVDiagnosticsChangedEvent> = new EventEmitter<SVDiagnosticsChangedEvent>();
 
@@ -45,14 +45,10 @@ export class SVDiagnosticCollection implements Disposable {
 
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
-        this.issuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
-        this.unmappedIssuesCollection = new Map<string, SarifViewerVsCodeDiagnostic[]>();
-        this.runInfoCollection = [];
 
         this.fileMapper = new FileMapper(this);
-        this.disposables.push(this.fileMapper);
-
         this.disposables.push(this.fileMapper.OnMappingChanged(this.mappingChanged.bind(this)));
+        this.disposables.push(this.fileMapper);
     }
 
     public dispose(): void {
@@ -97,11 +93,9 @@ export class SVDiagnosticCollection implements Disposable {
      * @param runInfo RunInfo object to add to the collection
      */
     public addRunInfo(runInfo: RunInfo): number {
-        runInfo.id = 0;
-        if (this.runInfoCollection.length !== 0) {
-            runInfo.id = this.runInfoCollection[this.runInfoCollection.length - 1].id + 1;
-        }
-
+        // The reason the ID is not just the length of the run info collection is because items
+        // are added and removed from the collection.
+        runInfo.id = this.runInfoCollection.length !== 0 ? this.runInfoCollection[this.runInfoCollection.length - 1].id + 1 : 0;
         this.runInfoCollection.push(runInfo);
         return runInfo.id;
     }

@@ -24,14 +24,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
     const explorerController: ExplorerController = new ExplorerController(context);
     context.subscriptions.push(explorerController);
 
-    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController, explorerController.diagnosticCollection);
+    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController);
     context.subscriptions.push(codeActionProvider);
 
     context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider, explorerController.diagnosticCollection));
 
-    context.subscriptions.push(new SVCodeActionProvider(explorerController, explorerController.diagnosticCollection));
-
     context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
+
+    context.subscriptions.push(new CodeFlowDecorations(explorerController));
 
     context.subscriptions.push(
         commands.registerCommand(CodeFlowDecorations.selectNextCFStepCommand, CodeFlowDecorations.selectNextCFStep),

@@ -6,7 +6,6 @@ import * as vscode from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import * as sarif from 'sarif';
 
@@ -15,11 +14,10 @@ import * as sarif from 'sarif';
  * Also adds the Map to Source fix for the results that were not able to be mapped previously
  */
 export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.Disposable {
-    private isFirstCall = true;
+    private isFirstCall: boolean = true;
     private disposables: vscode.Disposable[] = [];
 
-    public constructor(private readonly explorerController: ExplorerController,
-                    private readonly diagnosticCollection: SVDiagnosticCollection) {
+    public constructor(private readonly explorerController: ExplorerController) {
         this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
     }
 
@@ -46,30 +44,28 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
         context: vscode.CodeActionContext,
         token?: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
         const index: number = context.diagnostics.findIndex((x) => (<SarifViewerVsCodeDiagnostic>x).resultInfo !== undefined);
-        if (!context.only && index !== -1) {
-            const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
-            if (svDiagnostic.source === "SARIFViewer") {
-                // This diagnostic is the place holder for the problems panel limit message,
-                // can possibly put logic here to allow for showing next set of diagnostics
-            } else {
-                if (this.isFirstCall) {
-                    await vscode.commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
-                    this.isFirstCall = false;
-                }
-
-                const activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-                if (!activeSVDiagnostic || activeSVDiagnostic !== svDiagnostic) {
-                    this.explorerController.setActiveDiagnostic(svDiagnostic);
-                    if (svDiagnostic.resultInfo.assignedLocation) {
-                        await CodeFlowDecorations.updateSelectionHighlight(this.explorerController, svDiagnostic.resultInfo.assignedLocation, svDiagnostic.rawResult);
-                    }
-                    CodeFlowDecorations.updateStepsHighlight(this.explorerController);
-                    CodeFlowDecorations.updateResultGutterIcon(this.explorerController);
-                    await CodeFlowDecorations.updateCodeFlowSelection(this.explorerController);
-                }
-
-                return this.getCodeActions(svDiagnostic);
+        if (context.only || index === -1) {
+            return [];
+        }
+        const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
+        if (svDiagnostic.source === "SARIFViewer") {
+            // This diagnostic is the place holder for the problems panel limit message,
+            // can possibly put logic here to allow for showing next set of diagnostics
+        } else {
+            if (this.isFirstCall) {
+                await vscode.commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
+                this.isFirstCall = false;
             }
+
+            const activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
+            if (!activeSVDiagnostic || activeSVDiagnostic !== svDiagnostic) {
+                this.explorerController.setActiveDiagnostic(svDiagnostic);
+                if (svDiagnostic.resultInfo.assignedLocation) {
+                    await CodeFlowDecorations.updateSelectionHighlight(this.explorerController, svDiagnostic.resultInfo.assignedLocation, svDiagnostic.rawResult);
+                }
+            }
+
+            return this.getCodeActions(svDiagnostic);
         }
 
         return [];
@@ -95,7 +91,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
 
                 const action: vscode.CodeAction = {
                     command: cmd,
-                    diagnostics:  this.diagnosticCollection.getAllUnmappedDiagnostics(),
+                    diagnostics:  this.explorerController.diagnosticCollection.getAllUnmappedDiagnostics(),
                     kind: vscode.CodeActionKind.QuickFix,
                     title: "Map To Source",
                 } ;

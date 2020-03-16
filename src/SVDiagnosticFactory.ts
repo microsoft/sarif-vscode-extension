@@ -11,12 +11,18 @@ import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { ExplorerController } from "./ExplorerController";
 
+const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
+    [ "error", DiagnosticSeverity.Error],
+    [ "none", DiagnosticSeverity.Information],
+    [ "note", DiagnosticSeverity.Information],
+    [ "warning", DiagnosticSeverity.Warning],
+]);
+
 /**
  * Object that is used to display a problem in the Problems panel
  * Extended with the information representing the SARIF result
  */
 export class SVDiagnosticFactory {
-
     public static readonly Code = "SARIFReader";
 
     /**
@@ -53,7 +59,7 @@ export class SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.relatedLocations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.relatedLocations, runId);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -90,16 +96,7 @@ export class SVDiagnosticFactory {
      * @param level severity level for the result in the sarif file
      */
     private static getSeverity(level: sarif.Result.level): DiagnosticSeverity {
-        switch (level) {
-            case "error":
-                return DiagnosticSeverity.Error;
-            case "none":
-            case "note":
-                return DiagnosticSeverity.Information;
-            case "warning":
-            default:
-                return DiagnosticSeverity.Warning;
-        }
+        return sarifLevelToVsCodeSeverityMap.get(level) || DiagnosticSeverity.Warning;
     }
 
     /**

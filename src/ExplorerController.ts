@@ -41,7 +41,7 @@ export class ExplorerController implements Disposable {
         return this.activeSVDiagnostic;
     }
 
-    public  set activeDiagnostic(value: SarifViewerVsCodeDiagnostic | undefined) {
+    public set activeDiagnostic(value: SarifViewerVsCodeDiagnostic | undefined) {
         if (this.activeSVDiagnostic !== value) {
             this.activeSVDiagnostic = value;
             this.onDidChangeActiveDiagnosticEventEmitter.fire(value);
@@ -82,7 +82,7 @@ export class ExplorerController implements Disposable {
     }
 
     private activeTab: string | undefined;
-    private selectedRow: string | undefined;
+    private selectedCodeFlowRow: string | undefined;
     private wvPanel: WebviewPanel | undefined;
 
     private get webviewPanel(): WebviewPanel {
@@ -92,7 +92,6 @@ export class ExplorerController implements Disposable {
     public constructor(private readonly extensionContext: ExtensionContext) {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
-        this.disposables.push(window.onDidChangeVisibleTextEditors(CodeFlowDecorations.onVisibleTextEditorsChanged, this));
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
         this.disposables.push(commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, this.SendCFSelectionToExplorerCommand.bind(this)));
 
@@ -178,8 +177,8 @@ export class ExplorerController implements Disposable {
                 break;
 
             case MessageType.CodeFlowSelectionChange:
-                this.selectedRow = message.data;
-                await CodeFlowDecorations.updateCodeFlowSelection(this, this.selectedRow);
+                this.selectedCodeFlowRow = message.data;
+                await CodeFlowDecorations.updateCodeFlowSelection(this, this.selectedCodeFlowRow);
                 break;
 
             case MessageType.SourceLinkClicked:
@@ -243,7 +242,7 @@ export class ExplorerController implements Disposable {
             this.activeDiagnostic = diag;
             if (!mappingUpdate) {
                 this.activeTab = undefined;
-                this.selectedRow = undefined;
+                this.selectedCodeFlowRow = undefined;
             }
             this.sendActiveDiagnostic(false);
         }
@@ -267,8 +266,8 @@ export class ExplorerController implements Disposable {
      * @param id Id of the codeflow row
      */
     public setSelectedCodeFlow(id: string): void {
-        this.selectedRow = id;
-        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange } as WebviewMessage, false);
+        this.selectedCodeFlowRow = id;
+        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange }, false);
     }
 
     /**
@@ -355,7 +354,7 @@ export class ExplorerController implements Disposable {
 
         let diagData: DiagnosticData = {
             activeTab: this.activeTab,
-            selectedRow: this.selectedRow,
+            selectedRow: this.selectedCodeFlowRow,
             selectedVerbosity: this.selectedVerbosity,
             resultInfo: this.activeDiagnostic.resultInfo,
         };
