@@ -3,6 +3,7 @@
  */
 
 import * as path from "path";
+import * as sarif from "sarif";
 import { commands, Range, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { MessageType } from "./common/Enums";
@@ -48,19 +49,19 @@ export class ExplorerController implements Disposable {
     }
 
     // Verbosity setting, and corresponding event.
-    private currentVerbosity: string | undefined;
+    private currentVerbosity: sarif.ThreadFlowLocation.importance = "important";
 
-    private onDidChangeVerbosityEventEmitter: EventEmitter<string | undefined> = new EventEmitter<string | undefined>();
+    private onDidChangeVerbosityEventEmitter: EventEmitter<sarif.ThreadFlowLocation.importance> = new EventEmitter<sarif.ThreadFlowLocation.importance>();
 
-    public get onDidChangeVerbosity(): Event<string | undefined> {
+    public get onDidChangeVerbosity(): Event<sarif.ThreadFlowLocation.importance> {
         return this.onDidChangeVerbosityEventEmitter.event;
     }
 
-    public get selectedVerbosity(): string | undefined {
+    public get selectedVerbosity(): sarif.ThreadFlowLocation.importance {
         return this.currentVerbosity;
     }
 
-    public set selectedVerbosity(value: string | undefined) {
+    public set selectedVerbosity(value: sarif.ThreadFlowLocation.importance) {
         if (this.currentVerbosity !== value) {
             this.currentVerbosity = value;
             this.onDidChangeVerbosityEventEmitter.fire(value);
@@ -194,6 +195,10 @@ export class ExplorerController implements Disposable {
                 break;
 
                 case MessageType.VerbosityChanged:
+                if (!Utilities.isThreadFlowImportance(message.data)) {
+                    throw new Error("Unhandled verbosity level");
+                }
+
                 if (this.selectedVerbosity !== message.data) {
                     this.selectedVerbosity = message.data;
                 }
@@ -239,7 +244,6 @@ export class ExplorerController implements Disposable {
             if (!mappingUpdate) {
                 this.activeTab = undefined;
                 this.selectedRow = undefined;
-                this.selectedVerbosity = undefined;
             }
             this.sendActiveDiagnostic(false);
         }

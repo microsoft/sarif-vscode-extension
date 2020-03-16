@@ -519,4 +519,13 @@ export class Utilities {
             }
         };
     }
+
+    /**
+     * Confirms that the string representring verbosity level is a valid.
+     * @param value The string value to confirm.
+     */
+    public static isThreadFlowImportance(value: string): value is sarif.ThreadFlowLocation.importance {
+        const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>["essential", "important", "unimportant"];
+        return allowedKeys.indexOf(value) !== -1;
+    }
 }

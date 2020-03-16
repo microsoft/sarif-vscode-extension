@@ -15,6 +15,21 @@ import {
 
 import { ResultsList } from "./resultsList";
 import { TextAndTooltip } from "./textAndTooltip";
+import { getDocumentElementById } from "./documentUtilities";
+
+// Types used to map between the verbosity level (0-2, where 2 is show everything)
+type verbosityClassStates = "verbosityshow" | "verbosityhide";
+
+interface VerbosityState {
+    importantClass: verbosityClassStates;
+    unimportantClass: verbosityClassStates;
+    verbosityRequest: sarif.ThreadFlowLocation.importance;
+}
+
+const verbosityLevels: Map<string, VerbosityState> = new Map<string, VerbosityState>([
+    ["0", { importantClass: "verbosityhide", unimportantClass: "verbosityhide", verbosityRequest: "essential" }],
+    ["1", { importantClass: "verbosityshow", unimportantClass: "verbosityhide", verbosityRequest: "important" }],
+    ["2", { importantClass: "verbosityshow", unimportantClass: "verbosityshow", verbosityRequest: "unimportant" }]]);
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -1386,42 +1401,17 @@ export class ExplorerWebview {
      * Updates the CodeFlow trees to only show the nodes based on the current verbosity setting
      */
     private updateTreeVerbosity(): void {
-        const hide: string = "verbosityhide";
-        const show: string = "verbosityshow";
-        const verbosityElement: HTMLElement | null = document.getElementById("codeflowverbosity");
-        if (!verbosityElement) {
-            throw new Error("Cannot find code-flow verbosity element.");
+        const verbosityElement: HTMLInputElement = getDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
+
+        const verbosity: VerbosityState | undefined = verbosityLevels.get(verbosityElement.value);
+        if (!verbosity) {
+            throw new Error("Unhandled value for code flow verbosity.");
         }
 
-        const value: string = (<HTMLInputElement>verbosityElement).value;
-        let importantClass: string | undefined;
-        let unimportantClass: string | undefined;
-        let verbosityRequest: string | undefined;
+        this.setVerbosityShowState("important", verbosity.importantClass);
+        this.setVerbosityShowState("unimportant", verbosity.unimportantClass);
 
-        switch (value) {
-            case "0":
-                importantClass = hide;
-                unimportantClass = hide;
-                verbosityRequest = "essential";
-                break;
-            case "1":
-                importantClass = show;
-                unimportantClass = hide;
-                verbosityRequest = "important";
-                break;
-            case "2":
-                importantClass = show;
-                unimportantClass = show;
-                verbosityRequest = "unimportant";
-                break;
-            default:
-                throw new Error("Unhandled value for code flow verbosity.");
-        }
-
-        this.setVerbosityShowState("important", importantClass);
-        this.setVerbosityShowState("unimportant", unimportantClass);
-
-        this.sendMessage({ data: verbosityRequest, type: MessageType.VerbosityChanged } as WebviewMessage);
+        this.sendMessage({ data: verbosity.verbosityRequest, type: MessageType.VerbosityChanged });
     }
 
 }
@@ -1431,6 +1421,6 @@ let explorerWebview: ExplorerWebview | undefined;
 export function startExplorer(): void {
     if (!explorerWebview) {
         explorerWebview = new ExplorerWebview();
-        explorerWebview.sendMessage({ data: "", type: MessageType.ExplorerLoaded } as WebviewMessage);
+        explorerWebview.sendMessage({ data: "", type: MessageType.ExplorerLoaded });
     }
 }

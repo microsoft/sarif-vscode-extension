@@ -4,7 +4,9 @@
 
 import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
 import { ExplorerController } from "./ExplorerController";
-import { CodeFlow, ThreadFlow, CodeFlowStep, Location, SarifViewerDiagnostic } from "./common/Interfaces";
+import { Location, SarifViewerDiagnostic } from "./common/Interfaces";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import * as sarif from "sarif";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
@@ -12,8 +14,10 @@ import { CodeFlow, ThreadFlow, CodeFlowStep, Location, SarifViewerDiagnostic } f
 export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
     private disposables: Disposable[]  = [];
     private onDidChangeCodeLensesEmitter: EventEmitter<void> = new EventEmitter<void>();
+    private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
+    private selectedVerbosity: sarif.ThreadFlowLocation.importance = "important";
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(explorerController: ExplorerController) {
         this.disposables.push(this.onDidChangeCodeLensesEmitter);
         this.disposables.push(languages.registerCodeLensProvider("*", this));
         this.disposables.push(explorerController.onDidChangeVerbosity(this.onDidChangeVerbosity.bind(this)));
@@ -41,27 +45,24 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
      */
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
 
-        if (!this.explorerController.activeDiagnostic) {
+        if (!this.activeDiagnostic) {
             return [];
         }
-
         const codeLenses: CodeLens[] = [];
-        const verbosity: string = this.explorerController.selectedVerbosity || "important";
-        const codeFlows: CodeFlow[] = this.explorerController.activeDiagnostic.resultInfo.codeFlows;
-        for (const cFIndex of codeFlows.keys()) {
-            const codeFlow: CodeFlow = codeFlows[cFIndex];
-            for (const tFIndex of codeFlow.threads.keys()) {
-                const threadFlow: ThreadFlow = codeFlow.threads[tFIndex];
-                for (const stepIndex of threadFlow.steps.keys()) {
-                    const step: CodeFlowStep = threadFlow.steps[stepIndex];
+
+        for (const codeFlow of this.activeDiagnostic.resultInfo.codeFlows) {
+            for (const  threadFlow of codeFlow.threads) {
+                for (const step of threadFlow.steps) {
                     const stepLoc: Location | undefined = step.location;
-                    if (stepLoc && stepLoc.uri && stepLoc.range && stepLoc.uri.toString() === document.uri.toString()) {
-                        if (step.importance === "essential" ||
-                            verbosity === "unimportant" ||
-                            step.importance === verbosity) {
-                            const codeLens: CodeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
-                            codeLenses.push(codeLens);
-                        }
+                    if (!stepLoc || !stepLoc.uri || !stepLoc.range || stepLoc.uri.toString() !== document.uri.toString()) {
+                        continue;
+                    }
+
+                    // If the importance is "essential", then we never hide it from the user.
+                    // If the users has selected "unimportant", then we will show them everything.
+                    // It the step matches the selected verbosity, then we are good to go.
+                    if (step.importance === "essential" || this.selectedVerbosity === "unimportant" || step.importance === this.selectedVerbosity) {
+                        codeLenses.push(new CodeLens(stepLoc.range, step.codeLensCommand));
                     }
                 }
             }
@@ -73,7 +74,8 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
     /**
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
-    private onDidChangeVerbosity(verbosity: string | undefined): void {
+    private onDidChangeVerbosity(verbosity: sarif.ThreadFlowLocation.importance): void {
+        this.selectedVerbosity = verbosity;
         this.onDidChangeCodeLensesEmitter.fire();
     }
 
@@ -81,6 +83,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
     public onDidChangeActiveDiagnostic(diagnostic: SarifViewerDiagnostic | undefined): void {
+        this.activeDiagnostic = diagnostic;
         this.onDidChangeCodeLensesEmitter.fire();
     }
 }
