@@ -140,8 +140,11 @@ export interface CodeFlowStep {
     traversalId: string;
 }
 
+export type StackHeaderType = 'result' | 'message' | 'name' | 'location' | 'filename' | 'parameters' | 'threadId';
+export type StackColumnWithContent  = { [key in StackHeaderType] : boolean };
+
 export interface Stacks {
-    columnsWithContent: boolean[];
+    columnsWithContent: StackColumnWithContent,
     stacks: Stack[];
 }
 

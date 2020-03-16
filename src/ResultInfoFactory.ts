@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
 import {
-    Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message
+    Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent
 } from "./common/Interfaces";
 import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
@@ -257,15 +257,25 @@ export class ResultInfoFactory {
      * @param runId id of the run this result is from
      */
     private static async parseStacks(explorerController: ExplorerController, sarifStacks: sarif.Stack[] | undefined, runId: number): Promise<Stacks> {
+        let columnsWithContent: StackColumnWithContent = {
+            filename: false,
+            location: false,
+            message: false,
+            name: false,
+            parameters: false,
+            result: false,
+            threadId: false
+        };
+
         if (!sarifStacks) {
             return {
-                columnsWithContent: [],
+                columnsWithContent: columnsWithContent,
                 stacks: []
             };
         }
 
-        let columnsWithContent: boolean[] = [];
         const stacks: Stack[] = [];
+        columnsWithContent.result = true;
 
         for (const sarifStack of sarifStacks) {
             const message: Message = Utilities.parseSarifMessage(sarifStack.message);
@@ -321,27 +331,13 @@ export class ResultInfoFactory {
      * @param frame the stack frame to check for content
      * @param hasContent the current set of hasContent flags
      */
-    private static checkFrameContent(frame: Frame, hasContent: boolean[]): boolean[] {
-        if (hasContent[1] === false) {
-            hasContent[1] = frame.message.text !== undefined && frame.message.text !== "";
-        }
-        if (hasContent[2] !== true) {
-            hasContent[2] = frame.name !== undefined && frame.name !== "";
-        }
-        if (hasContent[3] !== true) {
-            const range: vscode.Range | undefined = frame.location.range;
-            hasContent[3] = range !== undefined && range.start.line !== 0;
-        }
-        if (hasContent[4] !== true) {
-            hasContent[4] = frame.location.fileName !== undefined && frame.location.fileName !== "";
-        }
-        if (hasContent[5] !== true) {
-            hasContent[5] = frame.parameters !== undefined && frame.parameters.length !== 0;
-        }
-        if (hasContent[6] !== true) {
-            hasContent[6] = frame.threadId !== undefined;
-        }
-
-        return hasContent;
+    private static checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
+        columnsWithContent.message = columnsWithContent.message &&  frame.message.text !== undefined && frame.message.text !== "";
+        columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== "";
+        columnsWithContent.location = columnsWithContent.location && frame.location.range !== undefined && frame.location.range.start.line !== 0;
+        columnsWithContent.filename = columnsWithContent.filename && frame.location.fileName !== undefined && frame.location.fileName !== "";
+        columnsWithContent.parameters = columnsWithContent.parameters && frame.parameters !== undefined && frame.parameters.length !== 0;
+        columnsWithContent.threadId = columnsWithContent.threadId && frame.threadId !== undefined;
+        return columnsWithContent;
     }
 }

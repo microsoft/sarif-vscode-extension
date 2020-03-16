@@ -9,7 +9,7 @@ import * as sarif from "sarif";
 import { Position } from "vscode";
 import {
     Attachment, CodeFlow, CodeFlowStep, DiagnosticData, Fix, HTMLElementOptions, Location, LocationData, Message,
-    ResultInfo, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, ThreadFlow
+    ResultInfo, RunInfo, Stack, Stacks, TreeNodeOptions, WebviewMessage, ThreadFlow, StackHeaderType
 } from "../common/Interfaces";
 
 import { ResultsList } from "./resultsList";
@@ -29,6 +29,15 @@ const verbosityLevels: Map<string, VerbosityState> = new Map<string, VerbositySt
     ["0", { importantClass: "verbosityhide", unimportantClass: "verbosityhide", verbosityRequest: "essential" }],
     ["1", { importantClass: "verbosityshow", unimportantClass: "verbosityhide", verbosityRequest: "important" }],
     ["2", { importantClass: "verbosityshow", unimportantClass: "verbosityshow", verbosityRequest: "unimportant" }]]);
+
+const stackHeaderNames: {headerType: StackHeaderType; uiString: string} []  = [
+    { headerType: 'result', uiString:  ""},
+    { headerType: 'message', uiString: "Message" },
+    { headerType: 'name', uiString: "Name" },
+    { headerType: 'location', uiString: "Line" },
+    { headerType: 'filename', uiString:  "File" },
+    { headerType: 'parameters', uiString: "Parameters" },
+    { headerType: 'threadId', uiString: "ThreadId "}];
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -737,12 +746,11 @@ export class ExplorerWebview {
         const tableEle: HTMLTableElement = this.createElement("table",
             { id: "stackstable", className: "listtable" });
 
-        const headerNames: string []  = ["", "Message", "Name", "Line", "File", "Parameters", "ThreadId"];
         const headerRow: HTMLTableRowElement = this.createElement("tr");
         let columnCount: number = 0;
-        for (let index: number  = 0; index < headerNames.length; index++) {
-            if (stacks.columnsWithContent[index] === true) {
-                const headerEle: HTMLTableHeaderCellElement = this.createElement("th", { text: headerNames[index] });
+        for (let index: number  = 0; index < stackHeaderNames.length; index++) {
+            if (stacks.columnsWithContent[stackHeaderNames[index].headerType] === true) {
+                const headerEle: HTMLTableHeaderCellElement = this.createElement("th", { text: stackHeaderNames[index].uiString });
                 headerRow.appendChild(headerEle);
                 columnCount++;
             }
@@ -803,23 +811,23 @@ export class ExplorerWebview {
                 }
 
                 fRow.appendChild(this.createElement(tdTag));
-                if (stacks.columnsWithContent[1] === true) {
+                if (stacks.columnsWithContent.message === true) {
                     fRow.appendChild(this.createElement(tdTag, { text: fMsg, tooltip: fMsg }));
                 }
-                if (stacks.columnsWithContent[2] === true) {
+                if (stacks.columnsWithContent.name === true) {
                     fRow.appendChild(this.createElement(tdTag, { text: frame.name, tooltip: frame.name }));
                 }
-                if (stacks.columnsWithContent[3] === true) {
+                if (stacks.columnsWithContent.location === true) {
                     fRow.appendChild(this.createElement(tdTag, { text: fLine, tooltip: fLine }));
                 }
-                if (stacks.columnsWithContent[4] === true) {
+                if (stacks.columnsWithContent.filename === true) {
                     fRow.appendChild(this.createElement(tdTag,
                         { text: frame.location.fileName, tooltip: fLocation.fileName }));
                 }
-                if (stacks.columnsWithContent[5] === true) {
+                if (stacks.columnsWithContent.parameters === true) {
                     fRow.appendChild(this.createElement(tdTag, { text: fParameters, tooltip: fParameters }));
                 }
-                if (stacks.columnsWithContent[6] === true) {
+                if (stacks.columnsWithContent.threadId === true) {
                     fRow.appendChild(this.createElement(tdTag, { text: fThreadId, tooltip: fThreadId }));
                 }
 
