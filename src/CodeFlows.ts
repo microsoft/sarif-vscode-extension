@@ -183,7 +183,7 @@ export class CodeFlows {
     ): Promise<CodeFlowStep> {
 
         let tFLoc: sarif.ThreadFlowLocation = tFLocOrig;
-        if (tFLoc.index) {
+        if (tFLoc.index !== undefined) {
             const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
             if (lookedUpLoc) {
                 tFLoc = lookedUpLoc;
@@ -194,15 +194,14 @@ export class CodeFlows {
         let isLastChildFlag: boolean  = false;
         if (nextTFLocOrig) {
             let nextTFLoc: sarif.ThreadFlowLocation = nextTFLocOrig;
-            if (nextTFLoc.index) {
+            if (nextTFLoc.index !== undefined) {
                 const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
                 if (lookedUpLoc) {
                     nextTFLoc = lookedUpLoc;
                 }
             }
 
-            if (tFLoc && tFLoc.nestingLevel &&
-                nextTFLoc && nextTFLoc.nestingLevel) {
+            if (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel !== undefined) {
                 if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
                 (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
                     isParentFlag = true;
@@ -238,7 +237,7 @@ export class CodeFlows {
         };
 
         let nestingLevelValue: number | undefined = tFLoc.nestingLevel;
-        if (!nestingLevelValue) {
+        if (nestingLevelValue === undefined) {
             nestingLevelValue = -1;
         }
 
