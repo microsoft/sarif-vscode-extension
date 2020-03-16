@@ -15,7 +15,7 @@ import {
 
 import { ResultsList } from "./resultsList";
 import { TextAndTooltip } from "./textAndTooltip";
-import { getDocumentElementById } from "./documentUtilities";
+import { getDocumentElementById, getDocumentElementsByClassName, getOptionalDocumentElementById, getElementChildren, removeElementChildren } from "./documentUtilities";
 
 // Types used to map between the verbosity level (0-2, where 2 is show everything)
 type verbosityClassStates = "verbosityshow" | "verbosityhide";
@@ -141,63 +141,45 @@ export class ExplorerWebview {
      */
     private cleanUpResultDetails(): void {
         // Remove event handlers
-        const tabContainer: HTMLElement | null = document.getElementById("tabcontainer");
+        const tabContainer: HTMLDivElement | undefined = getOptionalDocumentElementById(document, "tabcontainer", HTMLDivElement);
         if (tabContainer) {
-            for (const tabContainerElement of tabContainer.children) {
-                (<HTMLDivElement>tabContainerElement).removeEventListener("click", this.onTabClicked.bind(this));
+            debugger;
+            for (const tabContainerElement of getElementChildren(tabContainer, HTMLDivElement)) {
+                tabContainerElement.removeEventListener("click", this.onTabClicked.bind(this));
             }
         }
 
-        const sourceLinks: HTMLCollectionOf<Element> = document.getElementsByClassName("sourcelink");
+        const sourceLinks: HTMLCollectionOf<HTMLAnchorElement> = getDocumentElementsByClassName(document, "sourcelink", HTMLAnchorElement);
         for (const sourceLink of sourceLinks) {
-            (<HTMLAnchorElement>sourceLink).removeEventListener("click", this.onSourceLinkClicked.bind(this));
+            sourceLink.removeEventListener("click", this.onSourceLinkClicked.bind(this));
         }
 
         if (this.hasCodeFlows) {
-            const codeFlowTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("codeflowtreeroot");
+            const codeFlowTrees: HTMLCollectionOf<HTMLUListElement> = getDocumentElementsByClassName(document, "codeflowtreeroot", HTMLUListElement);
             for (const codeFlowTree of codeFlowTrees) {
-                (<HTMLUListElement>codeFlowTree).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
+                codeFlowTree.removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             }
 
-            let element: Element | null = document.getElementById("expandallcodeflow");
-            if (element) {
-                element.removeEventListener("click", this.onExpandAllClicked.bind(this));
-            }
+            let element: HTMLDivElement = getDocumentElementById(document, "expandallcodeflow", HTMLDivElement);
+            element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
 
-            element = document.getElementById("collapseallcodeflow");
-            if (element) {
-                element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
-            }
+            element = getDocumentElementById(document, "collapseallcodeflow", HTMLDivElement);
+            element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
 
-            element = document.getElementById("codeflowverbosity");
-            if (element) {
-                element.removeEventListener("click", this.onVerbosityChange.bind(this));
-            }
+            const verbosityElement: HTMLInputElement = getDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
+            verbosityElement.removeEventListener("click", this.onVerbosityChange.bind(this));
         }
 
         if (this.hasAttachments) {
-            const attachmentTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("attachmentstreeroot");
+            const attachmentTrees: HTMLCollectionOf<HTMLUListElement> = getDocumentElementsByClassName(document, "attachmentstreeroot", HTMLUListElement);
             for (const attachmentTree of attachmentTrees) {
-                (<HTMLUListElement>attachmentTree).removeEventListener("click", this.onAttachmentClicked.bind(this));
+                attachmentTree.removeEventListener("click", this.onAttachmentClicked.bind(this));
             }
         }
 
         // Clear Result Details
-        const header: Element | null = document.getElementById("resultdetailsheader");
-        while (header && header.children.length > 0) {
-            const childHeaderItem: Element | null = header.children.item(0);
-            if (childHeaderItem) {
-                header.removeChild(childHeaderItem);
-            }
-        }
-
-        const container: Element | null = document.getElementById("resultdetailscontainer");
-        while (container && container.children.length > 0) {
-            const containerChildItem: Element | null = container.children.item(0);
-            if (containerChildItem) {
-                container.removeChild(containerChildItem);
-            }
-        }
+        removeElementChildren(document.getElementById("resultdetailsheader"));
+        removeElementChildren(document.getElementById("resultdetailscontainer"));
     }
 
     /**

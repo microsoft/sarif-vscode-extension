@@ -286,7 +286,6 @@ export class ExplorerController implements Disposable {
      */
     private getWebviewContent(webViewPanel: WebviewPanel): string {
         const resourcesPath: string[] = ["resources", "explorer"];
-        //const scriptsPath: string = "out/explorer/";
 
         const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "explorer.css");
         const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "listTable.css");
@@ -295,12 +294,6 @@ export class ExplorerController implements Disposable {
         const colResizeDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "colResizable-1.6.min.js");
         const requireJsPath: Uri = this.getVSCodeResourcePath("node_modules", "requirejs", "require.js");
         const explorerPath: Uri = this.getVSCodeResourcePath("out", "explorer", "systemExplorer.js");
-
-        // const webviewDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "webview.js");
-        // const resultsListDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "resultsList.js");
-        // const enumDiskPath: Uri = this.getVSCodeResourcePath(scriptsPath, "enums.js");
-        // const explorerCodePath: Uri = this.getVSCodeResourcePath(scriptsPath, "systemExplorer.js");
-        //             <script>System.import('${explorerCodePath}')</script>
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -327,15 +320,10 @@ export class ExplorerController implements Disposable {
             <div id="resultdetailsheader" class="headercontainer expanded"></div>
             <div id="resultdetailscontainer"></div>
             <script>
-               console.debug("Trying to load web view.");
                requirejs(['systemExplorer'], function () {
-                 console.debug("Here 1");
-                 var testMe = require(["explorer/webview"], function(webView) {
-                    console.debug("Here 2");
-                    console.debug(webView);
+                 require(["explorer/webview"], function(webView) {
                     webView.startExplorer();
                  });
-                 console.debug("webview started");
                });
             </script>
         </body>
