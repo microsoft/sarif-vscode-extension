@@ -8,6 +8,7 @@
         "outDir": "out",
         "lib": [
             "dom",
+            "dom.iterable",
             "es6"
         ],
         "sourceMap": true,

@@ -48,13 +48,11 @@ export class ExplorerWebview {
     private resultsList: ResultsList;
 
     public constructor() {
-        // @ts-ignore ResultsList is a defined class but can't import becuase it's not a module
+        // @ts-ignore: acquireVsCodeApi function is provided real time in the webview
+        this.vscode = acquireVsCodeApi();
         this.resultsList = new ResultsList(this);
 
         window.addEventListener("message", this.onMessage.bind(this));
-
-        // @ts-ignore: acquireVsCodeApi function is provided real time in the webview
-        this.vscode = acquireVsCodeApi();
     }
 
     /**
@@ -145,29 +143,20 @@ export class ExplorerWebview {
         // Remove event handlers
         const tabContainer: HTMLElement | null = document.getElementById("tabcontainer");
         if (tabContainer) {
-            for (let i: number = 0; i < tabContainer.children.length; i++) {
-                const tabContainerElement: Element | null = tabContainer.children.item(i);
-                if (tabContainerElement) {
-                    (<HTMLDivElement>tabContainerElement).removeEventListener("click", this.onTabClicked.bind(this));
-                }
+            for (const tabContainerElement of tabContainer.children) {
+                (<HTMLDivElement>tabContainerElement).removeEventListener("click", this.onTabClicked.bind(this));
             }
         }
 
         const sourceLinks: HTMLCollectionOf<Element> = document.getElementsByClassName("sourcelink");
-        for (let i: number = 0; i < sourceLinks.length; i++) {
-            const sourceLinkElement: Element | null = sourceLinks.item(i);
-            if (sourceLinkElement) {
-                (<HTMLAnchorElement>sourceLinkElement).removeEventListener("click", this.onSourceLinkClicked.bind(this));
-            }
+        for (const sourceLink of sourceLinks) {
+            (<HTMLAnchorElement>sourceLink).removeEventListener("click", this.onSourceLinkClicked.bind(this));
         }
 
         if (this.hasCodeFlows) {
             const codeFlowTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("codeflowtreeroot");
-            for (let i: number = 0; i < codeFlowTrees.length; i++) {
-                const codeFlowTree: Element | null = codeFlowTrees.item(i);
-                if (codeFlowTree) {
-                    (<HTMLUListElement>codeFlowTree).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
-                }
+            for (const codeFlowTree of codeFlowTrees) {
+                (<HTMLUListElement>codeFlowTree).removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
             }
 
             let element: Element | null = document.getElementById("expandallcodeflow");
@@ -188,11 +177,8 @@ export class ExplorerWebview {
 
         if (this.hasAttachments) {
             const attachmentTrees: HTMLCollectionOf<Element> = document.getElementsByClassName("attachmentstreeroot");
-            for (let i: number = 0; i < attachmentTrees.length; i++) {
-                const attachmentTree: Element | null = attachmentTrees.item(i);
-                if (attachmentTree) {
-                    (<HTMLUListElement>attachmentTree).removeEventListener("click", this.onAttachmentClicked.bind(this));
-                }
+            for (const attachmentTree of attachmentTrees) {
+                (<HTMLUListElement>attachmentTree).removeEventListener("click", this.onAttachmentClicked.bind(this));
             }
         }
 
@@ -266,11 +252,7 @@ export class ExplorerWebview {
      * Creates the content that shows in the results details header of the Explorer window
      */
     private createResultDetailsHeader(resultInfo: ResultInfo): void {
-        const header: Element | null = document.getElementById("resultdetailsheader");
-
-        if (!header) {
-            throw new Error("Could not find the result details header");
-        }
+        const header: HTMLDivElement = getDocumentElementById(document, "resultdetailsheader", HTMLDivElement);
 
         if (resultInfo.ruleId !== undefined || resultInfo.ruleName !== undefined) {
             header.appendChild(this.createElement("label", { id: "titleruleid", text: resultInfo.ruleId }));
@@ -303,24 +285,25 @@ export class ExplorerWebview {
     private createLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement | undefined {
         const cellContents: HTMLDivElement = this.createElement("div");
 
-        let locationsAdded: number = 0;
+        let locationsAdded: boolean = false;
+
         for (const loc of locations) {
-            if (loc && loc.range) {
-                const text: string = `${loc.fileName} (${(loc.range.start.line + 1)})`;
-                const link: HTMLAnchorElement | undefined = this.createSourceLink(loc, text);
-                if (link !== undefined) {
-                    cellContents.appendChild(link);
-                    cellContents.appendChild(this.createElement("br"));
-                    locationsAdded++;
-                }
+            if (!loc || !loc.range) {
+                continue;
             }
+
+            const text: string = `${loc.fileName} (${(loc.range.start.line + 1)})`;
+            const link: HTMLAnchorElement | undefined = this.createSourceLink(loc, text);
+
+            if (!link) {
+                continue;
+            }
+            cellContents.appendChild(link);
+            cellContents.appendChild(this.createElement("br"));
+            locationsAdded = true;
         }
 
-        if (locationsAdded === 0) {
-            return undefined;
-        }
-
-        return this.createRowWithContents(rowName, cellContents);
+        return locationsAdded ? this.createRowWithContents(rowName, cellContents) : undefined;
     }
 
     /**
@@ -331,25 +314,21 @@ export class ExplorerWebview {
     private createLogicalLocationsRow(rowName: string, locations: Location[]): HTMLTableRowElement | undefined {
         const cellContents: HTMLDivElement = this.createElement("div");
 
-        let locationsAdded: number = 0;
+        let locationsAdded: boolean = false;
         for (const loc of locations) {
-            if (loc !== undefined && loc !== null) {
-                if (loc.logicalLocations !== undefined) {
-                    for (const logLoc of loc.logicalLocations) {
-                        const text: HTMLSpanElement = this.createElement("span", { text: logLoc });
-                        cellContents.appendChild(text);
-                        cellContents.appendChild(this.createElement("br"));
-                        locationsAdded++;
-                    }
-                }
+            if (!loc || !loc.logicalLocations) {
+                continue;
+            }
+
+            for (const logLoc of loc.logicalLocations) {
+                const text: HTMLSpanElement = this.createElement("span", { text: logLoc });
+                cellContents.appendChild(text);
+                cellContents.appendChild(this.createElement("br"));
+                locationsAdded = true;
             }
         }
 
-        if (locationsAdded === 0) {
-            return undefined;
-        }
-
-        return this.createRowWithContents(rowName, cellContents);
+        return locationsAdded ? this.createRowWithContents(rowName, cellContents) : undefined;
     }
 
     /**
