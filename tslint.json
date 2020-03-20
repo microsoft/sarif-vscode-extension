@@ -55,7 +55,8 @@
             "check-decl"],
         "no-any": true,
         "no-unused-expression": true,
-        "no-unnecessary-initializer": true
+        "no-unnecessary-initializer": true,
+        "await-promise": [true, "Thenable"]
     },
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {
