@@ -24,7 +24,7 @@ export class FileMapper implements Disposable {
     public static readonly MapCommand = "extension.sarif.Map";
 
     private baseRemapping: Map<string, string>;
-    private fileRemapping: Map<string, Uri>;
+    private fileRemapping: Map<string, Uri | undefined>;
     private fileIndexKeyMapping: Map<string, string>;
     private onMappingChanged: EventEmitter<Uri>;
     private userCanceledMapping: boolean = false;
@@ -94,6 +94,7 @@ export class FileMapper implements Disposable {
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
 
         const directory: string | undefined = await this.openRemappingInputDialog(origUri);
+        this.userCanceledMapping = directory === undefined;
 
         if (!directory) {
             // path is undefined if the skip next button was pressed or the input was dismissed without fixing the path
@@ -120,7 +121,7 @@ export class FileMapper implements Disposable {
             } else {
                 this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
                 this.saveBasePath(origUri, uri, uriBase);
-                this.fileRemapping.forEach((value: Uri, key: string) => {
+                this.fileRemapping.forEach((value: Uri | undefined, key: string) => {
                     if (value === null) {
                         this.tryRebaseUri(Uri.file(key));
                     }
@@ -206,10 +207,9 @@ export class FileMapper implements Disposable {
     private addToFileMapping(key: string, uri?: Uri): void {
         if (uri) {
             uri.toString();
-            this.fileRemapping.set(key, uri);
-        } else {
-            this.fileRemapping.delete(key);
         }
+
+        this.fileRemapping.set(key, uri);
     }
 
     /**
@@ -312,7 +312,6 @@ export class FileMapper implements Disposable {
                         break;
 
                     case 'Skip':
-                        this.userCanceledMapping = true;
                         input.hide();
                         resolve(resolvedString);
                         break;
@@ -509,7 +508,7 @@ export class FileMapper implements Disposable {
      */
     private updateMappingsWithRootPaths(): void {
         let remapped: boolean = false;
-        this.fileRemapping.forEach((value: Uri, key: string, map: Map<string, Uri>) => {
+        this.fileRemapping.forEach((value: Uri | undefined, key: string, map: Map<string, Uri | undefined>) => {
             remapped = remapped || this.tryConfigRootpathsUri(Uri.file(key), undefined);
         });
 
