@@ -65,7 +65,7 @@ export class ResultInfoFactory {
         const allLocations: Location[] = locations.concat(relatedLocations);
 
         // Parse the rule related info
-        if (ruleIndex && tool) {
+        if (ruleIndex !== undefined  && tool) {
             let ruleDescriptors: sarif.ReportingDescriptor[] | undefined;
             if (!extensionIndex) {
                 ruleDescriptors = tool.driver.rules;

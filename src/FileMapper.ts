@@ -89,7 +89,7 @@ export class FileMapper implements Disposable {
      * @param origUri Uri the user needs to remap, if it has a uriBase it should be included in this uri
      * @param uriBase the base path of the uri
      */
-    public async getUserToChooseFile(origUri: Uri, uriBase: string): Promise<void> {
+    public async getUserToChooseFile(origUri: Uri, uriBase?: string): Promise<void> {
         const oldProgressMsg: string | undefined = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport("Waiting for user input");
 
@@ -143,31 +143,29 @@ export class FileMapper implements Disposable {
         // check if the file has already been remapped and the mapping isn't null(previously failed to map)
         const uriPath: string = Utilities.getFsPathWithFragment(uri);
         if (this.fileRemapping.has(uriPath) && this.fileRemapping.get(uriPath) !== null) {
-            return Promise.resolve();
+            return;
         }
 
         if (this.tryMapUri(uri, uriPath)) {
-            return Promise.resolve();
+            return;
         }
 
         if (this.tryRebaseUri(uri)) {
-            return Promise.resolve();
+            return;
         }
 
-        if (uriBase !== undefined && this.tryConfigRootpathsUri(uri, uriBase)) {
-            return Promise.resolve();
+        if (this.tryConfigRootpathsUri(uri, uriBase)) {
+            return;
         }
 
         // if user previously canceled mapping we don't open the file chooser
         if (this.userCanceledMapping) {
             this.addToFileMapping(uriPath, undefined);
-            return Promise.resolve();
+            return;
         }
 
         // If not able to remap using other means, we need to ask the user to enter a path for remapping
-        if (uriBase !== undefined) {
-            await this.getUserToChooseFile(uri, uriBase);
-        }
+        await this.getUserToChooseFile(uri, uriBase);
     }
 
     /**

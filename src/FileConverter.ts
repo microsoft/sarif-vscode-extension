@@ -127,21 +127,17 @@ export class FileConverter {
      */
     public static async upgradeSarif(doc: vscode.TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
         interface UpgradeChoiceMessageItem extends vscode.MessageItem {
-            choice: 'Temp' | 'Save As' | 'No';
         }
 
         const saveTempChoice: UpgradeChoiceMessageItem =  {
-            choice: 'Temp',
             title: "Yes (Save Temp)"
         };
 
         const saveAsChoice: UpgradeChoiceMessageItem = {
-            choice: 'Save As',
             title: "Yes (Save As)"
         };
 
         const noChoice: UpgradeChoiceMessageItem = {
-            choice: 'No',
             title: "No"
         };
 
