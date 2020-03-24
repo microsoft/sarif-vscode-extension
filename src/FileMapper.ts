@@ -363,6 +363,8 @@ export class FileMapper implements Disposable {
             let resolvedString: string | undefined;
 
             const input: InputBox = window.createInputBox();
+            disposables.push(input);
+
             input.title = "Sarif Result Location Remapping";
             input.value = uri.fsPath;
             input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
@@ -387,6 +389,7 @@ export class FileMapper implements Disposable {
             }));
 
             disposables.push(input.onDidHide(() => {
+                Disposable.from(...disposables).dispose();
                 resolve(resolvedString);
             }));
 
@@ -405,7 +408,6 @@ export class FileMapper implements Disposable {
 
                     case 'Skip':
                         input.hide();
-                        resolve(resolvedString);
                         break;
                 }
             }));
