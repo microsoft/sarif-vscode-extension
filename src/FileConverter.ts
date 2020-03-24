@@ -53,7 +53,7 @@ export class FileConverter {
         const openUris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
             canSelectFiles: true,
             canSelectMany: false,
-            filters: filters
+            filters
         });
 
         if (!openUris) {

@@ -65,18 +65,18 @@ export class RunInfoFactory {
         return {
             id: 0,
             toolName: tool.name,
-            toolFullName: toolFullName,
-            toolFileName: toolFileName,
-            workingDir: workingDir,
-            cmdLine: cmdLine,
-            timeDuration: timeDuration,
+            toolFullName,
+            toolFileName,
+            workingDir,
+            cmdLine,
+            timeDuration,
             additionalProperties: run.properties,
             uriBaseIds: Utilities.expandBaseIds(run.originalUriBaseIds),
             sarifFileFullPath: sarifFileName,
             sarifFileName: path.basename(sarifFileName),
-            automationCategory: automationCategory,
-            automationIdentifier: automationIdentifier,
-            startUtc: startUtc
+            automationCategory,
+            automationIdentifier,
+            startUtc
         };
     }
 }

@@ -63,15 +63,15 @@ export class LocationFactory {
         }
 
         return {
-            id: id,
+            id,
             endOfLine: parsedRange?.endOfLine,
-            fileName: fileName,
-            logicalLocations: logicalLocations,
-            mapped: mapped,
+            fileName,
+            logicalLocations,
+            mapped,
             range: parsedRange?.range ?? new Range(0, 0, 0, 1),
-            uri: uri,
-            uriBase: uriBase,
-            message: message,
+            uri,
+            uriBase,
+            message,
             toJSON: Utilities.LocationToJson
         };
     }

@@ -41,8 +41,8 @@ export class ProgressHelper {
     public async setProgressReport(message?: string, increment?: number): Promise<void> {
         if (this.progress) {
             const update: { message?: string; increment?: number} = {
-                message: message,
-                increment: increment
+                message,
+                increment
             };
             this.progress.report(update);
             return new Promise((resolve) => {

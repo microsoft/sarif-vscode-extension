@@ -112,23 +112,23 @@ export class ResultInfoFactory {
         }
 
         return {
-            id: id,
-            locationInSarifFile: locationInSarifFile,
-            runId: runId,
+            id,
+            locationInSarifFile,
+            runId,
             baselineState: result.baselineState || "new",
-            locations: locations,
+            locations,
             assignedLocation: locations.length > 0 ? locations[0] : undefined,
-            codeFlows: codeFlows,
-            stacks: stacks,
-            attachments: attachments,
-            fixes: fixes,
+            codeFlows,
+            stacks,
+            attachments,
+            fixes,
             relatedLocs: relatedLocations,
             additionalProperties: result.properties,
             ruleHelpUri: helpUri,
-            ruleName: ruleName,
-            ruleDescription: ruleDescription,
+            ruleName,
+            ruleDescription,
             rank: result.rank || ruleRank,
-            ruleId: ruleId,
+            ruleId,
             severityLevel: severityLevel || "warning",
             message: Utilities.parseSarifMessage(resultMessage, allLocations),
             kind: result.kind || "fail",
@@ -194,9 +194,9 @@ export class ResultInfoFactory {
             }
 
             attachments.push({
-                description: description,
+                description,
                 file: attachmentFile,
-                regionsOfInterest: regionsOfInterest
+                regionsOfInterest
             });
         }
 
@@ -316,14 +316,14 @@ export class ResultInfoFactory {
             }
 
             stacks.push({
-                frames: frames,
-                message: message
+                frames,
+                message
             });
         }
 
         return {
-            columnsWithContent: columnsWithContent,
-            stacks: stacks
+            columnsWithContent,
+            stacks
         };
     }
 

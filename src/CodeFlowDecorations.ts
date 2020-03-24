@@ -141,7 +141,7 @@ export class CodeFlowDecorations implements Disposable {
                 const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
                 const sarifPhysicalLocation: sarif.PhysicalLocation = {
                     artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                    region: region,
+                    region,
                 };
 
                 const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
