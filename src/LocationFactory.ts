@@ -68,7 +68,7 @@ export class LocationFactory {
             fileName: fileName,
             logicalLocations: logicalLocations,
             mapped: mapped,
-            range: parsedRange ?  parsedRange.range : new Range(0, 0, 0, 1),
+            range: parsedRange?.range ?? new Range(0, 0, 0, 1),
             uri: uri,
             uriBase: uriBase,
             message: message,
