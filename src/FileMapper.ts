@@ -64,7 +64,7 @@ export class FileMapper implements Disposable {
     public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string):
         Promise<{mapped: boolean; uri?: Uri}> {
         let uriPath: string | undefined;
-        if (location.index) {
+        if (location.index !== undefined) {
             uriPath = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
         } else {
             if (location.uri) {
@@ -145,7 +145,7 @@ export class FileMapper implements Disposable {
             this.onMappingChanged.fire(origUri);
 
             await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
-            return Promise.resolve();
+            return;
         }
     }
 
@@ -184,32 +184,30 @@ export class FileMapper implements Disposable {
     }
 
     /**
-     * Call to map the files in the Sarif run files object
-     * @param files array of sarif.Files that needs to be mapped
+     * Call to map the files in the Sarif run artifact objects
+     * @param artifacts array of sarif.Artifact that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapFiles(files: sarif.Artifact[], runId: number): Promise<void> {
+    public async mapArtifacts(artifacts: sarif.Artifact[], runId: number): Promise<void> {
         this.userCanceledMapping = false;
-        if (files) {
-            for (const fileIndex of files.keys()) {
-                const file: sarif.Artifact = files[fileIndex];
-                const fileLocation: sarif.ArtifactLocation | undefined = file.location;
+        for (const [artifactIndex, artifact] of artifacts.entries()) {
+            const fileLocation: sarif.ArtifactLocation | undefined = artifact.location;
 
-                if (fileLocation && fileLocation.uri) {
-                    const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
-                    const uriWithBase: Uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
-
-                    const key: string = Utilities.getFsPathWithFragment(uriWithBase);
-                    if (file.contents) {
-                        this.mapEmbeddedContent(key, file);
-                    } else {
-                        await this.map(uriWithBase, uriBase);
-                    }
-
-                    const index: string = `${runId}_${fileIndex}`;
-                    this.fileIndexKeyMapping.set(index, key);
-                }
+            if (!artifact.location || !artifact.location.uri) {
+                continue;
             }
+
+            const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
+            const uriWithBase: Uri = Utilities.combineUriWithUriBase(artifact.location.uri, uriBase);
+
+            const key: string = Utilities.getFsPathWithFragment(uriWithBase);
+            if (artifact.contents) {
+                this.mapEmbeddedContent(key, artifact);
+            } else {
+                await this.map(uriWithBase, uriBase);
+            }
+
+            this.fileIndexKeyMapping.set(`${runId}_${artifactIndex}`, key);
         }
     }
 
@@ -252,17 +250,23 @@ export class FileMapper implements Disposable {
     /**
      * Creates a temp file with the decoded content and adds the new temp file to the mapping
      * @param fileKey key of the original file path that needs to be mapped
-     * @param file file object that contains the hash and embedded content
+     * @param artifact file object that contains the hash and embedded content
      */
-    private mapEmbeddedContent(fileKey: string, file: sarif.Artifact): void {
-        const hashValue: string = this.getHashValue(file.hashes);
+    private mapEmbeddedContent(fileKey: string, artifact: sarif.Artifact): void {
+        const hashValue: string = this.getHashValue(artifact.hashes);
         const tempPath: string = Utilities.generateTempPath(fileKey, hashValue);
 
+        if (!artifact.contents) {
+            return;
+        }
+
         let contents: string | undefined;
-        if (file.contents &&  file.contents.text) {
-            contents = file.contents.text;
-        } else if (file.contents && file.contents.binary) {
-            contents = Buffer.from(file.contents.binary, "base64").toString();
+        if (artifact.contents.text) {
+            contents = artifact.contents.text;
+        } else if (artifact.contents.binary) {
+            contents = Buffer.from(artifact.contents.binary, "base64").toString();
+        } else if (artifact.contents.rendered) {
+            contents = artifact.contents.rendered.text;
         }
 
         if (contents) {

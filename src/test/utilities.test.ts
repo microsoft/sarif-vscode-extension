@@ -302,7 +302,7 @@ suite("getUirBase", () => {
     const explorerController: ExplorerController = new ExplorerController(new MockExtensionContext());
     const diagnosticCollection: SVDiagnosticCollection = explorerController.diagnosticCollection;
 
-    const runIdTest: number  = diagnosticCollection.addRunInfo(runInfoTest);
+    const runIdTest: number  = diagnosticCollection.addRunInfoAndCalculateId(runInfoTest);
 
     test("Undefined fileLocation", () => {
         const base: string | undefined = Utilities.getUriBase(diagnosticCollection, undefined, undefined);

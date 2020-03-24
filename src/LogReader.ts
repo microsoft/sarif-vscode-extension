@@ -137,20 +137,22 @@ export class LogReader implements Disposable {
                     for (let runIndex: number = 0; runIndex < log.runs.length; runIndex++) {
                         const run: sarif.Run = log.runs[runIndex];
                         runInfo = RunInfoFactory.Create(run, doc.fileName);
-                        const runId: number = this.explorerController.diagnosticCollection.addRunInfo(runInfo);
+                        // A run itself does not actually have an ID in SARIF.
+                        // One is manufactured for the "run" by adding it to the diagnostic collection.
+                        runInfo.id  = this.explorerController.diagnosticCollection.addRunInfoAndCalculateId(runInfo);
 
                         if (run.threadFlowLocations) {
-                            CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runId);
+                            CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runInfo.id);
                         }
 
                         if (run.artifacts) {
                             await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                            await this.explorerController.fileMapper.mapFiles(run.artifacts, runId);
+                            await this.explorerController.fileMapper.mapArtifacts(run.artifacts, runInfo.id);
                         }
 
                         if (run.results) {
                             await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
-                            await this.readResults(run.results, run.tool, runId, doc.uri, runIndex);
+                            await this.readResults(run.results, run.tool, runInfo.id, doc.uri, runIndex);
                         }
                     }
 

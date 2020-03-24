@@ -92,12 +92,12 @@ export class SVDiagnosticCollection implements Disposable {
      * Adds a RunInfo object to the runinfo collection and returns it's id
      * @param runInfo RunInfo object to add to the collection
      */
-    public addRunInfo(runInfo: RunInfo): number {
+    public addRunInfoAndCalculateId(runInfo: RunInfo): number {
         // The reason the ID is not just the length of the run info collection is because items
         // are added and removed from the collection.
-        runInfo.id = this.runInfoCollection.length !== 0 ? this.runInfoCollection[this.runInfoCollection.length - 1].id + 1 : 0;
+        const runInfoIdentifier: number =  this.runInfoCollection.length !== 0 ? this.runInfoCollection[this.runInfoCollection.length - 1].id + 1 : 0;
         this.runInfoCollection.push(runInfo);
-        return runInfo.id;
+        return runInfoIdentifier;
     }
 
     /**
