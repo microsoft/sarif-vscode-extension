@@ -47,7 +47,7 @@ export class SVDiagnosticCollection implements Disposable {
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
         this.fileMapper = new FileMapper(this);
-        this.disposables.push(this.fileMapper.OnMappingChanged(this.mappingChanged.bind(this)));
+        this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
         this.disposables.push(this.fileMapper);
     }
 
