@@ -45,9 +45,9 @@ export interface Location {
     endOfLine?: boolean;
     fileName?: string;
     logicalLocations?: string[];
-    mapped?: boolean;
+    mapped: boolean;
     message?: Message;
-    range?: Range;
+    range: Range;
     uri?: Uri;
     uriBase?: string;
 

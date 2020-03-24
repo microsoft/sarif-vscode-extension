@@ -395,7 +395,6 @@ export class CodeFlowDecorations implements Disposable {
         if (!step.location ||
             !step.location.uri ||
             !step.location.mapped ||
-            !step.location.range ||
             step.location.uri.toString() !== editor.document.uri.toString()) {
             return undefined;
         }

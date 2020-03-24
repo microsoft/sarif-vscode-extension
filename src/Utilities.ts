@@ -449,12 +449,11 @@ export class Utilities {
                     const className: string = `class="sourcelink"`;
                     const tooltip: string = `title="${location.uri.toString(true)}"`;
                     const data: string =
-                        `data-file="${location.uri.toString(true)}" ` + (
-                            location.range ?
-                                (`data-sLine="${location.range.start.line}" ` +
+                        `data-file="${location.uri.toString(true)}" ` +
+                                `data-sLine="${location.range.start.line}" ` +
                                 `data-sCol="${location.range.start.character}" ` +
                                 `data-eLine="${location.range.end.line}" ` +
-                                `data-eCol="${location.range.end.character}"`) : '');
+                                `data-eCol="${location.range.end.character}"`;
                     const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
                 } else {
@@ -483,10 +482,6 @@ export class Utilities {
      */
     // tslint:disable-next-line: no-any
     public static LocationToJson(this: Location, key: any, value: any): any {
-        if (!this.range) {
-            return value;
-        }
-
         return {
             ...this,
             range: {

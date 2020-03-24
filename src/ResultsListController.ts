@@ -159,11 +159,10 @@ export class ResultsListController implements Disposable {
                     const textDocument: TextDocument = await workspace.openTextDocument(diagLocation.uri);
                     const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
                     await window.showTextDocument(textDocument, ViewColumn.One, true);
-                    if (diagLocation.range) {
-                        textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-                        textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
-                        await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
-                    }
+
+                    textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
+                    textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
+                    await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
                 }
                 break;
 
@@ -316,10 +315,8 @@ export class ResultsListController implements Disposable {
                 resultFileName = loc.fileName;
                 resultFsPath = loc.uri.fsPath;
 
-                if (loc.range) {
-                    startPosition = loc.range.start;
-                    startPositionString = `(${startPosition.line + 1}, ${startPosition.character + 1})`;
-                }
+                startPosition = loc.range.start;
+                startPositionString = `(${startPosition.line + 1}, ${startPosition.character + 1})`;
             }
 
             if (loc.logicalLocations) {

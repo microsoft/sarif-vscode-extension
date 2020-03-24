@@ -62,7 +62,7 @@ export class FileMapper implements Disposable {
      * @param uriBase the base path of the uri
      */
     public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string):
-        Promise<Uri | undefined> {
+        Promise<{mapped: boolean; uri?: Uri}> {
         let uriPath: string | undefined;
         if (location.index) {
             uriPath = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
@@ -77,10 +77,24 @@ export class FileMapper implements Disposable {
         }
 
         if (!uriPath) {
-            return undefined;
+            return {
+                mapped: false
+            };
         }
 
-        return this.fileRemapping.get(uriPath);
+        const mappedUri: Uri | undefined = this.fileRemapping.get(uriPath);
+
+        if (mappedUri) {
+            return {
+                mapped: true,
+                uri: mappedUri
+            };
+        }
+
+        return {
+            mapped: false,
+            uri: Uri.parse(uriPath)
+        };
     }
 
     /**

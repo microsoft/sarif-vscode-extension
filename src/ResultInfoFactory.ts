@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as vscode from "vscode";
 import * as sarif from "sarif";
 import { CodeFlows } from "./CodeFlows";
 import {
@@ -150,6 +151,8 @@ export class ResultInfoFactory {
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
             locations.push({
+                range: new vscode.Range(0, 0, 0, 1),
+                mapped: false,
                 toJSON: () => {}
             });
         }
@@ -333,7 +336,7 @@ export class ResultInfoFactory {
     private static checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
         columnsWithContent.message = columnsWithContent.message &&  frame.message.text !== undefined && frame.message.text !== "";
         columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== "";
-        columnsWithContent.location = columnsWithContent.location && frame.location.range !== undefined && frame.location.range.start.line !== 0;
+        columnsWithContent.location = columnsWithContent.location && frame.location.range.start.line !== 0;
         columnsWithContent.filename = columnsWithContent.filename && frame.location.fileName !== undefined && frame.location.fileName !== "";
         columnsWithContent.parameters = columnsWithContent.parameters && frame.parameters !== undefined && frame.parameters.length !== 0;
         columnsWithContent.threadId = columnsWithContent.threadId && frame.threadId !== undefined;

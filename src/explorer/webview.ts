@@ -1269,8 +1269,11 @@ export class ExplorerWebview {
         }
 
         if (diagnosticData.selectedVerbosity !== undefined) {
-            (document.getElementById("codeflowverbosity") as HTMLInputElement).value = diagnosticData.selectedVerbosity;
-            this.updateTreeVerbosity();
+            const codeflowverbosity: HTMLInputElement | undefined = getOptionalDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
+            if (codeflowverbosity) {
+                codeflowverbosity.value = diagnosticData.selectedVerbosity;
+                this.updateTreeVerbosity();
+            }
         }
     }
 

@@ -54,7 +54,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
             for (const  threadFlow of codeFlow.threads) {
                 for (const step of threadFlow.steps) {
                     const stepLoc: Location | undefined = step.location;
-                    if (!stepLoc || !stepLoc.uri || !stepLoc.range || stepLoc.uri.toString() !== document.uri.toString()) {
+                    if (!stepLoc || !stepLoc.uri || stepLoc.uri.toString() !== document.uri.toString()) {
                         continue;
                     }
 

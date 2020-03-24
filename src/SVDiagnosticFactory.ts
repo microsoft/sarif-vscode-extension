@@ -32,7 +32,6 @@ export class SVDiagnosticFactory {
      */
     public static create(diagnosticCollection: SVDiagnosticCollection, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
         if (!resultInfo.assignedLocation ||
-            !resultInfo.assignedLocation.range ||
             !resultInfo.message.text) {
             throw new Error('Cannot represent a diagnostic without a range in the document and the diagnostic text to display to the user.');
         }
@@ -79,9 +78,7 @@ export class SVDiagnosticFactory {
             const firstLocation: Location = diagnostic.resultInfo.locations[0];
             if (firstLocation && firstLocation.mapped && (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped)) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
-                if (firstLocation.range) {
-                    diagnostic.range = firstLocation.range;
-                }
+                diagnostic.range = firstLocation.range;
 
                 diagnostic.message = SVDiagnosticFactory.updateMessage(diagnostic);
                 return true;

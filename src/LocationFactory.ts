@@ -33,15 +33,14 @@ export class LocationFactory {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
             uriBase = Utilities.getUriBase(explorerController.diagnosticCollection, artifactLocation, runId);
 
-            uri = await explorerController.fileMapper.get(artifactLocation, runId, uriBase);
+            const mappedUri: {mapped: boolean; uri?: Uri}  = await explorerController.fileMapper.get(artifactLocation, runId, uriBase);
+            mapped = mappedUri.mapped;
 
+            uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
+
+            // toString() is executed to create an external value for the webview's use
             if (uri) {
-                uri = Utilities.fixUriCasing(uri);
-
-                // toString() is executed to create an external value for the webview's use
                 uri.toString();
-                mapped = true;
-
                 fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
             }
         }
@@ -69,7 +68,7 @@ export class LocationFactory {
             fileName: fileName,
             logicalLocations: logicalLocations,
             mapped: mapped,
-            range: parsedRange?.range,
+            range: parsedRange ?  parsedRange.range : new Range(0, 0, 0, 1),
             uri: uri,
             uriBase: uriBase,
             message: message,
