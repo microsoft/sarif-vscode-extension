@@ -33,11 +33,28 @@ export class FileConverter {
             readonly extensions: string[];
         }
 
+        // This really should have a friendly UI name as well as the extension list.
+        // We can leave that for another day.
+        const fileConverterTools: { [toolName: string]: string[] } = {
+            "AndroidStudio": ["xml"],
+            "ClangAnalyzer": ["xml"],
+            "CppCheck": ["xml"],
+            "ContrastSecurity": ["xml"],
+            "Fortify": ["xml"],
+            "FortifyFpr": ["fpr"],
+            "FxCop": ["fxcop", "xml"],
+            "PREfast": ["xml"],
+            "Pylint": ["json"],
+            "SemmleQL": ["csv"],
+            "StaticDriverVerifier": ["tt"],
+            "TSLint": ["json"]
+        };
+
         const quickPickItems: ToolQuickPickItem[] = [];
-        for (const [toolName, toolExtensions] of FileConverter.Tools.entries()) {
+        for (const toolName of Object.keys(fileConverterTools)) {
             quickPickItems.push({
                 label: toolName,
-                extensions: toolExtensions
+                extensions: fileConverterTools[toolName]
             });
         }
 
@@ -56,12 +73,13 @@ export class FileConverter {
             filters
         });
 
-        if (!openUris) {
+        if (!openUris || openUris.length !==  1) {
             return;
         }
-        if (openUris.length > 0) {
-            FileConverter.convert(openUris[0], tool.label);
-        }
+
+        // The "label" used for the quick-pick item is the tool name we will
+        // ultimately pass to the multi-tool conversion that exists in the SDK.
+        FileConverter.convert(openUris[0], tool.label);
     }
 
     /**
@@ -221,7 +239,6 @@ export class FileConverter {
     private static multiToolVersion: SarifVersion | undefined;
     private static multiToolRawVersion: sarif.Log.version = "2.1.0";
     private static multiTool: string;
-    private static tools: Map<string, string[]>;
     private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
 
     private static get MultiToolCurrentSchemaVersion(): SarifVersion {
@@ -254,26 +271,6 @@ export class FileConverter {
         }
 
         return FileConverter.multiTool;
-    }
-
-    private static get Tools(): Map<string, string[]> {
-        if (FileConverter.tools === undefined) {
-            FileConverter.tools = new Map<string, string[]>();
-            FileConverter.tools.set("AndroidStudio", ["xml"]);
-            FileConverter.tools.set("ClangAnalyzer", ["xml"]);
-            FileConverter.tools.set("CppCheck", ["xml"]);
-            FileConverter.tools.set("ContrastSecurity", ["xml"]);
-            FileConverter.tools.set("Fortify", ["xml"]);
-            FileConverter.tools.set("FortifyFpr", ["fpr"]);
-            FileConverter.tools.set("FxCop", ["fxcop", "xml"]);
-            FileConverter.tools.set("PREfast", ["xml"]);
-            FileConverter.tools.set("Pylint", ["json"]);
-            FileConverter.tools.set("SemmleQL", ["csv"]);
-            FileConverter.tools.set("StaticDriverVerifier", ["tt"]);
-            FileConverter.tools.set("TSLint", ["json"]);
-        }
-
-        return FileConverter.tools;
     }
 
     /**

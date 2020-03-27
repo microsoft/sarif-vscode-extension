@@ -4,20 +4,20 @@
 
 import * as vscode from "vscode";
 import * as sarif from "sarif";
-import { CodeFlows } from "./CodeFlows";
+import { CodeFlowFactory } from  "./CodeFlowFactory";
+import { LocationFactory } from "./LocationFactory";
+
 import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent
-} from "./common/Interfaces";
-import { LocationFactory } from "./LocationFactory";
-import { Utilities } from "./Utilities";
-import { ExplorerController } from "./ExplorerController";
+} from "../common/Interfaces";
+import { Utilities } from "../Utilities";
+import { ExplorerController } from "../ExplorerController";
 
 /**
- * Class that holds the result information processed from the Sarif result.
- * This code transofrms the SARIF JSON into a "flatter" data model that is used
- * by the rest of the viewer code.
+ * Namespace that has the functions for processing (and transforming) the Sarif results (and runs)
+ * a model used by the Web Panel..
  */
-export class ResultInfoFactory {
+export namespace ResultInfoFactory {
 
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
@@ -28,7 +28,7 @@ export class ResultInfoFactory {
      * @param id Identifier used to identify this result.
      * @param locationInSarifFile the location in the SARIF file
      */
-    public static async create(
+    export async function create(
         explorerController: ExplorerController,
         result: sarif.Result,
         runId: number,
@@ -37,10 +37,10 @@ export class ResultInfoFactory {
         locationInSarifFile?: Location): Promise<ResultInfo> {
         const locations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.locations, runId);
         const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, result.relatedLocations, runId);
-        const attachments: Attachment[] = await ResultInfoFactory.parseAttachments(explorerController, result.attachments, runId);
-        const fixes: Fix[] = await ResultInfoFactory.parseFixes(explorerController, result.fixes, runId);
-        const codeFlows: CodeFlow[] = await CodeFlows.create(explorerController, result.codeFlows, runId);
-        const stacks: Stacks = await ResultInfoFactory.parseStacks(explorerController, result.stacks, runId);
+        const attachments: Attachment[] = await parseAttachments(explorerController, result.attachments, runId);
+        const fixes: Fix[] = await parseFixes(explorerController, result.fixes, runId);
+        const codeFlows: CodeFlow[] = await CodeFlowFactory.create(explorerController, result.codeFlows, runId);
+        const stacks: Stacks = await parseStacks(explorerController, result.stacks, runId);
 
         let ruleIndex: number | undefined;
         let ruleId: string | undefined;
@@ -141,7 +141,7 @@ export class ResultInfoFactory {
      * @param sarifLocations sarif locations that need to be processed
      * @param runId id of the run this result is from
      */
-    public static async parseLocations(explorerController: ExplorerController, sarifLocations: sarif.Location[] | undefined, runId: number): Promise<Location[]> {
+    export async function  parseLocations(explorerController: ExplorerController, sarifLocations: sarif.Location[] | undefined, runId: number): Promise<Location[]> {
         const locations: Location[] = [];
 
         if (sarifLocations) {
@@ -165,7 +165,7 @@ export class ResultInfoFactory {
      * @param sarifAttachments sarif attachments to parse
      * @param runId id of the run this result is from
      */
-    private static async parseAttachments(explorerController: ExplorerController, sarifAttachments: sarif.Attachment[] | undefined, runId: number): Promise<Attachment[]> {
+    async function  parseAttachments(explorerController: ExplorerController, sarifAttachments: sarif.Attachment[] | undefined, runId: number): Promise<Attachment[]> {
         if (!sarifAttachments) {
             return [];
         }
@@ -208,7 +208,7 @@ export class ResultInfoFactory {
      * @param sarifFixes sarif fixes to parse
      * @param runId id of the run this result is from
      */
-    private static async parseFixes(explorerController: ExplorerController, sarifFixes: sarif.Fix[] | undefined, runId: number): Promise<Fix[]> {
+    async function parseFixes(explorerController: ExplorerController, sarifFixes: sarif.Fix[] | undefined, runId: number): Promise<Fix[]> {
         if (!sarifFixes) {
             return [];
         }
@@ -258,7 +258,7 @@ export class ResultInfoFactory {
      * @param sarifStacks sarif stacks to parse
      * @param runId id of the run this result is from
      */
-    private static async parseStacks(explorerController: ExplorerController, sarifStacks: sarif.Stack[] | undefined, runId: number): Promise<Stacks> {
+    async function parseStacks(explorerController: ExplorerController, sarifStacks: sarif.Stack[] | undefined, runId: number): Promise<Stacks> {
         let columnsWithContent: StackColumnWithContent = {
             filename: false,
             location: false,
@@ -310,7 +310,7 @@ export class ResultInfoFactory {
                     name: frameNameParts.join()
                 };
 
-                columnsWithContent = this.checkFrameContent(frame, columnsWithContent);
+                columnsWithContent = checkFrameContent(frame, columnsWithContent);
 
                 frames.push(frame);
             }
@@ -333,7 +333,7 @@ export class ResultInfoFactory {
      * @param frame the stack frame to check for content
      * @param hasContent the current set of hasContent flags
      */
-    private static checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
+    function checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
         columnsWithContent.message = columnsWithContent.message && frame.message.text !== undefined && frame.message.text !== "";
         columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== "";
         columnsWithContent.location = columnsWithContent.location && frame.location.range.start.line !== 0;

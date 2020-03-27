@@ -3,29 +3,34 @@
  */
 
 import * as sarif from "sarif";
-import { Command } from "vscode";
-import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow } from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
 import { LocationFactory } from "./LocationFactory";
-import { Utilities } from "./Utilities";
+import { Command } from "vscode";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow } from "../common/Interfaces";
+import { Utilities } from "../Utilities";
+import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
+import { ExplorerController } from "../ExplorerController";
+
+const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 
 /**
- * Class that has the functions for processing the Sarif result codeflows
+ * Namespace that has the functions for processing (and transforming) the Sarif result code flows (thread flows, and steps) into
+ * a model used by the Web Panel.
  */
-export class CodeFlows {
+export namespace CodeFlowFactory {
+
     /**
      * Processes the array of Sarif codeflow objects
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
      * @param runId id of the run this result is from
      */
-    public static async create(explorerController: ExplorerController, sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
+    export async function create(explorerController: ExplorerController, sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
         if (!sarifCodeFlows) {
             return [];
         }
 
         const codeFlows: CodeFlow[] = [];
         for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-            codeFlows.push(await CodeFlows.createCodeFlow(explorerController, sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
+            codeFlows.push(await CodeFlowFactory.createCodeFlow(explorerController, sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
         }
 
         return codeFlows;
@@ -36,7 +41,7 @@ export class CodeFlows {
      * Returns a CodeFlowStepId object or undefined if there's no valid matching id (placeholder or bad formatting)
      * @param idText the codeflow id in text format ex: 1_1_2
      */
-    public static parseCodeFlowId(idText: string): CodeFlowStepId | undefined {
+    export function parseCodeFlowId(idText: string): CodeFlowStepId | undefined {
         let codeFlowId: CodeFlowStepId | undefined;
 
         if (idText !== "-1") {
@@ -58,10 +63,10 @@ export class CodeFlows {
      * @param tFLocs The array of ThreadFlowLocations off of the run object
      * @param runId Id of the run
      */
-    public static mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number): void {
+    export function mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number): void {
         if (tFLocs !== undefined) {
             for (let index: number = 0; index < tFLocs.length; index++) {
-                CodeFlows.threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
+                threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
             }
         }
     }
@@ -72,13 +77,10 @@ export class CodeFlows {
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
      * @param runId used for mapping uribaseids
      */
-    public static async tryRemapCodeFlows(explorerController: ExplorerController, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
-        for (const cFKey of codeFlows.keys()) {
-            const codeFlow: CodeFlow = codeFlows[cFKey];
-            for (const tFKey of codeFlow.threads.keys()) {
-                const thread: ThreadFlow = codeFlow.threads[tFKey];
-                for (const stepKey of thread.steps.keys()) {
-                    const step: CodeFlowStep = thread.steps[stepKey];
+    export async function tryRemapCodeFlows(explorerController: ExplorerController, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
+        for (const [cFKey, codeFlow] of codeFlows.entries()) {
+            for (const [tFKey, threadFlow] of codeFlow.threads.entries()) {
+                for (const [stepKey, step] of threadFlow.steps.entries()) {
                     if (step.location && step.location.mapped) {
                         const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
                         if (sarifLoc) {
@@ -92,15 +94,13 @@ export class CodeFlows {
         }
     }
 
-    private static threadFlowLocations = new Map<string, sarif.ThreadFlowLocation>();
-
     /**
      * Creates the CodeFlow object from the passed in sarif codeflow object
      * @param sarifCF the sarif codeflow object to be processed
      * @param indexId The id based on the index in the codeflow array
      * @param runId id of the run this result is from
      */
-    private static async createCodeFlow(explorerController: ExplorerController, sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
+    export async function createCodeFlow(explorerController: ExplorerController, sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
             message: undefined,
             threads: [],
@@ -110,7 +110,7 @@ export class CodeFlows {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlows.createThreadFlow(explorerController, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
+            await CodeFlowFactory.createThreadFlow(explorerController, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -125,7 +125,7 @@ export class CodeFlows {
      * @param indexId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
      * @param runId id of the run this result is from
      */
-    private static async createThreadFlow(explorerController: ExplorerController, sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
+    export async function  createThreadFlow(explorerController: ExplorerController, sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
     ): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
@@ -139,7 +139,7 @@ export class CodeFlows {
         }
 
         for (let index: number = 0; index < sarifTF.locations.length; index++) {
-            await CodeFlows.createCodeFlowStep(explorerController, sarifTF.locations[index], sarifTF.locations[index + 1],
+            await CodeFlowFactory.createCodeFlowStep(explorerController, sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
@@ -149,7 +149,7 @@ export class CodeFlows {
         let hasUndefinedNestingLevel: boolean = false;
         let hasZeroNestingLevel: boolean = false;
         for (const index of threadFlow.steps.keys()) {
-            threadFlow.steps[index].beforeIcon = CodeFlows.getBeforeIcon(index, threadFlow);
+            threadFlow.steps[index].beforeIcon = CodeFlowFactory.getBeforeIcon(index, threadFlow);
 
             // flag if step has undefined or 0 nestingLevel values
             if (threadFlow.steps[index].nestingLevel === -1) {
@@ -159,7 +159,7 @@ export class CodeFlows {
             }
         }
 
-        threadFlow.lvlsFirstStepIsNested = CodeFlows.getLevelsFirstStepIsNested(threadFlow.steps[0],
+        threadFlow.lvlsFirstStepIsNested = CodeFlowFactory.getLevelsFirstStepIsNested(threadFlow.steps[0],
             hasUndefinedNestingLevel, hasZeroNestingLevel);
 
         return threadFlow;
@@ -173,7 +173,7 @@ export class CodeFlows {
      * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      * @param runId id of the run this result is from
      */
-    private static async createCodeFlowStep(
+    export async function  createCodeFlowStep(
         explorerController: ExplorerController,
         tFLocOrig: sarif.ThreadFlowLocation,
         nextTFLocOrig: sarif.ThreadFlowLocation,
@@ -184,7 +184,7 @@ export class CodeFlows {
 
         let tFLoc: sarif.ThreadFlowLocation = tFLocOrig;
         if (tFLoc.index !== undefined) {
-            const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${tFLoc.index}`);
+            const lookedUpLoc: sarif.ThreadFlowLocation | undefined = threadFlowLocations.get(`${runId}_${tFLoc.index}`);
             if (lookedUpLoc) {
                 tFLoc = lookedUpLoc;
             }
@@ -195,7 +195,7 @@ export class CodeFlows {
         if (nextTFLocOrig) {
             let nextTFLoc: sarif.ThreadFlowLocation = nextTFLocOrig;
             if (nextTFLoc.index !== undefined) {
-                const lookedUpLoc: sarif.ThreadFlowLocation | undefined = CodeFlows.threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
+                const lookedUpLoc: sarif.ThreadFlowLocation | undefined = threadFlowLocations.get(`${runId}_${nextTFLoc.index}`);
                 if (lookedUpLoc) {
                     nextTFLoc = lookedUpLoc;
                 }
@@ -232,7 +232,7 @@ export class CodeFlows {
 
         const command: Command = {
             arguments: [indexId],
-            command: ExplorerController.SendCFSelectionToExplorerCommand,
+            command: sendCFSelectionToExplorerCommand,
             title: messageWithStepText,
         };
 
@@ -264,7 +264,7 @@ export class CodeFlows {
      * @param index Index of the step to determine the before icon of
      * @param threadFlow threadFlow that contains the step
      */
-    private static getBeforeIcon(index: number, threadFlow: ThreadFlow): string | undefined {
+    export function  getBeforeIcon(index: number, threadFlow: ThreadFlow): string | undefined {
         let iconName: string | undefined;
         const step: CodeFlowStep = threadFlow.steps[index];
         if (step.isParent) {
@@ -300,7 +300,7 @@ export class CodeFlows {
      * @param hasUndefinedNL flag for if the thread has any steps that are nested level of 0
      * @param hasZeroNL flag for if the thread has any steps that are nested level of 0
      */
-    private static getLevelsFirstStepIsNested(step: CodeFlowStep, hasUndefinedNL: boolean, hasZeroNL: boolean): number {
+    export function  getLevelsFirstStepIsNested(step: CodeFlowStep, hasUndefinedNL: boolean, hasZeroNL: boolean): number {
         const firstNestingLevel: number = step.nestingLevel;
         let lvlsFirstStepIsNested: number = 0;
         switch (firstNestingLevel) {

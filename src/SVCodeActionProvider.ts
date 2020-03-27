@@ -3,7 +3,6 @@
  */
 
 import * as vscode from "vscode";
-import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
@@ -60,9 +59,6 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
             const activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
             if (!activeSVDiagnostic || activeSVDiagnostic !== svDiagnostic) {
                 this.explorerController.setActiveDiagnostic(svDiagnostic);
-                if (svDiagnostic.resultInfo.assignedLocation) {
-                    await CodeFlowDecorations.updateSelectionHighlight(this.explorerController, svDiagnostic.resultInfo.assignedLocation, svDiagnostic.rawResult);
-                }
             }
 
             return this.getCodeActions(svDiagnostic);

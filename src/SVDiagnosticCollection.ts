@@ -1,11 +1,10 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
-
+import { SVDiagnosticFactory } from  "./factories/SVDiagnosticFactory";
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable } from "vscode";
 import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
-import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
@@ -290,7 +289,7 @@ export class SVDiagnosticCollection implements Disposable {
                 const msg: string = `Only displaying ${SVDiagnosticCollection.MaxDiagCollectionSize} of the total
                     ${issues.length} results in the SARIF log.`;
                 const maxReachedDiag: Diagnostic = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
-                maxReachedDiag.code = SVDiagnosticFactory.Code;
+                maxReachedDiag.code = "SARIFReader";
                 maxReachedDiag.source = "SARIFViewer";
                 diags = [maxReachedDiag].concat(issues.slice(0, SVDiagnosticCollection.MaxDiagCollectionSize));
             } else {

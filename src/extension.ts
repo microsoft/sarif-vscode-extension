@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
-import { commands, ExtensionContext } from "vscode";
+import { ExtensionContext } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
@@ -32,13 +32,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
 
     context.subscriptions.push(new CodeFlowDecorations(explorerController));
-
-    context.subscriptions.push(
-        commands.registerCommand(CodeFlowDecorations.selectNextCFStepCommand, CodeFlowDecorations.selectNextCFStep),
-    );
-    context.subscriptions.push(
-        commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
-    );
 
     // Read the initial set of open SARIF files
     const reader: LogReader = (new LogReader(explorerController));

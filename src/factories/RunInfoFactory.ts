@@ -4,20 +4,20 @@
 
 import * as path from "path";
 import * as sarif from "sarif";
-import { RunInfo } from "./common/Interfaces";
-import { Utilities } from "./Utilities";
+import { RunInfo } from "../common/Interfaces";
+import { Utilities } from "../Utilities";
 
 /**
- * Class that holds the run information processed from the Sarif run
+ * Namespace that has the functions for processing (and transforming) the Sarif run
+ * a model used by the Web Panel..
  */
-export class RunInfoFactory {
-
+export namespace RunInfoFactory {
     /**
      * Processes the run passed in and creates a new RunInfo object with the information processed
      * @param run SARIF run object to process
      * @param sarifFileName path and file name of the sarif file this run is in
      */
-    public static Create(run: sarif.Run, sarifFileName: string): RunInfo {
+    export function create(run: sarif.Run, sarifFileName: string): RunInfo {
         const tool: sarif.ToolComponent  = run.tool.driver;
 
         let toolFullName: string = tool.fullName || tool.name;

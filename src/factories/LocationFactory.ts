@@ -4,21 +4,22 @@
 
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
-import { Location, Message, JsonMapping, JsonPointer } from "./common/Interfaces";
-import { LogReader } from "./LogReader";
-import { Utilities } from "./Utilities";
-import { ExplorerController } from "./ExplorerController";
+import { Location, Message, JsonMapping, JsonPointer } from "../common/Interfaces";
+import { LogReader } from "../LogReader";
+import { Utilities } from "../Utilities";
+import { ExplorerController } from "../ExplorerController";
 
 /**
- * Class that processes and creates a location object from a results physical location
+ * Namespace that has the functions for processing (and transforming) the Sarif locations
+ * a model used by the Web Panel (typically Range and URis used by vscode).
  */
-export class LocationFactory {
+export namespace LocationFactory {
     /**
      * Processes the passed in sarif location and creates a new Location
      * @param sarifLocation location from result in sarif file
      * @param runId used for mapping uribaseids
      */
-    public static async create(explorerController: ExplorerController, sarifLocation: sarif.Location, runId: number): Promise<Location> {
+    export async function create(explorerController: ExplorerController, sarifLocation: sarif.Location, runId: number): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -82,7 +83,7 @@ export class LocationFactory {
      * @param sarifLocation raw sarif Location of the file
      * @param runId used for mapping uribaseids
      */
-    public static async getOrRemap(explorerController: ExplorerController, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
+    export async function getOrRemap(explorerController: ExplorerController, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
         // If it's already mapped, then just return it.
         if (location && location.mapped) {
             return location;
@@ -114,7 +115,7 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileLocation(logReader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+    export function  mapToSarifFileLocation(logReader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
         const sarifMapping: JsonMapping | undefined = logReader.sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
@@ -148,7 +149,7 @@ export class LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    public static mapToSarifFileResult(logRader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+    export function mapToSarifFileResult(logRader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
         const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
         return LocationFactory.createLocationOfMapping(logRader, sarifUri, resultPath, true);
     }
@@ -159,7 +160,7 @@ export class LocationFactory {
      * @param resultPath the pointer to the JsonMapping
      * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
      */
-    public static createLocationOfMapping(logRader: LogReader, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
+    export function createLocationOfMapping(logRader: LogReader, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
         const sarifMapping: JsonMapping | undefined = logRader.sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
@@ -188,7 +189,7 @@ export class LocationFactory {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    public static parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
+    export function  parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
         let startline: number = 0;
         let startcol: number = 0;
         let endline: number = 0;

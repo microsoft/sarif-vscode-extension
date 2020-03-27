@@ -4,13 +4,9 @@
 
 import * as path from "path";
 import * as sarif from "sarif";
-import { commands, Range, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
-import { CodeFlowDecorations } from "./CodeFlowDecorations";
+import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import { MessageType } from "./common/Enums";
-import {
-    DiagnosticData, Location, LocationData, ResultsListData, WebviewMessage, SarifViewerDiagnostic,
-} from "./common/Interfaces";
-import { LocationFactory } from "./LocationFactory";
+import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
@@ -23,7 +19,6 @@ export class ExplorerController implements Disposable {
     private disposables: Disposable[] = [];
 
     public static readonly ExplorerLaunchCommand = "extension.sarif.LaunchExplorer";
-    public static readonly SendCFSelectionToExplorerCommand = "extension.sarif.SendCFSelectionToExplorer";
     private static readonly ExplorerTitle = "SARIF Explorer";
 
     public resultsListData: ResultsListData | undefined;
@@ -93,8 +88,6 @@ export class ExplorerController implements Disposable {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
-        this.disposables.push(commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, this.SendCFSelectionToExplorerCommand.bind(this)));
-
         this.diagnosticCollection = new SVDiagnosticCollection(this);
         this.disposables.push(this.diagnosticCollection);
 
@@ -145,55 +138,15 @@ export class ExplorerController implements Disposable {
      * @param message the message from the webview describing the type and data of the message
      */
     public async onReceivedMessage(message: WebviewMessage): Promise<void> {
+        // Have the explorer controller set up whatever state it needs
+        // BEFORE firing the event out so the stat is consistent in the
+        // explorer controller before others receive the web view message.
         switch (message.type) {
-            case MessageType.AttachmentSelectionChange:
-                const selectionId: string[] = (message.data as string).split("_");
-                if (selectionId.length !== 2) {
-                    throw new Error('Selection id is incorrectly formatted');
-                }
-
-                const attachmentId: number = parseInt(selectionId[0], 10);
-                if (selectionId.length > 1) {
-                    await CodeFlowDecorations.updateAttachmentSelection(this, attachmentId, parseInt(selectionId[1], 10));
-                } else {
-                    const diagnostic: SarifViewerDiagnostic | undefined = this.activeDiagnostic;
-                    if (!diagnostic) {
-                        return;
-                    }
-
-                    const location: Location | undefined = await LocationFactory.getOrRemap(
-                        this,
-                        diagnostic.resultInfo.attachments[attachmentId].file,
-                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        diagnostic.resultInfo.runId
-                    );
-
-                    if (!location) {
-                        return;
-                    }
-
-                    await commands.executeCommand("vscode.open", location.uri, ViewColumn.One);
-                }
-                break;
-
             case MessageType.CodeFlowSelectionChange:
                 this.selectedCodeFlowRow = message.data;
-                await CodeFlowDecorations.updateCodeFlowSelection(this, this.selectedCodeFlowRow);
                 break;
 
-            case MessageType.SourceLinkClicked:
-                const locData: LocationData = JSON.parse(message.data);
-                const location: Location = {
-                    mapped: true,
-                    range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
-                        parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
-                    uri: Uri.parse(locData.file),
-                    toJSON: Utilities.LocationToJson
-                };
-                await CodeFlowDecorations.updateSelectionHighlight(this,  location, undefined);
-                break;
-
-                case MessageType.VerbosityChanged:
+            case MessageType.VerbosityChanged:
                     if (!Utilities.isThreadFlowImportance(message.data)) {
                         throw new Error("Unhandled verbosity level");
                     }
@@ -220,16 +173,9 @@ export class ExplorerController implements Disposable {
             case MessageType.TabChanged:
                 this.activeTab = message.data;
                 break;
-
-            case MessageType.ResultsListColumnToggled:
-            case MessageType.ResultsListFilterApplied:
-            case MessageType.ResultsListFilterCaseToggled:
-            case MessageType.ResultsListGroupChanged:
-            case MessageType.ResultsListResultSelected:
-            case MessageType.ResultsListSortChanged:
-                this.onWebViewMessageEventEmitter.fire(message);
-                break;
         }
+
+        this.onWebViewMessageEventEmitter.fire(message);
     }
 
     /**
@@ -372,10 +318,5 @@ export class ExplorerController implements Disposable {
         // just adding the message to the web-views queue.
         // tslint:disable-next-line: no-floating-promises
         this.webviewPanel.webview.postMessage(message);
-    }
-
-    private async SendCFSelectionToExplorerCommand(id: string): Promise<void> {
-        await CodeFlowDecorations.updateCodeFlowSelection(this,  id);
-        this.setSelectedCodeFlow(id);
     }
 }

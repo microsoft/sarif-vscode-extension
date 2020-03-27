@@ -4,17 +4,19 @@
 
 import * as path from "path";
 import * as sarif from "sarif";
+
+import { LocationFactory } from "./factories/LocationFactory";
+import { ResultInfoFactory } from "./factories/ResultInfoFactory";
+import { RunInfoFactory } from "./factories/RunInfoFactory";
+import { SVDiagnosticFactory } from "./factories/SVDiagnosticFactory";
+
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
-import { CodeFlows } from "./CodeFlows";
 import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
-import { LocationFactory } from "./LocationFactory";
 import { ProgressHelper } from "./ProgressHelper";
-import { ResultInfoFactory } from "./ResultInfoFactory";
-import { RunInfoFactory } from "./RunInfoFactory";
-import { SVDiagnosticFactory } from "./SVDiagnosticFactory";
 import { ExplorerController } from "./ExplorerController";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { CodeFlowFactory } from "./factories/CodeFlowFactory";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -136,13 +138,13 @@ export class LogReader implements Disposable {
 
                     for (let runIndex: number = 0; runIndex < log.runs.length; runIndex++) {
                         const run: sarif.Run = log.runs[runIndex];
-                        runInfo = RunInfoFactory.Create(run, doc.fileName);
+                        runInfo =  RunInfoFactory.create(run, doc.fileName);
                         // A run itself does not actually have an ID in SARIF.
                         // One is manufactured for the "run" by adding it to the diagnostic collection.
                         runInfo.id  = this.explorerController.diagnosticCollection.addRunInfoAndCalculateId(runInfo);
 
                         if (run.threadFlowLocations) {
-                            CodeFlows.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runInfo.id);
+                            CodeFlowFactory.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runInfo.id);
                         }
 
                         if (run.artifacts) {

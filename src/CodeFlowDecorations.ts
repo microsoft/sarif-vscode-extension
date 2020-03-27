@@ -3,16 +3,22 @@
  */
 
 import * as sarif from "sarif";
+import { LocationFactory } from "./factories/LocationFactory";
+
 import {
-    DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
+    commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
 } from "vscode";
-import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, SarifViewerDiagnostic } from "./common/Interfaces";
+import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, SarifViewerDiagnostic, WebviewMessage, LocationData } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
-import { LocationFactory } from "./LocationFactory";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { CodeFlows } from "./CodeFlows";
+import { MessageType } from "./common/Enums";
+import { CodeFlowFactory } from "./factories/CodeFlowFactory";
+
+const selectNextCFStepCommand: string = "extension.sarif.nextCodeFlowStep";
+const selectPrevCFStepCommand: string = "extension.sarif.previousCodeFlowStep";
+export const sendCFSelectionToExplorerCommand: string = "extension.sarif.SendCFSelectionToExplorer";
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
@@ -20,12 +26,13 @@ import { CodeFlows } from "./CodeFlows";
 export class CodeFlowDecorations implements Disposable {
     private disposables: Disposable[] = [];
 
-    public static readonly selectNextCFStepCommand = "extension.sarif.nextCodeFlowStep";
-    public static readonly selectPrevCFStepCommand = "extension.sarif.previousCodeFlowStep";
-
     public constructor(private readonly explorerController: ExplorerController) {
         this.disposables.push(window.onDidChangeVisibleTextEditors(this.onVisibleTextEditorsChanged.bind(this)));
         this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
+        this.disposables.push(explorerController.onWebViewMessage(this.onWebviewMessage.bind(this)));
+        this.disposables.push(commands.registerCommand(selectPrevCFStepCommand, this.selectPrevCFStep.bind(this)));
+        this.disposables.push(commands.registerCommand(selectNextCFStepCommand, this.selectNextCFStep.bind(this)));
+        this.disposables.push(commands.registerCommand(sendCFSelectionToExplorerCommand, this.sendCFSelectionToExplorerCommand.bind(this)));
     }
 
     public dispose(): void {
@@ -37,14 +44,15 @@ export class CodeFlowDecorations implements Disposable {
      * Updates the decorations when there is a change in the visible text editors
      */
     private onVisibleTextEditorsChanged(): void {
+        this.lastCodeFlowSelected = undefined;
         this.updateStepsHighlight();
         this.updateResultGutterIcon();
     }
 
     private async onActiveDiagnosticChanged(diagnostic: SarifViewerVsCodeDiagnostic | undefined): Promise<void> {
+        this.lastCodeFlowSelected = undefined;
         this.updateStepsHighlight();
         this.updateResultGutterIcon();
-        await CodeFlowDecorations.updateCodeFlowSelection(this.explorerController);
     }
 
     /**
@@ -128,8 +136,8 @@ export class CodeFlowDecorations implements Disposable {
      * @param attachmentId Id of the attachment selected
      * @param regionId Id of the region selected
      */
-    public static async updateAttachmentSelection(explorerController: ExplorerController, attachmentId: number, regionId: number): Promise<void> {
-        const svDiagnostic: SarifViewerVsCodeDiagnostic | undefined = explorerController.activeDiagnostic;
+    private async updateAttachmentSelection(attachmentId: number, regionId: number): Promise<void> {
+        const svDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!svDiagnostic || !svDiagnostic.rawResult.attachments) {
             return;
         }
@@ -146,7 +154,7 @@ export class CodeFlowDecorations implements Disposable {
 
                 const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
 
-                await CodeFlowDecorations.updateSelectionHighlight(explorerController, location, sarifLocation);
+                await this.updateSelectionHighlight(location, sarifLocation);
             }
         }
     }
@@ -154,14 +162,14 @@ export class CodeFlowDecorations implements Disposable {
     /**
      * Selects the next CodeFlow step
      */
-    public static async selectNextCFStep(explorerController: ExplorerController): Promise<void>  {
-        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+    private async selectNextCFStep(): Promise<void>  {
+        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
 
-        if (CodeFlowDecorations.lastCodeFlowSelected) {
-            const nextId: CodeFlowStepId = CodeFlowDecorations.lastCodeFlowSelected;
+        if (this.lastCodeFlowSelected) {
+            const nextId: CodeFlowStepId = this.lastCodeFlowSelected;
             nextId.stepId++;
 
             const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
@@ -176,13 +184,13 @@ export class CodeFlowDecorations implements Disposable {
                     }
                 }
             }
-            await CodeFlowDecorations.updateCodeFlowSelection(explorerController, undefined, nextId);
-            explorerController.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
+            await this.updateCodeFlowSelection(nextId);
+            this.explorerController.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
         } else {
             if (diagnostic.resultInfo.codeFlows.length > 0) {
                 const firstStepId: string = "0_0_0";
-                await CodeFlowDecorations.updateCodeFlowSelection(explorerController, firstStepId);
-                explorerController.setSelectedCodeFlow(firstStepId);
+                await this.updateCodeFlowSelection(firstStepId);
+                this.explorerController.setSelectedCodeFlow(firstStepId);
             }
         }
     }
@@ -190,14 +198,14 @@ export class CodeFlowDecorations implements Disposable {
     /**
      * Selects the previous CodeFlow step
      */
-    public static async selectPrevCFStep(explorerController: ExplorerController): Promise<void> {
-        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+    private async selectPrevCFStep(): Promise<void> {
+        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
 
-        if (CodeFlowDecorations.lastCodeFlowSelected) {
-            const prevId: CodeFlowStepId = CodeFlowDecorations.lastCodeFlowSelected;
+        if (this.lastCodeFlowSelected) {
+            const prevId: CodeFlowStepId = this.lastCodeFlowSelected;
             prevId.stepId--;
             const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
             if (prevId.stepId < 0) {
@@ -212,8 +220,8 @@ export class CodeFlowDecorations implements Disposable {
                 prevId.stepId = codeFlows[prevId.cFId].threads[prevId.tFId].steps.length - 1;
             }
 
-            await CodeFlowDecorations.updateCodeFlowSelection(explorerController, undefined, prevId);
-            explorerController.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
+            await this.updateCodeFlowSelection(prevId);
+            this.explorerController.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
         } else {
             const codeflows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
             if (codeflows.length > 0) {
@@ -221,8 +229,8 @@ export class CodeFlowDecorations implements Disposable {
                 const tFId: number = diagnostic.resultInfo.codeFlows[cFId].threads.length - 1;
                 const stepId: number = diagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
                 const lastStepId: string = `${cFId}_${tFId}_${stepId}`;
-                await CodeFlowDecorations.updateCodeFlowSelection(explorerController, lastStepId);
-                explorerController.setSelectedCodeFlow(lastStepId);
+                await this.updateCodeFlowSelection(lastStepId);
+                this.explorerController.setSelectedCodeFlow(lastStepId);
             }
         }
     }
@@ -233,49 +241,43 @@ export class CodeFlowDecorations implements Disposable {
      * @param idText text version of the id of the Code Flow, set to undefined if using id
      * @param idCFStep Id object of the Code Flow, set to undefined if using idText
      */
-    public static async updateCodeFlowSelection(explorerController: ExplorerController, idText?: string, idCFStep?: CodeFlowStepId): Promise<void> {
-        let id: CodeFlowStepId | undefined;
-        if (idText) {
-            id = CodeFlows.parseCodeFlowId(idText);
-        } else if (idCFStep) {
-            id = idCFStep;
+    private async updateCodeFlowSelection(cfStep: string | CodeFlowStepId): Promise<void> {
+        const id: CodeFlowStepId | undefined  = typeof cfStep === 'string' ? CodeFlowFactory.parseCodeFlowId(cfStep) : cfStep;
+        if (!id) {
+            return;
         }
 
-        if (id) {
-            const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
-            if (!diagnostic) {
-                return;
-            }
+        this.lastCodeFlowSelected = id;
 
-            if (!diagnostic.rawResult.codeFlows || !diagnostic.resultInfo.codeFlows) {
-                return;
-            }
-            const resultInfoCodeFlow: CodeFlow | undefined = diagnostic.resultInfo.codeFlows[id.cFId];
-            if (!resultInfoCodeFlow || !resultInfoCodeFlow.threads) {
-                return;
-            }
-
-            const rawResultCodeFlow: sarif.CodeFlow | undefined = diagnostic.rawResult.codeFlows[id.cFId];
-            if (!rawResultCodeFlow || !rawResultCodeFlow.threadFlows) {
-                return;
-            }
-
-            const rawResultLocation: sarif.Location | undefined = rawResultCodeFlow.threadFlows[id.tFId].locations[id.stepId].location;
-            if (!rawResultLocation) {
-                return;
-            }
-
-            const resultInfoLocation: Location | undefined = resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location;
-            if (!resultInfoLocation) {
-                return;
-            }
-
-            await  CodeFlowDecorations.updateSelectionHighlight(
-                explorerController,
-                resultInfoLocation,
-                rawResultLocation);
-            CodeFlowDecorations.lastCodeFlowSelected = id;
+        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        if (!diagnostic) {
+            return;
         }
+
+        if (!diagnostic.rawResult.codeFlows || !diagnostic.resultInfo.codeFlows) {
+            return;
+        }
+        const resultInfoCodeFlow: CodeFlow | undefined = diagnostic.resultInfo.codeFlows[id.cFId];
+        if (!resultInfoCodeFlow || !resultInfoCodeFlow.threads) {
+            return;
+        }
+
+        const rawResultCodeFlow: sarif.CodeFlow | undefined = diagnostic.rawResult.codeFlows[id.cFId];
+        if (!rawResultCodeFlow || !rawResultCodeFlow.threadFlows) {
+            return;
+        }
+
+        const rawResultLocation: sarif.Location | undefined = rawResultCodeFlow.threadFlows[id.tFId].locations[id.stepId].location;
+        if (!rawResultLocation) {
+            return;
+        }
+
+        const resultInfoLocation: Location | undefined = resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location;
+        if (!resultInfoLocation) {
+            return;
+        }
+
+        await this.updateSelectionHighlight(resultInfoLocation, rawResultLocation);
     }
 
     /**
@@ -283,15 +285,15 @@ export class CodeFlowDecorations implements Disposable {
      * @param location processed location to put the highlight at
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
-    public static async updateSelectionHighlight(explorerController: ExplorerController, location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        const diagnostic: SarifViewerDiagnostic | undefined = explorerController.activeDiagnostic;
+    private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
+        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
 
         if (!diagnostic) {
             return;
         }
 
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
-            explorerController,
+            this.explorerController,
             location,
             sarifLocation,
             diagnostic.resultInfo.runId);
@@ -313,7 +315,7 @@ export class CodeFlowDecorations implements Disposable {
         }
     }
 
-    private static lastCodeFlowSelected: CodeFlowStepId | undefined;
+    private lastCodeFlowSelected: CodeFlowStepId | undefined;
 
     private static get GutterErrorDecorationType(): TextEditorDecorationType {
         if (!CodeFlowDecorations.gutterErrorDecorationType) {
@@ -431,5 +433,60 @@ export class CodeFlowDecorations implements Disposable {
             range: stepRange,
             renderOptions: beforeDecoration,
         };
+    }
+
+    private async onWebviewMessage(webViewMessage: WebviewMessage): Promise<void> {
+        switch (webViewMessage.type) {
+            case MessageType.AttachmentSelectionChange:
+                const selectionId: string[] = (webViewMessage.data as string).split("_");
+                if (selectionId.length !== 2) {
+                    throw new Error('Selection id is incorrectly formatted');
+                }
+
+                const attachmentId: number = parseInt(selectionId[0], 10);
+                if (selectionId.length > 1) {
+                    await this.updateAttachmentSelection(attachmentId, parseInt(selectionId[1], 10));
+                } else {
+                    const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+                    if (!diagnostic) {
+                        return;
+                    }
+
+                    const location: Location | undefined = await LocationFactory.getOrRemap(
+                        this.explorerController,
+                        diagnostic.resultInfo.attachments[attachmentId].file,
+                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,
+                        diagnostic.resultInfo.runId
+                    );
+
+                    if (!location) {
+                        return;
+                    }
+
+                    await commands.executeCommand("vscode.open", location.uri, ViewColumn.One);
+                }
+                break;
+
+            case MessageType.CodeFlowSelectionChange:
+                await this.updateCodeFlowSelection(webViewMessage.data);
+                break;
+
+            case MessageType.SourceLinkClicked:
+                const locData: LocationData = JSON.parse(webViewMessage.data);
+                const location: Location = {
+                    mapped: true,
+                    range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
+                        parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
+                    uri: Uri.parse(locData.file),
+                    toJSON: Utilities.LocationToJson
+                };
+                await this.updateSelectionHighlight(location, undefined);
+                break;
+        }
+    }
+
+    private async sendCFSelectionToExplorerCommand(id: string): Promise<void> {
+        await this.updateCodeFlowSelection(id);
+        this.explorerController.setSelectedCodeFlow(id);
     }
 }

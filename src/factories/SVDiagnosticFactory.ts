@@ -3,13 +3,13 @@
  */
 
 import * as sarif from "sarif";
-import { DiagnosticSeverity } from "vscode";
-import { CodeFlows } from "./CodeFlows";
-import { ResultInfo, Location, RunInfo } from "./common/Interfaces";
 import { ResultInfoFactory } from "./ResultInfoFactory";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { ExplorerController } from "./ExplorerController";
+import { CodeFlowFactory } from  "./CodeFlowFactory";
+import { DiagnosticSeverity } from "vscode";
+import { ResultInfo, Location, RunInfo } from "../common/Interfaces";
+import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
+import { SarifViewerVsCodeDiagnostic } from "../SarifViewerDiagnostic";
+import { ExplorerController } from "../ExplorerController";
 
 const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
     [ "error", DiagnosticSeverity.Error],
@@ -19,18 +19,16 @@ const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity>
 ]);
 
 /**
- * Object that is used to display a problem in the Problems panel
- * Extended with the information representing the SARIF result
+ * Namespace that has the functions for processing (and transforming) the Sarif result into a VSCode diagnostic.
  */
-export class SVDiagnosticFactory {
-    public static readonly Code = "SARIFReader";
+export namespace SVDiagnosticFactory {
 
     /**
      * Creates a new SarifViewerDiagnostic
      * @param resultInfo processed result info
      * @param rawResult sarif result info from the sarif file
      */
-    public static create(diagnosticCollection: SVDiagnosticCollection, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
+    export function create(diagnosticCollection: SVDiagnosticCollection, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
         if (!resultInfo.assignedLocation ||
             !resultInfo.message.text) {
             throw new Error('Cannot represent a diagnostic without a range in the document and the diagnostic text to display to the user.');
@@ -51,10 +49,10 @@ export class SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    public static async tryToRemapLocations(explorerController: ExplorerController, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
+    export async function tryToRemapLocations(explorerController: ExplorerController, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         const runId: number = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlows.tryRemapCodeFlows(explorerController, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
+            await CodeFlowFactory.tryRemapCodeFlows(explorerController, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
@@ -92,7 +90,7 @@ export class SVDiagnosticFactory {
      * Translates the Result level to a DiagnosticSeverity
      * @param level severity level for the result in the sarif file
      */
-    private static getSeverity(level: sarif.Result.level): DiagnosticSeverity {
+    export function getSeverity(level: sarif.Result.level): DiagnosticSeverity {
         return sarifLevelToVsCodeSeverityMap.get(level) || DiagnosticSeverity.Warning;
     }
 
@@ -100,7 +98,7 @@ export class SVDiagnosticFactory {
      * Prepends the message with the rule Id if available
      * And Unmapped if the result has not been mapped
      */
-    private static updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
+    export function updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
         let message: string = diagnostic.resultInfo.message.text || '';
 
         if (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped) {
