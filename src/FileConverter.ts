@@ -126,18 +126,15 @@ export class FileConverter {
      * @param sarifSchema version of the sarif logs schema
      */
     public static async upgradeSarif(doc: vscode.TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
-        interface UpgradeChoiceMessageItem extends vscode.MessageItem {
-        }
-
-        const saveTempChoice: UpgradeChoiceMessageItem =  {
+        const saveTempChoice: vscode.MessageItem =  {
             title: "Yes (Save Temp)"
         };
 
-        const saveAsChoice: UpgradeChoiceMessageItem = {
+        const saveAsChoice: vscode.MessageItem = {
             title: "Yes (Save As)"
         };
 
-        const noChoice: UpgradeChoiceMessageItem = {
+        const noChoice: vscode.MessageItem = {
             title: "No"
         };
 
@@ -152,7 +149,7 @@ export class FileConverter {
             version = `version '${sarifVersion && sarifVersion.original ? sarifVersion.original : "Unknown"}'`;
         }
 
-        const choice: UpgradeChoiceMessageItem | undefined = await vscode.window.showInformationMessage(
+        const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
             `Sarif ${version} is not supported. Upgrade to the latest ${curVersion}?`,
             { modal: false },
             saveTempChoice, saveAsChoice, noChoice);

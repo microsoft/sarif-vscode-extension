@@ -45,8 +45,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(reader);
 
     // We do not need to block extension startup for reading any open documents.
-    // tslint:disable-next-line: no-floating-promises
-    reader.readAll();
+    void reader.readAll();
 }
 
 /**

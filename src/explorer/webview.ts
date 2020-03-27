@@ -14,7 +14,7 @@ import {
 
 import { ResultsList } from "./resultsList";
 import { TextAndTooltip } from "./textAndTooltip";
-import { getDocumentElementById, getDocumentElementsByClassName, getOptionalDocumentElementById, getElementChildren, removeElementChildren } from "./documentUtilities";
+import { getElementFromEvent, getDocumentElementById, getDocumentElementsByClassName, getOptionalDocumentElementById, getElementChildren, removeElementChildren } from "./documentUtilities";
 
 // Types used to map between the verbosity level (0-2, where 2 is show everything)
 type verbosityClassStates = "verbosityshow" | "verbosityhide";
@@ -149,7 +149,7 @@ export class ExplorerWebview {
      */
     private cleanUpResultDetails(): void {
         // Remove event handlers
-        const tabContainer: HTMLDivElement | undefined = getOptionalDocumentElementById(document, "tabcontainer", HTMLDivElement);
+        const tabContainer: HTMLElement | undefined = getOptionalDocumentElementById(document, "tabcontainer", HTMLElement);
         if (tabContainer) {
             for (const tabContainerElement of getElementChildren(tabContainer, HTMLDivElement)) {
                 tabContainerElement.removeEventListener("click", this.onTabClicked.bind(this));
@@ -158,7 +158,7 @@ export class ExplorerWebview {
 
         const sourceLinks: HTMLCollectionOf<HTMLAnchorElement> = getDocumentElementsByClassName(document, "sourcelink", HTMLAnchorElement);
         for (const sourceLink of sourceLinks) {
-            sourceLink.removeEventListener("click", this.onSourceLinkClicked.bind(this));
+            sourceLink.removeEventListener("click", this.onSourceLinkClicked);
         }
 
         if (this.hasCodeFlows) {
@@ -784,12 +784,12 @@ export class ExplorerWebview {
 
                 const fRow: HTMLTableRowElement = this.createElement("tr", {
                     attributes: {
-                        "data-eCol": fLocation.range !== undefined ? fLocation.range.end.character.toString() : 0,
-                        "data-eLine": fLocation.range !== undefined ? fLocation.range.end.line.toString() : 0,
+                        "data-eCol": fLocation.range.end.character.toString(),
+                        "data-eLine": fLocation.range.end.line.toString(),
                         "data-file": file,
                         "data-group": stackIndex,
-                        "data-sCol": fLocation.range !== undefined ? fLocation.range.start.character.toString() : 0,
-                        "data-sLine": fLocation.range !== undefined ? fLocation.range.start.line.toString() : 0,
+                        "data-sCol": fLocation.range.start.character.toString(),
+                        "data-sLine": fLocation.range.start.line.toString(),
                     },
                     className: "listtablerow",
                 });
@@ -1011,19 +1011,30 @@ export class ExplorerWebview {
      * @param event event fired when user clicked the attachment tree
      */
     private onAttachmentClicked(event: MouseEvent): void {
-        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
-        if (ele.classList.contains("treenodelocation")) {
-            ele = ele.parentElement;
-        }
+        /**
+         * For reference, the attachment structure looks like this.
+         * <li class='unexpandable' id='xyz'> | <li class='expanded' id='xyz]>
+         *    <span class="treenodeLocation"/>
+         *    <span class="treenodeLine"/>
+         * </li>
+         * And the click handler is on the root "list" element. So we must handle
+         * the clicks on all the element types.
+         */
+        const ele: HTMLElement = getElementFromEvent(event, HTMLElement);
 
-        if (!ele) {
+        // If the clicked element is either one of the spans, then we need the parent list element.
+        const elementOfInterest: HTMLElement | null = (ele.classList.contains("treenodelocation") || ele.classList.contains("treenodeline")) ? ele.parentElement : ele;
+        if (!elementOfInterest) {
             return;
         }
 
-        if (!ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+        // If the list element is expandable and the click was in the right region (not sure why we aren't handling the arrow click itself)
+        // The toggle the expansion state.
+        if (!elementOfInterest.classList.contains("unexpandable") && event.offsetX < 17 /*width of the expand/collapse arrows*/) {
             this.toggleTreeElement(ele);
         } else {
-            this.sendMessage({ data: ele.id, type: MessageType.AttachmentSelectionChange } as WebviewMessage);
+            // Otherwise, send the attachment click back to the explorer controller.
+            this.sendMessage({ data: ele.id, type: MessageType.AttachmentSelectionChange });
         }
     }
 
@@ -1110,13 +1121,12 @@ export class ExplorerWebview {
      * @param event event fired when user clicked the fix tree
      */
     private onFixClicked(event: MouseEvent): void {
-        let ele: HTMLElement | null = <HTMLElement>event.srcElement;
-        if (ele.classList.contains("treenodelocation")) {
-            ele = ele.parentElement;
-        }
-
-        if (ele && !ele.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
-            this.toggleTreeElement(ele);
+        const ele: HTMLSpanElement = getElementFromEvent(event, HTMLSpanElement);
+        if (ele.classList.contains("treenodelocation") || ele.classList.contains("treenodeline")) {
+            const parentElement: HTMLElement | null = ele.parentElement;
+            if (parentElement && parentElement.classList.contains("unexpandable") && event.offsetX < 17/*width of the expand/collapse arrows*/) {
+                this.toggleTreeElement(parentElement);
+            }
         }
     }
 
@@ -1125,7 +1135,7 @@ export class ExplorerWebview {
      * @param event event fired when a sourcelink was clicked
      */
     private onSourceLinkClicked(event: MouseEvent): void {
-        const ele: HTMLElement = <HTMLElement>event.currentTarget;
+        const ele: HTMLAnchorElement = getElementFromEvent(event, HTMLAnchorElement);
         if (ele.dataset.ecol === undefined ||
             ele.dataset.eline === undefined ||
             ele.dataset.file === undefined ||
@@ -1141,6 +1151,7 @@ export class ExplorerWebview {
             sCol: ele.dataset.scol,
             sLine: ele.dataset.sline
         };
+
         this.sendMessage({ data: JSON.stringify(msgData), type: MessageType.SourceLinkClicked });
     }
 

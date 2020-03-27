@@ -194,13 +194,13 @@ export class ExplorerController implements Disposable {
                 break;
 
                 case MessageType.VerbosityChanged:
-                if (!Utilities.isThreadFlowImportance(message.data)) {
-                    throw new Error("Unhandled verbosity level");
-                }
+                    if (!Utilities.isThreadFlowImportance(message.data)) {
+                        throw new Error("Unhandled verbosity level");
+                    }
 
-                if (this.selectedVerbosity !== message.data) {
-                    this.selectedVerbosity = message.data;
-                }
+                    if (this.selectedVerbosity !== message.data) {
+                        this.selectedVerbosity = message.data;
+                    }
                 break;
 
             case MessageType.ExplorerLoaded:

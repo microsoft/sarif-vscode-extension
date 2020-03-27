@@ -61,10 +61,13 @@ export function removeElementChildren(element: Element | undefined | null): void
         return;
     }
 
-    while (element.children.length > 0) {
-        const childHeaderItem: Element | null = element.children.item(0);
-        if (childHeaderItem) {
-            element.removeChild(childHeaderItem);
-        }
+    element.innerHTML = "";
+}
+
+export function getElementFromEvent<T extends HTMLElement, TE extends Event>(event: TE,  constructor: { new (): T  } ): T {
+    if (!(event.target instanceof constructor)) {
+        throw new Error(`Event element type is incorrect`);
     }
+
+    return event.target;
 }
