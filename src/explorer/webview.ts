@@ -47,7 +47,7 @@ export class ExplorerWebview {
         postMessage: (message: WebviewMessage) => void;
     };
 
-    public diagnostic?: DiagnosticData;
+    public diagnostic: DiagnosticData | undefined;
 
     private hasCodeFlows: boolean = false;
     private hasAttachments: boolean = false;
@@ -1267,22 +1267,29 @@ export class ExplorerWebview {
      */
     private setDiagnostic(data: string): void {
         this.cleanUpResultDetails();
-        const diagnosticData: DiagnosticData = JSON.parse(data);
-        this.diagnostic = diagnosticData;
+
+        // Zero-length data string means no activate diagnostic
+        const newDiagnosticData: DiagnosticData | undefined = data.length !== 0 ? JSON.parse(data) : undefined;
+        this.diagnostic = newDiagnosticData;
+
+        if (!newDiagnosticData) {
+            return;
+        }
+
         this.loadResultDetails();
 
-        if (diagnosticData.selectedRow !== undefined) {
-            this.showTreeNode(diagnosticData.selectedRow, true);
+        if (newDiagnosticData.selectedRow !== undefined) {
+            this.showTreeNode(newDiagnosticData.selectedRow, true);
         }
 
-        if (diagnosticData.activeTab !== undefined) {
-            this.openTab(diagnosticData.activeTab);
+        if (newDiagnosticData.activeTab !== undefined) {
+            this.openTab(newDiagnosticData.activeTab);
         }
 
-        if (diagnosticData.selectedVerbosity !== undefined) {
+        if (newDiagnosticData.selectedVerbosity !== undefined) {
             const codeflowverbosity: HTMLInputElement | undefined = getOptionalDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
             if (codeflowverbosity) {
-                codeflowverbosity.value = diagnosticData.selectedVerbosity;
+                codeflowverbosity.value = newDiagnosticData.selectedVerbosity;
                 this.updateTreeVerbosity();
             }
         }

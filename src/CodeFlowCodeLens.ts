@@ -4,7 +4,7 @@
 
 import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
 import { ExplorerController } from "./ExplorerController";
-import { Location, SarifViewerDiagnostic } from "./common/Interfaces";
+import { Location } from "./common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import * as sarif from "sarif";
 
@@ -82,7 +82,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
     /**
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
-    public onDidChangeActiveDiagnostic(diagnostic: SarifViewerDiagnostic | undefined): void {
+    public onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
         this.activeDiagnostic = diagnostic;
         this.onDidChangeCodeLensesEmitter.fire();
     }

@@ -7,7 +7,6 @@ import { ResultInfoFactory } from "./ResultInfoFactory";
 import { CodeFlowFactory } from  "./CodeFlowFactory";
 import { DiagnosticSeverity } from "vscode";
 import { ResultInfo, Location, RunInfo } from "../common/Interfaces";
-import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "../SarifViewerDiagnostic";
 import { ExplorerController } from "../ExplorerController";
 
@@ -28,18 +27,16 @@ export namespace SVDiagnosticFactory {
      * @param resultInfo processed result info
      * @param rawResult sarif result info from the sarif file
      */
-    export function create(diagnosticCollection: SVDiagnosticCollection, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
+    export function create(runInfo: RunInfo, resultInfo: ResultInfo, rawResult: sarif.Result): SarifViewerVsCodeDiagnostic {
         if (!resultInfo.assignedLocation ||
             !resultInfo.message.text) {
             throw new Error('Cannot represent a diagnostic without a range in the document and the diagnostic text to display to the user.');
         }
 
-        const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(resultInfo, rawResult, resultInfo.assignedLocation.range, resultInfo.message.text);
+        const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(runInfo, resultInfo, rawResult, resultInfo.assignedLocation.range, resultInfo.message.text);
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultInfo.severityLevel);
         svDiagnostic.code = resultInfo.ruleId;
-
-        const runInfo: RunInfo | undefined = diagnosticCollection.getRunInfo(resultInfo.runId);
-        svDiagnostic.source = runInfo ? runInfo.toolName : "Unknown tool";
+        svDiagnostic.source = runInfo.toolName || "Unknown tool";
 
         svDiagnostic.message = SVDiagnosticFactory.updateMessage(svDiagnostic);
 

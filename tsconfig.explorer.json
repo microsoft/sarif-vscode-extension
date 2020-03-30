@@ -21,7 +21,6 @@
         "noUnusedParameters": false,  /* Report errors on unused parameters. */
         "checkJs": true,
         "noImplicitThis": true,
-        "strictNullChecks": true
     },
     "include": [
         "src/explorer/*.ts"

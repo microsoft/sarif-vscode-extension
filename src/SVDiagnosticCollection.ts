@@ -3,7 +3,7 @@
  */
 import { SVDiagnosticFactory } from  "./factories/SVDiagnosticFactory";
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable } from "vscode";
-import { RunInfo, SarifViewerDiagnostic } from "./common/Interfaces";
+import { RunInfo } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
@@ -183,7 +183,7 @@ export class SVDiagnosticCollection implements Disposable {
      */
     public async mappingChanged(): Promise<void> {
         for (const key of this.issuesCollection.keys()) {
-            const issues: SarifViewerDiagnostic[] | undefined = this.issuesCollection.get(key);
+            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.issuesCollection.get(key);
             if (!issues) {
                 continue;
             }
@@ -306,7 +306,7 @@ export class SVDiagnosticCollection implements Disposable {
      * @param collection diagnostic collection to search for matching runids
      */
     private removeResults(runsToRemove: number[], collection: Map<string, SarifViewerVsCodeDiagnostic[]>): void {
-        let diagnosticsRemoved: SarifViewerDiagnostic[] = [];
+        let diagnosticsRemoved: SarifViewerVsCodeDiagnostic[] = [];
         for (const key of collection.keys()) {
             const diagnostics: SarifViewerVsCodeDiagnostic[] = collection.get(key) || [];
             for (let i: number = diagnostics.length - 1; i >= 0; i--) {
