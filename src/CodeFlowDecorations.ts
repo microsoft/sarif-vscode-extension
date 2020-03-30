@@ -9,7 +9,7 @@ import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
 } from "vscode";
-import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, SarifViewerDiagnostic, WebviewMessage, LocationData } from "./common/Interfaces";
+import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
@@ -163,7 +163,7 @@ export class CodeFlowDecorations implements Disposable {
      * Selects the next CodeFlow step
      */
     private async selectNextCFStep(): Promise<void>  {
-        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
@@ -199,7 +199,7 @@ export class CodeFlowDecorations implements Disposable {
      * Selects the previous CodeFlow step
      */
     private async selectPrevCFStep(): Promise<void> {
-        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
@@ -249,7 +249,7 @@ export class CodeFlowDecorations implements Disposable {
 
         this.lastCodeFlowSelected = id;
 
-        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
@@ -286,7 +286,7 @@ export class CodeFlowDecorations implements Disposable {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
 
         if (!diagnostic) {
             return;
@@ -447,7 +447,7 @@ export class CodeFlowDecorations implements Disposable {
                 if (selectionId.length > 1) {
                     await this.updateAttachmentSelection(attachmentId, parseInt(selectionId[1], 10));
                 } else {
-                    const diagnostic: SarifViewerDiagnostic | undefined = this.explorerController.activeDiagnostic;
+                    const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
                     if (!diagnostic) {
                         return;
                     }

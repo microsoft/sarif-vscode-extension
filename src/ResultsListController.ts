@@ -10,12 +10,13 @@ import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./com
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
-    WebviewMessage, SarifViewerDiagnostic, Location, RunInfo
+    WebviewMessage, Location, RunInfo
 } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./SVDiagnosticCollection";
 import { Utilities } from "./Utilities";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -148,7 +149,7 @@ export class ResultsListController implements Disposable {
             case MessageType.ResultsListResultSelected:
                 // What is the proper type if "id"?
                 const id: { resultId: number; runId: number} = JSON.parse(msg.data);
-                const diagnostic: SarifViewerDiagnostic | undefined = this.diagnosticCollection.getResultInfo(id.resultId, id.runId);
+                const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.diagnosticCollection.getResultInfo(id.resultId, id.runId);
                 if (!diagnostic) {
                     break;
                 }

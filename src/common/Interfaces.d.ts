@@ -61,10 +61,6 @@ export interface Location {
     toJSON(this: Location, key: any, value: any): any
 }
 
-export interface SarifViewerDiagnostic extends Diagnostic {
-    resultInfo: ResultInfo;
-    rawResult: sarif.Result;
-}
 
 export interface RunInfo {
     additionalProperties?: { [key: string]: string };
@@ -216,7 +212,7 @@ export interface WebviewMessage {
 export interface DiagnosticData {
     activeTab?: any,
     resultInfo: ResultInfo,
-    runInfo?: RunInfo,
+    runInfo: RunInfo,
     selectedRow?: string,
     selectedVerbosity?: any
 }

@@ -283,22 +283,18 @@ export class ExplorerController implements Disposable {
     private sendActiveDiagnostic(focus: boolean): void {
 
         if (!this.activeDiagnostic) {
+            // Empty string is used to signal no selected diagnostic
+            this.sendMessage({data: "", type: MessageType.NewDiagnostic}, focus);
             return;
         }
 
-        let diagData: DiagnosticData = {
+        const diagData: DiagnosticData = {
             activeTab: this.activeTab,
             selectedRow: this.selectedCodeFlowRow,
             selectedVerbosity: this.selectedVerbosity,
             resultInfo: this.activeDiagnostic.resultInfo,
+            runInfo: this.activeDiagnostic.runInfo
         };
-
-        if (this.activeDiagnostic) {
-            diagData = {
-                ...diagData,
-                runInfo: this.diagnosticCollection.getRunInfo(this.activeDiagnostic.resultInfo.runId),
-            };
-        }
 
         const dataString: string = JSON.stringify(diagData);
         this.sendMessage({data: dataString, type: MessageType.NewDiagnostic}, focus);
