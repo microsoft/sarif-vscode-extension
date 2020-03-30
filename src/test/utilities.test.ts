@@ -10,17 +10,14 @@ import * as sarif from "sarif";
 
 import { Range, Uri, Position } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
-import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { Utilities } from "../Utilities";
-import { ExplorerController } from "../ExplorerController";
-import { MockExtensionContext } from "./mockExtensionContext";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema: string = "file";
     test("Empty paths", () => {
         const uri: Uri = Utilities.combineUriWithUriBase("", "");
         assert.equal(uri.scheme, expectedFileSchema);
-        assert.equal(uri.fsPath, "\\");
+        assert.equal(uri.fsPath, "\\.");
     });
 
     test("Undefined base", () => {
@@ -298,32 +295,27 @@ suite("getUirBase", () => {
             test1: "file:///c:/folder1", test2: "file:///c:/folder2"
         }
     };
-    
-    const explorerController: ExplorerController = new ExplorerController(new MockExtensionContext());
-    const diagnosticCollection: SVDiagnosticCollection = explorerController.diagnosticCollection;
-
-    const runIdTest: number  = diagnosticCollection.addRunInfoAndCalculateId(runInfoTest);
 
     test("Undefined fileLocation", () => {
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, undefined, undefined);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, undefined);
         assert.equal(base, undefined);
     });
 
     test("Undefined uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "file:///c:/folder/file.ext" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, undefined);
     });
 
     test("UriBase match", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "test2" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, "file:///c:/folder2");
     });
 
     test("No matching uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "noTest" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, "noTest");
     });
 });

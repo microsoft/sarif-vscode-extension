@@ -47,19 +47,15 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
             return [];
         }
         const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
-        if (svDiagnostic.source === "SARIFViewer") {
-            // This diagnostic is the place holder for the problems panel limit message,
-            // can possibly put logic here to allow for showing next set of diagnostics
-        } else {
+        // This diagnostic with the source name of "SARIFViewer" is the place holder for the problems panel limit message,
+        // can possibly put logic here to allow for showing next set of diagnostics
+        if (svDiagnostic.source !== "SARIFViewer") {
             if (this.isFirstCall) {
                 await vscode.commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
                 this.isFirstCall = false;
             }
 
-            const activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-            if (!activeSVDiagnostic || activeSVDiagnostic !== svDiagnostic) {
-                this.explorerController.setActiveDiagnostic(svDiagnostic);
-            }
+            this.explorerController.setActiveDiagnostic(svDiagnostic);
 
             return this.getCodeActions(svDiagnostic);
         }
@@ -80,7 +76,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
 
             if (physicalLocation && physicalLocation.artifactLocation) {
                 const cmd: vscode.Command  = {
-                    arguments: [physicalLocation.artifactLocation, svDiagnostic.resultInfo.runId],
+                    arguments: [svDiagnostic.runInfo, physicalLocation.artifactLocation, svDiagnostic.resultInfo.runId],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
                 };

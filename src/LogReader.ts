@@ -149,7 +149,7 @@ export class LogReader implements Disposable {
 
                         if (run.artifacts) {
                             await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                            await this.explorerController.fileMapper.mapArtifacts(run.artifacts, runInfo.id);
+                            await this.explorerController.fileMapper.mapArtifacts(runInfo, run.artifacts, runInfo.id);
                         }
 
                         if (run.results) {
@@ -200,7 +200,7 @@ export class LogReader implements Disposable {
             const sarifResult: sarif.Result = results[resultIndex];
             const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this, docUri, runIndex, resultIndex);
 
-            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.explorerController, sarifResult, runId, tool, resultIndex, locationInSarifFile);
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.explorerController, runInfo, sarifResult, runId, tool, resultIndex, locationInSarifFile);
 
             if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
                 resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this, docUri, runIndex, resultIndex);

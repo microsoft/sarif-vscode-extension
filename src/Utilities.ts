@@ -10,7 +10,6 @@ import * as vscode from "vscode";
 import * as markdownit from "markdown-it";
 
 import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * Class that holds utility functions for use in different classes
@@ -52,7 +51,7 @@ export class Utilities {
      * @param start string representing the start time in utc format
      * @param end string representing the end time in utc format
      */
-    public static calcDuration(start?: string, end?: string): string | undefined  {
+    public static calcDuration(start?: string, end?: string): string | undefined {
         if (!start || !end) {
             return undefined;
         }
@@ -100,30 +99,37 @@ export class Utilities {
      * @param uriBase the uriBase as defined in the sarif file
      */
     public static combineUriWithUriBase(uriPath: string, uriBase?: string): vscode.Uri {
-        let combinedPath: string = uriPath;
+        try {
+            if (uriBase) {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                const baseUri: vscode.Uri = vscode.Uri.parse(uriBase, true);
 
-        if (uriBase && uriBase.length !== 0) {
-            combinedPath = this.joinPath(uriBase, uriPath);
-        }
+                // It did, great. Now combine it with the appropriate combination.
+                if (baseUri.scheme.localeCompare('file', 'root', { sensitivity: 'base' }) === 0) {
+                    return vscode.Uri.file(path.join(baseUri.path, uriPath)).with({
+                        fragment: baseUri.fragment,
+                        query: baseUri.query
+                    });
+                }
 
-        let uri: vscode.Uri | undefined;
-        if (combinedPath !== "") {
-            try {
-                uri = vscode.Uri.parse(combinedPath);
-            } catch (e) {
-                // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
-                // if it's malformed in the next if statement we force it to file schema
-                if (e.message !== "URI malformed") { throw e; }
+                return baseUri.with({
+                    scheme: baseUri.scheme,
+                    authority: baseUri.authority,
+                    fragment: baseUri.fragment,
+                    path: path.posix.join(baseUri.path, uriPath), // Use the POSIX separator for "/"
+                    query: baseUri.query
+                });
+            } else {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                return vscode.Uri.parse(uriPath, true);
             }
+        } catch (e) {
+            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+            // if it's malformed in the next if statement we force it to file schema
+
         }
 
-        if (!uri || uri.scheme !== "file") {
-            uri = vscode.Uri.file(combinedPath);
-        }
-
-        const fsPath: string = Utilities.getFsPathWithFragment(uri);
-
-        return vscode.Uri.file(fsPath);
+        return uriBase !== undefined ? vscode.Uri.file(path.normalize(path.join(uriBase, uriPath))) : vscode.Uri.file(path.normalize(uriPath));
     }
 
     /**
@@ -238,15 +244,10 @@ export class Utilities {
      * @param fileLocation File Location which contains the uriBaseId
      * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(diagnosticCollection: SVDiagnosticCollection, fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
+    public static getUriBase(runInfo: RunInfo, fileLocation?: sarif.ArtifactLocation): string | undefined {
         let uriBase: string | undefined;
 
-        if (!fileLocation || !fileLocation.uriBaseId || runId === undefined) {
-            return undefined;
-        }
-
-        const runInfo: RunInfo | undefined = diagnosticCollection.getRunInfo(runId);
-        if (!runInfo) {
+        if (!fileLocation || !fileLocation.uriBaseId) {
             return undefined;
         }
 
@@ -356,7 +357,7 @@ export class Utilities {
                     // Use "undefined" as the locale which means "default for environment" (which
                     // in our case is whatever VSCode is running in).
                     // We use this compare because file names can be typed in any language.
-                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, { sensitivity: "base" }) === 0);
             if (!fixedPathPart) {
                 throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
             }
@@ -403,7 +404,7 @@ export class Utilities {
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
         let base: string = "";
         const artifactLocation: sarif.ArtifactLocation | undefined = baseIds[id];
-        if (artifactLocation && artifactLocation.uriBaseId)  {
+        if (artifactLocation && artifactLocation.uriBaseId) {
             base = Utilities.expandBaseId(artifactLocation.uriBaseId, baseIds);
         }
 
@@ -450,10 +451,10 @@ export class Utilities {
                     const tooltip: string = `title="${location.uri.toString(true)}"`;
                     const data: string =
                         `data-file="${location.uri.toString(true)}" ` +
-                                `data-sLine="${location.range.start.line}" ` +
-                                `data-sCol="${location.range.start.character}" ` +
-                                `data-eLine="${location.range.end.line}" ` +
-                                `data-eCol="${location.range.end.character}"`;
+                        `data-sLine="${location.range.start.line}" ` +
+                        `data-sCol="${location.range.start.character}" ` +
+                        `data-eLine="${location.range.end.line}" ` +
+                        `data-eCol="${location.range.end.character}"`;
                     const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
                 } else {

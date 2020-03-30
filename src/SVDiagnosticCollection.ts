@@ -45,7 +45,7 @@ export class SVDiagnosticCollection implements Disposable {
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
-        this.fileMapper = new FileMapper(this);
+        this.fileMapper = new FileMapper();
         this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
         this.disposables.push(this.fileMapper);
     }
@@ -144,26 +144,21 @@ export class SVDiagnosticCollection implements Disposable {
      * @param runId Id of the run the results from
      */
     public getResultInfo(resultId: number, runId: number): SarifViewerVsCodeDiagnostic | undefined {
-        let result: SarifViewerVsCodeDiagnostic | undefined;
-        this.unmappedIssuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-            if (!result) {
-                result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                    return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
-                });
+        for (const unmappedIssuesCollection of this.unmappedIssuesCollection.values()) {
+            const result: SarifViewerVsCodeDiagnostic | undefined = unmappedIssuesCollection.find((diag: SarifViewerVsCodeDiagnostic) => diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
+            if (result) {
+                return result;
             }
-        });
-
-        if (!result) {
-            this.issuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-                if (!result) {
-                    result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                        return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
-                    });
-                }
-            });
         }
 
-        return result;
+        for (const mappedIssuesCollection of this.issuesCollection.values()) {
+            const result: SarifViewerVsCodeDiagnostic | undefined = mappedIssuesCollection.find((diag: SarifViewerVsCodeDiagnostic) => diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
+            if (result) {
+                return result;
+            }
+        }
+
+        return undefined;
     }
 
     /**
@@ -182,14 +177,9 @@ export class SVDiagnosticCollection implements Disposable {
      * Also goes through the codeflow locations, to update the locations
      */
     public async mappingChanged(): Promise<void> {
-        for (const key of this.issuesCollection.keys()) {
-            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.issuesCollection.get(key);
-            if (!issues) {
-                continue;
-            }
-
-            for (const index of issues.keys()) {
-                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, issues[index]);
+        for (const issues of this.issuesCollection.values()) {
+            for (const issue of issues) {
+                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, issue);
             }
         }
 
