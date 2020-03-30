@@ -251,7 +251,7 @@ export class Utilities {
             return undefined;
         }
 
-        const runUriBaseIds: { [key: string]: string } | undefined = runInfo.uriBaseIds;
+        const runUriBaseIds: { [key: string]: string } | undefined = runInfo.expandedBaseIds;
         if (runUriBaseIds) {
             uriBase = runUriBaseIds[fileLocation.uriBaseId];
         }

@@ -89,9 +89,9 @@ export interface RunInfo {
      *      "uri" : "file:///E:"
      *    },
      * }
-     * then this map would contain "SRCROOT" => "file:///E:/SRC" and "DRIVEROOT" => "file://E:"
+     * then this map would contain [ "SRCROOT" : "file:///E:/SRC" , "DRIVEROOT" => "file://E:" ]
      */
-    uriBaseIds?: { [key: string]: string };
+    expandedBaseIds?: { [uriBaseId: string]: string };
 
     workingDir?: string;
 }

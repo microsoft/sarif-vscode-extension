@@ -291,7 +291,7 @@ suite("getUirBase", () => {
         toolName: "Test Tool Name",
         sarifFileName: "test.sarif",
         sarifFileFullPath: "file:///c:/test.sarif",
-        uriBaseIds: {
+        expandedBaseIds: {
             test1: "file:///c:/folder1", test2: "file:///c:/folder2"
         }
     };

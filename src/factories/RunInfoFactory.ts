@@ -71,7 +71,7 @@ export namespace RunInfoFactory {
             cmdLine,
             timeDuration,
             additionalProperties: run.properties,
-            uriBaseIds: Utilities.expandBaseIds(run.originalUriBaseIds),
+            expandedBaseIds: Utilities.expandBaseIds(run.originalUriBaseIds),
             sarifFileFullPath: sarifFileName,
             sarifFileName: path.basename(sarifFileName),
             automationCategory,
