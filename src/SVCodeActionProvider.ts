@@ -1,46 +1,31 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
-import {
-    CancellationToken, CodeAction, CodeActionContext, CodeActionKind, CodeActionProvider, Command, commands, Disposable,
-    languages, ProviderResult, Range, TextDocument,
-} from "vscode";
-import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
-import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { SarifViewerDiagnostic } from "./common/Interfaces";
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+import * as vscode from "vscode";
 import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import * as sarif from 'sarif';
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes
  * Also adds the Map to Source fix for the results that were not able to be mapped previously
  */
-export class SVCodeActionProvider implements CodeActionProvider {
-    private static instance: SVCodeActionProvider;
+export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.Disposable {
+    private isFirstCall: boolean = true;
+    private disposables: vscode.Disposable[] = [];
 
-    private actionProvider: Disposable;
-    private isFirstCall = true;
-
-    private constructor() {
-        this.actionProvider = languages.registerCodeActionsProvider("*", this);
-    }
-
-    static get Instance(): SVCodeActionProvider {
-        if (SVCodeActionProvider.instance === undefined) {
-            SVCodeActionProvider.instance = new SVCodeActionProvider();
-        }
-
-        return SVCodeActionProvider.instance;
+    public constructor(private readonly explorerController: ExplorerController) {
+        this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
     }
 
     /**
      * For disposing on extension close
      */
-    public dispose() {
-        this.actionProvider.dispose();
+    public dispose(): void {
+        vscode.Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     /**
@@ -52,64 +37,60 @@ export class SVCodeActionProvider implements CodeActionProvider {
      * @param context Context carrying additional information, this has the SVDiagnostic with our result payload.
      * @param token A cancellation token.
      */
-    public provideCodeActions(
-        document: TextDocument,
-        range: Range,
-        context: CodeActionContext,
-        token: CancellationToken): ProviderResult<CodeAction[]> {
-        const index = context.diagnostics.findIndex((x) => (x as SarifViewerDiagnostic).resultInfo !== undefined);
-        let actions: CodeAction[];
-        if (context.only === undefined && index !== -1) {
-            const svDiagnostic = context.diagnostics[index] as SarifViewerDiagnostic;
-            if (svDiagnostic.source === "SARIFViewer") {
-                // This diagnostic is the place holder for the problems panel limit message,
-                // can possibly put logic here to allow for showing next set of diagnostics
-            } else {
-                if (this.isFirstCall) {
-                    commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
-                    this.isFirstCall = false;
-                }
-
-                const activeSVDiagnostic = ExplorerController.Instance.activeSVDiagnostic;
-                if (activeSVDiagnostic === undefined || activeSVDiagnostic !== svDiagnostic) {
-                    ExplorerController.Instance.setActiveDiagnostic(svDiagnostic);
-                    CodeFlowCodeLensProvider.Instance.triggerCodeLensRefresh();
-                    CodeFlowDecorations.updateSelectionHighlight(svDiagnostic.resultInfo.assignedLocation, undefined);
-                    CodeFlowDecorations.updateStepsHighlight();
-                    CodeFlowDecorations.updateResultGutterIcon();
-                    CodeFlowDecorations.updateCodeFlowSelection();
-                }
-
-                actions = this.getCodeActions(svDiagnostic);
+    public async provideCodeActions(
+        document: vscode.TextDocument,
+        range: vscode.Range,
+        context: vscode.CodeActionContext,
+        token?: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
+        const index: number = context.diagnostics.findIndex((x) => (<SarifViewerVsCodeDiagnostic>x).resultInfo !== undefined);
+        if (context.only || index === -1) {
+            return [];
+        }
+        const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
+        if (svDiagnostic.source === "SARIFViewer") {
+            // This diagnostic is the place holder for the problems panel limit message,
+            // can possibly put logic here to allow for showing next set of diagnostics
+        } else {
+            if (this.isFirstCall) {
+                await vscode.commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
+                this.isFirstCall = false;
             }
+
+            const activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
+            if (!activeSVDiagnostic || activeSVDiagnostic !== svDiagnostic) {
+                this.explorerController.setActiveDiagnostic(svDiagnostic);
+            }
+
+            return this.getCodeActions(svDiagnostic);
         }
 
-        return actions;
+        return [];
     }
 
     /**
      * Creates the set of code actions for the passed in Sarif Viewer Diagnostic
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
-    private getCodeActions(svDiagnostic: SarifViewerDiagnostic): CodeAction[] {
-        const rawLocations = svDiagnostic.rawResult.locations;
-        const actions: CodeAction[] = [];
+    private getCodeActions(svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction[] {
+        const rawLocations: sarif.Location[] | undefined = svDiagnostic.rawResult.locations;
+        const actions: vscode.CodeAction[] = [];
 
-        if (!svDiagnostic.resultInfo.assignedLocation.mapped && rawLocations !== undefined) {
-            const physicalLocation = rawLocations[0].physicalLocation;
-            if (physicalLocation !== undefined && physicalLocation.artifactLocation !== undefined) {
-                const cmd = {
+        if ((!svDiagnostic.resultInfo.assignedLocation || !svDiagnostic.resultInfo.assignedLocation.mapped) && rawLocations) {
+            const physicalLocation: sarif.PhysicalLocation | undefined = rawLocations[0].physicalLocation;
+
+            if (physicalLocation && physicalLocation.artifactLocation) {
+                const cmd: vscode.Command  = {
                     arguments: [physicalLocation.artifactLocation, svDiagnostic.resultInfo.runId],
                     command: FileMapper.MapCommand,
                     title: "Map To Source",
-                } as Command;
+                };
 
-                const action = {
+                const action: vscode.CodeAction = {
                     command: cmd,
-                    diagnostics: SVDiagnosticCollection.Instance.getAllUnmappedDiagnostics(),
-                    kind: CodeActionKind.QuickFix,
+                    diagnostics:  this.explorerController.diagnosticCollection.getAllUnmappedDiagnostics(),
+                    kind: vscode.CodeActionKind.QuickFix,
                     title: "Map To Source",
-                } as CodeAction;
+                } ;
 
                 actions.push(action);
             }

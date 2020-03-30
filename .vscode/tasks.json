@@ -8,28 +8,34 @@
             "script": "watch",
             "problemMatcher": "$tsc-watch",
             "isBackground": true,
-            "presentation": {
-                "reveal": "never"
-            },
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "dependsOn" : [
-                "BuildExplorer"
-            ]
+            "dependsOn": ["Build Explorer"]
         },
         {
-            "label": "BuildExplorer",
+            "label": "Install node modules",
             "type": "npm",
-            "script": "prevscode:prepublish",
+            "script": "installNodeModules",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Build Explorer",
+            "type": "npm",
+            "script": "buildExplorer",
+            "problemMatcher": "$tsc-watch",
             "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            }
+            "dependsOn": ["Install node modules"]
+        },
+        {
+            "label": "Build Explorer Watch",
+            "isBackground": true,
+            "type": "npm",
+            "script": "buildExplorerWatch",
+            "problemMatcher": "$tsc-watch",
+            "group": "build",
         },
         {
             "label": "tslint",

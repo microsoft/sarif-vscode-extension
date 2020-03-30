@@ -10,14 +10,23 @@
         ],
         "sourceMap": true,
         "rootDir": "src",
-        "noUnusedLocals": true
+        /* Strict Type-Checking Option */
+        "strict": true,   /* enable all strict type-checking options */
+        /* Additional Checks */
+        "noUnusedLocals": true, /* Report errors on unused locals. */
+        "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
+        "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
+        "noUnusedParameters": false,  /* Report errors on unused parameters. */
+        "checkJs": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true
     },
     "exclude": [
         "node_modules",
         ".vscode-test",
         "out",
-        "src\\explorer",
-        "resources",
-        "sariftypesgenerator"
+        "resources/**",
+        "sariftypesgenerator",
+        "src/explorer"
     ]
 }

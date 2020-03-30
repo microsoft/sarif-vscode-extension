@@ -34,19 +34,31 @@ export interface HTMLElementOptions {
     /**
      * object filled with any attributes to set on the element
      */
-    attributes?: object;
+    attributes?: {
+        readonly [key: string]: any;
+    }
 }
 
+
 export interface Location {
-    id: number;
-    endOfLine: boolean;
-    fileName: string;
-    logicalLocations: string[];
+    id?: number;
+    endOfLine?: boolean;
+    fileName?: string;
+    logicalLocations?: string[];
     mapped: boolean;
-    message: Message;
+    message?: Message;
     range: Range;
-    uri: Uri;
-    uriBase: string;
+    uri?: Uri;
+    uriBase?: string;
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the location being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
+     * @param value The current location value.
+     */
+    toJSON(this: Location, key: any, value: any): any
 }
 
 export interface SarifViewerDiagnostic extends Diagnostic {
@@ -55,55 +67,55 @@ export interface SarifViewerDiagnostic extends Diagnostic {
 }
 
 export interface RunInfo {
-    additionalProperties: { [key: string]: string };
-    automationCategory: string;
-    automationIdentifier: string;
-    cmdLine: string;
+    additionalProperties?: { [key: string]: string };
+    automationCategory?: string;
+    automationIdentifier?: string;
+    cmdLine?: string;
     id: number;
     sarifFileFullPath: string;
     sarifFileName: string;
-    startUtc: string;
-    timeDuration: string;
-    toolFileName: string;
-    toolFullName: string;
+    startUtc?: string;
+    timeDuration?: string;
+    toolFileName?: string;
+    toolFullName?: string;
     toolName: string;
-    uriBaseIds: { [key: string]: string };
-    workingDir: string;
+    uriBaseIds?: { [key: string]: string };
+    workingDir?: string;
 }
 
 export interface ResultInfo {
-    additionalProperties: { [key: string]: string };
-    assignedLocation: Location;
+    additionalProperties?: { [key: string]: string };
+    assignedLocation?: Location;
     attachments: Attachment[];
     baselineState: sarif.Result.baselineState;
     codeFlows: CodeFlow[];
     fixes: Fix[];
     id: number;
     kind: sarif.Result.kind;
-    locationInSarifFile: Location;
+    locationInSarifFile?: Location;
     locations: Location[];
     message: Message;
-    messageHTML: HTMLLabelElement;
-    rank: number;
+    messageHTML?: HTMLLabelElement;
+    rank?: number;
     relatedLocs: Location[];
-    ruleHelpUri: string;
-    ruleId: string;
-    ruleName: string;
-    ruleDescription: Message;
+    ruleHelpUri?: string;
+    ruleId?: string;
+    ruleName?: string;
+    ruleDescription?: Message;
     runId: number;
     severityLevel: sarif.Result.level;
     stacks: Stacks;
 }
 
 export interface CodeFlow {
-    message: string;
+    message?: string;
     threads: ThreadFlow[];
 }
 
 export interface ThreadFlow {
-    message: string;
+    message?: string;
     lvlsFirstStepIsNested: number;
-    id: string;
+    id?: string;
     steps: CodeFlowStep[];
 }
 
@@ -114,22 +126,25 @@ export interface CodeFlowStepId {
 }
 
 export interface CodeFlowStep {
-    beforeIcon: string;
+    beforeIcon?: string;
     codeLensCommand: Command;
     importance: sarif.ThreadFlowLocation.importance,
     isLastChild: boolean;
     isParent: boolean;
-    location: Location;
+    location?: Location;
     message: string;
     messageWithStep: string;
     nestingLevel: number;
-    state: object;
-    stepId: number;
+    state?: object;
+    stepId?: number;
     traversalId: string;
 }
 
+export type StackHeaderType = 'result' | 'message' | 'name' | 'location' | 'filename' | 'parameters' | 'threadId';
+export type StackColumnWithContent  = { [key in StackHeaderType] : boolean };
+
 export interface Stacks {
-    columnsWithContent: boolean[];
+    columnsWithContent: StackColumnWithContent,
     stacks: Stack[];
 }
 
@@ -143,12 +158,12 @@ export interface Frame {
     message: Message;
     name: string;
     parameters: string[];
-    threadId: number;
+    threadId?: number;
 }
 
 export interface Message {
-    html: string,
-    text: string,
+    html?: string,
+    text?: string,
 }
 
 export interface Attachment {
@@ -169,12 +184,21 @@ export interface FixFile {
 
 export interface FixChange {
     delete: Range,
-    insert: string
+    insert?: string
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the FixChange being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
+     * @param value The current location value.
+     */
+    toJSON(this: FixChange, key: any, value: any): any
 }
 
 export interface TreeNodeOptions {
     isParent: boolean,
-    liClass: string,
+    liClass?: string,
     location?: Location,
     locationLine?: string,
     locationText?: string,
@@ -192,7 +216,7 @@ export interface WebviewMessage {
 export interface DiagnosticData {
     activeTab?: any,
     resultInfo: ResultInfo,
-    runInfo: RunInfo,
+    runInfo?: RunInfo,
     selectedRow?: string,
     selectedVerbosity?: any
 }
@@ -209,10 +233,10 @@ export interface ResultsListData {
     columns: { [key: string]: ResultsListColumn },
     filterCaseMatch: boolean,
     filterText: string,
-    groupBy: string,
+    groupBy?: string,
     groups: ResultsListGroup[],
     resultCount: number,
-    sortBy: ResultsListSortBy,
+    sortBy?: ResultsListSortBy,
 }
 
 export interface ResultsListGroup {
@@ -238,46 +262,48 @@ export interface ResultsListRow {
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
     tool: ResultsListStringValue,
+    readonly [key: string]: ResultsListValue | ResultsListStringValue | ResultsListNumberValue | ResultsListCustomOrderValue | ResultsListPositionValue;
 }
 
 export interface ResultsListValue {
-    value: any,
+    value?: any,
     tooltip?: string,
 }
 
 export interface ResultsListStringValue extends ResultsListValue {
-    value: string,
+    value?: string,
 }
 
 export interface ResultsListNumberValue extends ResultsListValue {
-    value: number
+    value?: number
 }
 
 export interface ResultsListPositionValue extends ResultsListValue {
-    pos: Position,
-    value: string,
+    pos?: Position,
+    value?: string,
 }
 
 export interface ResultsListCustomOrderValue extends ResultsListValue {
+    customOrderType : 'Baseline' | 'Kind' | 'Severity';
     order: BaselineOrder | KindOrder | SeverityLevelOrder,
-    value: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
+    value?: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,
 }
 
 export interface ResultsListBaselineValue extends ResultsListCustomOrderValue {
-    isBaseLine: boolean,
-    order: BaselineOrder,
-    value: sarif.Result.baselineState,
+    customOrderType: 'Baseline',
+    order: BaselineOrder
+    value: sarif.Result.baselineState;
 }
 
 export interface ResultsListKindValue extends ResultsListCustomOrderValue {
-    isKind: boolean,
-    order: KindOrder,
-    value: sarif.Result.kind,
+    customOrderType: 'Kind',
+    order: KindOrder
+    value: sarif.Result.kind;
 }
 
 export interface ResultsListSeverityValue extends ResultsListCustomOrderValue {
-    isSeverity: boolean,
-    order: SeverityLevelOrder,
+    customOrderType: 'Severity',
+    order: SeverityLevelOrder
     value: sarif.Result.level,
 }
 
@@ -305,4 +331,19 @@ export interface SarifVersion {
 export interface JsonMapping {
     data: sarif.Log,
     pointers: any,
+}
+
+export interface JsonPointer {
+    value: {
+        line: number;
+        column: number;
+    };
+    valueEnd: {
+        line: number;
+        column: number;
+    };
+}
+
+export interface JsonMap {
+    parse: (json: string) => JsonMapping;
 }

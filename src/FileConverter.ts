@@ -1,43 +1,85 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
 import * as sarif from "sarif";
-import {
-    commands, extensions, MessageOptions, OpenDialogOptions, SaveDialogOptions, TextDocument, TextDocumentShowOptions,
-    Uri, ViewColumn, window,
-} from "vscode";
+import * as vscode from "vscode";
 import { SarifVersion } from "./common/Interfaces";
 import { Utilities } from "./Utilities";
+import { ChildProcess, spawn } from "child_process";
 
 /**
  * Handles converting a non sarif static analysis file to a sarif file via the sarif-sdk multitool
  */
 export class FileConverter {
-    public static ConvertCommand = "extension.sarif.Convert";
+    private static extensionContext: vscode.ExtensionContext | undefined;
+
+    public static initialize(extensionContext: vscode.ExtensionContext): void {
+        FileConverter.extensionContext = extensionContext;
+        FileConverter.registerCommands(extensionContext);
+    }
+
+    private  static registerCommands(extensionContext: vscode.ExtensionContext): void {
+        extensionContext.subscriptions.push(
+            vscode.commands.registerCommand("extension.sarif.Convert", FileConverter.selectConverter),
+        );
+    }
 
     /**
      * Opens a quick pick list to select a tool, then opens a file picker to select the file and converts selected file
      */
-    public static selectConverter() {
-        let tool: string;
-        window.showQuickPick(Array.from(FileConverter.Tools.keys())).then((value: string) => {
-            if (value === undefined) {
-                return;
-            }
+    public static async selectConverter(): Promise<void> {
+        interface ToolQuickPickItem extends vscode.QuickPickItem {
+            readonly extensions: string[];
+        }
 
-            tool = value;
-            const dialogOptions = { canSelectFiles: true, canSelectMany: false, filters: {} } as OpenDialogOptions;
-            const toolExt = FileConverter.Tools.get(tool);
-            dialogOptions.filters[`${tool} log files`] = toolExt;
+        // This really should have a friendly UI name as well as the extension list.
+        // We can leave that for another day.
+        const fileConverterTools: { [toolName: string]: string[] } = {
+            "AndroidStudio": ["xml"],
+            "ClangAnalyzer": ["xml"],
+            "CppCheck": ["xml"],
+            "ContrastSecurity": ["xml"],
+            "Fortify": ["xml"],
+            "FortifyFpr": ["fpr"],
+            "FxCop": ["fxcop", "xml"],
+            "PREfast": ["xml"],
+            "Pylint": ["json"],
+            "SemmleQL": ["csv"],
+            "StaticDriverVerifier": ["tt"],
+            "TSLint": ["json"]
+        };
 
-            return window.showOpenDialog(dialogOptions);
-        }).then((uris: Uri[]) => {
-            if (uris !== undefined && uris.length > 0) {
-                FileConverter.convert(uris[0], tool);
-            }
+        const quickPickItems: ToolQuickPickItem[] = [];
+        for (const toolName of Object.keys(fileConverterTools)) {
+            quickPickItems.push({
+                label: toolName,
+                extensions: fileConverterTools[toolName]
+            });
+        }
+
+        const tool: ToolQuickPickItem | undefined = await vscode.window.showQuickPick(quickPickItems);
+        if (!tool) {
+            return;
+        }
+
+        const toolName: string = `${tool.label} log files`;
+        const filters: { [name: string]: string[] } = {};
+        filters[toolName] = tool.extensions;
+
+        const openUris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectMany: false,
+            filters
         });
+
+        if (!openUris || openUris.length !==  1) {
+            return;
+        }
+
+        // The "label" used for the quick-pick item is the tool name we will
+        // ultimately pass to the multi-tool conversion that exists in the SDK.
+        FileConverter.convert(openUris[0], tool.label);
     }
 
     /**
@@ -47,42 +89,50 @@ export class FileConverter {
      * @param schema The Schema from the sarif file
      * @param doc the text document of the sarif file to convert
      */
-    public static tryUpgradeSarif(version: sarif.Log.version, schema: string, doc: TextDocument): boolean {
-        let tryToUpgrade = false;
-        const mTCurVersion = FileConverter.MultiToolCurrentVersion;
-        const parsedVer = FileConverter.parseVersion(version);
-        let parsedSchemaVer: SarifVersion;
+    public static async sarifUpgradeNeeded(version: sarif.Log.version, schema: string, doc: vscode.TextDocument): Promise<boolean> {
+        const mTCurVersion: SarifVersion = FileConverter.MultiToolCurrentVersion;
+        const parsedVer: SarifVersion = FileConverter.parseVersion(version);
 
-        if (parsedVer.original !== mTCurVersion.original) {
-            tryToUpgrade = FileConverter.isOlderThenVersion(parsedVer, mTCurVersion);
-        } else {
-            if (schema === "http://json.schemastore.org/sarif-2.1.0-rtm.1") {
-                // By passes a bug in the multitool, remove after fix https://github.com/microsoft/sarif-sdk/issues/1584
-                return false;
-            } else if (schema !== undefined && (schema.startsWith("http://json.schemastore.org/sarif-") ||
-                schema.startsWith("https://schemastore.azurewebsites.net/schemas/json/sarif-"))) {
-                parsedSchemaVer = FileConverter.parseSchema(schema);
-                const mTCurSchemaVersion = FileConverter.MultiToolCurrentSchemaVersion;
+        if (parsedVer.original === mTCurVersion.original) {
+            return false;
+        }
 
-                if (parsedSchemaVer.original !== mTCurSchemaVersion.original) {
-                    tryToUpgrade = FileConverter.isOlderThenVersion(parsedSchemaVer, mTCurSchemaVersion);
-                } else {
-                    return false;
-                }
-            } else {
+        if (schema === "http://json.schemastore.org/sarif-2.1.0-rtm.1") {
+            // By passes a bug in the multitool, remove after fix https://github.com/microsoft/sarif-sdk/issues/1584
+            return false;
+        }
+
+        let parsedSchemaVer: SarifVersion | undefined;
+        let tryToUpgrade: boolean = false;
+        if (schema && (schema.startsWith("http://json.schemastore.org/sarif-") ||
+            schema.startsWith("https://schemastore.azurewebsites.net/schemas/json/sarif-"))) {
+            parsedSchemaVer = FileConverter.parseSchema(schema);
+
+            if (!parsedSchemaVer) {
                 return false;
             }
+
+            const mTCurSchemaVersion: SarifVersion = FileConverter.MultiToolCurrentSchemaVersion;
+
+            tryToUpgrade = (parsedSchemaVer.original !== mTCurSchemaVersion.original) &&
+                FileConverter.isOlderThenVersion(parsedSchemaVer, FileConverter.MultiToolCurrentSchemaVersion);
+        } else {
+            return false;
         }
 
         if (tryToUpgrade) {
+            // The upgrade process does not need to block the return of this function
+            // as it open the converted document when it is done whic starts
+            // the read SARIF cycle again.
+            // tslint:disable-next-line: no-floating-promises
             FileConverter.upgradeSarif(doc, parsedVer, parsedSchemaVer);
         } else {
-            window.showErrorMessage(`Sarif version '${version}'(schema '${schema}') is not yet supported by the Viewer.
+            await vscode.window.showErrorMessage(`Sarif version '${version}'(schema '${schema}') is not yet supported by the Viewer.
             Make sure you have the latest extension version and check
             https://github.com/Microsoft/sarif-vscode-extension for future support.`);
         }
 
-        return true;
+        return tryToUpgrade;
     }
 
     /**
@@ -93,134 +143,134 @@ export class FileConverter {
      * @param sarifVersion version of the sarif log
      * @param sarifSchema version of the sarif logs schema
      */
-    public static async upgradeSarif(doc: TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion) {
-        const saveTemp = "Yes (Save Temp)";
-        const saveAs = "Yes (Save As)";
-        const msgOptions = { modal: false } as MessageOptions;
+    public static async upgradeSarif(doc: vscode.TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
+        const saveTempChoice: vscode.MessageItem =  {
+            title: "Yes (Save Temp)"
+        };
+
+        const saveAsChoice: vscode.MessageItem = {
+            title: "Yes (Save As)"
+        };
+
+        const noChoice: vscode.MessageItem = {
+            title: "No"
+        };
+
         let curVersion: string;
         let version: string;
-        let infoMsg: string;
 
-        if (sarifSchema !== undefined) {
+        if (sarifSchema) {
             curVersion = `schema version '${FileConverter.MultiToolCurrentSchemaVersion.original}'`;
             version = `schema version '${sarifSchema.original}'`;
         } else {
             curVersion = `version '${FileConverter.MultiToolCurrentVersion.original}'`;
-            version = `version '${sarifVersion.original}'`;
+            version = `version '${sarifVersion && sarifVersion.original ? sarifVersion.original : "Unknown"}'`;
         }
 
-        infoMsg = `Sarif ${version} is not supported. Upgrade to the latest ${curVersion}? `;
-        const choice = await window.showInformationMessage(infoMsg, msgOptions, saveTemp, saveAs, "No");
+        const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
+            `Sarif ${version} is not supported. Upgrade to the latest ${curVersion}?`,
+            { modal: false },
+            saveTempChoice, saveAsChoice, noChoice);
 
-        let output: string;
+        if (!choice || choice === noChoice) {
+            return false;
+        }
+
+        let output: string | undefined;
         switch (choice) {
-            case saveTemp:
+            case saveTempChoice:
                 output = Utilities.generateTempPath(doc.uri.fsPath);
                 break;
-            case saveAs:
-                const saveOptions: SaveDialogOptions = Object.create(null);
-                saveOptions.defaultUri = doc.uri;
-                saveOptions.filters = { sarif: ["sarif"] };
 
-                await window.showSaveDialog(saveOptions).then((selectedUri) => {
-                    if (selectedUri !== undefined) {
-                        output = selectedUri.fsPath;
-                    }
+            case saveAsChoice:
+                const selectedUri: vscode.Uri | undefined = await vscode.window.showSaveDialog({
+                    defaultUri: doc.uri,
+                    filters: { sarif: ["sarif"] }
                 });
+
+                if (selectedUri) {
+                    output = selectedUri.fsPath;
+                }
                 break;
         }
 
-        if (output !== undefined) {
-            const proc = FileConverter.ChildProcess.spawn(FileConverter.MultiTool,
-                ["transform", doc.uri.fsPath, "-o", output, "-p", "-f"],
+        if (!output) {
+            return false;
+        }
+
+        const fileOutputPath: string = output;
+        const errorData: string[] = [];
+        const converted: boolean = await new Promise<boolean>((resolve) => {
+            const proc: ChildProcess = spawn(FileConverter.MultiToolExecutablePath,
+                ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"],
             );
 
-            let errorData;
             proc.stdout.on("data", (data) => {
-                errorData = data.toString();
+                errorData.push(data.toString());
             });
 
-            proc.on("close", (code) => {
-                if (code === 0) {
-                    const textEditor = window.activeTextEditor;
-                    // try to close the editor
-                    if (textEditor !== undefined && textEditor.document.fileName === doc.fileName) {
-                        commands.executeCommand("workbench.action.closeActiveEditor");
-                    }
-
-                    commands.executeCommand("vscode.open", Uri.file(output),
-                        {
-                            preserveFocus: false, preview: false, viewColumn: ViewColumn.One,
-                        } as TextDocumentShowOptions);
-                } else {
-                    window.showErrorMessage(`Sarif upgrade failed with error:
-        ${errorData}`,
-                        { modal: false } as MessageOptions);
-                }
+            proc.on("close", async (code) => {
+                resolve (code === 0);
             });
+        });
+
+        if (!converted) {
+            await vscode.window.showErrorMessage(`Sarif upgrade failed with error: ${errorData.join('\n')}`, { modal: false });
+            return false;
         }
+
+        const textEditor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+
+        if (textEditor && textEditor.document.fileName === doc.fileName) {
+            await vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+        }
+
+        await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(output), {
+                preserveFocus: false,
+                preview: false,
+                viewColumn: vscode.ViewColumn.One,
+        });
+
+        return true;
     }
 
-    private static childProcess;
-    private static multiToolSchemaVersion: SarifVersion;
+    private static multiToolSchemaVersion: SarifVersion | undefined;
     private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json";
-    private static multiToolVersion: SarifVersion;
-    private static multiToolRawVersion = "2.1.0" as sarif.Log.version;
+    private static multiToolVersion: SarifVersion | undefined;
+    private static multiToolRawVersion: sarif.Log.version = "2.1.0";
     private static multiTool: string;
-    private static tools: Map<string, string[]>;
     private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
 
-    private static get ChildProcess() {
-        if (FileConverter.childProcess === undefined) {
-            FileConverter.childProcess = require("child_process");
+    private static get MultiToolCurrentSchemaVersion(): SarifVersion {
+        if (!FileConverter.multiToolSchemaVersion) {
+            FileConverter.multiToolSchemaVersion = FileConverter.parseSchema(FileConverter.multiToolRawSchema);
         }
 
-        return FileConverter.childProcess;
-    }
-
-    private static get MultiToolCurrentSchemaVersion() {
-        if (FileConverter.multiToolSchemaVersion === undefined) {
-            FileConverter.multiToolSchemaVersion = FileConverter.parseSchema(FileConverter.multiToolRawSchema);
+        if (!FileConverter.multiToolSchemaVersion) {
+            throw new Error("Expected to be able to parse the multi-tool schema.");
         }
 
         return FileConverter.multiToolSchemaVersion;
     }
 
-    private static get MultiToolCurrentVersion() {
-        if (FileConverter.multiToolVersion === undefined) {
+    private static get MultiToolCurrentVersion(): SarifVersion {
+        if (!FileConverter.multiToolVersion) {
             FileConverter.multiToolVersion = FileConverter.parseVersion(FileConverter.multiToolRawVersion);
         }
 
         return FileConverter.multiToolVersion;
     }
 
-    private static get MultiTool(): string {
-        if (FileConverter.multiTool === undefined) {
-            FileConverter.multiTool = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-                "/resources/sarif.multitool/Sarif.Multitool.exe";
+    private static get MultiToolExecutablePath(): string {
+        if (!FileConverter.extensionContext) {
+            throw new Error("File converter properties were not properly initialized.");
+        }
+
+        if (!FileConverter.multiTool) {
+            FileConverter.multiTool = FileConverter.extensionContext.asAbsolutePath("/resources/sarif.multitool/Sarif.Multitool.exe");
         }
 
         return FileConverter.multiTool;
-    }
-
-    private static get Tools(): Map<string, string[]> {
-        if (FileConverter.tools === undefined) {
-            FileConverter.tools = new Map<string, string[]>();
-            FileConverter.tools.set("AndroidStudio", ["xml"]);
-            FileConverter.tools.set("ClangAnalyzer", ["xml"]);
-            FileConverter.tools.set("CppCheck", ["xml"]);
-            FileConverter.tools.set("ContrastSecurity", ["xml"]);
-            FileConverter.tools.set("Fortify", ["xml"]);
-            FileConverter.tools.set("FortifyFpr", ["fpr"]);
-            FileConverter.tools.set("FxCop", ["fxcop", "xml"]);
-            FileConverter.tools.set("PREfast", ["xml"]);
-            FileConverter.tools.set("Pylint", ["json"]);
-            FileConverter.tools.set("SemmleQL", ["csv"]);
-            FileConverter.tools.set("StaticDriverVerifier", ["tt"]);
-            FileConverter.tools.set("TSLint", ["json"]);
-        }
-
-        return FileConverter.tools;
     }
 
     /**
@@ -228,19 +278,19 @@ export class FileConverter {
      * @param uri path to the file to convert
      * @param tool tool that generated the file to convert
      */
-    private static convert(uri: Uri, tool: string) {
-        const output = Utilities.generateTempPath(uri.fsPath) + ".sarif";
-        const proc = FileConverter.ChildProcess.spawn(FileConverter.MultiTool,
+    private static convert(uri: vscode.Uri, tool: string): void {
+        const output: string = Utilities.generateTempPath(uri.fsPath) + ".sarif";
+        const proc: ChildProcess = spawn(FileConverter.MultiToolExecutablePath,
             ["convert", "-t", tool, "-o", output, "-p", "-f", uri.fsPath],
         );
 
-        proc.on("close", (code) => {
+        proc.on("close", async (code) => {
             if (code === 0) {
-                commands.executeCommand("vscode.open", Uri.file(output),
-                    { preserveFocus: false, preview: false, viewColumn: ViewColumn.One } as TextDocumentShowOptions);
+                await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(output),
+                    { preserveFocus: false, preview: false, viewColumn: vscode.ViewColumn.One });
             } else {
-                window.showErrorMessage(`Sarif converter failed with error code: ${code} `,
-                    { modal: false } as MessageOptions);
+                await vscode.window.showErrorMessage(`Sarif converter failed with error code: ${code} `,
+                    { modal: false });
             }
         });
     }
@@ -250,7 +300,7 @@ export class FileConverter {
      * @param version version to compare against the current version
      */
     private static isOlderThenVersion(parsedVer: SarifVersion, currentVer: SarifVersion): boolean {
-        let olderThanCurrent = false;
+        let olderThanCurrent: boolean = false;
 
         if (parsedVer.major < currentVer.major) {
             olderThanCurrent = true;
@@ -262,21 +312,23 @@ export class FileConverter {
                     olderThanCurrent = true;
                 } else if (parsedVer.sub === currentVer.sub) {
                     if (currentVer.rtm !== undefined) {
-                        if (parsedVer.rtm === undefined) {
+                        if (!parsedVer.rtm) {
                             olderThanCurrent = true;
                         } else if (parsedVer.rtm < currentVer.rtm) {
                             olderThanCurrent = true;
                         }
-                    } else if (currentVer.rtm === undefined && currentVer.csd === undefined) {
-                        if (parsedVer.csd !== undefined) {
+                    } else if (!currentVer.rtm && !currentVer.csd) {
+                        if (parsedVer.csd) {
                             olderThanCurrent = true;
                         }
-                    } else if (parsedVer.csd !== undefined && currentVer.csd !== undefined) {
+                    } else if (parsedVer.csd && currentVer.csd) {
                         if (parsedVer.csd < currentVer.csd) {
                             olderThanCurrent = true;
                         } else if (parsedVer.csd === currentVer.csd) {
-                            if (parsedVer.csdDate < currentVer.csdDate) {
-                                olderThanCurrent = true;
+                            if (parsedVer.csdDate && currentVer.csdDate) {
+                                if (parsedVer.csdDate < currentVer.csdDate || !parsedVer.csdDate) {
+                                    olderThanCurrent = true;
+                                }
                             }
                         }
                     }
@@ -293,28 +345,32 @@ export class FileConverter {
      * ex. "2.0.0-csd.2.beta.2018-10-10"
      * @param version version from the sarif log to parse
      */
-    private static parseVersion(version: sarif.Log.version): SarifVersion {
-        const parsedVer = {} as SarifVersion;
-        const splitVer = version.split(".");
-        parsedVer.original = version.toString();
-        parsedVer.major = parseInt(splitVer[0], 10);
-        parsedVer.minor = parseInt(splitVer[1], 10);
+    private static parseVersion(version: string): SarifVersion {
+        const splitVer: string[] = version.split(".");
+
+        const sarifVersion: SarifVersion = {
+            major: parseInt(splitVer[0], 10),
+            minor: parseInt(splitVer[1], 10),
+            sub: parseInt(splitVer[1], 10),
+            original: version.toString()
+        };
+
         if (splitVer[2].indexOf("-csd") !== -1) {
-            const splitSub = splitVer[2].split("-");
-            parsedVer.sub = parseInt(splitSub[0], 10);
-            parsedVer.csd = parseInt(splitVer[3], 10);
-            const splitDate = splitVer[5].split("-");
-            parsedVer.csdDate = new Date(parseInt(splitDate[0], 10), parseInt(splitDate[1], 10),
+            const splitSub: string[] = splitVer[2].split("-");
+            sarifVersion.sub = parseInt(splitSub[0], 10);
+            sarifVersion.csd = parseInt(splitVer[3], 10);
+            const splitDate: string[] = splitVer[5].split("-");
+            sarifVersion.csdDate = new Date(parseInt(splitDate[0], 10), parseInt(splitDate[1], 10),
                 parseInt(splitDate[2], 10));
         } else if (splitVer[2].indexOf("-rtm") !== -1) {
-            const splitSub = splitVer[2].split("-");
-            parsedVer.sub = parseInt(splitSub[0], 10);
-            parsedVer.rtm = parseInt(splitVer[3], 10);
+            const splitSub: string[] = splitVer[2].split("-");
+            sarifVersion.sub = parseInt(splitSub[0], 10);
+            sarifVersion.rtm = parseInt(splitVer[3], 10);
         } else {
-            parsedVer.sub = parseInt(splitVer[2], 10);
+            sarifVersion.sub = parseInt(splitVer[2], 10);
         }
 
-        return parsedVer;
+        return sarifVersion;
     }
 
     /**
@@ -322,12 +378,15 @@ export class FileConverter {
      * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json"
      * @param schema schema string from the sarif log to parse
      */
-    private static parseSchema(schema: string): SarifVersion {
-        const regEx = new RegExp(FileConverter.regExpVersion);
-        let rawSchemaVersion = regEx.exec(schema)[0];
-        rawSchemaVersion = rawSchemaVersion.replace(".json", "");
-        const parsedSchemaVer = FileConverter.parseVersion(rawSchemaVersion as sarif.Log.version);
-        return parsedSchemaVer;
-    }
+    private static parseSchema(schema: string): SarifVersion | undefined {
+        const regEx: RegExp = new RegExp(FileConverter.regExpVersion);
+        const matchArray: RegExpExecArray | null  = regEx.exec(schema);
+        if (!matchArray || matchArray.length === 0) {
+            return undefined;
+        }
 
+        const rawSchemaVersion: string = matchArray[0].replace(".json", "");
+
+        return FileConverter.parseVersion(rawSchemaVersion);
+    }
 }
