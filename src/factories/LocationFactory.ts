@@ -38,7 +38,11 @@ export namespace LocationFactory {
             const mappedUri: {mapped: boolean; uri?: Uri}  = await fileMapper.get(artifactLocation, runInfo.id, uriBase);
             mapped = mappedUri.mapped;
 
-            uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
+            // If the location was successfully mapped, then we can assume it is a local file
+            // and we can "fix" the path casing for VSCode.
+            if (mapped) {
+                uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
+            }
 
             // toString() is executed to create an external value for the webview's use
             if (uri) {
