@@ -289,7 +289,11 @@ export class ExplorerController implements Disposable {
             selectedRow: this.selectedCodeFlowRow,
             selectedVerbosity: this.selectedVerbosity,
             resultInfo: this.activeDiagnostic.resultInfo,
+<<<<<<< HEAD
             runInfo: this.activeDiagnostic.resultInfo.runInfo
+=======
+            runInfo: this.activeDiagnostic.runInfo
+>>>>>>> origin/master
         };
 
         const dataString: string = JSON.stringify(diagData);
