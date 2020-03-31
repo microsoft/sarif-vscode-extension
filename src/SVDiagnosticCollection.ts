@@ -2,9 +2,8 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 import { SVDiagnosticFactory } from  "./factories/SVDiagnosticFactory";
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable } from "vscode";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable, workspace, TextDocument } from "vscode";
 import { RunInfo } from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
@@ -35,7 +34,7 @@ export class SVDiagnosticCollection implements Disposable {
         return this.diagnosticCollectionChangedEventEmitter.event;
     }
 
-    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
+    public constructor(private readonly fileMapper: FileMapper) {
         this.disposables.push(this.diagnosticCollectionChangedEventEmitter);
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
         this.disposables.push(this.diagnosticCollection);
@@ -45,6 +44,8 @@ export class SVDiagnosticCollection implements Disposable {
 
         this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
         this.disposables.push(this.fileMapper);
+
+        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
     }
 
     public dispose(): void {
@@ -180,40 +181,20 @@ export class SVDiagnosticCollection implements Disposable {
             }
         }
 
-        const explorerDiag: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!explorerDiag) {
-            return;
-        }
-
-        for (const key of this.unmappedIssuesCollection.keys()) {
-            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.unmappedIssuesCollection.get(key);
-            if (!issues) {
-                return;
-            }
-
+        for (const [key, unmappedIssues] of this.unmappedIssuesCollection.entries()) {
             const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
-            for (const index of issues.keys()) {
-                const diag: SarifViewerVsCodeDiagnostic = issues[index];
-                await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, diag).then((remapped) => {
-                    if (remapped) {
-                        this.add(diag);
-                        this.diagnosticCollectionChangedEventEmitter.fire({
-                            diagnostics: [diag],
-                            type: 'Add'
-                        });
-                        if (explorerDiag !== undefined && explorerDiag.resultInfo.runId === diag.resultInfo.runId &&
-                            explorerDiag.resultInfo.id === diag.resultInfo.id) {
-                            this.explorerController.setActiveDiagnostic(diag, true);
-                        }
-                    } else {
-                        remainingUnmappedIssues.push(issues[index]);
-                    }
-                });
+            for (const unmappedIssue of unmappedIssues) {
+                const remapped: boolean = await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, unmappedIssue);
+                if (remapped) {
+                    this.add(unmappedIssue);
+                } else {
+                    remainingUnmappedIssues.push(unmappedIssue);
+                }
             }
 
             if (remainingUnmappedIssues.length === 0) {
                 this.unmappedIssuesCollection.delete(key);
-            } else if (remainingUnmappedIssues.length !== issues.length) {
+            } else if (remainingUnmappedIssues.length !== unmappedIssues.length) {
                 this.unmappedIssuesCollection.set(key, remainingUnmappedIssues);
             }
         }
@@ -317,6 +298,17 @@ export class SVDiagnosticCollection implements Disposable {
                 diagnostics: diagnosticsRemoved,
                 type: 'Remove'
             });
+        }
+    }
+
+    /**
+     * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
+     * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
+     * @param doc document that was closed
+     */
+    public onDocumentClosed(doc: TextDocument): void {
+        if (Utilities.isSarifFile(doc)) {
+            this.removeRuns(doc.fileName);
         }
     }
 }

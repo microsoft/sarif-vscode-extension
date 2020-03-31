@@ -84,7 +84,7 @@ export class ExplorerController implements Disposable {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
-        this.diagnosticCollection = new SVDiagnosticCollection(this, fileMapper);
+        this.diagnosticCollection = new SVDiagnosticCollection(fileMapper);
         this.disposables.push(this.diagnosticCollection);
 
     }

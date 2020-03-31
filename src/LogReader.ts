@@ -18,20 +18,13 @@ import { ExplorerController } from "./ExplorerController";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
 import { FileMapper } from "./FileMapper";
+import { Utilities } from "./Utilities";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
  */
 export class LogReader implements Disposable {
     private disposables: Disposable[] = [];
-
-    /**
-     * Helper method to check if the document provided is a sarif file
-     * @param doc document to check if it's a sarif file
-     */
-    private static isSarifFile(doc: TextDocument): boolean {
-        return (doc.languageId === "json" && doc.fileName.substring(doc.fileName.lastIndexOf(".")) === ".sarif");
-    }
 
     /**
      * Contains a map between a parsed SARIF file (the key) to a JsonMapping object which contains
@@ -43,7 +36,6 @@ export class LogReader implements Disposable {
     public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
         // Listen for new sarif files to open or close
         this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
-        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
     }
 
     /**
@@ -55,25 +47,11 @@ export class LogReader implements Disposable {
     }
 
     /**
-     * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
-     * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
-     * @param doc document that was closed
-     */
-    public onDocumentClosed(doc: TextDocument): void {
-        if (LogReader.isSarifFile(doc)) {
-            this.explorerController.diagnosticCollection.removeRuns(doc.fileName);
-            return;
-        }
-    }
-
-    /**
      * When a sarif document opens we read it and sync to the list of issues to add it to the problems panel
      * @param doc document that was opened
      */
-    public async onDocumentOpened(doc: TextDocument): Promise<void> {
-        if (LogReader.isSarifFile(doc)) {
-            await this.read(doc, true);
-        }
+    public onDocumentOpened(doc: TextDocument): Promise<void> {
+        return Utilities.isSarifFile(doc) ? this.read(doc, true) : Promise.resolve();
     }
 
     /**
@@ -85,7 +63,7 @@ export class LogReader implements Disposable {
 
         let needsSync: boolean = false;
         for (const doc of docs) {
-            if (!needsSync && LogReader.isSarifFile(doc)) {
+            if (!needsSync && Utilities.isSarifFile(doc)) {
                 needsSync = true;
             }
             await this.read(doc);
@@ -102,7 +80,7 @@ export class LogReader implements Disposable {
      * @param sync Optional flag to sync the issues after reading this file
      */
     public async read(doc: TextDocument, sync?: boolean): Promise<void> {
-        if (LogReader.isSarifFile(doc)) {
+        if (Utilities.isSarifFile(doc)) {
             const pOptions: ProgressOptions = {
                 cancellable: false,
                 location: ProgressLocation.Notification,
