@@ -5,7 +5,6 @@
 import * as sarif from "sarif";
 import { Range, Uri } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
-import { LogReader } from "../LogReader";
 import { Utilities } from "../Utilities";
 import { FileMapper } from "../FileMapper";
 
@@ -117,12 +116,13 @@ export namespace LocationFactory {
 
     /**
      * Maps a Location to the File Location of a result in the SARIF file
+     * @param sarifJSONMapping A map from a URI to pointers created during reading the SARIF file.
      * @param sarifUri Uri of the SARIF document the result is in
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    export function  mapToSarifFileLocation(logReader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
-        const sarifMapping: JsonMapping | undefined = logReader.sarifJSONMapping.get(sarifUri.toString());
+    export function  mapToSarifFileLocation(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
         }
@@ -146,28 +146,30 @@ export namespace LocationFactory {
             resultPath = resultPath + "/analysisTarget";
         }
 
-        return LocationFactory.createLocationOfMapping(logReader, sarifUri, resultPath);
+        return LocationFactory.createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath);
     }
 
     /**
      * Maps a Location to the top of the result in the SARIF file
+     * @param sarifJSONMapping A map from a URI to pointers created during reading the SARIF file.
      * @param sarifUri Uri of the SARIF document the result is in
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    export function mapToSarifFileResult(logRader: LogReader, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+    export function mapToSarifFileResult(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
         const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
-        return LocationFactory.createLocationOfMapping(logRader, sarifUri, resultPath, true);
+        return LocationFactory.createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath, true);
     }
 
     /**
      * Maps the resultPath to a Location object
+     * @param sarifJSONMapping A map from a URI to pointers created during reading the SARIF file.
      * @param sarifUri Uri of the SARIF document the result is in
      * @param resultPath the pointer to the JsonMapping
      * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
      */
-    export function createLocationOfMapping(logRader: LogReader, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
-        const sarifMapping: JsonMapping | undefined = logRader.sarifJSONMapping.get(sarifUri.toString());
+    export function createLocationOfMapping(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
+        const sarifMapping: JsonMapping | undefined = sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
             return undefined;
         }

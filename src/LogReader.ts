@@ -33,14 +33,14 @@ export class LogReader implements Disposable {
         return (doc.languageId === "json" && doc.fileName.substring(doc.fileName.lastIndexOf(".")) === ".sarif");
     }
 
-    public sarifJSONMapping: Map<string, JsonMapping>;
-
-    private readonly jsonMap: JsonMap;
+    /**
+     * Contains a map between a parsed SARIF file (the key) to a JsonMapping object which contains
+     * the result of the JSON parsing. This contains the actual SAIRF content and the "pointers" (which are like xpath's for XML)
+     * to elements found in the JSON.
+     */
+    private readonly sarifJSONMapping: Map<string, JsonMapping> = new Map<string, JsonMapping>();
 
     public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
-        this.sarifJSONMapping = new Map<string, JsonMapping>();
-        this.jsonMap = require("json-source-map");
-
         // Listen for new sarif files to open or close
         this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
         this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
@@ -117,10 +117,10 @@ export class LogReader implements Disposable {
                     let docMapping: JsonMapping;
                     await ProgressHelper.Instance.setProgressReport("Parsing Sarif file");
                     try {
-                        docMapping = this.jsonMap.parse(doc.getText()) as JsonMapping;
+                        const jsonMap: JsonMap = require("json-source-map");
+                        docMapping = jsonMap.parse(doc.getText());
                     } catch (error) {
-                        await window.showErrorMessage(`Sarif Viewer:
-                        Cannot display results for '${doc.fileName}' because: ${error.message}`);
+                        await window.showErrorMessage(`Sarif Viewer: Cannot display results for '${doc.fileName}' because: ${error.message}`);
                         return;
                     }
 
@@ -145,7 +145,7 @@ export class LogReader implements Disposable {
                         runInfo.id  = this.explorerController.diagnosticCollection.addRunInfoAndCalculateId(runInfo);
 
                         if (run.threadFlowLocations) {
-                            CodeFlowFactory.mapThreadFlowLocationsFromRun(run.threadFlowLocations, runInfo.id);
+                            CodeFlowFactory.mapThreadFlowLocationsFromRun(runInfo, run.threadFlowLocations);
                         }
 
                         if (run.artifacts) {
@@ -198,12 +198,12 @@ export class LogReader implements Disposable {
                 await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
             }
             const sarifResult: sarif.Result = results[resultIndex];
-            const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this, docUri, runIndex, resultIndex);
+            const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this.sarifJSONMapping, docUri, runIndex, resultIndex);
 
             const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, locationInSarifFile);
 
             if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
-                resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this, docUri, runIndex, resultIndex);
+                resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this.sarifJSONMapping, docUri, runIndex, resultIndex);
             }
 
             const diagnostic: SarifViewerVsCodeDiagnostic = SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult);

@@ -21,9 +21,8 @@ export namespace CodeFlowFactory {
     /**
      * Processes the array of Sarif codeflow objects
      * @param fileMapper The file mapper used to map the URI locations to a valid local path.
-     * @param runInfo The run the code flow belongs to.
+     * @param runInfo The run the code flows belong to.
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
-     * @param runId id of the run this result is from
      */
     export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifCodeFlows: sarif.CodeFlow[] | undefined): Promise<CodeFlow[]> {
         if (!sarifCodeFlows) {
@@ -62,23 +61,21 @@ export namespace CodeFlowFactory {
 
     /**
      * Map ThreadFlowLocations array from the sarif file for
+     * @param runInfo The run the thread flows belong to.
      * @param tFLocs The array of ThreadFlowLocations off of the run object
-     * @param runId Id of the run
      */
-    export function mapThreadFlowLocationsFromRun(tFLocs: sarif.ThreadFlowLocation[], runId: number): void {
-        if (tFLocs !== undefined) {
-            for (let index: number = 0; index < tFLocs.length; index++) {
-                threadFlowLocations.set(`${runId}_${index}`, tFLocs[index]);
-            }
+    export function mapThreadFlowLocationsFromRun(runInfo: RunInfo, tFLocs: sarif.ThreadFlowLocation[]): void {
+        for (let index: number = 0; index < tFLocs.length; index++) {
+            threadFlowLocations.set(`${runInfo.id}_${index}`, tFLocs[index]);
         }
     }
 
     /**
      * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
      * @param fileMapper The file mapper used to map the URI locations to a valid local path.
+     * @param runInfo The run the code flows belong to.
      * @param codeFlows array of processed codeflow objects to try to remap
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
-     * @param runId used for mapping uribaseids
      */
     export async function tryRemapCodeFlows(fileMapper: FileMapper, runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[]): Promise<void> {
         for (const [cFKey, codeFlow] of codeFlows.entries()) {

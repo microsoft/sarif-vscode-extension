@@ -342,11 +342,6 @@ export interface SarifVersion {
     sub: number,
 }
 
-export interface JsonMapping {
-    data: sarif.Log,
-    pointers: any,
-}
-
 export interface JsonPointer {
     value: {
         line: number;
@@ -357,6 +352,14 @@ export interface JsonPointer {
         column: number;
     };
 }
+
+export interface JsonMapping {
+    data: sarif.Log,
+    pointers: {
+        [jsonPath: string] : JsonPointer
+    },
+}
+
 
 export interface JsonMap {
     parse: (json: string) => JsonMapping;
