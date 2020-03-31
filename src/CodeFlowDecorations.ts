@@ -154,7 +154,7 @@ export class CodeFlowDecorations implements Disposable {
 
                 const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
 
-                await this.updateSelectionHighlight(this.activeDiagnostic.runInfo, location, sarifLocation);
+                await this.updateSelectionHighlight(location, sarifLocation);
             }
         }
     }
@@ -275,7 +275,7 @@ export class CodeFlowDecorations implements Disposable {
             return;
         }
 
-        await this.updateSelectionHighlight(diagnostic.resultInfo.runInfo, resultInfoLocation, rawResultLocation);
+        await this.updateSelectionHighlight(resultInfoLocation, rawResultLocation);
     }
 
     /**
@@ -283,14 +283,18 @@ export class CodeFlowDecorations implements Disposable {
      * @param location processed location to put the highlight at
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
-    private async updateSelectionHighlight(runInfo: RunInfo, location: Location, sarifLocation?: sarif.Location): Promise<void> {
+    private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
+        if (!this.activeDiagnostic) {
+            return;
+        }
+
+        const runInfo: RunInfo = this.activeDiagnostic.runInfo;
 
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
             this.fileMapper,
             runInfo,
             location,
-            sarifLocation,
-            runInfo.id);
+            sarifLocation);
 
         if (remappedLocation && remappedLocation.mapped && remappedLocation.uri) {
             let locRange: Range | undefined = remappedLocation.range;
@@ -450,8 +454,7 @@ export class CodeFlowDecorations implements Disposable {
                         this.fileMapper,
                         diagnostic.resultInfo.runInfo,
                         diagnostic.resultInfo.attachments[attachmentId].file,
-                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        diagnostic.resultInfo.runId
+                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation
                     );
 
                     if (!location) {
@@ -479,7 +482,7 @@ export class CodeFlowDecorations implements Disposable {
                     uri: Uri.parse(locData.file),
                     toJSON: Utilities.LocationToJson
                 };
-                await this.updateSelectionHighlight(this.activeDiagnostic.runInfo, location, undefined);
+                await this.updateSelectionHighlight(location, undefined);
                 break;
         }
     }

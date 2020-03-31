@@ -13,7 +13,7 @@ export function run(): Promise<void> {
         fullStackTrace: true,
 
         // Do not allow uncaught exceptions.
-        allowUncaught: false,        
+        allowUncaught: false
     });
     mocha.useColors(true);
 

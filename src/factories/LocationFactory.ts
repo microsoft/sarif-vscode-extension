@@ -16,10 +16,11 @@ import { FileMapper } from "../FileMapper";
 export namespace LocationFactory {
     /**
      * Processes the passed in sarif location and creates a new Location
+     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
+     * @param runInfo The run the location belongs to.
      * @param sarifLocation location from result in sarif file
-     * @param runId used for mapping uribaseids
      */
-    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifLocation: sarif.Location, runId: number): Promise<Location> {
+    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -34,7 +35,7 @@ export namespace LocationFactory {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
             uriBase = Utilities.getUriBase(runInfo, artifactLocation);
 
-            const mappedUri: {mapped: boolean; uri?: Uri}  = await fileMapper.get(artifactLocation, runId, uriBase);
+            const mappedUri: {mapped: boolean; uri?: Uri}  = await fileMapper.get(artifactLocation, runInfo.id, uriBase);
             mapped = mappedUri.mapped;
 
             uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
@@ -79,11 +80,12 @@ export namespace LocationFactory {
 
     /**
      * Helper function returns the passed in location if mapped, if not mapped or undefined it asks the user
+     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
+     * @param runInfo The run the locations belongs to.
      * @param location processed Location of the file
      * @param sarifLocation raw sarif Location of the file
-     * @param runId used for mapping uribaseids
      */
-    export async function getOrRemap(fileMapper: FileMapper, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
+    export async function getOrRemap(fileMapper: FileMapper, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined): Promise<Location | undefined> {
         // If it's already mapped, then just return it.
         if (location && location.mapped) {
             return location;
@@ -106,7 +108,7 @@ export namespace LocationFactory {
 
         const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
         await fileMapper.getUserToChooseFile(uri, location.uriBase);
-        return await LocationFactory.create(fileMapper, runInfo, sarifLocation, runId);
+        return await LocationFactory.create(fileMapper, runInfo, sarifLocation);
     }
 
     /**

@@ -62,6 +62,29 @@ suite("combineUriWithUriBase", () => {
                 Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
             }
     });
+
+    test("File path with uri id base and fragments", () => {
+        // This may seem somewhat counter-intuitive, but fragments are both not supported in SARIF
+        // nor are they supported in FILE scheme URIs by VSCode. Which "kind of" makes sense
+        // as the fragment identifier '#' is a valid file system path character.
+        const expectedPath: string = "c:\\folder1\\folder2\\file.ext#testFragment";
+        const uriPath: string = "folder2/file.ext#testFragment";
+        const uriBasePath: string = "file:///c:/folder1";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
+        assert.equal(uri.scheme, expectedFileSchema);
+        assert.equal(uri.fsPath, expectedPath);
+        assert.equal(uri.fragment, "");
+    });
+
+    test("Http path with uri id base and fragments", () => {
+        // This may seem somewhat counter-intuitive, but fragments are both not supported in SARIF.
+        const uriPath: string = "folder2/file.ext#testFragment";
+        const uriBasePath: string = "https:/server/folder";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
+        assert.equal(uri.scheme, "https");
+        assert.equal(uri.path, "/server/folder/folder2/file.ext");
+        assert.equal(uri.fragment, "");
+    });
 });
 
 suite("parseSarifMessages", () => {
@@ -282,6 +305,14 @@ suite("parseSarifMessages", () => {
         const message: Message = Utilities.parseSarifMessage(sarifMessage, locations1);
         assert.equal(message.text, outputText);
         assert.equal(message.html, outputHtml);
+    });
+
+    test("Markdown text", () => {
+        const inputText: string = "### Hello World";
+        const sarifMessage: sarif.Message = { markdown: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
+        assert.equal(message.text, undefined);
+        assert.equal(message.html, "<h3>Hello World</h3>\n");
     });
 });
 

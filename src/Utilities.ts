@@ -7,9 +7,8 @@ import * as path from "path";
 import * as sarif from "sarif";
 import * as os from "os";
 import * as vscode from "vscode";
-import * as markdownit from "markdown-it";
-
 import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
+import MarkdownIt = require("markdown-it");
 
 /**
  * Class that holds utility functions for use in different classes
@@ -33,17 +32,6 @@ export class Utilities {
         }
 
         return Utilities.iconsPath;
-    }
-
-    /**
-     * Markdown-it object for parsing markdown text
-     */
-    public static get Md(): markdownit {
-        if (!Utilities.md) {
-            Utilities.md = require("markdown-it")();
-        }
-
-        return Utilities.md;
     }
 
     /**
@@ -106,18 +94,18 @@ export class Utilities {
 
                 // It did, great. Now combine it with the appropriate combination.
                 if (baseUri.scheme.localeCompare('file', 'root', { sensitivity: 'base' }) === 0) {
-                    return vscode.Uri.file(path.join(baseUri.path, uriPath)).with({
-                        fragment: baseUri.fragment,
-                        query: baseUri.query
-                    });
+                    const fileUri: vscode.Uri = vscode.Uri.file(uriPath);
+                    return vscode.Uri.file(path.join(baseUri.fsPath, fileUri.fsPath));
                 }
 
+                const uriPathAsUri: vscode.Uri = vscode.Uri.parse(uriPath).with({
+                    scheme: baseUri.scheme
+                });
+
+                // The 'uriPath" parsed into a URI may indeed have a fragment, which, we will
+                // drop as it is not supported in SARF.
                 return baseUri.with({
-                    scheme: baseUri.scheme,
-                    authority: baseUri.authority,
-                    fragment: baseUri.fragment,
-                    path: path.posix.join(baseUri.path, uriPath), // Use the POSIX separator for "/"
-                    query: baseUri.query
+                    path: path.posix.join(baseUri.path, uriPathAsUri.path) // Use the POSIX separator for "/"
                 });
             } else {
                 // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
@@ -126,7 +114,6 @@ export class Utilities {
         } catch (e) {
             // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
             // if it's malformed in the next if statement we force it to file schema
-
         }
 
         return uriBase !== undefined ? vscode.Uri.file(path.normalize(path.join(uriBase, uriPath))) : vscode.Uri.file(path.normalize(uriPath));
@@ -294,20 +281,22 @@ export class Utilities {
                 mdText = msgText;
             }
 
+            const mdIt: MarkdownIt = new MarkdownIt();
+
             if (mdText) {
-                mdText = Utilities.Md.render(mdText);
+                mdText = mdIt.render(mdText);
                 mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
                 mdText = Utilities.unescapeBrackets(mdText);
             }
 
             if (msgText) {
-                msgText = Utilities.Md.renderInline(msgText);
+                msgText = mdIt.renderInline(msgText);
                 msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
                     return `${p2}(${p1})`;
                 });
                 msgText = Utilities.unescapeBrackets(msgText);
-                msgText = Utilities.Md.utils.unescapeAll(msgText);
+                msgText = mdIt.utils.unescapeAll(msgText);
             }
 
             return { text: msgText, html: mdText };
@@ -372,7 +361,6 @@ export class Utilities {
         return vscode.Uri.file(fixedPath);
     }
 
-    private static md: markdownit;
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;

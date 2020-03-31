@@ -47,13 +47,12 @@ export namespace SVDiagnosticFactory {
      * Tries to remap the locations for this diagnostic
      */
     export async function tryToRemapLocations(fileMapper: FileMapper, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
-        const runId: number = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlowFactory.tryRemapCodeFlows(fileMapper, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
+            await CodeFlowFactory.tryRemapCodeFlows(fileMapper, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.relatedLocations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.relatedLocations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -62,7 +61,7 @@ export namespace SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.locations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.locations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.locations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.locations[index] = parsedLocations[index];

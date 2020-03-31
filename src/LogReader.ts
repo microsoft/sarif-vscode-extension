@@ -155,7 +155,7 @@ export class LogReader implements Disposable {
 
                         if (run.results) {
                             await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
-                            await this.readResults(runInfo, run.results, run.tool, runInfo.id, doc.uri, runIndex);
+                            await this.readResults(runInfo, run.results, run.tool, doc.uri, runIndex);
                         }
                     }
 
@@ -172,12 +172,11 @@ export class LogReader implements Disposable {
      * Reads the results from the run, adding a diagnostic for each result
      * @param results Array of results from the run
      * @param tool Tool from the run
-     * @param runId Id of the processed run
      * @param docUri Uri of the sarif file
      * @param runIndex Index of the run in the sarif file
      */
     private async readResults(
-        runInfo: RunInfo, results: sarif.Result[], tool: sarif.Tool, runId: number, docUri: Uri, runIndex: number,
+        runInfo: RunInfo, results: sarif.Result[], tool: sarif.Tool, docUri: Uri, runIndex: number,
     ): Promise<void> {
         const showIncrement: boolean = results.length > 1000;
         let percent: number = 0;
@@ -201,13 +200,13 @@ export class LogReader implements Disposable {
             const sarifResult: sarif.Result = results[resultIndex];
             const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this, docUri, runIndex, resultIndex);
 
-            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, runId, tool, resultIndex, locationInSarifFile);
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, locationInSarifFile);
 
             if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
                 resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this, docUri, runIndex, resultIndex);
             }
 
-            const diagnostic: SarifViewerVsCodeDiagnostic  = SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult);
+            const diagnostic: SarifViewerVsCodeDiagnostic = SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult);
             this.explorerController.diagnosticCollection.add(diagnostic);
         }
     }
