@@ -9,7 +9,7 @@ import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
 
 export interface SVDiagnosticsChangedEvent {
-    diagnostics?: SarifViewerVsCodeDiagnostic[]; // Undefined on synchronize
+    diagnostics: SarifViewerVsCodeDiagnostic[];
     type: 'Add' | 'Remove' | 'Synchronize';
 }
 
@@ -24,7 +24,12 @@ export class SVDiagnosticCollection implements Disposable {
     private static MaxDiagCollectionSize: number;
 
     private readonly diagnosticCollection: DiagnosticCollection;
-    private readonly issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
+
+    /**
+     * The 'mapped' collection cotnains diagnostics that have had their file-paths mapped to a local path.
+     * The 'unmapped' collection, have not had their file paths mapped.
+     */
+    private readonly mappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
     private readonly unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
     private runInfoCollection: RunInfo[] = [];
 
@@ -59,10 +64,11 @@ export class SVDiagnosticCollection implements Disposable {
     public syncDiagnostics(): void {
         this.diagnosticCollection.clear();
 
-        this.addToDiagnosticCollection(this.issuesCollection);
+        this.addToDiagnosticCollection(this.mappedIssuesCollection);
         this.addToDiagnosticCollection(this.unmappedIssuesCollection);
 
         this.diagnosticCollectionChangedEventEmitter.fire({
+            diagnostics: [],
             type: 'Synchronize'
         });
     }
@@ -74,7 +80,7 @@ export class SVDiagnosticCollection implements Disposable {
      */
     public add(issue: SarifViewerVsCodeDiagnostic): void {
         if (issue.resultInfo.assignedLocation && issue.resultInfo.assignedLocation.mapped) {
-            this.addToCollection(this.issuesCollection, issue);
+            this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
@@ -103,25 +109,9 @@ export class SVDiagnosticCollection implements Disposable {
      */
     public clear(): void {
         this.diagnosticCollection.clear();
-        this.issuesCollection.clear();
+        this.mappedIssuesCollection.clear();
         this.unmappedIssuesCollection.clear();
         this.runInfoCollection.length = 0;
-    }
-
-    /**
-     * Gets a flat array of all the diagnostics (includes mapped and unmapped)
-     */
-    public getAllDiagnostics(): SarifViewerVsCodeDiagnostic[] {
-        const allDiags: SarifViewerVsCodeDiagnostic[] = [];
-        this.unmappedIssuesCollection.forEach((value) => {
-            allDiags.push(...value);
-        });
-
-        this.issuesCollection.forEach((value) => {
-            allDiags.push(...value);
-        });
-
-        return allDiags;
     }
 
     /**
@@ -149,7 +139,7 @@ export class SVDiagnosticCollection implements Disposable {
             }
         }
 
-        for (const mappedIssuesCollection of this.issuesCollection.values()) {
+        for (const mappedIssuesCollection of this.mappedIssuesCollection.values()) {
             const result: SarifViewerVsCodeDiagnostic | undefined = mappedIssuesCollection.find((diag: SarifViewerVsCodeDiagnostic) => diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
             if (result) {
                 return result;
@@ -175,7 +165,10 @@ export class SVDiagnosticCollection implements Disposable {
      * Also goes through the codeflow locations, to update the locations
      */
     public async mappingChanged(): Promise<void> {
-        for (const issues of this.issuesCollection.values()) {
+        // There is an interesting issue here that may either be by design or
+        // overlooked. If the remapping "fails" for something that has already been mapped
+        // does it become unmapped? The result of tryToRemapLocations is being ignored.
+        for (const issues of this.mappedIssuesCollection.values()) {
             for (const issue of issues) {
                 await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, issue);
             }
@@ -194,7 +187,7 @@ export class SVDiagnosticCollection implements Disposable {
 
             if (remainingUnmappedIssues.length === 0) {
                 this.unmappedIssuesCollection.delete(key);
-            } else if (remainingUnmappedIssues.length !== unmappedIssues.length) {
+            } else {
                 this.unmappedIssuesCollection.set(key, remainingUnmappedIssues);
             }
         }
@@ -215,7 +208,7 @@ export class SVDiagnosticCollection implements Disposable {
             }
         }
 
-        this.removeResults(runsToRemove, this.issuesCollection);
+        this.removeResults(runsToRemove, this.mappedIssuesCollection);
         this.removeResults(runsToRemove, this.unmappedIssuesCollection);
         this.syncDiagnostics();
     }
