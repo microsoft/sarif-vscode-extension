@@ -11,7 +11,7 @@ import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent, RunInfo
 } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
-import { ExplorerController } from "../ExplorerController";
+import { FileMapper } from "../FileMapper";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif results (and runs)
@@ -29,19 +29,19 @@ export namespace ResultInfoFactory {
      * @param locationInSarifFile the location in the SARIF file
      */
     export async function create(
-        explorerController: ExplorerController,
+        fileMappper: FileMapper,
         runInfo: RunInfo,
         result: sarif.Result,
         runId: number,
         tool: sarif.Tool,
         id: number,
         locationInSarifFile?: Location): Promise<ResultInfo> {
-        const locations: Location[] = await ResultInfoFactory.parseLocations(explorerController, runInfo, result.locations, runId);
-        const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, runInfo, result.relatedLocations, runId);
-        const attachments: Attachment[] = await parseAttachments(explorerController, runInfo, result.attachments, runId);
-        const fixes: Fix[] = await parseFixes(explorerController, runInfo, result.fixes, runId);
-        const codeFlows: CodeFlow[] = await CodeFlowFactory.create(explorerController, runInfo, result.codeFlows, runId);
-        const stacks: Stacks = await parseStacks(explorerController, runInfo, result.stacks, runId);
+        const locations: Location[] = await ResultInfoFactory.parseLocations(fileMappper, runInfo, result.locations, runId);
+        const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMappper, runInfo, result.relatedLocations, runId);
+        const attachments: Attachment[] = await parseAttachments(fileMappper, runInfo, result.attachments, runId);
+        const fixes: Fix[] = await parseFixes(fileMappper, runInfo, result.fixes, runId);
+        const codeFlows: CodeFlow[] = await CodeFlowFactory.create(fileMappper, runInfo, result.codeFlows, runId);
+        const stacks: Stacks = await parseStacks(fileMappper, runInfo, result.stacks, runId);
 
         let ruleIndex: number | undefined;
         let ruleId: string | undefined;
@@ -143,12 +143,12 @@ export namespace ResultInfoFactory {
      * @param sarifLocations sarif locations that need to be processed
      * @param runId id of the run this result is from
      */
-    export async function  parseLocations(explorerController: ExplorerController, runInfo: RunInfo, sarifLocations: sarif.Location[] | undefined, runId: number): Promise<Location[]> {
+    export async function parseLocations(fileMapper: FileMapper, runInfo: RunInfo, sarifLocations: sarif.Location[] | undefined, runId: number): Promise<Location[]> {
         const locations: Location[] = [];
 
         if (sarifLocations) {
             for (const sarifLocation of sarifLocations) {
-                locations.push(await LocationFactory.create(explorerController, runInfo, sarifLocation, runId));
+                locations.push(await LocationFactory.create(fileMapper, runInfo, sarifLocation, runId));
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
@@ -167,7 +167,7 @@ export namespace ResultInfoFactory {
      * @param sarifAttachments sarif attachments to parse
      * @param runId id of the run this result is from
      */
-    async function  parseAttachments(explorerController: ExplorerController, runInfo: RunInfo, sarifAttachments: sarif.Attachment[] | undefined, runId: number): Promise<Attachment[]> {
+    async function  parseAttachments(fileMapper: FileMapper, runInfo: RunInfo, sarifAttachments: sarif.Attachment[] | undefined, runId: number): Promise<Attachment[]> {
         if (!sarifAttachments) {
             return [];
         }
@@ -177,7 +177,7 @@ export namespace ResultInfoFactory {
         for (const sarifAttachment of sarifAttachments) {
             const description: Message  = Utilities.parseSarifMessage(sarifAttachment.description);
 
-            const attachmentFile: Location = await LocationFactory.create(explorerController, runInfo, {
+            const attachmentFile: Location = await LocationFactory.create(fileMapper, runInfo, {
                 physicalLocation: {
                     artifactLocation: sarifAttachment.artifactLocation
                 }
@@ -186,7 +186,7 @@ export namespace ResultInfoFactory {
             const regionsOfInterest: Location[] = [];
             if (sarifAttachment.regions) {
                 for (const sarifRegion of sarifAttachment.regions) {
-                    regionsOfInterest.push(await LocationFactory.create(explorerController, runInfo, {
+                    regionsOfInterest.push(await LocationFactory.create(fileMapper, runInfo, {
                         physicalLocation: {
                             artifactLocation: sarifAttachment.artifactLocation,
                             region: sarifRegion,
@@ -210,7 +210,7 @@ export namespace ResultInfoFactory {
      * @param sarifFixes sarif fixes to parse
      * @param runId id of the run this result is from
      */
-    async function parseFixes(explorerController: ExplorerController, runInfo: RunInfo, sarifFixes: sarif.Fix[] | undefined, runId: number): Promise<Fix[]> {
+    async function parseFixes(fileMapper: FileMapper, runInfo: RunInfo, sarifFixes: sarif.Fix[] | undefined, runId: number): Promise<Fix[]> {
         if (!sarifFixes) {
             return [];
         }
@@ -223,7 +223,7 @@ export namespace ResultInfoFactory {
             if (sarifFix.artifactChanges) {
 
                 for (const sarifChange of sarifFix.artifactChanges) {
-                    const fixLocation: Location = await LocationFactory.create( explorerController, runInfo, {
+                    const fixLocation: Location = await LocationFactory.create(fileMapper, runInfo, {
                         physicalLocation: {
                             artifactLocation: sarifChange.artifactLocation
                         },
@@ -260,7 +260,7 @@ export namespace ResultInfoFactory {
      * @param sarifStacks sarif stacks to parse
      * @param runId id of the run this result is from
      */
-    async function parseStacks(explorerController: ExplorerController, runInfo: RunInfo, sarifStacks: sarif.Stack[] | undefined, runId: number): Promise<Stacks> {
+    async function parseStacks(fileMapper: FileMapper, runInfo: RunInfo, sarifStacks: sarif.Stack[] | undefined, runId: number): Promise<Stacks> {
         let columnsWithContent: StackColumnWithContent = {
             filename: false,
             location: false,
@@ -292,7 +292,7 @@ export namespace ResultInfoFactory {
                     continue;
                 }
 
-                const frameLocation: Location = await LocationFactory.create(explorerController, runInfo, sarifFrame.location, runId);
+                const frameLocation: Location = await LocationFactory.create(fileMapper, runInfo, sarifFrame.location, runId);
 
                 const frameNameParts: string[] = [];
 

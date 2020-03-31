@@ -35,9 +35,7 @@ export class SVDiagnosticCollection implements Disposable {
         return this.diagnosticCollectionChangedEventEmitter.event;
     }
 
-    public readonly fileMapper: FileMapper;
-
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
         this.disposables.push(this.diagnosticCollectionChangedEventEmitter);
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
         this.disposables.push(this.diagnosticCollection);
@@ -45,7 +43,6 @@ export class SVDiagnosticCollection implements Disposable {
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
-        this.fileMapper = new FileMapper();
         this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
         this.disposables.push(this.fileMapper);
     }
@@ -179,7 +176,7 @@ export class SVDiagnosticCollection implements Disposable {
     public async mappingChanged(): Promise<void> {
         for (const issues of this.issuesCollection.values()) {
             for (const issue of issues) {
-                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, issue);
+                await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, issue);
             }
         }
 
@@ -197,7 +194,7 @@ export class SVDiagnosticCollection implements Disposable {
             const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
             for (const index of issues.keys()) {
                 const diag: SarifViewerVsCodeDiagnostic = issues[index];
-                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, diag).then((remapped) => {
+                await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, diag).then((remapped) => {
                     if (remapped) {
                         this.add(diag);
                         this.diagnosticCollectionChangedEventEmitter.fire({

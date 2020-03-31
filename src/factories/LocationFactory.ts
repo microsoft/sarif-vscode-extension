@@ -7,7 +7,7 @@ import { Range, Uri } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
 import { LogReader } from "../LogReader";
 import { Utilities } from "../Utilities";
-import { ExplorerController } from "../ExplorerController";
+import { FileMapper } from "../FileMapper";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -19,7 +19,7 @@ export namespace LocationFactory {
      * @param sarifLocation location from result in sarif file
      * @param runId used for mapping uribaseids
      */
-    export async function create(explorerController: ExplorerController, runInfo: RunInfo, sarifLocation: sarif.Location, runId: number): Promise<Location> {
+    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifLocation: sarif.Location, runId: number): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -34,7 +34,7 @@ export namespace LocationFactory {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
             uriBase = Utilities.getUriBase(runInfo, artifactLocation);
 
-            const mappedUri: {mapped: boolean; uri?: Uri}  = await explorerController.fileMapper.get(artifactLocation, runId, uriBase);
+            const mappedUri: {mapped: boolean; uri?: Uri}  = await fileMapper.get(artifactLocation, runId, uriBase);
             mapped = mappedUri.mapped;
 
             uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
@@ -83,7 +83,7 @@ export namespace LocationFactory {
      * @param sarifLocation raw sarif Location of the file
      * @param runId used for mapping uribaseids
      */
-    export async function getOrRemap(explorerController: ExplorerController, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
+    export async function getOrRemap(fileMapper: FileMapper, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined, runId: number): Promise<Location | undefined> {
         // If it's already mapped, then just return it.
         if (location && location.mapped) {
             return location;
@@ -105,8 +105,8 @@ export namespace LocationFactory {
         }
 
         const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
-        await explorerController.fileMapper.getUserToChooseFile(uri, location.uriBase);
-        return await LocationFactory.create(explorerController, runInfo, sarifLocation, runId);
+        await fileMapper.getUserToChooseFile(uri, location.uriBase);
+        return await LocationFactory.create(fileMapper, runInfo, sarifLocation, runId);
     }
 
     /**

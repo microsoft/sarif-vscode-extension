@@ -17,6 +17,7 @@ import { ProgressHelper } from "./ProgressHelper";
 import { ExplorerController } from "./ExplorerController";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
+import { FileMapper } from "./FileMapper";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -36,7 +37,7 @@ export class LogReader implements Disposable {
 
     private readonly jsonMap: JsonMap;
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
         this.sarifJSONMapping = new Map<string, JsonMapping>();
         this.jsonMap = require("json-source-map");
 
@@ -149,7 +150,7 @@ export class LogReader implements Disposable {
 
                         if (run.artifacts) {
                             await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                            await this.explorerController.fileMapper.mapArtifacts(runInfo, run.artifacts, runInfo.id);
+                            await this.fileMapper.mapArtifacts(runInfo, run.artifacts, runInfo.id);
                         }
 
                         if (run.results) {
@@ -200,7 +201,7 @@ export class LogReader implements Disposable {
             const sarifResult: sarif.Result = results[resultIndex];
             const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this, docUri, runIndex, resultIndex);
 
-            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.explorerController, runInfo, sarifResult, runId, tool, resultIndex, locationInSarifFile);
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, runId, tool, resultIndex, locationInSarifFile);
 
             if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
                 resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this, docUri, runIndex, resultIndex);

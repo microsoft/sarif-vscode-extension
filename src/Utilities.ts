@@ -241,26 +241,28 @@ export class Utilities {
 
     /**
      * gets the uriBase from this runs uriBaseIds, if no match: returns uriBaseId, if no uriBaseId: returns undefined
+     * @param runInfo The run the file location belongs to.
      * @param fileLocation File Location which contains the uriBaseId
-     * @param runId The run's id to pull the runUriBaseIds from
      */
     public static getUriBase(runInfo: RunInfo, fileLocation?: sarif.ArtifactLocation): string | undefined {
-        let uriBase: string | undefined;
-
         if (!fileLocation || !fileLocation.uriBaseId) {
             return undefined;
         }
 
-        const runUriBaseIds: { [key: string]: string } | undefined = runInfo.expandedBaseIds;
-        if (runUriBaseIds) {
-            uriBase = runUriBaseIds[fileLocation.uriBaseId];
+        let expandedBaseUri: string | undefined;
+
+        const expoandedBaseIdsForRun: { [key: string]: string } | undefined = runInfo.expandedBaseIds;
+        if (expoandedBaseIdsForRun) {
+            expandedBaseUri = expoandedBaseIdsForRun[fileLocation.uriBaseId];
         }
 
-        if (!uriBase) {
-            uriBase = fileLocation.uriBaseId;
+        // This is actually an exceptional condition as it would indicate
+        // that the SARIF file had a URI base id that was not mapped properly.
+        if (!expandedBaseUri) {
+            expandedBaseUri = fileLocation.uriBaseId;
         }
 
-        return uriBase;
+        return expandedBaseUri;
     }
 
     /**

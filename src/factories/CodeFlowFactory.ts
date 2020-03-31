@@ -8,7 +8,7 @@ import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
 import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
-import { ExplorerController } from "../ExplorerController";
+import { FileMapper } from "../FileMapper";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 
@@ -23,14 +23,14 @@ export namespace CodeFlowFactory {
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
      * @param runId id of the run this result is from
      */
-    export async function create(explorerController: ExplorerController, runInfo: RunInfo, sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
+    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifCodeFlows: sarif.CodeFlow[] | undefined, runId: number): Promise<CodeFlow[]> {
         if (!sarifCodeFlows) {
             return [];
         }
 
         const codeFlows: CodeFlow[] = [];
         for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-            codeFlows.push(await CodeFlowFactory.createCodeFlow(explorerController, runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
+            codeFlows.push(await CodeFlowFactory.createCodeFlow(fileMapper, runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`, runId));
         }
 
         return codeFlows;
@@ -77,14 +77,14 @@ export namespace CodeFlowFactory {
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
      * @param runId used for mapping uribaseids
      */
-    export async function tryRemapCodeFlows(explorerController: ExplorerController, runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
+    export async function tryRemapCodeFlows(fileMapper: FileMapper, runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[], runId: number): Promise<void> {
         for (const [cFKey, codeFlow] of codeFlows.entries()) {
             for (const [tFKey, threadFlow] of codeFlow.threads.entries()) {
                 for (const [stepKey, step] of threadFlow.steps.entries()) {
-                    if (step.location && step.location.mapped) {
+                    if (step.location && !step.location.mapped) {
                         const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
                         if (sarifLoc) {
-                            await LocationFactory.create(explorerController, runInfo, sarifLoc, runId).then((location: Location) => {
+                            await LocationFactory.create(fileMapper, runInfo, sarifLoc, runId).then((location: Location) => {
                                 codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                             });
                         }
@@ -100,7 +100,7 @@ export namespace CodeFlowFactory {
      * @param indexId The id based on the index in the codeflow array
      * @param runId id of the run this result is from
      */
-    export async function createCodeFlow(explorerController: ExplorerController, runInfo: RunInfo, sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
+    export async function createCodeFlow(fileMapper: FileMapper, runInfo: RunInfo, sarifCF: sarif.CodeFlow, indexId: string, runId: number): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
             message: undefined,
             threads: [],
@@ -110,7 +110,7 @@ export namespace CodeFlowFactory {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlowFactory.createThreadFlow(explorerController, runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
+            await CodeFlowFactory.createThreadFlow(fileMapper, runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`, runId).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -125,7 +125,7 @@ export namespace CodeFlowFactory {
      * @param indexId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
      * @param runId id of the run this result is from
      */
-    export async function  createThreadFlow(explorerController: ExplorerController, runInfo: RunInfo, sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
+    export async function createThreadFlow(fileMapper: FileMapper, runInfo: RunInfo, sarifTF: sarif.ThreadFlow, indexId: string, runId: number,
     ): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
@@ -139,7 +139,7 @@ export namespace CodeFlowFactory {
         }
 
         for (let index: number = 0; index < sarifTF.locations.length; index++) {
-            await CodeFlowFactory.createCodeFlowStep(explorerController, runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
+            await CodeFlowFactory.createCodeFlowStep(fileMapper, runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1, runId).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
@@ -174,7 +174,7 @@ export namespace CodeFlowFactory {
      * @param runId id of the run this result is from
      */
     export async function  createCodeFlowStep(
-        explorerController: ExplorerController,
+        fileMapper: FileMapper,
         runInfo: RunInfo,
         tFLocOrig: sarif.ThreadFlowLocation,
         nextTFLocOrig: sarif.ThreadFlowLocation,
@@ -216,7 +216,7 @@ export namespace CodeFlowFactory {
         let loc: Location | undefined;
         let message: Message | undefined;
         if (tFLoc && tFLoc.location) {
-            loc = await LocationFactory.create(explorerController, runInfo, tFLoc.location, runId);
+            loc = await LocationFactory.create(fileMapper, runInfo, tFLoc.location, runId);
             message = Utilities.parseSarifMessage(tFLoc.location.message);
         }
 

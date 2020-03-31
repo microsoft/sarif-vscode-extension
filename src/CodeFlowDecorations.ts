@@ -15,6 +15,7 @@ import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { MessageType } from "./common/Enums";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
+import { FileMapper } from "./FileMapper";
 
 const selectNextCFStepCommand: string = "extension.sarif.nextCodeFlowStep";
 const selectPrevCFStepCommand: string = "extension.sarif.previousCodeFlowStep";
@@ -27,7 +28,7 @@ export class CodeFlowDecorations implements Disposable {
     private disposables: Disposable[] = [];
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
         this.disposables.push(window.onDidChangeVisibleTextEditors(this.onVisibleTextEditorsChanged.bind(this)));
         this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
         this.disposables.push(explorerController.onWebViewMessage(this.onWebviewMessage.bind(this)));
@@ -285,7 +286,7 @@ export class CodeFlowDecorations implements Disposable {
     private async updateSelectionHighlight(runInfo: RunInfo, location: Location, sarifLocation?: sarif.Location): Promise<void> {
 
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
-            this.explorerController,
+            this.fileMapper,
             runInfo,
             location,
             sarifLocation,
@@ -446,7 +447,7 @@ export class CodeFlowDecorations implements Disposable {
                     }
 
                     const location: Location | undefined = await LocationFactory.getOrRemap(
-                        this.explorerController,
+                        this.fileMapper,
                         diagnostic.resultInfo.runInfo,
                         diagnostic.resultInfo.attachments[attachmentId].file,
                         diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,

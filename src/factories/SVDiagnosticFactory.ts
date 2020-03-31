@@ -8,7 +8,7 @@ import { CodeFlowFactory } from  "./CodeFlowFactory";
 import { DiagnosticSeverity } from "vscode";
 import { ResultInfo, RunInfo, Location } from "../common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "../SarifViewerDiagnostic";
-import { ExplorerController } from "../ExplorerController";
+import { FileMapper } from "../FileMapper";
 
 const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
     [ "error", DiagnosticSeverity.Error],
@@ -46,14 +46,14 @@ export namespace SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    export async function tryToRemapLocations(explorerController: ExplorerController, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
+    export async function tryToRemapLocations(fileMapper: FileMapper, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         const runId: number = diagnostic.resultInfo.runId;
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlowFactory.tryRemapCodeFlows(explorerController, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
+            await CodeFlowFactory.tryRemapCodeFlows(fileMapper, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.runInfo, diagnostic.rawResult.relatedLocations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.relatedLocations, runId);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -62,7 +62,7 @@ export namespace SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.locations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.runInfo, diagnostic.rawResult.locations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.locations, runId);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.locations[index] = parsedLocations[index];
