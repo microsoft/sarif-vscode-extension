@@ -457,9 +457,12 @@ export class FileMapper implements Disposable {
                                     (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)`;
                             } else {
                                 resolvedString = this.rootpaths[rootPathIndex];
+                                input.hide();
                             }
                         } else if (this.tryMapUri(validateUri)) {
                             message = undefined;
+                            resolvedString = validateUri.fsPath;
+                            input.hide();
                         }
                     }
                 }

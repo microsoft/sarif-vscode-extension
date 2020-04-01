@@ -235,10 +235,9 @@ export class FileConverter {
     }
 
     private static multiToolSchemaVersion: SarifVersion | undefined;
-    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json";
+    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json";
     private static multiToolVersion: SarifVersion | undefined;
     private static multiToolRawVersion: sarif.Log.version = "2.1.0";
-    private static multiTool: string;
     private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
 
     private static get MultiToolCurrentSchemaVersion(): SarifVersion {
@@ -266,11 +265,10 @@ export class FileConverter {
             throw new Error("File converter properties were not properly initialized.");
         }
 
-        if (!FileConverter.multiTool) {
-            FileConverter.multiTool = FileConverter.extensionContext.asAbsolutePath("/resources/sarif.multitool/Sarif.Multitool.exe");
-        }
-
-        return FileConverter.multiTool;
+        // I'd love to use the type-script "usage" here, but that causes a type-script error
+        // https://www.npmjs.com/package/@microsoft/sarif-multitool
+        // so, I'm just doing what the node package does internally (yuck).
+        return  FileConverter.extensionContext.asAbsolutePath(`node_modules/@Microsoft/sarif-multitool-${process.platform}/Sarif.Multitool.exe`);
     }
 
     /**
@@ -375,7 +373,7 @@ export class FileConverter {
 
     /**
      * Parses the version out of the schema string to a Version object
-     * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json"
+     * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json"
      * @param schema schema string from the sarif log to parse
      */
     private static parseSchema(schema: string): SarifVersion | undefined {
