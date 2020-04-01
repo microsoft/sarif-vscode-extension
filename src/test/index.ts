@@ -1,9 +1,9 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
-import * as glob from "glob";
-import * as Mocha from "mocha";
 import * as path from "path";
+import glob from "glob";
+import Mocha from "mocha";
 
 export function run(): Promise<void> {
     // Create the mocha test
