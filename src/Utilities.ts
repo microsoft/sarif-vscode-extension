@@ -7,10 +7,8 @@ import * as path from "path";
 import * as sarif from "sarif";
 import * as os from "os";
 import * as vscode from "vscode";
-import * as markdownit from "markdown-it";
-
 import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import MarkdownIt = require("markdown-it");
 
 /**
  * Class that holds utility functions for use in different classes
@@ -37,22 +35,11 @@ export class Utilities {
     }
 
     /**
-     * Markdown-it object for parsing markdown text
-     */
-    public static get Md(): markdownit {
-        if (!Utilities.md) {
-            Utilities.md = require("markdown-it")();
-        }
-
-        return Utilities.md;
-    }
-
-    /**
      * Calculates the duration between the start and end times
      * @param start string representing the start time in utc format
      * @param end string representing the end time in utc format
      */
-    public static calcDuration(start?: string, end?: string): string | undefined  {
+    public static calcDuration(start?: string, end?: string): string | undefined {
         if (!start || !end) {
             return undefined;
         }
@@ -100,30 +87,36 @@ export class Utilities {
      * @param uriBase the uriBase as defined in the sarif file
      */
     public static combineUriWithUriBase(uriPath: string, uriBase?: string): vscode.Uri {
-        let combinedPath: string = uriPath;
+        try {
+            if (uriBase) {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                const baseUri: vscode.Uri = vscode.Uri.parse(uriBase, true);
 
-        if (uriBase && uriBase.length !== 0) {
-            combinedPath = this.joinPath(uriBase, uriPath);
-        }
+                // It did, great. Now combine it with the appropriate combination.
+                if (baseUri.scheme.localeCompare('file', 'root', { sensitivity: 'base' }) === 0) {
+                    const fileUri: vscode.Uri = vscode.Uri.file(uriPath);
+                    return vscode.Uri.file(path.join(baseUri.fsPath, fileUri.fsPath));
+                }
 
-        let uri: vscode.Uri | undefined;
-        if (combinedPath !== "") {
-            try {
-                uri = vscode.Uri.parse(combinedPath);
-            } catch (e) {
-                // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
-                // if it's malformed in the next if statement we force it to file schema
-                if (e.message !== "URI malformed") { throw e; }
+                const uriPathAsUri: vscode.Uri = vscode.Uri.parse(uriPath).with({
+                    scheme: baseUri.scheme
+                });
+
+                // The 'uriPath" parsed into a URI may indeed have a fragment, which, we will
+                // drop as it is not supported in SARF.
+                return baseUri.with({
+                    path: path.posix.join(baseUri.path, uriPathAsUri.path) // Use the POSIX separator for "/"
+                });
+            } else {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                return vscode.Uri.parse(uriPath, true);
             }
+        } catch (e) {
+            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+            // if it's malformed in the next if statement we force it to file schema
         }
 
-        if (!uri || uri.scheme !== "file") {
-            uri = vscode.Uri.file(combinedPath);
-        }
-
-        const fsPath: string = Utilities.getFsPathWithFragment(uri);
-
-        return vscode.Uri.file(fsPath);
+        return uriBase !== undefined ? vscode.Uri.file(path.normalize(path.join(uriBase, uriPath))) : vscode.Uri.file(path.normalize(uriPath));
     }
 
     /**
@@ -235,31 +228,28 @@ export class Utilities {
 
     /**
      * gets the uriBase from this runs uriBaseIds, if no match: returns uriBaseId, if no uriBaseId: returns undefined
+     * @param runInfo The run the file location belongs to.
      * @param fileLocation File Location which contains the uriBaseId
-     * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(diagnosticCollection: SVDiagnosticCollection, fileLocation?: sarif.ArtifactLocation, runId?: number): string | undefined {
-        let uriBase: string | undefined;
-
-        if (!fileLocation || !fileLocation.uriBaseId || runId === undefined) {
+    public static getUriBase(runInfo: RunInfo, fileLocation?: sarif.ArtifactLocation): string | undefined {
+        if (!fileLocation || !fileLocation.uriBaseId) {
             return undefined;
         }
 
-        const runInfo: RunInfo | undefined = diagnosticCollection.getRunInfo(runId);
-        if (!runInfo) {
-            return undefined;
+        let expandedBaseUri: string | undefined;
+
+        const expoandedBaseIdsForRun: { [key: string]: string } | undefined = runInfo.expandedBaseIds;
+        if (expoandedBaseIdsForRun) {
+            expandedBaseUri = expoandedBaseIdsForRun[fileLocation.uriBaseId];
         }
 
-        const runUriBaseIds: { [key: string]: string } | undefined = runInfo.uriBaseIds;
-        if (runUriBaseIds) {
-            uriBase = runUriBaseIds[fileLocation.uriBaseId];
+        // This is actually an exceptional condition as it would indicate
+        // that the SARIF file had a URI base id that was not mapped properly.
+        if (!expandedBaseUri) {
+            expandedBaseUri = fileLocation.uriBaseId;
         }
 
-        if (!uriBase) {
-            uriBase = fileLocation.uriBaseId;
-        }
-
-        return uriBase;
+        return expandedBaseUri;
     }
 
     /**
@@ -291,20 +281,22 @@ export class Utilities {
                 mdText = msgText;
             }
 
+            const mdIt: MarkdownIt = new MarkdownIt();
+
             if (mdText) {
-                mdText = Utilities.Md.render(mdText);
+                mdText = mdIt.render(mdText);
                 mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
                 mdText = Utilities.unescapeBrackets(mdText);
             }
 
             if (msgText) {
-                msgText = Utilities.Md.renderInline(msgText);
+                msgText = mdIt.renderInline(msgText);
                 msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
                     return `${p2}(${p1})`;
                 });
                 msgText = Utilities.unescapeBrackets(msgText);
-                msgText = Utilities.Md.utils.unescapeAll(msgText);
+                msgText = mdIt.utils.unescapeAll(msgText);
             }
 
             return { text: msgText, html: mdText };
@@ -356,7 +348,7 @@ export class Utilities {
                     // Use "undefined" as the locale which means "default for environment" (which
                     // in our case is whatever VSCode is running in).
                     // We use this compare because file names can be typed in any language.
-                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, { sensitivity: "base" }) === 0);
             if (!fixedPathPart) {
                 throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
             }
@@ -369,7 +361,6 @@ export class Utilities {
         return vscode.Uri.file(fixedPath);
     }
 
-    private static md: markdownit;
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
@@ -403,7 +394,7 @@ export class Utilities {
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
         let base: string = "";
         const artifactLocation: sarif.ArtifactLocation | undefined = baseIds[id];
-        if (artifactLocation && artifactLocation.uriBaseId)  {
+        if (artifactLocation && artifactLocation.uriBaseId) {
             base = Utilities.expandBaseId(artifactLocation.uriBaseId, baseIds);
         }
 
@@ -450,10 +441,10 @@ export class Utilities {
                     const tooltip: string = `title="${location.uri.toString(true)}"`;
                     const data: string =
                         `data-file="${location.uri.toString(true)}" ` +
-                                `data-sLine="${location.range.start.line}" ` +
-                                `data-sCol="${location.range.start.character}" ` +
-                                `data-eLine="${location.range.end.line}" ` +
-                                `data-eCol="${location.range.end.character}"`;
+                        `data-sLine="${location.range.start.line}" ` +
+                        `data-sCol="${location.range.start.character}" ` +
+                        `data-eLine="${location.range.end.line}" ` +
+                        `data-eCol="${location.range.end.character}"`;
                     const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
                 } else {
@@ -522,5 +513,23 @@ export class Utilities {
     public static isThreadFlowImportance(value: string): value is sarif.ThreadFlowLocation.importance {
         const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>["essential", "important", "unimportant"];
         return allowedKeys.indexOf(value) !== -1;
+    }
+
+    /**
+     * Helper method to check if the document provided is a sarif file
+     * @param doc document to check if it's a sarif file
+     */
+    public static isSarifFile(doc: vscode.TextDocument | string): boolean {
+        // SARIF spec says that the file name can end in ".sarif" or ".sarif.json";
+        const stringCheck: (stringToCheck: string) => boolean = (stringToCheck) => {
+            const stringCheckUpperCase: string = stringToCheck.toLocaleUpperCase('root');
+            return stringCheckUpperCase.endsWith(".SARIF") || stringCheckUpperCase.endsWith(".SARIF.JSON");
+        };
+
+        if (typeof doc === 'string') {
+            return stringCheck(doc);
+        }
+
+        return doc.languageId === "json" && stringCheck(doc.fileName);
     }
 }

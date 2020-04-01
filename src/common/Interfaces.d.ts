@@ -75,11 +75,29 @@ export interface RunInfo {
     toolFileName?: string;
     toolFullName?: string;
     toolName: string;
-    uriBaseIds?: { [key: string]: string };
+
+    /**
+     * Provides a map between a "baseID" (such as %srcroot%) to its absolute URI.
+     * For example a run can contain "originalUriBaseIds" contains an ID of
+     * %srcRoot% which had a value of "/src" and a uriBaseId of %driveRoot%
+     * "originalUriBaseIds": {
+     *    "SRCROOT": {
+     *      "uri": "/src",
+     *      "uriBaseId": "DRIVEROOT"
+     *    },
+     *    "DRIVEROOT": {
+     *      "uri" : "file:///E:"
+     *    },
+     * }
+     * then this map would contain [ "SRCROOT" : "file:///E:/SRC" , "DRIVEROOT" => "file://E:" ]
+     */
+    expandedBaseIds?: { [uriBaseId: string]: string };
+
     workingDir?: string;
 }
 
 export interface ResultInfo {
+    runInfo: RunInfo;
     additionalProperties?: { [key: string]: string };
     assignedLocation?: Location;
     attachments: Attachment[];
@@ -324,11 +342,6 @@ export interface SarifVersion {
     sub: number,
 }
 
-export interface JsonMapping {
-    data: sarif.Log,
-    pointers: any,
-}
-
 export interface JsonPointer {
     value: {
         line: number;
@@ -339,6 +352,14 @@ export interface JsonPointer {
         column: number;
     };
 }
+
+export interface JsonMapping {
+    data: sarif.Log,
+    pointers: {
+        [jsonPath: string] : JsonPointer
+    },
+}
+
 
 export interface JsonMap {
     parse: (json: string) => JsonMapping;

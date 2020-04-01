@@ -9,12 +9,13 @@ import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
 } from "vscode";
-import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
+import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData, RunInfo } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { MessageType } from "./common/Enums";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
+import { FileMapper } from "./FileMapper";
 
 const selectNextCFStepCommand: string = "extension.sarif.nextCodeFlowStep";
 const selectPrevCFStepCommand: string = "extension.sarif.previousCodeFlowStep";
@@ -25,8 +26,9 @@ export const sendCFSelectionToExplorerCommand: string = "extension.sarif.SendCFS
  */
 export class CodeFlowDecorations implements Disposable {
     private disposables: Disposable[] = [];
+    private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
         this.disposables.push(window.onDidChangeVisibleTextEditors(this.onVisibleTextEditorsChanged.bind(this)));
         this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
         this.disposables.push(explorerController.onWebViewMessage(this.onWebviewMessage.bind(this)));
@@ -50,6 +52,7 @@ export class CodeFlowDecorations implements Disposable {
     }
 
     private async onActiveDiagnosticChanged(diagnostic: SarifViewerVsCodeDiagnostic | undefined): Promise<void> {
+        this.activeDiagnostic = diagnostic;
         this.lastCodeFlowSelected = undefined;
         this.updateStepsHighlight();
         this.updateResultGutterIcon();
@@ -59,21 +62,20 @@ export class CodeFlowDecorations implements Disposable {
      * Updates the GutterIcon for the current active Diagnostic
      */
     public updateResultGutterIcon(): void {
-        const activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!activeDiagnostic) {
+        if (!this.activeDiagnostic) {
             return;
         }
 
         for (const editor of window.visibleTextEditors) {
-            if (activeDiagnostic.resultInfo &&
-                activeDiagnostic.resultInfo.assignedLocation &&
-                activeDiagnostic.resultInfo.assignedLocation.uri &&
-                activeDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
+            if (this.activeDiagnostic.resultInfo &&
+                this.activeDiagnostic.resultInfo.assignedLocation &&
+                this.activeDiagnostic.resultInfo.assignedLocation.uri &&
+                this.activeDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
                 const errorDecoration: Range[] = [];
                 const warningDecoration: Range[] = [];
                 const infoDecoration: Range[] = [];
-                const iconRange: Range = new Range(activeDiagnostic.range.start, activeDiagnostic.range.start);
-                switch (activeDiagnostic.severity) {
+                const iconRange: Range = new Range(this.activeDiagnostic.range.start, this.activeDiagnostic.range.start);
+                switch (this.activeDiagnostic.severity) {
                     case DiagnosticSeverity.Error:
                         errorDecoration.push(iconRange);
                         break;
@@ -103,8 +105,7 @@ export class CodeFlowDecorations implements Disposable {
      * Updates the decorations for the steps in the Code Flow tree
      */
     private updateStepsHighlight(): void {
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!diagnostic || !diagnostic.resultInfo.codeFlows) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.resultInfo.codeFlows) {
             return;
         }
 
@@ -112,7 +113,7 @@ export class CodeFlowDecorations implements Disposable {
         for (const editor of window.visibleTextEditors) {
             const decorations: DecorationOptions[] = [];
             const unimportantDecorations: DecorationOptions[] = [];
-            for (const codeflow of diagnostic.resultInfo.codeFlows) {
+            for (const codeflow of this.activeDiagnostic.resultInfo.codeFlows) {
                 // For now we only support one threadFlow in the code flow
                 for (const step of codeflow.threads[0].steps) {
                     const decoration: DecorationOptions | undefined = CodeFlowDecorations.createHighlightDecoration(step, editor);
@@ -137,18 +138,17 @@ export class CodeFlowDecorations implements Disposable {
      * @param regionId Id of the region selected
      */
     private async updateAttachmentSelection(attachmentId: number, regionId: number): Promise<void> {
-        const svDiagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!svDiagnostic || !svDiagnostic.rawResult.attachments) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.rawResult.attachments) {
             return;
         }
 
-        const attachment: sarif.Attachment | undefined = svDiagnostic.rawResult.attachments[attachmentId];
+        const attachment: sarif.Attachment | undefined = this.activeDiagnostic.rawResult.attachments[attachmentId];
         if (attachment && attachment.regions) {
             const region: sarif.Region | undefined =  attachment.regions[regionId];
             if (region) {
-                const location: Location = svDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
+                const location: Location = this.activeDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
                 const sarifPhysicalLocation: sarif.PhysicalLocation = {
-                    artifactLocation: svDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
+                    artifactLocation: this.activeDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
                     region,
                 };
 
@@ -163,8 +163,7 @@ export class CodeFlowDecorations implements Disposable {
      * Selects the next CodeFlow step
      */
     private async selectNextCFStep(): Promise<void>  {
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!diagnostic) {
+        if (!this.activeDiagnostic) {
             return;
         }
 
@@ -172,7 +171,7 @@ export class CodeFlowDecorations implements Disposable {
             const nextId: CodeFlowStepId = this.lastCodeFlowSelected;
             nextId.stepId++;
 
-            const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
+            const codeFlows: CodeFlow[] = this.activeDiagnostic.resultInfo.codeFlows;
             if (nextId.stepId >= codeFlows[nextId.cFId].threads[nextId.tFId].steps.length) {
                 nextId.stepId = 0;
                 nextId.tFId++;
@@ -187,7 +186,7 @@ export class CodeFlowDecorations implements Disposable {
             await this.updateCodeFlowSelection(nextId);
             this.explorerController.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
         } else {
-            if (diagnostic.resultInfo.codeFlows.length > 0) {
+            if (this.activeDiagnostic.resultInfo.codeFlows.length > 0) {
                 const firstStepId: string = "0_0_0";
                 await this.updateCodeFlowSelection(firstStepId);
                 this.explorerController.setSelectedCodeFlow(firstStepId);
@@ -199,15 +198,14 @@ export class CodeFlowDecorations implements Disposable {
      * Selects the previous CodeFlow step
      */
     private async selectPrevCFStep(): Promise<void> {
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!diagnostic) {
+        if (!this.activeDiagnostic) {
             return;
         }
 
         if (this.lastCodeFlowSelected) {
             const prevId: CodeFlowStepId = this.lastCodeFlowSelected;
             prevId.stepId--;
-            const codeFlows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
+            const codeFlows: CodeFlow[] = this.activeDiagnostic.resultInfo.codeFlows;
             if (prevId.stepId < 0) {
                 prevId.tFId--;
                 if (prevId.tFId < 0) {
@@ -223,11 +221,11 @@ export class CodeFlowDecorations implements Disposable {
             await this.updateCodeFlowSelection(prevId);
             this.explorerController.setSelectedCodeFlow(`${prevId.cFId}_${prevId.tFId}_${prevId.stepId}`);
         } else {
-            const codeflows: CodeFlow[] = diagnostic.resultInfo.codeFlows;
+            const codeflows: CodeFlow[] = this.activeDiagnostic.resultInfo.codeFlows;
             if (codeflows.length > 0) {
-                const cFId: number = diagnostic.resultInfo.codeFlows.length - 1;
-                const tFId: number = diagnostic.resultInfo.codeFlows[cFId].threads.length - 1;
-                const stepId: number = diagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
+                const cFId: number = this.activeDiagnostic.resultInfo.codeFlows.length - 1;
+                const tFId: number = this.activeDiagnostic.resultInfo.codeFlows[cFId].threads.length - 1;
+                const stepId: number = this.activeDiagnostic.resultInfo.codeFlows[cFId].threads[tFId].steps.length - 1;
                 const lastStepId: string = `${cFId}_${tFId}_${stepId}`;
                 await this.updateCodeFlowSelection(lastStepId);
                 this.explorerController.setSelectedCodeFlow(lastStepId);
@@ -286,17 +284,17 @@ export class CodeFlowDecorations implements Disposable {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-
-        if (!diagnostic) {
+        if (!this.activeDiagnostic) {
             return;
         }
 
+        const runInfo: RunInfo = this.activeDiagnostic.runInfo;
+
         const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
-            this.explorerController,
+            this.fileMapper,
+            runInfo,
             location,
-            sarifLocation,
-            diagnostic.resultInfo.runId);
+            sarifLocation);
 
         if (remappedLocation && remappedLocation.mapped && remappedLocation.uri) {
             let locRange: Range | undefined = remappedLocation.range;
@@ -453,10 +451,10 @@ export class CodeFlowDecorations implements Disposable {
                     }
 
                     const location: Location | undefined = await LocationFactory.getOrRemap(
-                        this.explorerController,
+                        this.fileMapper,
+                        diagnostic.resultInfo.runInfo,
                         diagnostic.resultInfo.attachments[attachmentId].file,
-                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        diagnostic.resultInfo.runId
+                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation
                     );
 
                     if (!location) {
@@ -472,6 +470,10 @@ export class CodeFlowDecorations implements Disposable {
                 break;
 
             case MessageType.SourceLinkClicked:
+                if (!this.activeDiagnostic) {
+                    return;
+                }
+
                 const locData: LocationData = JSON.parse(webViewMessage.data);
                 const location: Location = {
                     mapped: true,

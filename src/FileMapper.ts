@@ -11,7 +11,7 @@ import {
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { RunInfo } from "./common/Interfaces";
 
 const RootPathSample: string = "c:\\sample\\path";
 const ConfigRootPaths: string = "rootpaths";
@@ -82,7 +82,7 @@ export class FileMapper implements Disposable {
      */
     private rootpaths: string[] = [];
 
-    public constructor(private readonly diagnosticCollection: SVDiagnosticCollection) {
+    public constructor() {
         this.updateRootPaths();
         this.disposables.push(this.mappingChangedEventEmitter);
         this.disposables.push(workspace.onDidChangeConfiguration(this.updateRootPaths, this));
@@ -245,7 +245,7 @@ export class FileMapper implements Disposable {
      * @param artifacts array of sarif.Artifact that needs to be mapped
      * @param runId id of the run these files are from
      */
-    public async mapArtifacts(artifacts: sarif.Artifact[], runId: number): Promise<void> {
+    public async mapArtifacts(runInfo: RunInfo, artifacts: sarif.Artifact[], runId: number): Promise<void> {
 
         // This function is called once per SARIF run while parsing is occurring for the
         // array of artifacts in that run.
@@ -260,7 +260,7 @@ export class FileMapper implements Disposable {
                 continue;
             }
 
-            const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
+            const uriBase: string | undefined = Utilities.getUriBase(runInfo, fileLocation);
             const uriWithBase: Uri = Utilities.combineUriWithUriBase(artifact.location.uri, uriBase);
 
             const key: string = Utilities.getFsPathWithFragment(uriWithBase);
@@ -611,8 +611,8 @@ export class FileMapper implements Disposable {
         }
     }
 
-    private async mapFileCommand(fileLocation: sarif.ArtifactLocation, runId: number): Promise<void>  {
-        const uriBase: string | undefined = Utilities.getUriBase(this.diagnosticCollection, fileLocation, runId);
+    private async mapFileCommand(runInfo: RunInfo, fileLocation: sarif.ArtifactLocation, runId: number): Promise<void>  {
+        const uriBase: string | undefined = Utilities.getUriBase(runInfo, fileLocation);
         if (!uriBase || !fileLocation.uri) {
             return;
         }

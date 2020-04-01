@@ -72,10 +72,6 @@ export class ExplorerController implements Disposable {
 
     public readonly diagnosticCollection: SVDiagnosticCollection;
 
-    public get fileMapper(): FileMapper {
-        return this.diagnosticCollection.fileMapper;
-    }
-
     private activeTab: string | undefined;
     private selectedCodeFlowRow: string | undefined;
     private wvPanel: WebviewPanel | undefined;
@@ -84,11 +80,11 @@ export class ExplorerController implements Disposable {
         return this.createWebview();
     }
 
-    public constructor(private readonly extensionContext: ExtensionContext) {
+    public constructor(private readonly extensionContext: ExtensionContext, fileMapper: FileMapper) {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
-        this.diagnosticCollection = new SVDiagnosticCollection(this);
+        this.diagnosticCollection = new SVDiagnosticCollection(fileMapper);
         this.disposables.push(this.diagnosticCollection);
 
     }
@@ -293,7 +289,7 @@ export class ExplorerController implements Disposable {
             selectedRow: this.selectedCodeFlowRow,
             selectedVerbosity: this.selectedVerbosity,
             resultInfo: this.activeDiagnostic.resultInfo,
-            runInfo: this.activeDiagnostic.runInfo
+            runInfo: this.activeDiagnostic.resultInfo.runInfo
         };
 
         const dataString: string = JSON.stringify(diagData);

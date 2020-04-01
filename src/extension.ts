@@ -11,6 +11,7 @@ import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
 import { ResultsListController } from "./ResultsListController";
+import { FileMapper } from "./FileMapper";
 
 /**
  * This method is called when the extension is activated.
@@ -21,7 +22,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
-    const explorerController: ExplorerController = new ExplorerController(context);
+    const fileMapper: FileMapper = new FileMapper();
+    context.subscriptions.push(fileMapper);
+
+    const explorerController: ExplorerController = new ExplorerController(context, fileMapper);
     context.subscriptions.push(explorerController);
 
     const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController);
@@ -31,10 +35,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
 
-    context.subscriptions.push(new CodeFlowDecorations(explorerController));
+    context.subscriptions.push(new CodeFlowDecorations(explorerController, fileMapper));
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = (new LogReader(explorerController));
+    const reader: LogReader = (new LogReader(explorerController, fileMapper));
     context.subscriptions.push(reader);
 
     // We do not need to block extension startup for reading any open documents.

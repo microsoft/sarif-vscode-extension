@@ -10,17 +10,14 @@ import * as sarif from "sarif";
 
 import { Range, Uri, Position } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
-import { SVDiagnosticCollection } from "../SVDiagnosticCollection";
 import { Utilities } from "../Utilities";
-import { ExplorerController } from "../ExplorerController";
-import { MockExtensionContext } from "./mockExtensionContext";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema: string = "file";
     test("Empty paths", () => {
         const uri: Uri = Utilities.combineUriWithUriBase("", "");
         assert.equal(uri.scheme, expectedFileSchema);
-        assert.equal(uri.fsPath, "\\");
+        assert.equal(uri.fsPath, "\\.");
     });
 
     test("Undefined base", () => {
@@ -64,6 +61,29 @@ suite("combineUriWithUriBase", () => {
             assert.equal(path.join(__dirname, directoryEntry),
                 Utilities.fixUriCasing(Uri.file(upperCasedPath)).fsPath);
             }
+    });
+
+    test("File path with uri id base and fragments", () => {
+        // This may seem somewhat counter-intuitive, but fragments are both not supported in SARIF
+        // nor are they supported in FILE scheme URIs by VSCode. Which "kind of" makes sense
+        // as the fragment identifier '#' is a valid file system path character.
+        const expectedPath: string = "c:\\folder1\\folder2\\file.ext#testFragment";
+        const uriPath: string = "folder2/file.ext#testFragment";
+        const uriBasePath: string = "file:///c:/folder1";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
+        assert.equal(uri.scheme, expectedFileSchema);
+        assert.equal(uri.fsPath, expectedPath);
+        assert.equal(uri.fragment, "");
+    });
+
+    test("Http path with uri id base and fragments", () => {
+        // This may seem somewhat counter-intuitive, but fragments are both not supported in SARIF.
+        const uriPath: string = "folder2/file.ext#testFragment";
+        const uriBasePath: string = "https:/server/folder";
+        let uri: Uri = Utilities.combineUriWithUriBase(uriPath, uriBasePath);
+        assert.equal(uri.scheme, "https");
+        assert.equal(uri.path, "/server/folder/folder2/file.ext");
+        assert.equal(uri.fragment, "");
     });
 });
 
@@ -286,6 +306,14 @@ suite("parseSarifMessages", () => {
         assert.equal(message.text, outputText);
         assert.equal(message.html, outputHtml);
     });
+
+    test("Markdown text", () => {
+        const inputText: string = "### Hello World";
+        const sarifMessage: sarif.Message = { markdown: inputText };
+        const message: Message = Utilities.parseSarifMessage(sarifMessage);
+        assert.equal(message.text, undefined);
+        assert.equal(message.html, "<h3>Hello World</h3>\n");
+    });
 });
 
 suite("getUirBase", () => {
@@ -294,36 +322,31 @@ suite("getUirBase", () => {
         toolName: "Test Tool Name",
         sarifFileName: "test.sarif",
         sarifFileFullPath: "file:///c:/test.sarif",
-        uriBaseIds: {
+        expandedBaseIds: {
             test1: "file:///c:/folder1", test2: "file:///c:/folder2"
         }
     };
-    
-    const explorerController: ExplorerController = new ExplorerController(new MockExtensionContext());
-    const diagnosticCollection: SVDiagnosticCollection = explorerController.diagnosticCollection;
-
-    const runIdTest: number  = diagnosticCollection.addRunInfoAndCalculateId(runInfoTest);
 
     test("Undefined fileLocation", () => {
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, undefined, undefined);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, undefined);
         assert.equal(base, undefined);
     });
 
     test("Undefined uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "file:///c:/folder/file.ext" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, undefined);
     });
 
     test("UriBase match", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "test2" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, "file:///c:/folder2");
     });
 
     test("No matching uribaseid", () => {
         const sarifLocation: sarif.ArtifactLocation = { uri: "/file.ext", uriBaseId: "noTest" };
-        const base: string | undefined = Utilities.getUriBase(diagnosticCollection, sarifLocation, runIdTest);
+        const base: string | undefined = Utilities.getUriBase(runInfoTest, sarifLocation);
         assert.equal(base, "noTest");
     });
 });

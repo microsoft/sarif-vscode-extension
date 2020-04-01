@@ -2,15 +2,14 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 import { SVDiagnosticFactory } from  "./factories/SVDiagnosticFactory";
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable } from "vscode";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable, workspace, TextDocument } from "vscode";
 import { RunInfo } from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { FileMapper } from "./FileMapper";
 
 export interface SVDiagnosticsChangedEvent {
-    diagnostics?: SarifViewerVsCodeDiagnostic[]; // Undefined on synchronize
+    diagnostics: SarifViewerVsCodeDiagnostic[];
     type: 'Add' | 'Remove' | 'Synchronize';
 }
 
@@ -25,7 +24,12 @@ export class SVDiagnosticCollection implements Disposable {
     private static MaxDiagCollectionSize: number;
 
     private readonly diagnosticCollection: DiagnosticCollection;
-    private readonly issuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
+
+    /**
+     * The 'mapped' collection cotnains diagnostics that have had their file-paths mapped to a local path.
+     * The 'unmapped' collection, have not had their file paths mapped.
+     */
+    private readonly mappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
     private readonly unmappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
     private runInfoCollection: RunInfo[] = [];
 
@@ -35,9 +39,7 @@ export class SVDiagnosticCollection implements Disposable {
         return this.diagnosticCollectionChangedEventEmitter.event;
     }
 
-    public readonly fileMapper: FileMapper;
-
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly fileMapper: FileMapper) {
         this.disposables.push(this.diagnosticCollectionChangedEventEmitter);
         this.diagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
         this.disposables.push(this.diagnosticCollection);
@@ -45,9 +47,10 @@ export class SVDiagnosticCollection implements Disposable {
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
-        this.fileMapper = new FileMapper(this);
         this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
         this.disposables.push(this.fileMapper);
+
+        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
     }
 
     public dispose(): void {
@@ -61,10 +64,11 @@ export class SVDiagnosticCollection implements Disposable {
     public syncDiagnostics(): void {
         this.diagnosticCollection.clear();
 
-        this.addToDiagnosticCollection(this.issuesCollection);
+        this.addToDiagnosticCollection(this.mappedIssuesCollection);
         this.addToDiagnosticCollection(this.unmappedIssuesCollection);
 
         this.diagnosticCollectionChangedEventEmitter.fire({
+            diagnostics: [],
             type: 'Synchronize'
         });
     }
@@ -76,7 +80,7 @@ export class SVDiagnosticCollection implements Disposable {
      */
     public add(issue: SarifViewerVsCodeDiagnostic): void {
         if (issue.resultInfo.assignedLocation && issue.resultInfo.assignedLocation.mapped) {
-            this.addToCollection(this.issuesCollection, issue);
+            this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
@@ -105,25 +109,9 @@ export class SVDiagnosticCollection implements Disposable {
      */
     public clear(): void {
         this.diagnosticCollection.clear();
-        this.issuesCollection.clear();
+        this.mappedIssuesCollection.clear();
         this.unmappedIssuesCollection.clear();
         this.runInfoCollection.length = 0;
-    }
-
-    /**
-     * Gets a flat array of all the diagnostics (includes mapped and unmapped)
-     */
-    public getAllDiagnostics(): SarifViewerVsCodeDiagnostic[] {
-        const allDiags: SarifViewerVsCodeDiagnostic[] = [];
-        this.unmappedIssuesCollection.forEach((value) => {
-            allDiags.push(...value);
-        });
-
-        this.issuesCollection.forEach((value) => {
-            allDiags.push(...value);
-        });
-
-        return allDiags;
     }
 
     /**
@@ -144,26 +132,21 @@ export class SVDiagnosticCollection implements Disposable {
      * @param runId Id of the run the results from
      */
     public getResultInfo(resultId: number, runId: number): SarifViewerVsCodeDiagnostic | undefined {
-        let result: SarifViewerVsCodeDiagnostic | undefined;
-        this.unmappedIssuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-            if (!result) {
-                result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                    return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
-                });
+        for (const unmappedIssuesCollection of this.unmappedIssuesCollection.values()) {
+            const result: SarifViewerVsCodeDiagnostic | undefined = unmappedIssuesCollection.find((diag: SarifViewerVsCodeDiagnostic) => diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
+            if (result) {
+                return result;
             }
-        });
-
-        if (!result) {
-            this.issuesCollection.forEach((diags: SarifViewerVsCodeDiagnostic[]) => {
-                if (!result) {
-                    result = diags.find((diag: SarifViewerVsCodeDiagnostic) => {
-                        return (diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
-                    });
-                }
-            });
         }
 
-        return result;
+        for (const mappedIssuesCollection of this.mappedIssuesCollection.values()) {
+            const result: SarifViewerVsCodeDiagnostic | undefined = mappedIssuesCollection.find((diag: SarifViewerVsCodeDiagnostic) => diag.resultInfo.runId === runId && diag.resultInfo.id === resultId);
+            if (result) {
+                return result;
+            }
+        }
+
+        return undefined;
     }
 
     /**
@@ -182,51 +165,29 @@ export class SVDiagnosticCollection implements Disposable {
      * Also goes through the codeflow locations, to update the locations
      */
     public async mappingChanged(): Promise<void> {
-        for (const key of this.issuesCollection.keys()) {
-            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.issuesCollection.get(key);
-            if (!issues) {
-                continue;
-            }
-
-            for (const index of issues.keys()) {
-                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, issues[index]);
+        // There is an interesting issue here that may either be by design or
+        // overlooked. If the remapping "fails" for something that has already been mapped
+        // does it become unmapped? The result of tryToRemapLocations is being ignored.
+        for (const issues of this.mappedIssuesCollection.values()) {
+            for (const issue of issues) {
+                await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, issue);
             }
         }
 
-        const explorerDiag: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
-        if (!explorerDiag) {
-            return;
-        }
-
-        for (const key of this.unmappedIssuesCollection.keys()) {
-            const issues: SarifViewerVsCodeDiagnostic[] | undefined = this.unmappedIssuesCollection.get(key);
-            if (!issues) {
-                return;
-            }
-
+        for (const [key, unmappedIssues] of this.unmappedIssuesCollection.entries()) {
             const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
-            for (const index of issues.keys()) {
-                const diag: SarifViewerVsCodeDiagnostic = issues[index];
-                await SVDiagnosticFactory.tryToRemapLocations(this.explorerController, diag).then((remapped) => {
-                    if (remapped) {
-                        this.add(diag);
-                        this.diagnosticCollectionChangedEventEmitter.fire({
-                            diagnostics: [diag],
-                            type: 'Add'
-                        });
-                        if (explorerDiag !== undefined && explorerDiag.resultInfo.runId === diag.resultInfo.runId &&
-                            explorerDiag.resultInfo.id === diag.resultInfo.id) {
-                            this.explorerController.setActiveDiagnostic(diag, true);
-                        }
-                    } else {
-                        remainingUnmappedIssues.push(issues[index]);
-                    }
-                });
+            for (const unmappedIssue of unmappedIssues) {
+                const remapped: boolean = await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, unmappedIssue);
+                if (remapped) {
+                    this.add(unmappedIssue);
+                } else {
+                    remainingUnmappedIssues.push(unmappedIssue);
+                }
             }
 
             if (remainingUnmappedIssues.length === 0) {
                 this.unmappedIssuesCollection.delete(key);
-            } else if (remainingUnmappedIssues.length !== issues.length) {
+            } else {
                 this.unmappedIssuesCollection.set(key, remainingUnmappedIssues);
             }
         }
@@ -247,7 +208,7 @@ export class SVDiagnosticCollection implements Disposable {
             }
         }
 
-        this.removeResults(runsToRemove, this.issuesCollection);
+        this.removeResults(runsToRemove, this.mappedIssuesCollection);
         this.removeResults(runsToRemove, this.unmappedIssuesCollection);
         this.syncDiagnostics();
     }
@@ -330,6 +291,17 @@ export class SVDiagnosticCollection implements Disposable {
                 diagnostics: diagnosticsRemoved,
                 type: 'Remove'
             });
+        }
+    }
+
+    /**
+     * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
+     * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
+     * @param doc document that was closed
+     */
+    public onDocumentClosed(doc: TextDocument): void {
+        if (Utilities.isSarifFile(doc)) {
+            this.removeRuns(doc.fileName);
         }
     }
 }

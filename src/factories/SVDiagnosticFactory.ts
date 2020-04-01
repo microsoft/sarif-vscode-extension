@@ -6,9 +6,9 @@ import * as sarif from "sarif";
 import { ResultInfoFactory } from "./ResultInfoFactory";
 import { CodeFlowFactory } from  "./CodeFlowFactory";
 import { DiagnosticSeverity } from "vscode";
-import { ResultInfo, Location, RunInfo } from "../common/Interfaces";
+import { ResultInfo, RunInfo, Location } from "../common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "../SarifViewerDiagnostic";
-import { ExplorerController } from "../ExplorerController";
+import { FileMapper } from "../FileMapper";
 
 const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
     [ "error", DiagnosticSeverity.Error],
@@ -36,7 +36,7 @@ export namespace SVDiagnosticFactory {
         const svDiagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(runInfo, resultInfo, rawResult, resultInfo.assignedLocation.range, resultInfo.message.text);
         svDiagnostic.severity = SVDiagnosticFactory.getSeverity(resultInfo.severityLevel);
         svDiagnostic.code = resultInfo.ruleId;
-        svDiagnostic.source = runInfo.toolName || "Unknown tool";
+        svDiagnostic.source = resultInfo.runInfo.toolName || "Unknown tool";
 
         svDiagnostic.message = SVDiagnosticFactory.updateMessage(svDiagnostic);
 
@@ -46,14 +46,13 @@ export namespace SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    export async function tryToRemapLocations(explorerController: ExplorerController, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
-        const runId: number = diagnostic.resultInfo.runId;
+    export async function tryToRemapLocations(fileMapper: FileMapper, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlowFactory.tryRemapCodeFlows(explorerController, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows, runId);
+            await CodeFlowFactory.tryRemapCodeFlows(fileMapper, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.relatedLocations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.relatedLocations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -62,7 +61,7 @@ export namespace SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.locations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(explorerController, diagnostic.rawResult.locations, runId);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.locations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.locations[index] = parsedLocations[index];

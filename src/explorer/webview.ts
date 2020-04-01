@@ -79,6 +79,7 @@ export class ExplorerWebview {
                 this.showTreeNode(message.data, true);
                 break;
             case MessageType.ResultsListDataSet:
+                this.cleanUpResultDetails();
                 this.resultsList.Data = JSON.parse(message.data);
                 break;
         }
