@@ -19,7 +19,8 @@
         "noUnusedParameters": false,  /* Report errors on unused parameters. */
         "checkJs": true,
         "noImplicitThis": true,
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "esModuleInterop": true
     },
     "exclude": [
         "node_modules",
