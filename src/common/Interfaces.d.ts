@@ -45,7 +45,12 @@ export interface Location {
     endOfLine?: boolean;
     fileName?: string;
     logicalLocations?: string[];
-    mapped: boolean;
+
+    /**
+     * Indicates if this location has been mapped to a local path.
+     */
+    mappedToLocalPath: boolean;
+
     message?: Message;
     range: Range;
     uri?: Uri;

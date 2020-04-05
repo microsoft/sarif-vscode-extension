@@ -72,19 +72,18 @@ export namespace CodeFlowFactory {
 
     /**
      * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the code flows belong to.
      * @param codeFlows array of processed codeflow objects to try to remap
      * @param sarifCodeFlows Used if a codeflow needs to be remapped
      */
-    export async function tryRemapCodeFlows(fileMapper: FileMapper, runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[]): Promise<void> {
+    export async function tryRemapCodeFlows(runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[]): Promise<void> {
         for (const [cFKey, codeFlow] of codeFlows.entries()) {
             for (const [tFKey, threadFlow] of codeFlow.threads.entries()) {
                 for (const [stepKey, step] of threadFlow.steps.entries()) {
-                    if (step.location && !step.location.mapped) {
+                    if (step.location && !step.location.mappedToLocalPath) {
                         const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
                         if (sarifLoc) {
-                            const location: Location = await LocationFactory.create(fileMapper, runInfo, sarifLoc);
+                            const location: Location = await LocationFactory.create(runInfo, sarifLoc);
                             codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
                         }
                     }
@@ -216,7 +215,7 @@ export namespace CodeFlowFactory {
         let loc: Location | undefined;
         let message: Message | undefined;
         if (tFLoc && tFLoc.location) {
-            loc = await LocationFactory.create(fileMapper, runInfo, tFLoc.location);
+            loc = await LocationFactory.create(runInfo, tFLoc.location);
             message = Utilities.parseSarifMessage(tFLoc.location.message);
         }
 

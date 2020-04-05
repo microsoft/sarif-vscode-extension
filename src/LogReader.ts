@@ -62,10 +62,8 @@ export class LogReader implements Disposable {
         const docs: readonly TextDocument[] = workspace.textDocuments;
 
         let needsSync: boolean = false;
-        for (const doc of docs) {
-            if (!needsSync && Utilities.isSarifFile(doc)) {
-                needsSync = true;
-            }
+        for (const doc of docs.filter((doc) => Utilities.isSarifFile(doc))) {
+            needsSync = true;
             await this.read(doc);
         }
 
@@ -180,7 +178,7 @@ export class LogReader implements Disposable {
 
             const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, locationInSarifFile);
 
-            if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mapped) {
+            if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mappedToLocalPath) {
                 resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this.sarifJSONMapping, docUri, runIndex, resultIndex);
             }
 

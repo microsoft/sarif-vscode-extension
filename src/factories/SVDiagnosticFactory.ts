@@ -8,7 +8,6 @@ import { CodeFlowFactory } from  "./CodeFlowFactory";
 import { DiagnosticSeverity } from "vscode";
 import { ResultInfo, RunInfo, Location } from "../common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "../SarifViewerDiagnostic";
-import { FileMapper } from "../FileMapper";
 
 const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
     [ "error", DiagnosticSeverity.Error],
@@ -46,13 +45,13 @@ export namespace SVDiagnosticFactory {
     /**
      * Tries to remap the locations for this diagnostic
      */
-    export async function tryToRemapLocations(fileMapper: FileMapper, diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
+    export async function tryToRemapLocations(diagnostic: SarifViewerVsCodeDiagnostic): Promise<boolean> {
         if (diagnostic.resultInfo.codeFlows && diagnostic.rawResult.codeFlows) {
-            await CodeFlowFactory.tryRemapCodeFlows(fileMapper, diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows);
+            await CodeFlowFactory.tryRemapCodeFlows(diagnostic.runInfo, diagnostic.resultInfo.codeFlows, diagnostic.rawResult.codeFlows);
         }
 
         if (diagnostic.rawResult.relatedLocations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.relatedLocations);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(diagnostic.runInfo, diagnostic.rawResult.relatedLocations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] && diagnostic.resultInfo.relatedLocs[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.relatedLocs[index] = parsedLocations[index];
@@ -61,7 +60,7 @@ export namespace SVDiagnosticFactory {
         }
 
         if (diagnostic.rawResult.locations) {
-            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMapper, diagnostic.runInfo, diagnostic.rawResult.locations);
+            const parsedLocations: Location[] = await ResultInfoFactory.parseLocations(diagnostic.runInfo, diagnostic.rawResult.locations);
             for (const index in parsedLocations) {
                 if (parsedLocations[index] !== undefined && diagnostic.resultInfo.locations[index] !== parsedLocations[index]) {
                     diagnostic.resultInfo.locations[index] = parsedLocations[index];
@@ -70,7 +69,7 @@ export namespace SVDiagnosticFactory {
 
             // If first location is mapped but the assigned location is not mapped we need to remap the diagnostic
             const firstLocation: Location = diagnostic.resultInfo.locations[0];
-            if (firstLocation && firstLocation.mapped && (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped)) {
+            if (firstLocation && firstLocation.mappedToLocalPath && (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mappedToLocalPath)) {
                 diagnostic.resultInfo.assignedLocation = firstLocation;
                 diagnostic.range = firstLocation.range;
 
@@ -97,7 +96,7 @@ export namespace SVDiagnosticFactory {
     export function updateMessage(diagnostic: SarifViewerVsCodeDiagnostic): string {
         let message: string = diagnostic.resultInfo.message.text || '';
 
-        if (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mapped) {
+        if (!diagnostic.resultInfo.assignedLocation || !diagnostic.resultInfo.assignedLocation.mappedToLocalPath) {
             message = `[Unmapped] ${message}`;
         }
 

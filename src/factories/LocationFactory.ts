@@ -3,6 +3,7 @@
  */
 
 import * as sarif from "sarif";
+import * as fs from "fs";
 import { Range, Uri } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
@@ -19,33 +20,36 @@ export namespace LocationFactory {
      * @param runInfo The run the location belongs to.
      * @param sarifLocation location from result in sarif file
      */
-    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
+    export async function create(runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
         let uri: Uri | undefined;
-        let mapped: boolean = false;
+        let mappedToLocalPath: boolean = false;
         let fileName: string | undefined;
         let parsedRange: { range: Range; endOfLine: boolean } | undefined;
         let message: Message | undefined;
         let logicalLocations: string[] | undefined;
 
-        if (physLocation && physLocation.artifactLocation) {
+        if (physLocation && physLocation.artifactLocation && physLocation.artifactLocation.uri) {
             const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
             uriBase = Utilities.getUriBase(runInfo, artifactLocation);
+            uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
-            const mappedUri: {mapped: boolean; uri?: Uri}  = await fileMapper.get(artifactLocation, runInfo.id, uriBase);
-            mapped = mappedUri.mapped;
-
-            // If the location was successfully mapped, then we can assume it is a local file
-            // and we can "fix" the path casing for VSCode.
-            if (mapped) {
-                uri = mappedUri.uri && Utilities.fixUriCasing(mappedUri.uri);
-            }
-
-            // toString() is executed to create an external value for the webview's use
             if (uri) {
+
+                // If the URI is of file scheme, then we will try to fix the casing
+                // because VSCode treats URIs as case sensitive and if the case
+                // isn't correct can result in opening the same file twice (with different casing).
+                // Also, we can treat the URI as "mapped to local path" if it exists locally.
+                if (uri.scheme.localeCompare('root', 'file', {sensitivity: 'base'}) === 0) {
+                    uri = Utilities.fixUriCasing(uri);
+                    mappedToLocalPath = fs.existsSync(uri.fsPath);
+                }
+
                 uri.toString();
+
+                // toString() is executed to create an external value for the webview's use
                 fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
             }
         }
@@ -72,7 +76,7 @@ export namespace LocationFactory {
             endOfLine: parsedRange?.endOfLine,
             fileName,
             logicalLocations,
-            mapped,
+            mappedToLocalPath: mappedToLocalPath,
             range: parsedRange?.range ?? new Range(0, 0, 0, 1),
             uri,
             uriBase,
@@ -90,7 +94,7 @@ export namespace LocationFactory {
      */
     export async function getOrRemap(fileMapper: FileMapper, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined): Promise<Location | undefined> {
         // If it's already mapped, then just return it.
-        if (location && location.mapped) {
+        if (location && location.mappedToLocalPath) {
             return location;
         }
 
@@ -111,7 +115,7 @@ export namespace LocationFactory {
 
         const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
         await fileMapper.getUserToChooseFile(uri, location.uriBase);
-        return await LocationFactory.create(fileMapper, runInfo, sarifLocation);
+        return await LocationFactory.create(runInfo, sarifLocation);
     }
 
     /**
@@ -183,7 +187,7 @@ export namespace LocationFactory {
         const resultLocation: Location = {
             endOfLine: false,
             fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
-            mapped: false,
+            mappedToLocalPath: false,
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
             uri: sarifUri,

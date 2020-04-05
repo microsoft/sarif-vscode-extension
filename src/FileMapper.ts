@@ -118,7 +118,7 @@ export class FileMapper implements Disposable {
             // fileRemapping map.
             uriPathKey = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
         } else if (location.uri) {
-            // If the SARIF artifact location has a UIR, then we create the key
+            // If the SARIF artifact location has a URI, then we create the key
             // for the fileRemapping and see if we already have a mapping.
             // If we don't, then attempt to map the location (which may ask the user).
             const uri: Uri = Utilities.combineUriWithUriBase(location.uri, uriBase);

@@ -296,7 +296,7 @@ export class CodeFlowDecorations implements Disposable {
             location,
             sarifLocation);
 
-        if (remappedLocation && remappedLocation.mapped && remappedLocation.uri) {
+        if (remappedLocation && remappedLocation.mappedToLocalPath && remappedLocation.uri) {
             let locRange: Range | undefined = remappedLocation.range;
             if (!locRange) {
                 return;
@@ -394,7 +394,7 @@ export class CodeFlowDecorations implements Disposable {
     private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions | undefined {
         if (!step.location ||
             !step.location.uri ||
-            !step.location.mapped ||
+            !step.location.mappedToLocalPath ||
             step.location.uri.toString() !== editor.document.uri.toString()) {
             return undefined;
         }
@@ -476,7 +476,7 @@ export class CodeFlowDecorations implements Disposable {
 
                 const locData: LocationData = JSON.parse(webViewMessage.data);
                 const location: Location = {
-                    mapped: true,
+                    mappedToLocalPath: true,
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),

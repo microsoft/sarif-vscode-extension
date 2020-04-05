@@ -71,7 +71,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
         const rawLocations: sarif.Location[] | undefined = svDiagnostic.rawResult.locations;
         const actions: vscode.CodeAction[] = [];
 
-        if ((!svDiagnostic.resultInfo.assignedLocation || !svDiagnostic.resultInfo.assignedLocation.mapped) && rawLocations) {
+        if ((!svDiagnostic.resultInfo.assignedLocation || !svDiagnostic.resultInfo.assignedLocation.mappedToLocalPath) && rawLocations) {
             const physicalLocation: sarif.PhysicalLocation | undefined = rawLocations[0].physicalLocation;
 
             if (physicalLocation && physicalLocation.artifactLocation) {

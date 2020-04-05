@@ -48,8 +48,6 @@ export class SVDiagnosticCollection implements Disposable {
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
         this.disposables.push(this.fileMapper.onMappingChanged(this.mappingChanged.bind(this)));
-        this.disposables.push(this.fileMapper);
-
         this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
     }
 
@@ -79,7 +77,7 @@ export class SVDiagnosticCollection implements Disposable {
      * @param issue diagnostic to add to the problems panel
      */
     public add(issue: SarifViewerVsCodeDiagnostic): void {
-        if (issue.resultInfo.assignedLocation && issue.resultInfo.assignedLocation.mapped) {
+        if (issue.resultInfo.assignedLocation && issue.resultInfo.assignedLocation.mappedToLocalPath) {
             this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
             this.addToCollection(this.unmappedIssuesCollection, issue);
@@ -170,14 +168,14 @@ export class SVDiagnosticCollection implements Disposable {
         // does it become unmapped? The result of tryToRemapLocations is being ignored.
         for (const issues of this.mappedIssuesCollection.values()) {
             for (const issue of issues) {
-                await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, issue);
+                await SVDiagnosticFactory.tryToRemapLocations(issue);
             }
         }
 
         for (const [key, unmappedIssues] of this.unmappedIssuesCollection.entries()) {
             const remainingUnmappedIssues: SarifViewerVsCodeDiagnostic[] = [];
             for (const unmappedIssue of unmappedIssues) {
-                const remapped: boolean = await SVDiagnosticFactory.tryToRemapLocations(this.fileMapper, unmappedIssue);
+                const remapped: boolean = await SVDiagnosticFactory.tryToRemapLocations(unmappedIssue);
                 if (remapped) {
                     this.add(unmappedIssue);
                 } else {

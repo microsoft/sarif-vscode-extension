@@ -34,12 +34,12 @@ export namespace ResultInfoFactory {
         tool: sarif.Tool,
         id: number,
         locationInSarifFile?: Location): Promise<ResultInfo> {
-        const locations: Location[] = await ResultInfoFactory.parseLocations(fileMappper, runInfo, result.locations);
-        const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(fileMappper, runInfo, result.relatedLocations);
-        const attachments: Attachment[] = await parseAttachments(fileMappper, runInfo, result.attachments);
+        const locations: Location[] = await ResultInfoFactory.parseLocations(runInfo, result.locations);
+        const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(runInfo, result.relatedLocations);
+        const attachments: Attachment[] = await parseAttachments(runInfo, result.attachments);
         const fixes: Fix[] = await parseFixes(fileMappper, runInfo, result.fixes);
         const codeFlows: CodeFlow[] = await CodeFlowFactory.create(fileMappper, runInfo, result.codeFlows);
-        const stacks: Stacks = await parseStacks(fileMappper, runInfo, result.stacks);
+        const stacks: Stacks = await parseStacks(runInfo, result.stacks);
 
         let ruleIndex: number | undefined;
         let ruleId: string | undefined;
@@ -138,22 +138,21 @@ export namespace ResultInfoFactory {
     /**
      * Iterates through the sarif locations and creates Locations for each
      * Sets undefined placeholders in the returned array for those that can't be mapped
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the locations belongs to.
      * @param sarifLocations sarif locations that need to be processed
      */
-    export async function parseLocations(fileMapper: FileMapper, runInfo: RunInfo, sarifLocations: sarif.Location[] | undefined): Promise<Location[]> {
+    export async function parseLocations(runInfo: RunInfo, sarifLocations: sarif.Location[] | undefined): Promise<Location[]> {
         const locations: Location[] = [];
 
         if (sarifLocations) {
             for (const sarifLocation of sarifLocations) {
-                locations.push(await LocationFactory.create(fileMapper, runInfo, sarifLocation));
+                locations.push(await LocationFactory.create(runInfo, sarifLocation));
             }
         } else {
             // Default location if none is defined points to the location of the result in the SARIF file.
             locations.push({
                 range: new vscode.Range(0, 0, 0, 1),
-                mapped: false,
+                mappedToLocalPath: false,
                 toJSON: () => {}
             });
         }
@@ -163,11 +162,10 @@ export namespace ResultInfoFactory {
 
     /**
      * Parses the sarif attachment objects and returns and array of processed Attachments
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the attachments belongs to.
      * @param sarifAttachments sarif attachments to parse
      */
-    async function  parseAttachments(fileMapper: FileMapper, runInfo: RunInfo, sarifAttachments: sarif.Attachment[] | undefined): Promise<Attachment[]> {
+    async function  parseAttachments(runInfo: RunInfo, sarifAttachments: sarif.Attachment[] | undefined): Promise<Attachment[]> {
         if (!sarifAttachments) {
             return [];
         }
@@ -177,7 +175,7 @@ export namespace ResultInfoFactory {
         for (const sarifAttachment of sarifAttachments) {
             const description: Message  = Utilities.parseSarifMessage(sarifAttachment.description);
 
-            const attachmentFile: Location = await LocationFactory.create(fileMapper, runInfo, {
+            const attachmentFile: Location = await LocationFactory.create(runInfo, {
                 physicalLocation: {
                     artifactLocation: sarifAttachment.artifactLocation
                 }
@@ -186,7 +184,7 @@ export namespace ResultInfoFactory {
             const regionsOfInterest: Location[] = [];
             if (sarifAttachment.regions) {
                 for (const sarifRegion of sarifAttachment.regions) {
-                    regionsOfInterest.push(await LocationFactory.create(fileMapper, runInfo, {
+                    regionsOfInterest.push(await LocationFactory.create(runInfo, {
                         physicalLocation: {
                             artifactLocation: sarifAttachment.artifactLocation,
                             region: sarifRegion,
@@ -224,7 +222,7 @@ export namespace ResultInfoFactory {
             if (sarifFix.artifactChanges) {
 
                 for (const sarifChange of sarifFix.artifactChanges) {
-                    const fixLocation: Location = await LocationFactory.create(fileMapper, runInfo, {
+                    const fixLocation: Location = await LocationFactory.create(runInfo, {
                         physicalLocation: {
                             artifactLocation: sarifChange.artifactLocation
                         },
@@ -258,11 +256,10 @@ export namespace ResultInfoFactory {
 
     /**
      * Parses the sarif stacks objects and returns a Stacks obj
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the fixes belongs to.
      * @param sarifStacks sarif stacks to parse
      */
-    async function parseStacks(fileMapper: FileMapper, runInfo: RunInfo, sarifStacks: sarif.Stack[] | undefined): Promise<Stacks> {
+    async function parseStacks(runInfo: RunInfo, sarifStacks: sarif.Stack[] | undefined): Promise<Stacks> {
         let columnsWithContent: StackColumnWithContent = {
             filename: false,
             location: false,
@@ -294,7 +291,7 @@ export namespace ResultInfoFactory {
                     continue;
                 }
 
-                const frameLocation: Location = await LocationFactory.create(fileMapper, runInfo, sarifFrame.location);
+                const frameLocation: Location = await LocationFactory.create(runInfo, sarifFrame.location);
 
                 const frameNameParts: string[] = [];
 
