@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ResultInfo, RunInfo, Location } from './common/Interfaces';
+import { ResultInfo, RunInfo, Location, PromptUserDuringMap } from './common/Interfaces';
 import * as sarif from 'sarif';
 import { DiagnosticSeverity } from 'vscode';
 
@@ -61,5 +61,13 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
 
         this.currentLocation = mappedLocation;
         this.range = mappedLocation.range;
+    }
+
+    public async attemptToMapLocation(promptUser: PromptUserDuringMap): Promise<void> {
+        if (!this.resultInfo.assignedLocation || this.resultInfo.assignedLocation.hasBeenMapped) {
+            return;
+        }
+
+        await this.resultInfo.assignedLocation.mapLocationToLocalPath(promptUser);
     }
 }

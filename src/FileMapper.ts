@@ -11,7 +11,7 @@ import {
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
-import { RunInfo, Location } from "./common/Interfaces";
+import { RunInfo, Location, PromptUserDuringMap } from "./common/Interfaces";
 
 const RootPathSample: string = "c:\\sample\\path";
 const ConfigRootPaths: string = "rootpaths";
@@ -94,55 +94,6 @@ export class FileMapper implements Disposable {
     }
 
     /**
-     * Gets the mapped Uri associated with the passed in file, promise returns null if not able to map
-     * @param fileUri Uri of the file
-     * @param fileIndex file index of artifact
-     * @param runId id of the run
-     * @param uriBase the base path of the uri
-     */
-    public async get(location: sarif.ArtifactLocation, runId: number, uriBase?: string):
-        Promise<{mapped: boolean; uri?: Uri}> {
-        let uriPathKey: string | undefined;
-        let mappedUri: Uri | undefined;
-
-        if (location.index !== undefined) {
-            // If the SARIF artifact location has an index, then it is a "reference"
-            // to the artifacts contained in that run. So get the key into the
-            // fileRemapping map.
-            uriPathKey = this.fileIndexKeyMapping.get(`${runId}_${location.index}`);
-        } else if (location.uri) {
-            // If the SARIF artifact location has a URI, then we create the key
-            // for the fileRemapping and see if we already have a mapping.
-            // If we don't, then attempt to map the location (which may ask the user).
-            const uri: Uri = Utilities.combineUriWithUriBase(location.uri, uriBase);
-            uriPathKey = Utilities.getFsPathWithFragment(uri);
-            mappedUri = this.fileRemapping.get(uriPathKey);
-            if (!mappedUri) {
-                await this.map(uri, uriBase);
-            }
-        }
-
-        // If we weren't able to create the file mapping key, then we are certainly done.
-        if (!uriPathKey) {
-            return {
-                mapped: false
-            };
-        }
-
-        // We could have found the mapped URI above (so don't look up again if that's the case),
-        // but if the this was an index "reference" or we asked the user to map,
-        // then we need attempt to retrieve the file mapping again.
-        if (!mappedUri) {
-            mappedUri = this.fileRemapping.get(uriPathKey);
-        }
-
-        return {
-            mapped: mappedUri !== undefined,
-            uri: mappedUri || Uri.parse(uriPathKey)
-        };
-    }
-
-    /**
      * Opens a dialog for the user to select the file location to map the file to
      * Saves the mapping, base mapping
      * @param origUri Uri the user needs to remap, if it has a uriBase it should be included in this uri
@@ -198,8 +149,9 @@ export class FileMapper implements Disposable {
      * Tries to map the passed in uri to a file location
      * @param uri Uri that needs to be mapped, should already have uribase included
      * @param uriBase the base path of the uri
+     * @param promptUser Indicates whether we wish to prompt the user or not.
      */
-    private async map(uri: Uri, uriBase?: string): Promise<Uri | undefined> {
+    private async map(uri: Uri, uriBase: string | undefined, promptUser: PromptUserDuringMap): Promise<Uri | undefined> {
         // check if the file has already been remapped and the mapping isn't null(previously failed to map)
         const uriPath: string = Utilities.getFsPathWithFragment(uri);
 
@@ -224,7 +176,9 @@ export class FileMapper implements Disposable {
         }
 
         // If not able to remap using other means, we need to ask the user to enter a path for remapping
-        mappedUri = await this.getUserToChooseFile(uri, uriBase);
+        if (promptUser !== 'No prompt') {
+            mappedUri = await this.getUserToChooseFile(uri, uriBase);
+        }
 
         return mappedUri;
     }
@@ -252,7 +206,7 @@ export class FileMapper implements Disposable {
                 // used for the file mapping.
                 this.mapEmbeddedContent(key, artifact);
             } else {
-                await this.map(uriWithBase, uriBase);
+                await this.map(uriWithBase, uriBase, 'Prompt');
             }
 
             this.fileIndexKeyMapping.set(`${runId}_${artifactIndex}`, key);
@@ -592,7 +546,7 @@ export class FileMapper implements Disposable {
     }
 
     private  mapFileCommand(location: Location): Promise<Uri | undefined>  {
-        return location.mapLocationToLocalPath();
+        return location.mapLocationToLocalPath('Prompt');
     }
 
     public static uriMappedForLocation(this: Location): Event<Location> {
@@ -612,7 +566,7 @@ export class FileMapper implements Disposable {
         return newLocationEventEmitter.event;
     }
 
-    public static async mapLocationToLocalPath(this: Location): Promise<Uri | undefined> {
+    public static async mapLocationToLocalPath(this: Location, promptUser: PromptUserDuringMap): Promise<Uri | undefined> {
         if (!FileMapper.fileMapperInstance) {
             throw new Error("File mapper has not been initialized");
         }
@@ -628,12 +582,14 @@ export class FileMapper implements Disposable {
         }
 
         // Let's try to remap.
-        const mappedUri: Uri | undefined =  await FileMapper.fileMapperInstance.map(this.uri, this.uriBase);
-        const locationEventEmitter: EventEmitter<Location> | undefined = FileMapper.fileMapperInstance.locationMappedEventEmitterMap.get(this);
+        const mappedUri: Uri | undefined =  await FileMapper.fileMapperInstance.map(this.uri, this.uriBase, promptUser);
         if (mappedUri) {
             // If successful, save the remapped URI so we don't remap again.
             this.uri = mappedUri;
             this.hasBeenMapped = true;
+
+            // Let everyone know that the location's URI has changed.
+            const locationEventEmitter: EventEmitter<Location> | undefined = FileMapper.fileMapperInstance.locationMappedEventEmitterMap.get(this);
             if (locationEventEmitter) {
                 locationEventEmitter.fire(this);
             }

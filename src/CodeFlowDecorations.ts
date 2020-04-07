@@ -400,7 +400,7 @@ export class CodeFlowDecorations implements Disposable {
                 return undefined;
         }
 
-        const mappedUri: Uri | undefined = await step.location.mapLocationToLocalPath();
+        const mappedUri: Uri | undefined = await step.location.mapLocationToLocalPath('No prompt');
         if (!mappedUri ||
             mappedUri.toString() !== editor.document.uri.toString()) {
             return undefined;
@@ -463,7 +463,7 @@ export class CodeFlowDecorations implements Disposable {
                         return;
                     }
 
-                    const mappedLocation: Uri | undefined = await attachmentLocation.mapLocationToLocalPath();
+                    const mappedLocation: Uri | undefined = await attachmentLocation.mapLocationToLocalPath('Prompt');
                     if (!mappedLocation) {
                         return;
                     }

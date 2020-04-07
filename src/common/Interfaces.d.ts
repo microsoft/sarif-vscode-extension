@@ -40,6 +40,8 @@ export interface HTMLElementOptions {
 }
 
 
+type PromptUserDuringMap  = 'Prompt' | 'No prompt';
+
 export interface Location {
     /**
      * Contains the location of this "location" inside the SARIF JSON file.
@@ -64,7 +66,7 @@ export interface Location {
     /**
      * Maps a location to a local path.
      */
-    mapLocationToLocalPath(this: Location): Promise<Uri | undefined>;
+    mapLocationToLocalPath(this: Location, promptUser: PromptUserDuringMap): Promise<Uri | undefined>;
 
     /**
      * Serializes "start" and "stop" properties of VSCode's range as part of the location.
