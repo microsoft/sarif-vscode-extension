@@ -260,7 +260,7 @@ export class Utilities {
      */
     public static parseSarifMessage(sarifMessage?: sarif.Message, locations?: Location[]): Message {
         if (sarifMessage && (sarifMessage.markdown !== undefined || sarifMessage.text !== undefined)) {
-            let mdText: string | undefined = sarifMessage.markdown;
+            let markDown: string | undefined = sarifMessage.markdown;
             let msgText: string | undefined = sarifMessage.text;
 
             // Insert result specific arguments
@@ -270,27 +270,27 @@ export class Utilities {
                         msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
-                if (mdText) {
+                if (markDown) {
                     for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
-                        mdText = mdText.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        markDown = markDown.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
             }
 
-            if (!mdText) {
-                mdText = msgText;
+            if (!markDown) {
+                markDown = msgText;
             }
 
             const mdIt: MarkdownIt = new MarkdownIt();
 
-            if (mdText) {
-                mdText = mdIt.render(mdText);
-                mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
-                mdText = Utilities.unescapeBrackets(mdText);
+            if (markDown) {
+                markDown = mdIt.render(markDown);
+                markDown = Utilities.ReplaceLocationLinks(markDown, locations, true);
+                markDown = Utilities.unescapeBrackets(markDown);
+                markDown = mdIt.utils.unescapeAll(markDown);
             }
 
             if (msgText) {
-                msgText = mdIt.renderInline(msgText);
                 msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
                     return `${p2}(${p1})`;
@@ -299,7 +299,7 @@ export class Utilities {
                 msgText = mdIt.utils.unescapeAll(msgText);
             }
 
-            return { text: msgText, html: mdText };
+            return { text: msgText, html: markDown };
         }
 
         return {};
