@@ -296,11 +296,12 @@ export class SVDiagnosticCollection implements Disposable {
             if (indexOfUnmappedDiagnostic >= 0) {
                 unmappedDiagnostics.splice(indexOfUnmappedDiagnostic, 1);
                 this.unmappedIssuesCollection.set(key, unmappedDiagnostics);
+
+                diagnostic.updateToMappedLocation(location);
+                this.addToCollection(this.mappedIssuesCollection, diagnostic);
                 break;
             }
         }
-
-        this.addToCollection(this.mappedIssuesCollection, new SarifViewerVsCodeDiagnostic(diagnostic.runInfo, diagnostic.resultInfo, diagnostic.rawResult, location));
 
         this.syncDiagnostics();
     }

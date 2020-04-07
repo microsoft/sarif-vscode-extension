@@ -66,7 +66,6 @@ export class ExplorerController implements Disposable {
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
         this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
-
     }
 
     public dispose(): void {
@@ -78,11 +77,7 @@ export class ExplorerController implements Disposable {
      * Creates the Webview panel
      */
     public createWebview(): WebviewPanel {
-        if (this.wvPanel) {
-            if (!this.wvPanel.visible) {
-                this.wvPanel.reveal(undefined, false);
-            }
-        } else {
+        if (!this.wvPanel) {
             this.wvPanel = window.createWebviewPanel("sarifExplorer", ExplorerController.ExplorerTitle,
                 { preserveFocus: true, viewColumn: ViewColumn.Two },
                 {
@@ -99,6 +94,7 @@ export class ExplorerController implements Disposable {
             this.wvPanel.onDidDispose(this.onWebviewDispose, this);
             this.wvPanel.webview.html = this.getWebviewContent(this.wvPanel);
         }
+
         return this.wvPanel;
     }
 
@@ -138,11 +134,11 @@ export class ExplorerController implements Disposable {
                         data: JSON.stringify(this.resultsListData),
                         type: MessageType.ResultsListDataSet
                     };
-                    this.sendMessage(webViewMessage, false);
+                    this.sendMessage(webViewMessage);
                 }
 
                 if (this.activeDiagnostic) {
-                    this.sendActiveDiagnostic(true);
+                    this.sendActiveDiagnostic();
                 }
                 break;
 
@@ -164,7 +160,7 @@ export class ExplorerController implements Disposable {
             data: JSON.stringify(dataSet),
             type: MessageType.ResultsListDataSet
         };
-        this.sendMessage(webviewMessage, false);
+        this.sendMessage(webviewMessage);
     }
 
     /**
@@ -173,7 +169,7 @@ export class ExplorerController implements Disposable {
      */
     public setSelectedCodeFlow(id: string): void {
         this.selectedCodeFlowRow = id;
-        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange }, false);
+        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange });
     }
 
     /**
@@ -238,13 +234,12 @@ export class ExplorerController implements Disposable {
 
     /**
      * Creates the webview message based on the current active diagnostic and saved state and sends to the webview
-     * @param focus flag for setting focus to the webview
      */
-    private sendActiveDiagnostic(focus: boolean): void {
+    private sendActiveDiagnostic(): void {
 
         if (!this.activeDiagnostic) {
             // Empty string is used to signal no selected diagnostic
-            this.sendMessage({data: "", type: MessageType.NewDiagnostic}, focus);
+            this.sendMessage({data: "", type: MessageType.NewDiagnostic});
             return;
         }
 
@@ -257,19 +252,14 @@ export class ExplorerController implements Disposable {
         };
 
         const dataString: string = JSON.stringify(diagData);
-        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic}, focus);
+        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic});
     }
 
     /**
      * Handles sending a message to the webview
      * @param message Message to send, message has a type and data
-     * @param focus flag for if the webview panel should be given focus
      */
-    private sendMessage(message: WebviewMessage, focus: boolean): void {
-        if (!this.webviewPanel.visible) {
-            this.webviewPanel.reveal(undefined, !focus);
-        }
-
+    private sendMessage(message: WebviewMessage): void {
         // We do not want to wait for this promise to finish as we are
         // just adding the message to the web-views queue.
         // tslint:disable-next-line: no-floating-promises
@@ -277,7 +267,13 @@ export class ExplorerController implements Disposable {
     }
 
     private onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
+        // When the active diagnostic changes, then clear the active tab (which is the "Result Info", "Run Info", "Code Flow", etc.)
+        // to be undefined. That will cause the web-view to default to either "Result Info" or "Code Flow" tabs
+        // depending on what is present in the data.
+        this.activeTab = undefined;
+        this.selectedCodeFlowRow = undefined;
         this.activeDiagnostic = diagnostic;
-        this.sendActiveDiagnostic(false);
+
+        this.sendActiveDiagnostic();
     }
 }

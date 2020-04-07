@@ -62,24 +62,18 @@ export class CodeFlowDecorations implements Disposable {
      * Updates the GutterIcon for the current active Diagnostic
      */
     public async updateResultGutterIcon(): Promise<void> {
-        if (!this.activeDiagnostic) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.location.hasBeenMapped) {
             return;
         }
 
         for (const editor of window.visibleTextEditors) {
-            if (!this.activeDiagnostic.resultInfo.locations ||
-                this.activeDiagnostic.resultInfo.locations.length <= 0 ||
-                !this.activeDiagnostic.resultInfo.locations[0]) {
-                continue;
-            }
-
             // Attempt to map the result if it hasn't been mapped
-            const diagLocation: Location = this.activeDiagnostic.resultInfo.locations[0];
+            const diagLocation: Location = this.activeDiagnostic.location;
             if (!diagLocation.uri) {
                 continue;
             }
 
-            const mappedUri: Uri | undefined = await diagLocation.mapLocationToLocalPath();
+            const mappedUri: Uri | undefined = this.activeDiagnostic.location.uri;
             if (!mappedUri) {
                 continue;
             }
@@ -298,11 +292,11 @@ export class CodeFlowDecorations implements Disposable {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        if (!this.activeDiagnostic) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.location.hasBeenMapped) {
             return;
         }
 
-        const mappedUri: Uri | undefined = await location.mapLocationToLocalPath();
+        const mappedUri: Uri | undefined = this.activeDiagnostic.location.uri;
         if (!mappedUri) {
             return;
         }
@@ -316,8 +310,8 @@ export class CodeFlowDecorations implements Disposable {
             locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
         }
 
-        const textDocument: TextDocument = await  workspace.openTextDocument(mappedUri);
-        const textEditor: TextEditor = await   window.showTextDocument(textDocument, ViewColumn.One, true);
+        const textDocument: TextDocument = await workspace.openTextDocument(mappedUri);
+        const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
         textEditor.setDecorations(CodeFlowDecorations.SelectionDecorationType, [{ range: locRange }]);
         textEditor.revealRange(locRange, TextEditorRevealType.InCenterIfOutsideViewport);
     }
