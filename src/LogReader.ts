@@ -8,17 +8,16 @@ import * as sarif from "sarif";
 import { LocationFactory } from "./factories/LocationFactory";
 import { ResultInfoFactory } from "./factories/ResultInfoFactory";
 import { RunInfoFactory } from "./factories/RunInfoFactory";
-import { SVDiagnosticFactory } from "./factories/SVDiagnosticFactory";
 
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
 import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
 import { FileConverter } from "./FileConverter";
 import { ProgressHelper } from "./ProgressHelper";
-import { ExplorerController } from "./ExplorerController";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
-import { FileMapper } from "./FileMapper";
 import { Utilities } from "./Utilities";
+import { FileMapper } from "./FileMapper";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -33,7 +32,12 @@ export class LogReader implements Disposable {
      */
     private readonly sarifJSONMapping: Map<string, JsonMapping> = new Map<string, JsonMapping>();
 
-    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
+    /**
+     * Creates an instance of the log reader that is responsible for parsing SARIF files.
+     * @param fileMapper An instance of the file-mapper that will be used to map Locations to local paths.
+     * @param diagnosticCollection The diagnostic collection the results will be read in to.
+     */
+    public constructor(private readonly fileMapper: FileMapper, private readonly diagnosticCollection: SVDiagnosticCollection) {
         // Listen for new sarif files to open or close
         this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
     }
@@ -68,7 +72,7 @@ export class LogReader implements Disposable {
         }
 
         if (needsSync) {
-            this.explorerController.diagnosticCollection.syncDiagnostics();
+            this.diagnosticCollection.syncDiagnostics();
         }
     }
 
@@ -115,18 +119,12 @@ export class LogReader implements Disposable {
 
                     for (let runIndex: number = 0; runIndex < log.runs.length; runIndex++) {
                         const run: sarif.Run = log.runs[runIndex];
-                        runInfo =  RunInfoFactory.create(run, doc.fileName);
-                        // A run itself does not actually have an ID in SARIF.
-                        // One is manufactured for the "run" by adding it to the diagnostic collection.
-                        runInfo.id  = this.explorerController.diagnosticCollection.addRunInfoAndCalculateId(runInfo);
+                        runInfo =  RunInfoFactory.create(this.fileMapper, run, doc.fileName);
+
+                        this.diagnosticCollection.addRunInfo(runInfo);
 
                         if (run.threadFlowLocations) {
                             CodeFlowFactory.mapThreadFlowLocationsFromRun(runInfo, run.threadFlowLocations);
-                        }
-
-                        if (run.artifacts) {
-                            await ProgressHelper.Instance.setProgressReport("Mapping Files");
-                            await this.fileMapper.mapArtifacts(runInfo, run.artifacts, runInfo.id);
                         }
 
                         if (run.results) {
@@ -136,7 +134,7 @@ export class LogReader implements Disposable {
                     }
 
                     if (sync) {
-                        this.explorerController.diagnosticCollection.syncDiagnostics();
+                        this.diagnosticCollection.syncDiagnostics();
                     }
 
                     ProgressHelper.Instance.Progress = undefined;
@@ -174,16 +172,14 @@ export class LogReader implements Disposable {
                 await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
             }
             const sarifResult: sarif.Result = results[resultIndex];
-            const locationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this.sarifJSONMapping, docUri, runIndex, resultIndex);
+            const resultLocationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this.sarifJSONMapping, docUri, runIndex, resultIndex);
 
-            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, locationInSarifFile);
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, resultLocationInSarifFile);
 
-            if (!resultInfo.assignedLocation || !resultInfo.assignedLocation.mappedToLocalPath) {
-                resultInfo.assignedLocation = LocationFactory.mapToSarifFileLocation(this.sarifJSONMapping, docUri, runIndex, resultIndex);
+            if (resultInfo.assignedLocation) {
+                const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(runInfo, resultInfo, sarifResult, resultInfo.assignedLocation.hasBeenMapped ? resultInfo.assignedLocation : resultLocationInSarifFile);
+                this.diagnosticCollection.add(diagnostic);
             }
-
-            const diagnostic: SarifViewerVsCodeDiagnostic = SVDiagnosticFactory.create(runInfo, resultInfo, sarifResult);
-            this.explorerController.diagnosticCollection.add(diagnostic);
         }
     }
 }

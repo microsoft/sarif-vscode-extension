@@ -147,24 +147,36 @@ export class ResultsListController implements Disposable {
                 break;
 
             case MessageType.ResultsListResultSelected:
-                // What is the proper type if "id"?
+                // What is the proper type of "id"?
                 const id: { resultId: number; runId: number} = JSON.parse(msg.data);
                 const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.diagnosticCollection.getResultInfo(id.resultId, id.runId);
                 if (!diagnostic) {
                     break;
                 }
 
-                const diagLocation: Location | undefined = diagnostic.resultInfo.assignedLocation;
-
-                if (diagLocation && diagLocation.uri) {
-                    const textDocument: TextDocument = await workspace.openTextDocument(diagLocation.uri);
-                    const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
-                    await window.showTextDocument(textDocument, ViewColumn.One, true);
-
-                    textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-                    textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
-                    await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
+                if (!diagnostic.resultInfo.assignedLocation) {
+                    return;
                 }
+
+                // Attempt to map the result if it hasn't been mapped
+                const diagLocation: Location = diagnostic.resultInfo.assignedLocation;
+                if (!diagLocation.uri) {
+                    return;
+                }
+
+                const uriToOpen: Uri | undefined = await diagLocation.mapLocationToLocalPath();
+
+                if (!uriToOpen) {
+                    return;
+                }
+
+                const textDocument: TextDocument = await workspace.openTextDocument(uriToOpen);
+                const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
+                await window.showTextDocument(textDocument, ViewColumn.One, true);
+
+                textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
+                textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
+                await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
                 break;
 
             case MessageType.ResultsListSortChanged:

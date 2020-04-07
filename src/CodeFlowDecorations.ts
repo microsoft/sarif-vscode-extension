@@ -3,19 +3,19 @@
  */
 
 import * as sarif from "sarif";
-import { LocationFactory } from "./factories/LocationFactory";
 
 import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
 } from "vscode";
-import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData, RunInfo } from "./common/Interfaces";
+import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { MessageType } from "./common/Enums";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
 import { FileMapper } from "./FileMapper";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 const selectNextCFStepCommand: string = "extension.sarif.nextCodeFlowStep";
 const selectPrevCFStepCommand: string = "extension.sarif.previousCodeFlowStep";
@@ -28,9 +28,9 @@ export class CodeFlowDecorations implements Disposable {
     private disposables: Disposable[] = [];
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
-    public constructor(private readonly explorerController: ExplorerController, private readonly fileMapper: FileMapper) {
+    public constructor(private readonly explorerController: ExplorerController, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(window.onDidChangeVisibleTextEditors(this.onVisibleTextEditorsChanged.bind(this)));
-        this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
+        this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onActiveDiagnosticChanged.bind(this)));
         this.disposables.push(explorerController.onWebViewMessage(this.onWebviewMessage.bind(this)));
         this.disposables.push(commands.registerCommand(selectPrevCFStepCommand, this.selectPrevCFStep.bind(this)));
         this.disposables.push(commands.registerCommand(selectNextCFStepCommand, this.selectNextCFStep.bind(this)));
@@ -45,36 +45,50 @@ export class CodeFlowDecorations implements Disposable {
     /**
      * Updates the decorations when there is a change in the visible text editors
      */
-    private onVisibleTextEditorsChanged(): void {
+    private async onVisibleTextEditorsChanged(): Promise<void> {
         this.lastCodeFlowSelected = undefined;
-        this.updateStepsHighlight();
-        this.updateResultGutterIcon();
+        await this.updateStepsHighlight();
+        await this.updateResultGutterIcon();
     }
 
     private async onActiveDiagnosticChanged(diagnostic: SarifViewerVsCodeDiagnostic | undefined): Promise<void> {
         this.activeDiagnostic = diagnostic;
         this.lastCodeFlowSelected = undefined;
-        this.updateStepsHighlight();
-        this.updateResultGutterIcon();
+        await this.updateStepsHighlight();
+        await this.updateResultGutterIcon();
     }
 
     /**
      * Updates the GutterIcon for the current active Diagnostic
      */
-    public updateResultGutterIcon(): void {
+    public async updateResultGutterIcon(): Promise<void> {
         if (!this.activeDiagnostic) {
             return;
         }
 
         for (const editor of window.visibleTextEditors) {
-            if (this.activeDiagnostic.resultInfo &&
-                this.activeDiagnostic.resultInfo.assignedLocation &&
-                this.activeDiagnostic.resultInfo.assignedLocation.uri &&
-                this.activeDiagnostic.resultInfo.assignedLocation.uri.toString() === editor.document.uri.toString()) {
+            if (!this.activeDiagnostic.resultInfo.locations ||
+                this.activeDiagnostic.resultInfo.locations.length <= 0 ||
+                !this.activeDiagnostic.resultInfo.locations[0]) {
+                continue;
+            }
+
+            // Attempt to map the result if it hasn't been mapped
+            const diagLocation: Location = this.activeDiagnostic.resultInfo.locations[0];
+            if (!diagLocation.uri) {
+                continue;
+            }
+
+            const mappedUri: Uri | undefined = await diagLocation.mapLocationToLocalPath();
+            if (!mappedUri) {
+                continue;
+            }
+
+            if (mappedUri.toString() === editor.document.uri.toString()) {
                 const errorDecoration: Range[] = [];
                 const warningDecoration: Range[] = [];
                 const infoDecoration: Range[] = [];
-                const iconRange: Range = new Range(this.activeDiagnostic.range.start, this.activeDiagnostic.range.start);
+                const iconRange: Range = new Range(diagLocation.range.start, diagLocation.range.end);
                 switch (this.activeDiagnostic.severity) {
                     case DiagnosticSeverity.Error:
                         errorDecoration.push(iconRange);
@@ -104,7 +118,7 @@ export class CodeFlowDecorations implements Disposable {
     /**
      * Updates the decorations for the steps in the Code Flow tree
      */
-    private updateStepsHighlight(): void {
+    private async updateStepsHighlight(): Promise<void> {
         if (!this.activeDiagnostic || !this.activeDiagnostic.resultInfo.codeFlows) {
             return;
         }
@@ -116,7 +130,7 @@ export class CodeFlowDecorations implements Disposable {
             for (const codeflow of this.activeDiagnostic.resultInfo.codeFlows) {
                 // For now we only support one threadFlow in the code flow
                 for (const step of codeflow.threads[0].steps) {
-                    const decoration: DecorationOptions | undefined = CodeFlowDecorations.createHighlightDecoration(step, editor);
+                    const decoration: DecorationOptions | undefined = await CodeFlowDecorations.createHighlightDecoration(step, editor);
                     if (decoration) {
                         if (step.importance === "unimportant") {
                             unimportantDecorations.push(decoration);
@@ -247,7 +261,7 @@ export class CodeFlowDecorations implements Disposable {
 
         this.lastCodeFlowSelected = id;
 
-        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
+        const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.activeDiagnostic;
         if (!diagnostic) {
             return;
         }
@@ -288,29 +302,24 @@ export class CodeFlowDecorations implements Disposable {
             return;
         }
 
-        const runInfo: RunInfo = this.activeDiagnostic.runInfo;
-
-        const remappedLocation: Location | undefined = await LocationFactory.getOrRemap(
-            this.fileMapper,
-            runInfo,
-            location,
-            sarifLocation);
-
-        if (remappedLocation && remappedLocation.mappedToLocalPath && remappedLocation.uri) {
-            let locRange: Range | undefined = remappedLocation.range;
-            if (!locRange) {
-                return;
-            }
-
-            if (remappedLocation.endOfLine) {
-                locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
-            }
-
-            const textDocument: TextDocument = await  workspace.openTextDocument(remappedLocation.uri);
-            const textEditor: TextEditor = await   window.showTextDocument(textDocument, ViewColumn.One, true);
-            textEditor.setDecorations(CodeFlowDecorations.SelectionDecorationType, [{ range: locRange }]);
-            textEditor.revealRange(locRange, TextEditorRevealType.InCenterIfOutsideViewport);
+        const mappedUri: Uri | undefined = await location.mapLocationToLocalPath();
+        if (!mappedUri) {
+            return;
         }
+
+        let locRange: Range | undefined = location.range;
+        if (!locRange) {
+            return;
+        }
+
+        if (location.endOfLine) {
+            locRange = new Range(locRange.start, new Position(locRange.end.line - 1, Number.MAX_VALUE));
+        }
+
+        const textDocument: TextDocument = await  workspace.openTextDocument(mappedUri);
+        const textEditor: TextEditor = await   window.showTextDocument(textDocument, ViewColumn.One, true);
+        textEditor.setDecorations(CodeFlowDecorations.SelectionDecorationType, [{ range: locRange }]);
+        textEditor.revealRange(locRange, TextEditorRevealType.InCenterIfOutsideViewport);
     }
 
     private lastCodeFlowSelected: CodeFlowStepId | undefined;
@@ -391,13 +400,18 @@ export class CodeFlowDecorations implements Disposable {
      * @param step the Code Flow step
      * @param editor text editor we check if the location exists in
      */
-    private static createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): DecorationOptions | undefined {
+    private static async createHighlightDecoration(step: CodeFlowStep, editor: TextEditor): Promise<DecorationOptions | undefined> {
         if (!step.location ||
-            !step.location.uri ||
-            !step.location.mappedToLocalPath ||
-            step.location.uri.toString() !== editor.document.uri.toString()) {
+            !step.location.uri) {
+                return undefined;
+        }
+
+        const mappedUri: Uri | undefined = await step.location.mapLocationToLocalPath();
+        if (!mappedUri ||
+            mappedUri.toString() !== editor.document.uri.toString()) {
             return undefined;
         }
+
         let stepRange: Range = step.location.range;
 
         if (step.location.endOfLine === true) {
@@ -445,23 +459,22 @@ export class CodeFlowDecorations implements Disposable {
                 if (selectionId.length > 1) {
                     await this.updateAttachmentSelection(attachmentId, parseInt(selectionId[1], 10));
                 } else {
-                    const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.explorerController.activeDiagnostic;
+                    const diagnostic: SarifViewerVsCodeDiagnostic | undefined = this.activeDiagnostic;
                     if (!diagnostic) {
                         return;
                     }
 
-                    const location: Location | undefined = await LocationFactory.getOrRemap(
-                        this.fileMapper,
-                        diagnostic.resultInfo.runInfo,
-                        diagnostic.resultInfo.attachments[attachmentId].file,
-                        diagnostic.rawResult.attachments && diagnostic.rawResult.attachments[attachmentId] && diagnostic.rawResult.attachments[attachmentId].artifactLocation
-                    );
-
-                    if (!location) {
+                    const attachmentLocation: Location | undefined = diagnostic.resultInfo.attachments[attachmentId]?.location;
+                    if (!attachmentLocation) {
                         return;
                     }
 
-                    await commands.executeCommand("vscode.open", location.uri, ViewColumn.One);
+                    const mappedLocation: Uri | undefined = await attachmentLocation.mapLocationToLocalPath();
+                    if (!mappedLocation) {
+                        return;
+                    }
+
+                    await commands.executeCommand("vscode.open", mappedLocation, ViewColumn.One);
                 }
                 break;
 
@@ -470,17 +483,15 @@ export class CodeFlowDecorations implements Disposable {
                 break;
 
             case MessageType.SourceLinkClicked:
-                if (!this.activeDiagnostic) {
-                    return;
-                }
-
                 const locData: LocationData = JSON.parse(webViewMessage.data);
                 const location: Location = {
-                    mappedToLocalPath: true,
+                    hasBeenMapped: true,
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
-                    toJSON: Utilities.LocationToJson
+                    toJSON: Utilities.LocationToJson,
+                    mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+                    onLocationMapped: FileMapper.uriMappedForLocation
                 };
                 await this.updateSelectionHighlight(location, undefined);
                 break;

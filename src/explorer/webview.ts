@@ -14,7 +14,7 @@ import {
 
 import { ResultsList } from "./resultsList";
 import { TextAndTooltip } from "./textAndTooltip";
-import { getElementFromEvent, getDocumentElementById, getDocumentElementsByClassName, getOptionalDocumentElementById, getElementChildren, removeElementChildren } from "./documentUtilities";
+import { getElementFromEvent, getDocumentElementById, getOptionalDocumentElementById, removeElementChildren } from "./documentUtilities";
 
 // Types used to map between the verbosity level (0-2, where 2 is show everything)
 type verbosityClassStates = "verbosityshow" | "verbosityhide";
@@ -49,10 +49,6 @@ export class ExplorerWebview {
 
     public diagnostic: DiagnosticData | undefined;
 
-    private hasCodeFlows: boolean = false;
-    private hasAttachments: boolean = false;
-    private hasFixes: boolean = false;
-    private hasStacks: boolean = false;
     private resultsList: ResultsList;
 
     public constructor() {
@@ -149,46 +145,15 @@ export class ExplorerWebview {
      * Cleans up the result details section, removing event handlers and elements
      */
     private cleanUpResultDetails(): void {
-        // Remove event handlers
         const tabContainer: HTMLElement | undefined = getOptionalDocumentElementById(document, "tabcontainer", HTMLElement);
-        if (tabContainer) {
-            for (const tabContainerElement of getElementChildren(tabContainer, HTMLDivElement)) {
-                tabContainerElement.removeEventListener("click", this.onTabClicked.bind(this));
-            }
+        if (!tabContainer) {
+            return;
         }
 
-        const sourceLinks: HTMLCollectionOf<HTMLAnchorElement> = getDocumentElementsByClassName(document, "sourcelink", HTMLAnchorElement);
-        for (const sourceLink of sourceLinks) {
-            sourceLink.removeEventListener("click", this.onSourceLinkClicked);
-        }
+        tabContainer.innerHTML = "";
 
-        if (this.hasCodeFlows) {
-            const codeFlowTrees: HTMLCollectionOf<HTMLUListElement> = getDocumentElementsByClassName(document, "codeflowtreeroot", HTMLUListElement);
-            for (const codeFlowTree of codeFlowTrees) {
-                codeFlowTree.removeEventListener("click", this.onCodeFlowTreeClicked.bind(this));
-            }
-
-            let element: HTMLDivElement = getDocumentElementById(document, "expandallcodeflow", HTMLDivElement);
-            element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
-
-            element = getDocumentElementById(document, "collapseallcodeflow", HTMLDivElement);
-            element.removeEventListener("click", this.onCollapseAllClicked.bind(this));
-
-            const verbosityElement: HTMLInputElement = getDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
-            verbosityElement.removeEventListener("click", this.onVerbosityChange.bind(this));
-        }
-
-        if (this.hasAttachments) {
-            const attachmentTrees: HTMLCollectionOf<HTMLUListElement> = getDocumentElementsByClassName(document, "attachmentstreeroot", HTMLUListElement);
-            for (const attachmentTree of attachmentTrees) {
-                attachmentTree.removeEventListener("click", this.onAttachmentClicked.bind(this));
-            }
-        }
-
-        // Clear Result Details
         removeElementChildren(document.getElementById("resultdetailsheader"));
-        removeElementChildren(document.getElementById("resultdetailscontainer"));
-    }
+        removeElementChildren(document.getElementById("resultdetailscontainer"));    }
 
     /**
      * Creates a tree node for a codeflow step
@@ -445,7 +410,7 @@ export class ExplorerWebview {
             if (attachment.regionsOfInterest !== undefined) { isAParent = true; }
             const treeNodeOptions: TreeNodeOptions = {
                 isParent: isAParent,
-                location: attachment.file,
+                location: attachment.location,
                 message: attachment.description.text,
                 requestId: `${aIndex}`,
             };
@@ -481,9 +446,6 @@ export class ExplorerWebview {
      */
     private createPanelCodeFlow(codeFlows: CodeFlow[]): HTMLDivElement {
         const panel: HTMLDivElement = this.createPanel(tabNames.codeflow);
-        if (codeFlows.length === 0) {
-            return panel;
-        }
         const headerEle: HTMLDivElement = this.createElement("div", { className: "tabcontentheader" });
 
         const expandAll: HTMLDivElement = this.createElement("div", {
@@ -672,8 +634,8 @@ export class ExplorerWebview {
             tableEle.appendChild(this.createPropertiesRow(resultInfo.additionalProperties));
         }
 
-        if (resultInfo.locationInSarifFile) {
-            row = this.createLocationsRow("Location in Log: ", [resultInfo.locationInSarifFile]);
+        if (resultInfo.resultLocationInSarifFile) {
+            row = this.createLocationsRow("Location in Log: ", [resultInfo.resultLocationInSarifFile]);
             if (row) {
                 tableEle.appendChild(row);
             }
@@ -916,24 +878,26 @@ export class ExplorerWebview {
 
     /**
      * Creates the Tabs Container content, the tabs at the top of the tab container
-     * @param hasCodeFlows Flag to include the CodeFlow tab in the set of tabs
-     * @param hasAttachments Flag to include the Attachments tab in the set of tabs
      */
-    private createTabHeaderContainer(): HTMLDivElement {
+    private createTabHeaderContainer(resultInfo: ResultInfo): HTMLDivElement {
         const container: HTMLDivElement = this.createElement("div", { id: "tabcontainer" });
 
         container.appendChild(this.createTabElement(tabNames.resultinfo, "Results info", "RESULT INFO"));
-        if (this.hasCodeFlows) {
+        container.appendChild(this.createTabElement(tabNames.runinfo, "Run info", "RUN INFO"));
+
+        if (resultInfo.codeFlows && resultInfo.codeFlows.length > 0) {
             container.appendChild(this.createTabElement(tabNames.codeflow, "Code flow", "CODE FLOW"));
         }
-        container.appendChild(this.createTabElement(tabNames.runinfo, "Run info", "RUN INFO"));
-        if (this.hasAttachments) {
+
+        if (resultInfo.attachments && resultInfo.attachments.length > 0) {
             container.appendChild(this.createTabElement(tabNames.attachments, "Attachments", "ATTACHMENTS"));
         }
-        if (this.hasFixes) {
+
+        if (resultInfo.fixes && resultInfo.fixes.length > 0) {
             container.appendChild(this.createTabElement(tabNames.fixes, "Fixes", "FIXES"));
         }
-        if (this.hasStacks) {
+
+        if (resultInfo.stacks && resultInfo.stacks.stacks.length > 0) {
             container.appendChild(this.createTabElement(tabNames.stacks, "Stacks", "STACKS"));
         }
 
@@ -947,7 +911,8 @@ export class ExplorerWebview {
     private initializeOpenedTab(activeTab?: tabNames): void {
         let tab: tabNames | undefined = activeTab;
         if (tab === undefined) {
-            if (this.hasCodeFlows) {
+            const codeFlow: HTMLDivElement | undefined = getOptionalDocumentElementById(document, tabNames.codeflow, HTMLDivElement);
+            if (codeFlow) {
                 tab = tabNames.codeflow;
             } else {
                 tab = tabNames.resultinfo;
@@ -966,10 +931,6 @@ export class ExplorerWebview {
         }
 
         const resultInfo: ResultInfo = this.diagnostic.resultInfo;
-        this.hasCodeFlows = resultInfo.codeFlows !== undefined && resultInfo.codeFlows.length > 0;
-        this.hasAttachments = resultInfo.attachments !== undefined && resultInfo.attachments.length > 0;
-        this.hasFixes = resultInfo.fixes !== undefined && resultInfo.fixes.length > 0;
-        this.hasStacks = resultInfo.stacks !== undefined && resultInfo.stacks.stacks.length > 0;
 
         this.createResultDetailsHeader(resultInfo);
 
@@ -984,26 +945,35 @@ export class ExplorerWebview {
         }
 
         resultDetailsContainer.appendChild(resultDetails);
-        resultDetailsContainer.appendChild(this.createTabHeaderContainer());
+        resultDetailsContainer.appendChild(this.createTabHeaderContainer(resultInfo));
 
         // Create and add the panels
         const panelContainer: HTMLDivElement = this.createElement("div", { id: "tabcontentcontainer" });
-        panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
-        panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
 
-        if (this.diagnostic.runInfo) {
-            panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
+        panelContainer.appendChild(this.createPanelResultInfo(resultInfo));
+
+        panelContainer.appendChild(this.createPanelRunInfo(this.diagnostic.runInfo));
+
+        if (resultInfo.codeFlows !== undefined && resultInfo.codeFlows.length > 0) {
+            panelContainer.appendChild(this.createPanelCodeFlow(resultInfo.codeFlows));
         }
 
-        panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
-        panelContainer.appendChild(this.createPanelFixes(resultInfo.fixes));
-        panelContainer.appendChild(this.createPanelStacks(resultInfo.stacks));
+        if (resultInfo.attachments !== undefined && resultInfo.attachments.length > 0) {
+            panelContainer.appendChild(this.createPanelAttachments(resultInfo.attachments));
+        }
+
+        if (resultInfo.fixes !== undefined && resultInfo.fixes.length) {
+            panelContainer.appendChild(this.createPanelFixes(resultInfo.fixes));
+        }
+
+        if (resultInfo.stacks !== undefined && resultInfo.stacks.stacks.length > 0) {
+            panelContainer.appendChild(this.createPanelStacks(resultInfo.stacks));
+        }
+
         resultDetailsContainer.appendChild(panelContainer);
 
         // Setup any state
-        if (this.hasCodeFlows) {
-            this.updateTreeVerbosity();
-        }
+        this.updateTreeVerbosity();
         this.initializeOpenedTab(this.diagnostic.activeTab);
     }
 
@@ -1405,7 +1375,11 @@ export class ExplorerWebview {
      * Updates the CodeFlow trees to only show the nodes based on the current verbosity setting
      */
     private updateTreeVerbosity(): void {
-        const verbosityElement: HTMLInputElement = getDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
+        const verbosityElement: HTMLInputElement | undefined = getOptionalDocumentElementById(document, "codeflowverbosity", HTMLInputElement);
+
+        if (!verbosityElement) {
+            return;
+        }
 
         const verbosity: VerbosityState | undefined = verbosityLevels.get(verbosityElement.value);
         if (!verbosity) {

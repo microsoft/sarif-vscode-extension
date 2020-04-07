@@ -7,10 +7,9 @@ import * as sarif from "sarif";
 import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import { MessageType } from "./common/Enums";
 import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { FileMapper } from "./FileMapper";
 import { Utilities } from "./Utilities";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -23,25 +22,9 @@ export class ExplorerController implements Disposable {
 
     public resultsListData: ResultsListData | undefined;
 
-    // Active diagnostic and corresponding event.
-    private activeSVDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
+    private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
     private onDidChangeActiveDiagnosticEventEmitter: EventEmitter<SarifViewerVsCodeDiagnostic | undefined> = new EventEmitter<SarifViewerVsCodeDiagnostic | undefined>();
-
-    public get onDidChangeActiveDiagnostic(): Event<SarifViewerVsCodeDiagnostic | undefined> {
-        return this.onDidChangeActiveDiagnosticEventEmitter.event;
-    }
-
-    public get activeDiagnostic(): SarifViewerVsCodeDiagnostic | undefined {
-        return this.activeSVDiagnostic;
-    }
-
-    public set activeDiagnostic(value: SarifViewerVsCodeDiagnostic | undefined) {
-        if (this.activeSVDiagnostic !== value) {
-            this.activeSVDiagnostic = value;
-            this.onDidChangeActiveDiagnosticEventEmitter.fire(value);
-        }
-    }
 
     // Verbosity setting, and corresponding event.
     private currentVerbosity: sarif.ThreadFlowLocation.importance = "important";
@@ -70,8 +53,6 @@ export class ExplorerController implements Disposable {
         return this.onWebViewMessageEventEmitter.event;
     }
 
-    public readonly diagnosticCollection: SVDiagnosticCollection;
-
     private activeTab: string | undefined;
     private selectedCodeFlowRow: string | undefined;
     private wvPanel: WebviewPanel | undefined;
@@ -80,12 +61,11 @@ export class ExplorerController implements Disposable {
         return this.createWebview();
     }
 
-    public constructor(private readonly extensionContext: ExtensionContext, fileMapper: FileMapper) {
+    public constructor(private readonly extensionContext: ExtensionContext, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
         this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
-        this.diagnosticCollection = new SVDiagnosticCollection(fileMapper);
-        this.disposables.push(this.diagnosticCollection);
+        this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
 
     }
 
@@ -172,22 +152,6 @@ export class ExplorerController implements Disposable {
         }
 
         this.onWebViewMessageEventEmitter.fire(message);
-    }
-
-    /**
-     * Sets the active diagnostic that's showns in the Webview, resets the saved webview state(selected row, etc.)
-     * @param diag diagnostic to show
-     * @param mappingUpdate optional flag to indicate a mapping update and the state shouldn't be reset
-     */
-    public setActiveDiagnostic(diag: SarifViewerVsCodeDiagnostic, mappingUpdate?: boolean): void {
-        if (!this.activeDiagnostic || this.activeDiagnostic !== diag || mappingUpdate) {
-            this.activeDiagnostic = diag;
-            if (!mappingUpdate) {
-                this.activeTab = undefined;
-                this.selectedCodeFlowRow = undefined;
-            }
-            this.sendActiveDiagnostic(false);
-        }
     }
 
     /**
@@ -310,5 +274,10 @@ export class ExplorerController implements Disposable {
         // just adding the message to the web-views queue.
         // tslint:disable-next-line: no-floating-promises
         this.webviewPanel.webview.postMessage(message);
+    }
+
+    private onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
+        this.activeDiagnostic = diagnostic;
+        this.sendActiveDiagnostic(false);
     }
 }

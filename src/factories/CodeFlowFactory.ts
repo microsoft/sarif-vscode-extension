@@ -8,7 +8,6 @@ import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
 import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
-import { FileMapper } from "../FileMapper";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 
@@ -20,18 +19,17 @@ export namespace CodeFlowFactory {
 
     /**
      * Processes the array of Sarif codeflow objects
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the code flows belong to.
      * @param sarifCodeFlows array of Sarif codeflow objects to be processed
      */
-    export async function create(fileMapper: FileMapper, runInfo: RunInfo, sarifCodeFlows: sarif.CodeFlow[] | undefined): Promise<CodeFlow[]> {
+    export async function create(runInfo: RunInfo, sarifCodeFlows: sarif.CodeFlow[] | undefined): Promise<CodeFlow[]> {
         if (!sarifCodeFlows) {
             return [];
         }
 
         const codeFlows: CodeFlow[] = [];
         for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-            codeFlows.push(await CodeFlowFactory.createCodeFlow(fileMapper, runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`));
+            codeFlows.push(await CodeFlowFactory.createCodeFlow(runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`));
         }
 
         return codeFlows;
@@ -71,35 +69,12 @@ export namespace CodeFlowFactory {
     }
 
     /**
-     * Tries to remap any of the not mapped codeflow objects in the array of processed codeflow objects
-     * @param runInfo The run the code flows belong to.
-     * @param codeFlows array of processed codeflow objects to try to remap
-     * @param sarifCodeFlows Used if a codeflow needs to be remapped
-     */
-    export async function tryRemapCodeFlows(runInfo: RunInfo, codeFlows: CodeFlow[], sarifCodeFlows: sarif.CodeFlow[]): Promise<void> {
-        for (const [cFKey, codeFlow] of codeFlows.entries()) {
-            for (const [tFKey, threadFlow] of codeFlow.threads.entries()) {
-                for (const [stepKey, step] of threadFlow.steps.entries()) {
-                    if (step.location && !step.location.mappedToLocalPath) {
-                        const sarifLoc: sarif.Location | undefined = sarifCodeFlows[cFKey].threadFlows[tFKey].locations[stepKey].location;
-                        if (sarifLoc) {
-                            const location: Location = await LocationFactory.create(runInfo, sarifLoc);
-                            codeFlows[cFKey].threads[tFKey].steps[stepKey].location = location;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Creates the CodeFlow object from the passed in sarif codeflow object
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the code flow belongs to.
      * @param sarifCF the sarif codeflow object to be processed
      * @param indexId The id based on the index in the codeflow array
      */
-    export async function createCodeFlow(fileMapper: FileMapper, runInfo: RunInfo, sarifCF: sarif.CodeFlow, indexId: string): Promise<CodeFlow> {
+    export async function createCodeFlow(runInfo: RunInfo, sarifCF: sarif.CodeFlow, indexId: string): Promise<CodeFlow> {
         const codeFlow: CodeFlow = {
             message: undefined,
             threads: [],
@@ -109,7 +84,7 @@ export namespace CodeFlowFactory {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlowFactory.createThreadFlow(fileMapper, runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`).then(
+            await CodeFlowFactory.createThreadFlow(runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -120,12 +95,11 @@ export namespace CodeFlowFactory {
 
     /**
      * Creates the ThreadFlow object from the passed in sarif threadflow object
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the thread flow belongs to.
      * @param sarifTF the sarif threadflow object to be processed
      * @param indexId The id based on the index in the codeflow array and threadflow array(ex: "1_1")
      */
-    export async function createThreadFlow(fileMapper: FileMapper, runInfo: RunInfo, sarifTF: sarif.ThreadFlow, indexId: string): Promise<ThreadFlow> {
+    export async function createThreadFlow(runInfo: RunInfo, sarifTF: sarif.ThreadFlow, indexId: string): Promise<ThreadFlow> {
         const threadFlow: ThreadFlow = {
             id: sarifTF.id,
             lvlsFirstStepIsNested: 0,
@@ -138,7 +112,7 @@ export namespace CodeFlowFactory {
         }
 
         for (let index: number = 0; index < sarifTF.locations.length; index++) {
-            await CodeFlowFactory.createCodeFlowStep(fileMapper, runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
+            await CodeFlowFactory.createCodeFlowStep(runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
@@ -166,7 +140,6 @@ export namespace CodeFlowFactory {
 
     /**
      * Creates the CodeFlowStep object from the passed in sarif CodeFlowLocation object
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the code flow step belongs to.
      * @param tFLoc the ThreadFlowLocation that needs to be processed
      * @param nextTFLoc the next ThreadFlowLocation, it's nesting level is used to determine if isCall or isReturn
@@ -174,7 +147,6 @@ export namespace CodeFlowFactory {
      * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      */
     export async function  createCodeFlowStep(
-        fileMapper: FileMapper,
         runInfo: RunInfo,
         tFLocOrig: sarif.ThreadFlowLocation,
         nextTFLocOrig: sarif.ThreadFlowLocation,

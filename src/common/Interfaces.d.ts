@@ -4,7 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri } from "vscode";
+import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri, Event } from "vscode";
 import { MessageType, SeverityLevelOrder, KindOrder, BaselineOrder } from "./Enums";
 
 /**
@@ -41,6 +41,11 @@ export interface HTMLElementOptions {
 
 
 export interface Location {
+    /**
+     * Contains the location of this "location" inside the SARIF JSON file.
+     */
+    locationInSarifFile?: sarif.Location;
+
     id?: number;
     endOfLine?: boolean;
     fileName?: string;
@@ -49,12 +54,17 @@ export interface Location {
     /**
      * Indicates if this location has been mapped to a local path.
      */
-    mappedToLocalPath: boolean;
+    hasBeenMapped: boolean;
 
     message?: Message;
     range: Range;
     uri?: Uri;
     uriBase?: string;
+
+    /**
+     * Maps a location to a local path.
+     */
+    mapLocationToLocalPath(this: Location): Promise<Uri | undefined>;
 
     /**
      * Serializes "start" and "stop" properties of VSCode's range as part of the location.
@@ -64,22 +74,34 @@ export interface Location {
      * @param value The current location value.
      */
     toJSON(this: Location, key: any, value: any): any
+
+    /**
+     * Fired when the URI for a location has been mapped.
+     */
+    onLocationMapped(this: Location): Event<Location>;
 }
 
 
 export interface RunInfo {
-    additionalProperties?: { [key: string]: string };
-    automationCategory?: string;
-    automationIdentifier?: string;
-    cmdLine?: string;
-    id: number;
-    sarifFileFullPath: string;
-    sarifFileName: string;
-    startUtc?: string;
-    timeDuration?: string;
-    toolFileName?: string;
-    toolFullName?: string;
-    toolName: string;
+    readonly additionalProperties?: { [key: string]: string };
+    readonly automationCategory?: string;
+    readonly automationIdentifier?: string;
+    readonly cmdLine?: string;
+
+    /**
+     * Uniquely identifies this run ID.
+     * The number is assigned by the "Result Info Factory", so these
+     * IDs simply grow by one every time a SARIF run is parsed.
+     */
+    readonly id: number;
+
+    readonly sarifFileFullPath: string;
+    readonly sarifFileName: string;
+    readonly startUtc?: string;
+    readonly timeDuration?: string;
+    readonly toolFileName?: string;
+    readonly toolFullName?: string;
+    readonly toolName: string;
 
     /**
      * Provides a map between a "baseID" (such as %srcroot%) to its absolute URI.
@@ -96,9 +118,9 @@ export interface RunInfo {
      * }
      * then this map would contain [ "SRCROOT" : "file:///E:/SRC" , "DRIVEROOT" => "file://E:" ]
      */
-    expandedBaseIds?: { [uriBaseId: string]: string };
+    readonly expandedBaseIds?: { [uriBaseId: string]: string };
 
-    workingDir?: string;
+    readonly workingDir?: string;
 }
 
 export interface ResultInfo {
@@ -111,7 +133,7 @@ export interface ResultInfo {
     fixes: Fix[];
     id: number;
     kind: sarif.Result.kind;
-    locationInSarifFile?: Location;
+    resultLocationInSarifFile: Location;
     locations: Location[];
     message: Message;
     messageHTML?: HTMLLabelElement;
@@ -187,7 +209,7 @@ export interface Message {
 
 export interface Attachment {
     description: Message,
-    file: Location,
+    location: Location,
     regionsOfInterest: Location[]
 }
 

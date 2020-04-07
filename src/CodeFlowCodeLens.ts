@@ -7,6 +7,7 @@ import { ExplorerController } from "./ExplorerController";
 import { Location } from "./common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import * as sarif from "sarif";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
@@ -17,11 +18,11 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
     private selectedVerbosity: sarif.ThreadFlowLocation.importance = "important";
 
-    public constructor(explorerController: ExplorerController) {
+    public constructor(explorerController: ExplorerController, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(this.onDidChangeCodeLensesEmitter);
         this.disposables.push(languages.registerCodeLensProvider("*", this));
         this.disposables.push(explorerController.onDidChangeVerbosity(this.onDidChangeVerbosity.bind(this)));
-        this.disposables.push(explorerController.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
+        this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }
 
     /**

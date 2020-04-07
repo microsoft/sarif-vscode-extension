@@ -16,7 +16,6 @@ import { FileMapper } from "../FileMapper";
 export namespace LocationFactory {
     /**
      * Processes the passed in sarif location and creates a new Location
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
      * @param runInfo The run the location belongs to.
      * @param sarifLocation location from result in sarif file
      */
@@ -71,86 +70,23 @@ export namespace LocationFactory {
             }
         }
 
-        return {
+        const location: Location = {
+            locationInSarifFile: sarifLocation,
             id,
             endOfLine: parsedRange?.endOfLine,
             fileName,
             logicalLocations,
-            mappedToLocalPath: mappedToLocalPath,
+            hasBeenMapped: mappedToLocalPath,
             range: parsedRange?.range ?? new Range(0, 0, 0, 1),
             uri,
             uriBase,
             message,
-            toJSON: Utilities.LocationToJson
+            toJSON: Utilities.LocationToJson,
+            mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+            onLocationMapped: FileMapper.uriMappedForLocation
         };
-    }
 
-    /**
-     * Helper function returns the passed in location if mapped, if not mapped or undefined it asks the user
-     * @param fileMapper The file mapper used to map the URI locations to a valid local path.
-     * @param runInfo The run the locations belongs to.
-     * @param location processed Location of the file
-     * @param sarifLocation raw sarif Location of the file
-     */
-    export async function getOrRemap(fileMapper: FileMapper, runInfo: RunInfo, location: Location | undefined, sarifLocation: sarif.Location | undefined): Promise<Location | undefined> {
-        // If it's already mapped, then just return it.
-        if (location && location.mappedToLocalPath) {
-            return location;
-        }
-
-        // We can't remap a location without a uri base. (I think)
-        if (!location || !location.uriBase) {
-            return undefined;
-        }
-
-        if (!sarifLocation || !sarifLocation.physicalLocation) {
-            return location;
-        }
-
-        const physLoc: sarif.PhysicalLocation = sarifLocation.physicalLocation;
-
-        if (!physLoc.artifactLocation || !physLoc.artifactLocation.uri) {
-            return location;
-        }
-
-        const uri: Uri = Utilities.combineUriWithUriBase(physLoc.artifactLocation.uri, location.uriBase);
-        await fileMapper.getUserToChooseFile(uri, location.uriBase);
-        return await LocationFactory.create(runInfo, sarifLocation);
-    }
-
-    /**
-     * Maps a Location to the File Location of a result in the SARIF file
-     * @param sarifJSONMapping A map from a URI to pointers created during reading the SARIF file.
-     * @param sarifUri Uri of the SARIF document the result is in
-     * @param runIndex the index of the run in the SARIF file
-     * @param resultIndex the index of the result in the SARIF file
-     */
-    export function  mapToSarifFileLocation(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
-        const sarifMapping: JsonMapping | undefined = sarifJSONMapping.get(sarifUri.toString());
-        if (!sarifMapping) {
-            return undefined;
-        }
-
-        const sarifLog: sarif.Log = sarifMapping.data;
-        if (runIndex >= sarifLog.runs.length) {
-            return undefined;
-        }
-
-        const sarifRun: sarif.Run = sarifLog.runs[runIndex];
-        if (!sarifRun.results) {
-            return undefined;
-        }
-
-        const result: sarif.Result = sarifRun.results[resultIndex];
-        const locations: sarif.Location[] | undefined = result.locations;
-        let resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
-        if (locations  && locations.length !== 0 && locations[0].physicalLocation) {
-            resultPath = resultPath + "/locations/0/physicalLocation";
-        } else if (result.analysisTarget !== undefined) {
-            resultPath = resultPath + "/analysisTarget";
-        }
-
-        return LocationFactory.createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath);
+        return location;
     }
 
     /**
@@ -160,7 +96,7 @@ export namespace LocationFactory {
      * @param runIndex the index of the run in the SARIF file
      * @param resultIndex the index of the result in the SARIF file
      */
-    export function mapToSarifFileResult(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location | undefined {
+    export function mapToSarifFileResult(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location {
         const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
         return LocationFactory.createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath, true);
     }
@@ -172,10 +108,10 @@ export namespace LocationFactory {
      * @param resultPath the pointer to the JsonMapping
      * @param insertionPtr flag to set if you want the start position instead of the range, sets the end to the start
      */
-    export function createLocationOfMapping(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location | undefined {
+    export function createLocationOfMapping(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location {
         const sarifMapping: JsonMapping | undefined = sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
-            return undefined;
+            throw new Error("Expected to be able to find JSON path mapping");
         }
 
         const locationMapping: JsonPointer = sarifMapping.pointers[resultPath];
@@ -187,11 +123,13 @@ export namespace LocationFactory {
         const resultLocation: Location = {
             endOfLine: false,
             fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
-            mappedToLocalPath: false,
+            hasBeenMapped: false,
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
             uri: sarifUri,
-            toJSON: Utilities.LocationToJson
+            toJSON: Utilities.LocationToJson,
+            mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+            onLocationMapped: FileMapper.uriMappedForLocation
         };
 
         return resultLocation;

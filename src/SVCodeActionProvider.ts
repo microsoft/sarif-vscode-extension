@@ -3,20 +3,18 @@
  */
 
 import * as vscode from "vscode";
-import { ExplorerController } from "./ExplorerController";
 import { FileMapper } from "./FileMapper";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import * as sarif from 'sarif';
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes
  * Also adds the Map to Source fix for the results that were not able to be mapped previously
  */
 export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.Disposable {
-    private isFirstCall: boolean = true;
     private disposables: vscode.Disposable[] = [];
 
-    public constructor(private readonly explorerController: ExplorerController) {
+    public constructor(private readonly diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
     }
 
@@ -47,51 +45,54 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
             return [];
         }
         const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
+
         // This diagnostic with the source name of "SARIFViewer" is the place holder for the problems panel limit message,
         // can possibly put logic here to allow for showing next set of diagnostics
-        if (svDiagnostic.source !== "SARIFViewer") {
-            if (this.isFirstCall) {
-                await vscode.commands.executeCommand(ExplorerController.ExplorerLaunchCommand);
-                this.isFirstCall = false;
-            }
-
-            this.explorerController.setActiveDiagnostic(svDiagnostic);
-
-            return this.getCodeActions(svDiagnostic);
+        if (svDiagnostic.source === "SARIFViewer") {
+            return [];
         }
 
-        return [];
+        return this.getCodeActions(document.uri, svDiagnostic);
     }
 
     /**
      * Creates the set of code actions for the passed in Sarif Viewer Diagnostic
+     * @param sarifFileUri The Sarif file for which to get the unmapped diagnostics from.
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
-    private getCodeActions(svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction[] {
-        const rawLocations: sarif.Location[] | undefined = svDiagnostic.rawResult.locations;
-        const actions: vscode.CodeAction[] = [];
-
-        if ((!svDiagnostic.resultInfo.assignedLocation || !svDiagnostic.resultInfo.assignedLocation.mappedToLocalPath) && rawLocations) {
-            const physicalLocation: sarif.PhysicalLocation | undefined = rawLocations[0].physicalLocation;
-
-            if (physicalLocation && physicalLocation.artifactLocation) {
-                const cmd: vscode.Command  = {
-                    arguments: [svDiagnostic.runInfo, physicalLocation.artifactLocation, svDiagnostic.resultInfo.runId],
-                    command: FileMapper.MapCommand,
-                    title: "Map To Source",
-                };
-
-                const action: vscode.CodeAction = {
-                    command: cmd,
-                    diagnostics:  this.explorerController.diagnosticCollection.getAllUnmappedDiagnostics(),
-                    kind: vscode.CodeActionKind.QuickFix,
-                    title: "Map To Source",
-                } ;
-
-                actions.push(action);
-            }
+    private getCodeActions(sarifFileUri: vscode.Uri, svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction[] {
+        // If the location has already been mapped, then we don't need to map it again.
+        if (svDiagnostic.location.hasBeenMapped) {
+            return [];
         }
 
-        return actions;
+        // If we don't have a location to map, then we obviously can't map it :)
+        if (!svDiagnostic.resultInfo.assignedLocation) {
+            return [];
+        }
+
+        const unmappedDiagnostics: SarifViewerVsCodeDiagnostic[] = this.diagnosticCollection.getAllUnmappedDiagnostics(sarifFileUri);
+        if (unmappedDiagnostics.length === 0) {
+            return [];
+        }
+
+        if (unmappedDiagnostics.find((unmappedDiagnostic) => unmappedDiagnostic === svDiagnostic) === undefined) {
+            return [];
+        }
+
+        const cmd: vscode.Command  = {
+            arguments: [svDiagnostic.resultInfo.assignedLocation],
+            command: FileMapper.MapCommand,
+            title: "Map To Source",
+        };
+
+        const action: vscode.CodeAction = {
+            command: cmd,
+            diagnostics:  unmappedDiagnostics,
+            kind: vscode.CodeActionKind.QuickFix,
+            title: "Map To Source",
+        };
+
+        return [action];
     }
 }
