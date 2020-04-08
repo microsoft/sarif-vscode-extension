@@ -7,6 +7,8 @@ import * as sarif from "sarif";
 import { RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
 
+let nextRunInfoId: number = 0;
+
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif run
  * a model used by the Web Panel..
@@ -63,7 +65,7 @@ export namespace RunInfoFactory {
         }
 
         return {
-            id: 0,
+            id: nextRunInfoId++,
             toolName: tool.name,
             toolFullName,
             toolFileName,

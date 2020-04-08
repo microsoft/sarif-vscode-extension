@@ -12,6 +12,11 @@ import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
 import { ResultsListController } from "./ResultsListController";
 import { FileMapper } from "./FileMapper";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+
+// This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
+// If you don't do this... you crash using the extension methods.
+import './utilities/stringUtilities';
 
 /**
  * This method is called when the extension is activated.
@@ -22,23 +27,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
-    const fileMapper: FileMapper = new FileMapper();
-    context.subscriptions.push(fileMapper);
+    context.subscriptions.push(FileMapper.InitializeFileMapper());
 
-    const explorerController: ExplorerController = new ExplorerController(context, fileMapper);
+    const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection();
+    context.subscriptions.push(diagnosticCollection);
+
+    const explorerController: ExplorerController = new ExplorerController(context, diagnosticCollection);
     context.subscriptions.push(explorerController);
 
-    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(explorerController);
+    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(diagnosticCollection);
     context.subscriptions.push(codeActionProvider);
 
-    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider, explorerController.diagnosticCollection));
+    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider, diagnosticCollection));
 
-    context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController));
+    context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController, diagnosticCollection));
 
-    context.subscriptions.push(new CodeFlowDecorations(explorerController, fileMapper));
+    context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = (new LogReader(explorerController, fileMapper));
+    const reader: LogReader = (new LogReader(diagnosticCollection));
     context.subscriptions.push(reader);
 
     // We do not need to block extension startup for reading any open documents.

@@ -8,9 +8,10 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
 
-import { Range, Uri, Position } from "vscode";
+import { Range, Uri, Position, Event } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
+import { FileMapper } from "../FileMapper";
 
 suite("combineUriWithUriBase", () => {
     const expectedFileSchema: string = "file";
@@ -93,12 +94,16 @@ suite("parseSarifMessages", () => {
             endOfLine: false,
             fileName: "file.ext",
             id: 0,
-            mapped: true,
+            mappedToLocalPath: true,
             message: undefined,
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
-            toJSON: Utilities.LocationToJson
+            toJSON: Utilities.LocationToJson,
+            mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
     ];
 
@@ -107,23 +112,31 @@ suite("parseSarifMessages", () => {
             endOfLine: false,
             fileName: "file.ext",
             id: 1,
-            mapped: true,
+            mappedToLocalPath: true,
             message: undefined,
             range: new Range(1, 1, 2, 2),
             uri: Uri.file("c:/folder/file.ext"),
             uriBase: undefined,
-            toJSON: Utilities.LocationToJson
+            toJSON: Utilities.LocationToJson,
+            mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
         {
             endOfLine: false,
             fileName: "file1.ext",
             id: 0,
-            mapped: true,
+            mappedToLocalPath: true,
             message: undefined,
             range: new Range(3, 3, 4, 4),
             uri: Uri.file("c:/folder1/file1.ext"),
             uriBase: undefined,
-            toJSON: Utilities.LocationToJson
+            toJSON: Utilities.LocationToJson,
+            mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
     ];
 
