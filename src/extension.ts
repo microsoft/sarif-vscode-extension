@@ -14,6 +14,10 @@ import { ResultsListController } from "./ResultsListController";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
+// This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
+// If you don't do this... you crash using the extension methods.
+import './utilities/stringUtilities';
+
 /**
  * This method is called when the extension is activated.
  * Creates the explorer, reader, provider
@@ -23,8 +27,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
-    const fileMapper: FileMapper = new FileMapper();
-    context.subscriptions.push(fileMapper);
+    context.subscriptions.push(FileMapper.InitializeFileMapper());
 
     const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection();
     context.subscriptions.push(diagnosticCollection);
@@ -42,7 +45,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = (new LogReader(fileMapper, diagnosticCollection));
+    const reader: LogReader = (new LogReader(diagnosticCollection));
     context.subscriptions.push(reader);
 
     // We do not need to block extension startup for reading any open documents.

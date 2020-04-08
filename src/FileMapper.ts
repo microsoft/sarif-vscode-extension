@@ -11,11 +11,10 @@ import {
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
-import { RunInfo, Location, PromptUserDuringMap } from "./common/Interfaces";
+import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/Interfaces";
 
 const RootPathSample: string = "c:\\sample\\path";
 const ConfigRootPaths: string = "rootpaths";
-
 /**
  * Handles mapping file locations if the file is not in the location specified in the sarif file
  * Maintains a mapping of the files that have been remapped
@@ -75,7 +74,7 @@ export class FileMapper implements Disposable {
      */
     private rootpaths: string[] = [];
 
-    public constructor() {
+    private constructor() {
         if (FileMapper.fileMapperInstance) {
             throw new Error("The file mapper should only be constructed once per extension session.");
         }
@@ -149,9 +148,9 @@ export class FileMapper implements Disposable {
      * Tries to map the passed in uri to a file location
      * @param uri Uri that needs to be mapped, should already have uribase included
      * @param uriBase the base path of the uri
-     * @param promptUser Indicates whether we wish to prompt the user or not.
+     * @param options Indicates whether we wish to prompt the user or not.
      */
-    private async map(uri: Uri, uriBase: string | undefined, promptUser: PromptUserDuringMap): Promise<Uri | undefined> {
+    private async map(uri: Uri, uriBase: string | undefined, options: MapLocationToLocalPathOptions): Promise<Uri | undefined> {
         // check if the file has already been remapped and the mapping isn't null(previously failed to map)
         const uriPath: string = Utilities.getFsPathWithFragment(uri);
 
@@ -176,7 +175,7 @@ export class FileMapper implements Disposable {
         }
 
         // If not able to remap using other means, we need to ask the user to enter a path for remapping
-        if (promptUser !== 'No prompt') {
+        if (options.promptUser) {
             mappedUri = await this.getUserToChooseFile(uri, uriBase);
         }
 
@@ -206,7 +205,7 @@ export class FileMapper implements Disposable {
                 // used for the file mapping.
                 this.mapEmbeddedContent(key, artifact);
             } else {
-                await this.map(uriWithBase, uriBase, 'Prompt');
+                await this.map(uriWithBase, uriBase, { promptUser: true });
             }
 
             this.fileIndexKeyMapping.set(`${runId}_${artifactIndex}`, key);
@@ -545,16 +544,14 @@ export class FileMapper implements Disposable {
         });
     }
 
-    private  mapFileCommand(location: Location): Promise<Uri | undefined>  {
-        return location.mapLocationToLocalPath('Prompt');
+    private mapFileCommand(location: Location): Promise<Uri | undefined>  {
+        return location.mapLocationToLocalPath({ promptUser: true });
     }
 
     public static uriMappedForLocation(this: Location): Event<Location> {
-        if (!FileMapper.fileMapperInstance) {
-            throw new Error("File mapper has not been initialized");
-        }
+        const fileMapperInstance: FileMapper = FileMapper.InitializeFileMapper();
 
-        const locationEventEmitter: EventEmitter<Location> | undefined = FileMapper.fileMapperInstance.locationMappedEventEmitterMap.get(this);
+        const locationEventEmitter: EventEmitter<Location> | undefined = fileMapperInstance.locationMappedEventEmitterMap.get(this);
         if (locationEventEmitter) {
             return locationEventEmitter.event;
         }
@@ -566,13 +563,16 @@ export class FileMapper implements Disposable {
         return newLocationEventEmitter.event;
     }
 
-    public static async mapLocationToLocalPath(this: Location, promptUser: PromptUserDuringMap): Promise<Uri | undefined> {
-        if (!FileMapper.fileMapperInstance) {
-            throw new Error("File mapper has not been initialized");
-        }
+    /**
+     * Attempts to map a location to a local path.
+     * @param this The location to be mapped.
+     * @param options Options that specify whether the user should be prompted during mapping.
+     */
+    public static async mapLocationToLocalPath(this: Location, options: MapLocationToLocalPathOptions): Promise<Uri | undefined> {
+        const fileMapperInstance: FileMapper = FileMapper.InitializeFileMapper();
 
         // If the path is already local, then return.
-        if (this.hasBeenMapped) {
+        if (this.mappedToLocalPath) {
             return this.uri;
         }
 
@@ -582,19 +582,30 @@ export class FileMapper implements Disposable {
         }
 
         // Let's try to remap.
-        const mappedUri: Uri | undefined =  await FileMapper.fileMapperInstance.map(this.uri, this.uriBase, promptUser);
+        const mappedUri: Uri | undefined =  await fileMapperInstance.map(this.uri, this.uriBase, options);
         if (mappedUri) {
             // If successful, save the remapped URI so we don't remap again.
             this.uri = mappedUri;
-            this.hasBeenMapped = true;
+            this.mappedToLocalPath = true;
 
             // Let everyone know that the location's URI has changed.
-            const locationEventEmitter: EventEmitter<Location> | undefined = FileMapper.fileMapperInstance.locationMappedEventEmitterMap.get(this);
+            const locationEventEmitter: EventEmitter<Location> | undefined = fileMapperInstance.locationMappedEventEmitterMap.get(this);
             if (locationEventEmitter) {
                 locationEventEmitter.fire(this);
             }
         }
 
         return mappedUri;
+    }
+
+    /**
+     * Initialize the file-mapper singleton.
+     */
+    public static InitializeFileMapper(): FileMapper {
+        if (!FileMapper.fileMapperInstance) {
+            FileMapper.fileMapperInstance = new FileMapper();
+        }
+
+        return FileMapper.fileMapperInstance;
     }
 }

@@ -109,7 +109,7 @@ export class SVDiagnosticCollection implements Disposable {
     /**
      * Syncs the collection of Diagnostics added with those displayed in the problems panel.
      */
-    public syncDiagnostics(): void {
+    public syncIssuesWithDiagnosticCollection(): void {
         this.diagnosticCollection.clear();
 
         this.addToDiagnosticCollection(this.mappedIssuesCollection);
@@ -127,7 +127,7 @@ export class SVDiagnosticCollection implements Disposable {
      * @param issue diagnostic to add to the problems panel
      */
     public add(issue: SarifViewerVsCodeDiagnostic): void {
-        if (issue.location.hasBeenMapped) {
+        if (issue.location.mappedToLocalPath) {
             this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
             if (issue.resultInfo.assignedLocation) {
@@ -218,7 +218,7 @@ export class SVDiagnosticCollection implements Disposable {
 
         this.removeResults(runsToRemove, this.mappedIssuesCollection);
         this.removeResults(runsToRemove, this.unmappedIssuesCollection);
-        this.syncDiagnostics();
+        this.syncIssuesWithDiagnosticCollection();
     }
 
     /**
@@ -357,13 +357,13 @@ export class SVDiagnosticCollection implements Disposable {
             // we don't want to synchronize the diagnostics repeatedly while it occurs.
             this.remappingDiagnostics = true;
             for (const remainingUnmappedDiagnostic of remainingUnmappedDiagnostics) {
-                await remainingUnmappedDiagnostic.attemptToMapLocation('No prompt');
+                await remainingUnmappedDiagnostic.attemptToMapLocation({ promptUser: false });
             }
             this.remappingDiagnostics = false;
         }
 
         if (!this.remappingDiagnostics) {
-            this.syncDiagnostics();
+            this.syncIssuesWithDiagnosticCollection();
         }
     }
 

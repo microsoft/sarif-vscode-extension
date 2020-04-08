@@ -164,7 +164,7 @@ export class ResultsListController implements Disposable {
                     return;
                 }
 
-                const uriToOpen: Uri | undefined = await diagLocation.mapLocationToLocalPath('Prompt');
+                const uriToOpen: Uri | undefined = await diagLocation.mapLocationToLocalPath({ promptUser: true });
 
                 if (!uriToOpen) {
                     return;

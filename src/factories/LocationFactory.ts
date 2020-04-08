@@ -41,14 +41,11 @@ export namespace LocationFactory {
                 // because VSCode treats URIs as case sensitive and if the case
                 // isn't correct can result in opening the same file twice (with different casing).
                 // Also, we can treat the URI as "mapped to local path" if it exists locally.
-                if (uri.scheme.localeCompare('root', 'file', {sensitivity: 'base'}) === 0) {
+                if (uri.isFile()) {
                     uri = Utilities.fixUriCasing(uri);
                     mappedToLocalPath = fs.existsSync(uri.fsPath);
                 }
 
-                uri.toString();
-
-                // toString() is executed to create an external value for the webview's use
                 fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
             }
         }
@@ -76,7 +73,7 @@ export namespace LocationFactory {
             endOfLine: parsedRange?.endOfLine,
             fileName,
             logicalLocations,
-            hasBeenMapped: mappedToLocalPath,
+            mappedToLocalPath,
             range: parsedRange?.range ?? new Range(0, 0, 0, 1),
             uri,
             uriBase,
@@ -123,7 +120,7 @@ export namespace LocationFactory {
         const resultLocation: Location = {
             endOfLine: false,
             fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
-            hasBeenMapped: false,
+            mappedToLocalPath: false,
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
             uri: sarifUri,

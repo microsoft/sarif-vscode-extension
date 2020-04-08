@@ -6,7 +6,6 @@ import * as path from "path";
 import * as sarif from "sarif";
 import { RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
-import { FileMapper } from "../FileMapper";
 
 let nextRunInfoId: number = 0;
 
@@ -20,7 +19,7 @@ export namespace RunInfoFactory {
      * @param run SARIF run object to process
      * @param sarifFileName path and file name of the sarif file this run is in
      */
-    export function create(fileMapper: FileMapper, run: sarif.Run, sarifFileName: string): RunInfo {
+    export function create(run: sarif.Run, sarifFileName: string): RunInfo {
         const tool: sarif.ToolComponent  = run.tool.driver;
 
         let toolFullName: string = tool.fullName || tool.name;

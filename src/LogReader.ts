@@ -16,8 +16,17 @@ import { ProgressHelper } from "./ProgressHelper";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/CodeFlowFactory";
 import { Utilities } from "./Utilities";
-import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+
+/**
+ * Optinos used when readining\import SARIF files.
+ */
+export interface ReadOptions {
+    /**
+     * Specifies whether to synchronize the imported results with VSCode's diagnostics/problems pane.
+     */
+    synchronizeDiagnosticsCollection: boolean;
+}
 
 /**
  * Handles reading Sarif Logs, processes and adds the results to the collection to display in the problems window
@@ -34,10 +43,9 @@ export class LogReader implements Disposable {
 
     /**
      * Creates an instance of the log reader that is responsible for parsing SARIF files.
-     * @param fileMapper An instance of the file-mapper that will be used to map Locations to local paths.
      * @param diagnosticCollection The diagnostic collection the results will be read in to.
      */
-    public constructor(private readonly fileMapper: FileMapper, private readonly diagnosticCollection: SVDiagnosticCollection) {
+    public constructor(private readonly diagnosticCollection: SVDiagnosticCollection) {
         // Listen for new sarif files to open or close
         this.disposables.push(workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
     }
@@ -55,33 +63,32 @@ export class LogReader implements Disposable {
      * @param doc document that was opened
      */
     public onDocumentOpened(doc: TextDocument): Promise<void> {
-        return Utilities.isSarifFile(doc) ? this.read(doc, true) : Promise.resolve();
+        return Utilities.isSarifFile(doc) ? this.read(doc, { synchronizeDiagnosticsCollection: true }) : Promise.resolve();
     }
 
     /**
      * Reads through all of the text documents open in the workspace, syncs the issues with problem panel after
      */
     public async readAll(): Promise<void> {
-        // Get all the documents and read them
-        const docs: readonly TextDocument[] = workspace.textDocuments;
+        let synchronizeDiagnosticsCollection: boolean = false;
 
-        let needsSync: boolean = false;
-        for (const doc of docs.filter((doc) => Utilities.isSarifFile(doc))) {
-            needsSync = true;
-            await this.read(doc);
+        // Spin through VSCode's documents and read any SARIF files that are opened.
+        for (const sarifTextDocument of workspace.textDocuments.filter((doc) => Utilities.isSarifFile(doc))) {
+            await this.read(sarifTextDocument, { synchronizeDiagnosticsCollection: false });
+            synchronizeDiagnosticsCollection = true;
         }
 
-        if (needsSync) {
-            this.diagnosticCollection.syncDiagnostics();
+        if (synchronizeDiagnosticsCollection) {
+            this.diagnosticCollection.syncIssuesWithDiagnosticCollection();
         }
     }
 
     /**
      * Reads a sarif file, processing the results and adding them to the issues collection for display in problems panel
      * @param doc text document to read
-     * @param sync Optional flag to sync the issues after reading this file
+     * @param options Optional flag to sync the issues after reading this file
      */
-    public async read(doc: TextDocument, sync?: boolean): Promise<void> {
+    public async read(doc: TextDocument, options: ReadOptions): Promise<void> {
         if (Utilities.isSarifFile(doc)) {
             const pOptions: ProgressOptions = {
                 cancellable: false,
@@ -119,7 +126,7 @@ export class LogReader implements Disposable {
 
                     for (let runIndex: number = 0; runIndex < log.runs.length; runIndex++) {
                         const run: sarif.Run = log.runs[runIndex];
-                        runInfo =  RunInfoFactory.create(this.fileMapper, run, doc.fileName);
+                        runInfo =  RunInfoFactory.create(run, doc.fileName);
 
                         this.diagnosticCollection.addRunInfo(runInfo);
 
@@ -133,8 +140,8 @@ export class LogReader implements Disposable {
                         }
                     }
 
-                    if (sync) {
-                        this.diagnosticCollection.syncDiagnostics();
+                    if (options.synchronizeDiagnosticsCollection) {
+                        this.diagnosticCollection.syncIssuesWithDiagnosticCollection();
                     }
 
                     ProgressHelper.Instance.Progress = undefined;
@@ -174,10 +181,10 @@ export class LogReader implements Disposable {
             const sarifResult: sarif.Result = results[resultIndex];
             const resultLocationInSarifFile: Location | undefined = LocationFactory.mapToSarifFileResult(this.sarifJSONMapping, docUri, runIndex, resultIndex);
 
-            const resultInfo: ResultInfo = await ResultInfoFactory.create(this.fileMapper, runInfo, sarifResult, tool, resultIndex, resultLocationInSarifFile);
+            const resultInfo: ResultInfo = await ResultInfoFactory.create(runInfo, sarifResult, tool, resultIndex, resultLocationInSarifFile);
 
             if (resultInfo.assignedLocation) {
-                const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(runInfo, resultInfo, sarifResult, resultInfo.assignedLocation.hasBeenMapped ? resultInfo.assignedLocation : resultLocationInSarifFile);
+                const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(runInfo, resultInfo, sarifResult, resultInfo.assignedLocation.mappedToLocalPath ? resultInfo.assignedLocation : resultLocationInSarifFile);
                 this.diagnosticCollection.add(diagnostic);
             }
         }

@@ -153,7 +153,8 @@ export class ExplorerWebview {
         tabContainer.innerHTML = "";
 
         removeElementChildren(document.getElementById("resultdetailsheader"));
-        removeElementChildren(document.getElementById("resultdetailscontainer"));    }
+        removeElementChildren(document.getElementById("resultdetailscontainer"));
+    }
 
     /**
      * Creates a tree node for a codeflow step

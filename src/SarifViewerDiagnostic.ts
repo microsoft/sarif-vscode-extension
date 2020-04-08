@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ResultInfo, RunInfo, Location, PromptUserDuringMap } from './common/Interfaces';
+import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/Interfaces';
 import * as sarif from 'sarif';
 import { DiagnosticSeverity } from 'vscode';
 
@@ -23,14 +23,14 @@ function getSeverity(level: sarif.Result.level): DiagnosticSeverity {
 }
 
 /**
- * Contains the daignostic information for a single "result" in a SARIF file.
+ * Contains the diagnostic information for a single "result" in a SARIF file.
  */
 export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
     /**
      * Constructs a VSCode diagnostic for a single SARIF result.
      * @param runInfo The run the diagnostic belons to.
      * @param resultInfo The result the diagnostic belongs to.
-     * @param rawResult The origina SARIF result from the SARIF JSON file.
+     * @param rawResult The original SARIF result from the SARIF JSON file.
      * @param currentLocation The current location the diagnostic currently belongs to. This location can either be a location in the SARIF JSON file, or if mapped by the user, the actual file-system location of the result.
      */
     public constructor(
@@ -55,7 +55,7 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
      * @param mappedLocation The location that has been mapped to a file on the local filesystem.
      */
     public updateToMappedLocation(mappedLocation: Location): void {
-        if (!mappedLocation.hasBeenMapped) {
+        if (!mappedLocation.mappedToLocalPath) {
             throw new Error("Only expect mapped locations");
         }
 
@@ -63,8 +63,8 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
         this.range = mappedLocation.range;
     }
 
-    public async attemptToMapLocation(promptUser: PromptUserDuringMap): Promise<void> {
-        if (!this.resultInfo.assignedLocation || this.resultInfo.assignedLocation.hasBeenMapped) {
+    public async attemptToMapLocation(promptUser: MapLocationToLocalPathOptions): Promise<void> {
+        if (!this.resultInfo.assignedLocation || this.resultInfo.assignedLocation.mappedToLocalPath) {
             return;
         }
 

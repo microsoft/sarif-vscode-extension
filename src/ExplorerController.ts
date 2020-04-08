@@ -22,9 +22,10 @@ export class ExplorerController implements Disposable {
 
     public resultsListData: ResultsListData | undefined;
 
+    /**
+     * Contains the active diagnostic as known to the diagnostic collection.
+     */
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
-
-    private onDidChangeActiveDiagnosticEventEmitter: EventEmitter<SarifViewerVsCodeDiagnostic | undefined> = new EventEmitter<SarifViewerVsCodeDiagnostic | undefined>();
 
     // Verbosity setting, and corresponding event.
     private currentVerbosity: sarif.ThreadFlowLocation.importance = "important";
@@ -63,7 +64,6 @@ export class ExplorerController implements Disposable {
 
     public constructor(private readonly extensionContext: ExtensionContext, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
-        this.disposables.push(this.onDidChangeActiveDiagnosticEventEmitter);
         this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
         this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }

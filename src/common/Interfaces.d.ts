@@ -40,7 +40,15 @@ export interface HTMLElementOptions {
 }
 
 
-type PromptUserDuringMap  = 'Prompt' | 'No prompt';
+/**
+ * Options used when attempting file mapping.
+ */
+export interface MapLocationToLocalPathOptions {
+    /**
+     * Specifies whether to prompt the user for a path, or to attempt to map silently.
+     */
+    promptUser: boolean;
+}
 
 export interface Location {
     /**
@@ -56,7 +64,7 @@ export interface Location {
     /**
      * Indicates if this location has been mapped to a local path.
      */
-    hasBeenMapped: boolean;
+    mappedToLocalPath: boolean;
 
     message?: Message;
     range: Range;
@@ -66,7 +74,7 @@ export interface Location {
     /**
      * Maps a location to a local path.
      */
-    mapLocationToLocalPath(this: Location, promptUser: PromptUserDuringMap): Promise<Uri | undefined>;
+    mapLocationToLocalPath(this: Location, options: MapLocationToLocalPathOptions): Promise<Uri | undefined>;
 
     /**
      * Serializes "start" and "stop" properties of VSCode's range as part of the location.

@@ -260,7 +260,7 @@ export class Utilities {
      */
     public static parseSarifMessage(sarifMessage?: sarif.Message, locations?: Location[]): Message {
         if (sarifMessage && (sarifMessage.markdown !== undefined || sarifMessage.text !== undefined)) {
-            let markDown: string | undefined = sarifMessage.markdown;
+            let markdown: string | undefined = sarifMessage.markdown;
             let msgText: string | undefined = sarifMessage.text;
 
             // Insert result specific arguments
@@ -270,24 +270,24 @@ export class Utilities {
                         msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
-                if (markDown) {
+                if (markdown) {
                     for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
-                        markDown = markDown.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        markdown = markdown.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
             }
 
-            if (!markDown) {
-                markDown = msgText;
+            if (!markdown) {
+                markdown = msgText;
             }
 
             const mdIt: MarkdownIt = new MarkdownIt();
 
-            if (markDown) {
-                markDown = mdIt.render(markDown);
-                markDown = Utilities.ReplaceLocationLinks(markDown, locations, true);
-                markDown = Utilities.unescapeBrackets(markDown);
-                markDown = mdIt.utils.unescapeAll(markDown);
+            if (markdown) {
+                markdown = mdIt.render(markdown);
+                markdown = Utilities.ReplaceLocationLinks(markdown, locations, true);
+                markdown = Utilities.unescapeBrackets(markdown);
+                markdown = mdIt.utils.unescapeAll(markdown);
             }
 
             if (msgText) {
@@ -299,7 +299,7 @@ export class Utilities {
                 msgText = mdIt.utils.unescapeAll(msgText);
             }
 
-            return { text: msgText, html: markDown };
+            return { text: msgText, html: markdown };
         }
 
         return {};
@@ -316,41 +316,69 @@ export class Utilities {
 
     /**
      * Fixes up file schemed based paths to contain the proper casing for VSCode's URIs which are case sensitive.
+     * The path passed into this function must exist on the file-system.
      * @param uri The URI for which to fix the casing.
      */
-    public static fixUriCasing(uri: vscode.Uri): vscode.Uri {
-        // We can only support file-system scheme files.
-        // Use "root" locale to indicate invariant language.
-        if (uri.scheme.toLocaleUpperCase("root") !== "FILE") {
-            return uri;
+    public static fixUriCasing(uri: vscode.Uri | string ): vscode.Uri {
+        let pathParts: string[];
+
+        if (typeof uri === 'string') {
+            if (!fs.existsSync(uri)) {
+                return vscode.Uri.parse(uri);
+            }
+
+            pathParts = path.normalize(uri).split(path.sep);
+        } else {
+            // We can only support file-system scheme files.
+            // Use "root" locale to indicate invariant language.
+            if (!uri.isFile()) {
+                return uri;
+            }
+
+            if (!fs.existsSync(uri.fsPath)) {
+                return uri;
+            }
+
+            // If it is just the root drive, then return it.
+            pathParts = path.normalize(uri.fsPath).split(path.sep);
+            if (pathParts.length < 1) {
+                return uri;
+            }
         }
 
         let pathPartIndex: number = 0;
-        const pathParts: string[] = uri.fsPath.split(path.sep);
-        if (pathParts.length < 1) {
-            return uri;
-        }
 
-        // We assume that the "root" drive is lower-cased which is "usually" the case.
+        // We assume that the "root" drive is upper-cased which is "usually" the case.
         // There is an windows API
         // [GetLogicalDriveStringsW]
         // (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getlogicaldrivestringsw)
+        // https://microsoft.visualstudio.com/DefaultCollection/OS/_search?action=contents&text=def%3AGetLogicalDriveStringsW&type=code&lp=code-Project&filters=ProjectFilters%7BOS%7DRepositoryFilters%7Bos%7D&pageSize=25&includeFacets=false&result=DefaultCollection%2FOS%2Fos%2FGBofficial%2Frsmaster%2F%2Fminkernel%2Fkernelbase%2Fpathmisc.c
         // that we often use in native/C# code to get the proper casing of the driver letter.
         // As far as I know, this doesn't exist in node\javascript land.
-        // It is a very rare rare case that the drive letter is uppercase however.
-        let fixedPath: string = pathParts[0].toLowerCase() + path.sep;
+        // VSCode however, always lower-cases the drive letter:
+        // vscode.Uri.file("c:\\foo.txt").fsPath
+        // "c:\foo.txt"
+        // vscode.Uri.file("C:\\foo.txt").fsPath
+        // "c:\foo.txt"
+        // vscode.Uri.file("C:\\foo.txt").toString()
+        // "file:///c%3A/foo.txt"
+        // vscode.Uri.file("c:\\foo.txt").toString()
+        // "file:///c%3A/foo.txt"
+
+        let fixedPath: string = pathParts[0].toLocaleLowerCase('root') + path.sep;
 
         while (pathPartIndex + 1 < pathParts.length) {
             const directoryToRead: string = fixedPath;
             const directoryEntries: string[] = fs.readdirSync(directoryToRead);
             const fixedPathPart: string | undefined =
                 directoryEntries.find((directoryEntry) =>
-                    // Use "undefined" as the locale which means "default for environment" (which
-                    // in our case is whatever VSCode is running in).
-                    // We use this compare because file names can be typed in any language.
-                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, { sensitivity: "base" }) === 0);
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
             if (!fixedPathPart) {
-                throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
+                if (typeof uri === 'string') {
+                    throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri}`);
+                } else {
+                    throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
+                }
             }
 
             fixedPath = path.join(fixedPath, fixedPathPart);

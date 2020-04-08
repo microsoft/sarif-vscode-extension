@@ -62,7 +62,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
      */
     private getCodeActions(sarifFileUri: vscode.Uri, svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction[] {
         // If the location has already been mapped, then we don't need to map it again.
-        if (svDiagnostic.location.hasBeenMapped) {
+        if (svDiagnostic.location.mappedToLocalPath) {
             return [];
         }
 

@@ -62,23 +62,16 @@ export class CodeFlowDecorations implements Disposable {
      * Updates the GutterIcon for the current active Diagnostic
      */
     public async updateResultGutterIcon(): Promise<void> {
-        if (!this.activeDiagnostic || !this.activeDiagnostic.location.hasBeenMapped) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.location.mappedToLocalPath) {
             return;
         }
 
         for (const editor of window.visibleTextEditors) {
-            // Attempt to map the result if it hasn't been mapped
             const diagLocation: Location = this.activeDiagnostic.location;
-            if (!diagLocation.uri) {
+            if (!diagLocation.uri || !diagLocation.mappedToLocalPath) {
                 continue;
             }
-
-            const mappedUri: Uri | undefined = this.activeDiagnostic.location.uri;
-            if (!mappedUri) {
-                continue;
-            }
-
-            if (mappedUri.toString() === editor.document.uri.toString()) {
+            if (diagLocation.uri.toString() === editor.document.uri.toString()) {
                 const errorDecoration: Range[] = [];
                 const warningDecoration: Range[] = [];
                 const infoDecoration: Range[] = [];
@@ -292,7 +285,7 @@ export class CodeFlowDecorations implements Disposable {
      * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
     private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        if (!this.activeDiagnostic || !this.activeDiagnostic.location.hasBeenMapped) {
+        if (!this.activeDiagnostic || !this.activeDiagnostic.location.mappedToLocalPath) {
             return;
         }
 
@@ -400,7 +393,7 @@ export class CodeFlowDecorations implements Disposable {
                 return undefined;
         }
 
-        const mappedUri: Uri | undefined = await step.location.mapLocationToLocalPath('No prompt');
+        const mappedUri: Uri | undefined = await step.location.mapLocationToLocalPath({ promptUser: false });
         if (!mappedUri ||
             mappedUri.toString() !== editor.document.uri.toString()) {
             return undefined;
@@ -463,7 +456,7 @@ export class CodeFlowDecorations implements Disposable {
                         return;
                     }
 
-                    const mappedLocation: Uri | undefined = await attachmentLocation.mapLocationToLocalPath('Prompt');
+                    const mappedLocation: Uri | undefined = await attachmentLocation.mapLocationToLocalPath({ promptUser: true });
                     if (!mappedLocation) {
                         return;
                     }
@@ -479,7 +472,7 @@ export class CodeFlowDecorations implements Disposable {
             case MessageType.SourceLinkClicked:
                 const locData: LocationData = JSON.parse(webViewMessage.data);
                 const location: Location = {
-                    hasBeenMapped: true,
+                    mappedToLocalPath: true,
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),

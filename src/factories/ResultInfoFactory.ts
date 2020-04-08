@@ -10,7 +10,6 @@ import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent, RunInfo
 } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
-import { FileMapper } from "../FileMapper";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif results (and runs)
@@ -20,14 +19,12 @@ export namespace ResultInfoFactory {
 
     /**
      * Processes the result passed in and creates a new ResultInfo object with the information processed
-     * @param fileMapper An instance of the file-mapper that will be used to map Locations to local paths.
      * @param result The original sarif result object to be processed.
      * @param tool tool object that is used for the rules
      * @param id Identifier used to identify this result.
      * @param resultLocationInSarifFile the location in the SARIF file
      */
     export async function create(
-        fileMapper: FileMapper,
         runInfo: RunInfo,
         result: sarif.Result,
         tool: sarif.Tool,
