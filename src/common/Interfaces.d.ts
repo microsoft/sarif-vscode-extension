@@ -4,7 +4,7 @@
 // *                                                       *
 // ********************************************************/
 import * as sarif from "sarif";
-import { Command, Diagnostic, DiagnosticCollection, Position, Range, Uri, Event } from "vscode";
+import { Command, Position, Range, Uri, Event } from "vscode";
 import { MessageType, SeverityLevelOrder, KindOrder, BaselineOrder } from "./Enums";
 
 /**
