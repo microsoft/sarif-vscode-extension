@@ -4,20 +4,11 @@
 
 'use strict';
 
+// Information on 'root' locale:
+// Mozilla spec: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Locale
+// Unicode identifier spec => https://www.unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
+
 import { Uri } from "vscode";
-
-String.prototype.capitalizeFirstLetter = function(this: string): string {
-    if (!this) {
-        // Empty string
-        return this;
-    }
-
-    if (this.length === 1) {
-        return this.toUpperCase();
-    }
-
-    return this[0].toUpperCase() + this.substring(1).toLowerCase();
-};
 
 String.prototype.invariantEqual = function(this: string, thatString: string, ignoreCase?: 'Ignore Case'): boolean {
     return (ignoreCase === 'Ignore Case' ?

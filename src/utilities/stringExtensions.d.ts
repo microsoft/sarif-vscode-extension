@@ -19,11 +19,6 @@ declare global {
         invariantEqual(other: string, ignoreCase?: 'Ignore Case'): boolean;
 
         /**
-         * Capitalizes the first letter of the string, and lower-cases the rest.
-         */
-        capitalizeFirstLetter(): string;
-
-        /**
          * Performs a comparison that is safe for file system paths (or path parts).
          * @param other The other file path to compare against.
          */
