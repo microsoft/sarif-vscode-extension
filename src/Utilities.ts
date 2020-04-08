@@ -285,13 +285,14 @@ export class Utilities {
 
             if (markdown) {
                 markdown = mdIt.render(markdown);
-                markdown = Utilities.ReplaceLocationLinks(markdown, locations, true);
+                markdown = Utilities.ReplaceLocationLinks(markdown, locations, 'Markdown');
                 markdown = Utilities.unescapeBrackets(markdown);
                 markdown = mdIt.utils.unescapeAll(markdown);
             }
 
             if (msgText) {
-                msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
+                msgText = mdIt.renderInline(msgText);
+                msgText = Utilities.ReplaceLocationLinks(msgText, locations, 'Text');
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
                     return `${p2}(${p1})`;
                 });
@@ -452,7 +453,7 @@ export class Utilities {
      * @param locations array of locations to use in replacing the links
      * @param isMd if true the format replaced is as a markdown, if false it returns as if plain text
      */
-    private static ReplaceLocationLinks(text: string, locations: Location[] | undefined, isMd: boolean): string {
+    private static ReplaceLocationLinks(text: string, locations: Location[] | undefined, renderAs: 'Text' | 'Markdown'): string {
         if (!locations) {
             return text;
         }
@@ -464,7 +465,7 @@ export class Utilities {
             });
 
             if (location && location.uri) {
-                if (isMd) {
+                if (renderAs === 'Markdown') {
                     const className: string = `class="sourcelink"`;
                     const tooltip: string = `title="${location.uri.toString(true)}"`;
                     const data: string =

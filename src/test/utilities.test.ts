@@ -8,7 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
 
-import { Range, Uri, Position } from "vscode";
+import { Range, Uri, Position, Event } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
 import { FileMapper } from "../FileMapper";
@@ -101,7 +101,9 @@ suite("parseSarifMessages", () => {
             uriBase: undefined,
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-            onLocationMapped: FileMapper.uriMappedForLocation
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
     ];
 
@@ -117,7 +119,9 @@ suite("parseSarifMessages", () => {
             uriBase: undefined,
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-            onLocationMapped: FileMapper.uriMappedForLocation
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
         {
             endOfLine: false,
@@ -130,7 +134,9 @@ suite("parseSarifMessages", () => {
             uriBase: undefined,
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-            onLocationMapped: FileMapper.uriMappedForLocation
+            get locationMapped(): Event<Location> {
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         },
     ];
 

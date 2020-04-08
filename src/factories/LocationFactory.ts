@@ -4,7 +4,7 @@
 
 import * as sarif from "sarif";
 import * as fs from "fs";
-import { Range, Uri } from "vscode";
+import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
 import { FileMapper } from "../FileMapper";
@@ -80,7 +80,11 @@ export namespace LocationFactory {
             message,
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-            onLocationMapped: FileMapper.uriMappedForLocation
+            get locationMapped(): Event<Location> {
+                // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                // tslint:disable-next-line: no-invalid-this
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         };
 
         return location;
@@ -126,7 +130,11 @@ export namespace LocationFactory {
             uri: sarifUri,
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-            onLocationMapped: FileMapper.uriMappedForLocation
+            get locationMapped(): Event<Location> {
+                // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                // tslint:disable-next-line: no-invalid-this
+                return FileMapper.uriMappedForLocation.bind(this)();
+            }
         };
 
         return resultLocation;

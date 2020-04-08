@@ -5,6 +5,10 @@ import * as path from "path";
 import glob from "glob";
 import Mocha from "mocha";
 
+// This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
+// If you don't do this... you crash using the extension methods.
+import "../utilities/stringUtilities";
+
 export function run(): Promise<void> {
     // Create the mocha test
     const mocha: Mocha = new Mocha({

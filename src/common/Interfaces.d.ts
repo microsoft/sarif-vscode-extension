@@ -85,9 +85,9 @@ export interface Location {
     toJSON(this: Location, key: any, value: any): any
 
     /**
-     * Fired when the URI for a location has been mapped.
+     * Eevent that is fired when the location is mapped..
      */
-    onLocationMapped(this: Location): Event<Location>;
+    locationMapped: Event<Location>;
 }
 
 

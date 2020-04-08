@@ -6,7 +6,7 @@ import * as sarif from "sarif";
 
 import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable,
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable, Event
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
 import { ExplorerController } from "./ExplorerController";
@@ -478,7 +478,11 @@ export class CodeFlowDecorations implements Disposable {
                     uri: Uri.parse(locData.file),
                     toJSON: Utilities.LocationToJson,
                     mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
-                    onLocationMapped: FileMapper.uriMappedForLocation
+                    get locationMapped(): Event<Location> {
+                        // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                        // tslint:disable-next-line: no-invalid-this
+                        return FileMapper.uriMappedForLocation.bind(this)();
+                    }
                 };
                 await this.updateSelectionHighlight(location, undefined);
                 break;

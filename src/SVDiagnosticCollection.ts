@@ -131,7 +131,7 @@ export class SVDiagnosticCollection implements Disposable {
             this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
             if (issue.resultInfo.assignedLocation) {
-                this.disposables.push(issue.resultInfo.assignedLocation.onLocationMapped()((location) => (this.locationMapped(issue, location))));
+                this.disposables.push(issue.resultInfo.assignedLocation.locationMapped((location) => (this.locationMapped(issue, location))));
             }
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
