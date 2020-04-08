@@ -39,7 +39,6 @@ export interface HTMLElementOptions {
     }
 }
 
-
 /**
  * Options used when attempting file mapping.
  */

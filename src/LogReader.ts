@@ -70,6 +70,8 @@ export class LogReader implements Disposable {
      * Reads through all of the text documents open in the workspace, syncs the issues with problem panel after
      */
     public async readAll(): Promise<void> {
+        // Keep a flag that indicates whether we need to send the collected issues to
+        // VSCode's problems pane (i.e. synchronize diagnostics to the diagnostics collection)
         let synchronizeDiagnosticsCollection: boolean = false;
 
         // Spin through VSCode's documents and read any SARIF files that are opened.
