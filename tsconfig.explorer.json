@@ -1,22 +1,28 @@
 {
     "compilerOptions": {
+        "moduleResolution": "node",
         "allowJs": true,
+        "module": "AMD",
+        "outFile": "out/explorer/systemExplorer.js",
         "target": "es6",
-        "outDir": "out\\explorer",
+        "outDir": "out",
         "lib": [
             "dom",
+            "dom.iterable",
             "es6"
         ],
         "sourceMap": true,
-        "types": [
-            "jquery",
-            "vscode"
-        ]
+        /* Strict Type-Checking Option */
+        "strict": true,   /* enable all strict type-checking options */
+        /* Additional Checks */
+        "noUnusedLocals": true, /* Report errors on unused locals. */
+        "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
+        "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
+        "noUnusedParameters": false,  /* Report errors on unused parameters. */
+        "checkJs": true,
+        "noImplicitThis": true,
     },
     "include": [
-        "src\\explorer\\*"
-    ],
-    "exclude": [
-        "node_modules"
+        "src/explorer/*.ts"
     ]
 }

@@ -1,65 +1,37 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+import * as fs from "fs";
+import * as path from "path";
 import * as sarif from "sarif";
-import { extensions, Uri } from "vscode";
-import { Location, Message } from "./common/Interfaces";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import * as os from "os";
+import * as vscode from "vscode";
+import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
+import MarkdownIt = require("markdown-it");
 
 /**
  * Class that holds utility functions for use in different classes
  */
 export class Utilities {
+    private static extensionContext: vscode.ExtensionContext | undefined;
+
+    public static initialize(extensionContext: vscode.ExtensionContext): void {
+        Utilities.extensionContext = extensionContext;
+    }
+
     public static readonly configSection = "sarif-viewer";
 
-    /**
-     * nodejs File System object
-     */
-    public static get Fs() {
-        if (Utilities.fs === undefined) {
-            Utilities.fs = require("fs");
+    public static get IconsPath(): string {
+        if (!Utilities.extensionContext) {
+            throw new Error("The utilities were not properly initialized");
         }
-        return Utilities.fs;
-    }
 
-    public static get IconsPath() {
-        if (Utilities.iconsPath === undefined) {
-            Utilities.iconsPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath +
-                "/resources/icons/";
+        if (!Utilities.iconsPath) {
+            Utilities.iconsPath = Utilities.extensionContext.asAbsolutePath("/resources/icons/");
         }
+
         return Utilities.iconsPath;
-    }
-
-    /**
-     * Markdown-it object for parsing markdown text
-     */
-    public static get Md() {
-        if (Utilities.md === undefined) {
-            Utilities.md = require("markdown-it")();
-        }
-        return Utilities.md;
-    }
-
-    /**
-     * nodejs Operating System object
-     */
-    public static get Os() {
-        if (Utilities.os === undefined) {
-            Utilities.os = require("os");
-        }
-        return Utilities.os;
-    }
-
-    /**
-     * nodejs Path object
-     */
-    public static get Path() {
-        if (Utilities.path === undefined) {
-            Utilities.path = require("path");
-        }
-        return Utilities.path;
     }
 
     /**
@@ -67,43 +39,43 @@ export class Utilities {
      * @param start string representing the start time in utc format
      * @param end string representing the end time in utc format
      */
-    public static calcDuration(start: string, end: string): string {
-        let duration = "";
-        if (start !== undefined && end !== undefined) {
-            const diff = new Date(end).getTime() - new Date(start).getTime();
-            if (diff > 0) {
-                const msDiff = diff % 1000;
-                const sDiff = Math.floor((diff / 1000) % 60);
-                const mDiff = Math.floor((diff / 60000) % 60);
-                const hDiff = Math.floor(diff / 3600000);
+    public static calcDuration(start?: string, end?: string): string | undefined {
+        if (!start || !end) {
+            return undefined;
+        }
 
-                if (hDiff > 0) {
-                    const label = (hDiff === 1) ? "hr" : "hrs";
-                    duration = `${hDiff} ${label}`;
-                }
+        let duration: string = "";
 
-                if (mDiff > 0) {
-                    const label = (mDiff === 1) ? "min" : "mins";
-                    duration = `${duration} ${mDiff} ${label}`;
-                }
+        const diff: number = new Date(end).getTime() - new Date(start).getTime();
+        if (diff > 0) {
+            const msDiff: number = diff % 1000;
+            const sDiff: number = Math.floor((diff / 1000) % 60);
+            const mDiff: number = Math.floor((diff / 60000) % 60);
+            const hDiff: number = Math.floor(diff / 3600000);
 
-                if (sDiff > 0) {
-                    const label = (sDiff === 1) ? "sec" : "secs";
-                    duration = `${duration} ${sDiff} ${label}`;
-                }
-
-                if (msDiff > 0) {
-                    duration = `${duration} ${msDiff} ms`;
-                }
-
-                duration = duration.trim();
-
-            } else {
-                duration = `0 ms`;
+            if (hDiff > 0) {
+                const label: string = (hDiff === 1) ? "hr" : "hrs";
+                duration = `${hDiff} ${label}`;
             }
 
+            if (mDiff > 0) {
+                const label: string = (mDiff === 1) ? "min" : "mins";
+                duration = `${duration} ${mDiff} ${label}`;
+            }
+
+            if (sDiff > 0) {
+                const label: string = (sDiff === 1) ? "sec" : "secs";
+                duration = `${duration} ${sDiff} ${label}`;
+            }
+
+            if (msDiff > 0) {
+                duration = `${duration} ${msDiff} ms`;
+            }
+
+            duration = duration.trim();
+
         } else {
-            duration = undefined;
+            duration = `0 ms`;
         }
 
         return duration;
@@ -114,31 +86,37 @@ export class Utilities {
      * @param uriPath uri path from sarif file to combine with the base
      * @param uriBase the uriBase as defined in the sarif file
      */
-    public static combineUriWithUriBase(uriPath: string, uriBase: string): Uri {
-        let combinedPath = uriPath;
+    public static combineUriWithUriBase(uriPath: string, uriBase?: string): vscode.Uri {
+        try {
+            if (uriBase) {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                const baseUri: vscode.Uri = vscode.Uri.parse(uriBase, true);
 
-        if (uriBase !== undefined && uriBase !== "") {
-            combinedPath = this.joinPath(uriBase, uriPath);
-        }
+                // It did, great. Now combine it with the appropriate combination.
+                if (baseUri.scheme.localeCompare('file', 'root', { sensitivity: 'base' }) === 0) {
+                    const fileUri: vscode.Uri = vscode.Uri.file(uriPath);
+                    return vscode.Uri.file(path.join(baseUri.fsPath, fileUri.fsPath));
+                }
 
-        let uri: Uri;
-        if (combinedPath !== "") {
-            try {
-                uri = Uri.parse(combinedPath);
-            } catch (e) {
-                // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
-                // if it's malformed in the next if statement we force it to file schema
-                if (e.message !== "URI malformed") { throw e; }
+                const uriPathAsUri: vscode.Uri = vscode.Uri.parse(uriPath).with({
+                    scheme: baseUri.scheme
+                });
+
+                // The 'uriPath" parsed into a URI may indeed have a fragment, which, we will
+                // drop as it is not supported in SARF.
+                return baseUri.with({
+                    path: path.posix.join(baseUri.path, uriPathAsUri.path) // Use the POSIX separator for "/"
+                });
+            } else {
+                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+                return vscode.Uri.parse(uriPath, true);
             }
+        } catch (e) {
+            // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
+            // if it's malformed in the next if statement we force it to file schema
         }
 
-        if (uri === undefined || uri.scheme !== "file") {
-            uri = Uri.file(combinedPath);
-        }
-
-        const path = Utilities.getFsPathWithFragment(uri);
-
-        return Uri.file(path);
+        return uriBase !== undefined ? vscode.Uri.file(path.normalize(path.join(uriBase, uriPath))) : vscode.Uri.file(path.normalize(uriPath));
     }
 
     /**
@@ -147,22 +125,20 @@ export class Utilities {
      * @param path path to create the file in
      * @param contents content to add to the file after created
      */
-    public static createReadOnlyFile(path: string, contents: string): void {
-        try {
-            Utilities.Fs.unlinkSync(path);
-        } catch (error) {
-            if (error.code !== "ENOENT") { throw error; }
+    public static createReadOnlyFile(directory: string, contents: string): void {
+        if (fs.existsSync(directory)) {
+            fs.unlinkSync(directory);
         }
 
-        Utilities.Fs.writeFileSync(path, contents, { mode: 0o444/*readonly*/ });
+        fs.writeFileSync(directory, contents, { mode: 0o444/*readonly*/ });
     }
 
     /**
      * expands out all of the nested based ids to get a flat dictionary of base ids
      * @param baseIds all of the base ids that need to be expanded out
      */
-    public static expandBaseIds(baseIds: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } {
-        if (baseIds === undefined) {
+    public static expandBaseIds(baseIds?: { [key: string]: sarif.ArtifactLocation }): { [key: string]: string } | undefined {
+        if (!baseIds) {
             return undefined;
         }
 
@@ -183,7 +159,7 @@ export class Utilities {
      * @param end End of path
      */
     public static joinPath(start: string, end: string): string {
-        let joined = start;
+        let joined: string = start;
 
         if (joined !== "" && joined[joined.length - 1] !== "/") {
             joined = joined + "/";
@@ -204,12 +180,13 @@ export class Utilities {
      * @param hashValue optional hash value to add to the path
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
-        const pathObj = Utilities.Path.parse(filePath);
-        let basePath: string = Utilities.Path.join(Utilities.SarifViewerTempDir, hashValue || "");
-        let tempPath: string = Utilities.makeFileNameSafe(Utilities.Path.join(pathObj.dir.replace(pathObj.root, ""), Utilities.Path.win32.basename(filePath)));
+        const pathObj: path.ParsedPath = path.parse(filePath);
+        let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || "");
+        let tempPath: string = Utilities.makeFileNameSafe(
+            path.join(pathObj.dir.replace(pathObj.root, ""), path.win32.basename(filePath)));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         basePath = Utilities.createDirectoryInTemp(basePath);
-        tempPath = Utilities.Path.posix.join(basePath, tempPath);
+        tempPath = path.posix.join(basePath, tempPath);
 
         return tempPath;
     }
@@ -220,7 +197,7 @@ export class Utilities {
      * @param fileName file name to modify
      */
     public static makeFileNameSafe(fileName: string): string {
-        return fileName.replace(/[/\\?%*:|"<>]/g, '-');
+        return fileName.replace(/[/\\?%*:|"<>]/g, "-");
     }
 
     /**
@@ -228,11 +205,11 @@ export class Utilities {
      * ex: file:///d:/test/ and d:\\test will return d:\test
      * @param uri path to a directory
      */
-    public static getDisplayableRootpath(uri: Uri): string {
+    public static getDisplayableRootpath(uri: vscode.Uri): string {
         if (uri.scheme === "file") {
             return Utilities.getFsPathWithFragment(uri);
         } else {
-            return Utilities.Path.normalize(uri.toString(true));
+            return path.normalize(uri.toString(true));
         }
     }
 
@@ -240,34 +217,39 @@ export class Utilities {
      * Returns the fspath include the fragment if it exists
      * @param uri uri to pull the fspath and fragment from
      */
-    public static getFsPathWithFragment(uri: Uri): string {
-        let fragment = "";
+    public static getFsPathWithFragment(uri: vscode.Uri): string {
+        let fragment: string = "";
         if (uri.fragment !== "") {
             fragment = "#" + uri.fragment;
         }
 
-        return Utilities.Path.normalize(uri.fsPath + fragment);
+        return path.normalize(uri.fsPath + fragment);
     }
 
     /**
      * gets the uriBase from this runs uriBaseIds, if no match: returns uriBaseId, if no uriBaseId: returns undefined
+     * @param runInfo The run the file location belongs to.
      * @param fileLocation File Location which contains the uriBaseId
-     * @param runId The run's id to pull the runUriBaseIds from
      */
-    public static getUriBase(fileLocation: sarif.ArtifactLocation, runId: number): string {
-        let uriBase: string;
-        if (fileLocation !== undefined && fileLocation.uriBaseId !== undefined) {
-            const runUriBaseIds = SVDiagnosticCollection.Instance.getRunInfo(runId).uriBaseIds;
-            if (runUriBaseIds !== undefined) {
-                uriBase = runUriBaseIds[fileLocation.uriBaseId];
-            }
-
-            if (uriBase === undefined) {
-                uriBase = fileLocation.uriBaseId;
-            }
+    public static getUriBase(runInfo: RunInfo, fileLocation?: sarif.ArtifactLocation): string | undefined {
+        if (!fileLocation || !fileLocation.uriBaseId) {
+            return undefined;
         }
 
-        return uriBase;
+        let expandedBaseUri: string | undefined;
+
+        const expoandedBaseIdsForRun: { [key: string]: string } | undefined = runInfo.expandedBaseIds;
+        if (expoandedBaseIdsForRun) {
+            expandedBaseUri = expoandedBaseIdsForRun[fileLocation.uriBaseId];
+        }
+
+        // This is actually an exceptional condition as it would indicate
+        // that the SARIF file had a URI base id that was not mapped properly.
+        if (!expandedBaseUri) {
+            expandedBaseUri = fileLocation.uriBaseId;
+        }
+
+        return expandedBaseUri;
     }
 
     /**
@@ -276,66 +258,138 @@ export class Utilities {
      * @param sarifMessage sarif message object to be parsed
      * @param locations only needed if your message supports embedded links
      */
-    public static parseSarifMessage(sarifMessage: sarif.Message, locations?: Location[]): Message {
-        let message = {} as Message;
-
-        if (sarifMessage !== undefined) {
-            let mdText = sarifMessage.markdown;
-            let msgText = sarifMessage.text;
+    public static parseSarifMessage(sarifMessage?: sarif.Message, locations?: Location[]): Message {
+        if (sarifMessage && (sarifMessage.markdown !== undefined || sarifMessage.text !== undefined)) {
+            let markdown: string | undefined = sarifMessage.markdown;
+            let msgText: string | undefined = sarifMessage.text;
 
             // Insert result specific arguments
-            if (sarifMessage.arguments !== undefined) {
-                if (msgText !== undefined) {
-                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
+            if (sarifMessage.arguments) {
+                if (msgText) {
+                    for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
                         msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
-                if (mdText !== undefined) {
-                    for (let index = 0; index < sarifMessage.arguments.length; index++) {
-                        mdText = mdText.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                if (markdown) {
+                    for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
+                        markdown = markdown.split("{" + index + "}").join(sarifMessage.arguments[index]);
                     }
                 }
             }
 
-            if (mdText === undefined) {
-                mdText = msgText;
+            if (!markdown) {
+                markdown = msgText;
             }
 
-            if (mdText !== undefined) {
-                mdText = Utilities.Md.render(mdText);
-                mdText = Utilities.ReplaceLocationLinks(mdText, locations, true);
-                mdText = Utilities.unescapeBrackets(mdText);
+            const mdIt: MarkdownIt = new MarkdownIt();
+
+            if (markdown) {
+                markdown = mdIt.render(markdown);
+                markdown = Utilities.ReplaceLocationLinks(markdown, locations, 'Markdown');
+                markdown = Utilities.unescapeBrackets(markdown);
+                markdown = mdIt.utils.unescapeAll(markdown);
             }
 
-            if (msgText !== undefined) {
-                msgText = Utilities.Md.renderInline(msgText);
-                msgText = Utilities.ReplaceLocationLinks(msgText, locations, false);
+            if (msgText) {
+                msgText = mdIt.renderInline(msgText);
+                msgText = Utilities.ReplaceLocationLinks(msgText, locations, 'Text');
                 msgText = msgText.replace(Utilities.linkRegEx, (match, p1, p2) => {
                     return `${p2}(${p1})`;
                 });
                 msgText = Utilities.unescapeBrackets(msgText);
-                msgText = Utilities.Md.utils.unescapeAll(msgText);
+                msgText = mdIt.utils.unescapeAll(msgText);
             }
 
-            message = { text: msgText, html: mdText };
+            return { text: msgText, html: markdown };
         }
 
-        return message;
+        return {};
     }
 
     /**
      * Handles cleaning up the Sarif Viewer temp directory used for temp files (embedded code, converted files, etc.)
      */
     public static removeSarifViewerTempDirectory(): void {
-        const path = Utilities.Path.join(Utilities.Os.tmpdir(), Utilities.SarifViewerTempDir);
-        Utilities.removeDirectoryContents(path);
-        Utilities.Fs.rmdirSync(path);
+        const tempPath: string = path.join(os.tmpdir(), Utilities.SarifViewerTempDir);
+        Utilities.removeDirectoryContents(tempPath);
+        fs.rmdirSync(tempPath);
     }
 
-    private static fs: any;
-    private static md: markdownit;
-    private static os: any;
-    private static path: any;
+    /**
+     * Fixes up file schemed based paths to contain the proper casing for VSCode's URIs which are case sensitive.
+     * The path passed into this function must exist on the file-system.
+     * @param uri The URI for which to fix the casing.
+     */
+    public static fixUriCasing(uri: vscode.Uri | string ): vscode.Uri {
+        let pathParts: string[];
+
+        if (typeof uri === 'string') {
+            if (!fs.existsSync(uri)) {
+                return vscode.Uri.parse(uri);
+            }
+
+            pathParts = path.normalize(uri).split(path.sep);
+        } else {
+            // We can only support file-system scheme files.
+            // Use "root" locale to indicate invariant language.
+            if (!uri.isFile()) {
+                return uri;
+            }
+
+            if (!fs.existsSync(uri.fsPath)) {
+                return uri;
+            }
+
+            // If it is just the root drive, then return it.
+            pathParts = path.normalize(uri.fsPath).split(path.sep);
+            if (pathParts.length < 1) {
+                return uri;
+            }
+        }
+
+        let pathPartIndex: number = 0;
+
+        // We assume that the "root" drive is upper-cased which is "usually" the case.
+        // There is an windows API
+        // [GetLogicalDriveStringsW]
+        // (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getlogicaldrivestringsw)
+        // https://microsoft.visualstudio.com/DefaultCollection/OS/_search?action=contents&text=def%3AGetLogicalDriveStringsW&type=code&lp=code-Project&filters=ProjectFilters%7BOS%7DRepositoryFilters%7Bos%7D&pageSize=25&includeFacets=false&result=DefaultCollection%2FOS%2Fos%2FGBofficial%2Frsmaster%2F%2Fminkernel%2Fkernelbase%2Fpathmisc.c
+        // that we often use in native/C# code to get the proper casing of the driver letter.
+        // As far as I know, this doesn't exist in node\javascript land.
+        // VSCode however, always lower-cases the drive letter:
+        // vscode.Uri.file("c:\\foo.txt").fsPath
+        // "c:\foo.txt"
+        // vscode.Uri.file("C:\\foo.txt").fsPath
+        // "c:\foo.txt"
+        // vscode.Uri.file("C:\\foo.txt").toString()
+        // "file:///c%3A/foo.txt"
+        // vscode.Uri.file("c:\\foo.txt").toString()
+        // "file:///c%3A/foo.txt"
+
+        let fixedPath: string = pathParts[0].toLocaleLowerCase('root') + path.sep;
+
+        while (pathPartIndex + 1 < pathParts.length) {
+            const directoryToRead: string = fixedPath;
+            const directoryEntries: string[] = fs.readdirSync(directoryToRead);
+            const fixedPathPart: string | undefined =
+                directoryEntries.find((directoryEntry) =>
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+            if (!fixedPathPart) {
+                if (typeof uri === 'string') {
+                    throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri}`);
+                } else {
+                    throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
+                }
+            }
+
+            fixedPath = path.join(fixedPath, fixedPathPart);
+
+            pathPartIndex++;
+        }
+
+        return vscode.Uri.file(fixedPath);
+    }
+
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
@@ -343,16 +397,16 @@ export class Utilities {
 
     /**
      * Loops through the passed in path's directories and creates the directory structure
-     * @param path directory path that needs to be created in temp directory(including temp directory)
+     * @param relativePath directory path that needs to be created in temp directory(including temp directory)
      */
-    private static createDirectoryInTemp(path: string): string {
-        const directories = path.split(Utilities.Path.sep);
-        let createPath: string = Utilities.Os.tmpdir();
+    private static createDirectoryInTemp(relativePath: string): string {
+        const directories: string[] = relativePath.split(path.sep);
+        let createPath: string = os.tmpdir();
 
         for (const directory of directories) {
-            createPath = Utilities.Path.join(createPath, directory);
+            createPath = path.join(createPath, directory);
             try {
-                Utilities.Fs.mkdirSync(createPath);
+                fs.mkdirSync(createPath);
             } catch (error) {
                 if (error.code !== "EEXIST") { throw error; }
             }
@@ -367,27 +421,28 @@ export class Utilities {
      * @param baseIds all the base ids
      */
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
-        let base = "";
-        if (baseIds[id].uriBaseId !== undefined) {
-            base = this.expandBaseId(baseIds[id].uriBaseId, baseIds);
+        let base: string = "";
+        const artifactLocation: sarif.ArtifactLocation | undefined = baseIds[id];
+        if (artifactLocation && artifactLocation.uriBaseId) {
+            base = Utilities.expandBaseId(artifactLocation.uriBaseId, baseIds);
         }
 
         return this.joinPath(base, baseIds[id].uri || id);
     }
 
     /**
-     * Recursivly removes all of the contents in a directory, including subfolders
-     * @param path directory to remove all contents from
+     * Recursively removes all of the contents in a directory, including subfolders
+     * @param directory directory to remove all contents from
      */
-    private static removeDirectoryContents(path: string): void {
-        const contents = Utilities.Fs.readdirSync(path);
+    private static removeDirectoryContents(directory: string): void {
+        const contents: string[] = fs.readdirSync(directory);
         for (const content of contents) {
-            const contentPath = Utilities.Path.join(path, content);
-            if (Utilities.Fs.lstatSync(contentPath).isDirectory()) {
+            const contentPath: string = path.join(directory, content);
+            if (fs.lstatSync(contentPath).isDirectory()) {
                 this.removeDirectoryContents(contentPath);
-                Utilities.Fs.rmdirSync(contentPath);
+                fs.rmdirSync(contentPath);
             } else {
-                Utilities.Fs.unlinkSync(contentPath);
+                fs.unlinkSync(contentPath);
             }
         }
     }
@@ -398,29 +453,28 @@ export class Utilities {
      * @param locations array of locations to use in replacing the links
      * @param isMd if true the format replaced is as a markdown, if false it returns as if plain text
      */
-    private static ReplaceLocationLinks(text: string, locations: Location[], isMd: boolean): string {
-        if (locations === undefined) { return text; }
+    private static ReplaceLocationLinks(text: string, locations: Location[] | undefined, renderAs: 'Text' | 'Markdown'): string {
+        if (!locations) {
+            return text;
+        }
 
         return text.replace(Utilities.embeddedRegEx, (match, p1, id) => {
-            const linkId = parseInt(id, 10);
-            const location = locations.find((loc: Location, index: number, obj: Location[]) => {
-                if (loc !== undefined && loc.id === linkId) {
-                    return true;
-                }
+            const linkId: number = parseInt(id, 10);
+            const location: Location | undefined = locations.find((loc: Location, index: number, obj: Location[]) => {
+                return loc && loc.id === linkId;
             });
 
-            if (location !== undefined && location.uri !== undefined) {
-                if (isMd) {
-                    const className = `class="sourcelink"`;
-                    const tooltip = `title="${location.uri.toString(true)}"`;
-                    const data =
+            if (location && location.uri) {
+                if (renderAs === 'Markdown') {
+                    const className: string = `class="sourcelink"`;
+                    const tooltip: string = `title="${location.uri.toString(true)}"`;
+                    const data: string =
                         `data-file="${location.uri.toString(true)}" ` +
                         `data-sLine="${location.range.start.line}" ` +
                         `data-sCol="${location.range.start.character}" ` +
                         `data-eLine="${location.range.end.line}" ` +
                         `data-eCol="${location.range.end.character}"`;
-                    const onClick = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
-
+                    const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
                 } else {
                     return `${p1}"${location.uri.toString(true)}">`;
@@ -437,5 +491,74 @@ export class Utilities {
      */
     private static unescapeBrackets(text: string): string {
         return text.split("\\[").join("[").split("\\]").join("]");
+    }
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the location being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
+     * @param value The current location value.
+     */
+    // tslint:disable-next-line: no-any
+    public static LocationToJson(this: Location, key: any, value: any): any {
+        return {
+            ...this,
+            range: {
+                ...this.range,
+                start: this.range.start,
+                end: this.range.end
+            }
+        };
+    }
+
+    /**
+     * Serializes "start" and "stop" properties of VSCode's range as part of the location.
+     * That way we can properly type the web view code.
+     * @param this Represents the FixChange being serialized.
+     * @param key The "key" in the outer object that respresents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
+     * @param value The current location value.
+     */
+    // tslint:disable-next-line: no-any
+    public static FixChangeToJson(this: FixChange, key: any, value: any): any {
+        if (!this.delete) {
+            return value;
+        }
+
+        return {
+            ...this,
+            delete: {
+                ...this.delete,
+                start: this.delete.start,
+                end: this.delete.end
+            }
+        };
+    }
+
+    /**
+     * Confirms that the string representring verbosity level is a valid.
+     * @param value The string value to confirm.
+     */
+    public static isThreadFlowImportance(value: string): value is sarif.ThreadFlowLocation.importance {
+        const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>["essential", "important", "unimportant"];
+        return allowedKeys.indexOf(value) !== -1;
+    }
+
+    /**
+     * Helper method to check if the document provided is a sarif file
+     * @param doc document to check if it's a sarif file
+     */
+    public static isSarifFile(doc: vscode.TextDocument | string): boolean {
+        // SARIF spec says that the file name can end in ".sarif" or ".sarif.json";
+        const stringCheck: (stringToCheck: string) => boolean = (stringToCheck) => {
+            const stringCheckUpperCase: string = stringToCheck.toLocaleUpperCase('root');
+            return stringCheckUpperCase.endsWith(".SARIF") || stringCheckUpperCase.endsWith(".SARIF.JSON");
+        };
+
+        if (typeof doc === 'string') {
+            return stringCheck(doc);
+        }
+
+        return doc.languageId === "json" && stringCheck(doc.fileName);
     }
 }

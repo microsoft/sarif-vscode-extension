@@ -1,40 +1,36 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
-import {
-    CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult,
-    TextDocument,
-} from "vscode";
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
 import { ExplorerController } from "./ExplorerController";
+import { Location } from "./common/Interfaces";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import * as sarif from "sarif";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic
  */
-export class CodeFlowCodeLensProvider implements CodeLensProvider {
-    private static instance: CodeFlowCodeLensProvider;
-
-    private codeLensProvider: Disposable;
+export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
+    private disposables: Disposable[]  = [];
     private onDidChangeCodeLensesEmitter: EventEmitter<void> = new EventEmitter<void>();
+    private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
+    private selectedVerbosity: sarif.ThreadFlowLocation.importance = "important";
 
-    private constructor() {
-        this.codeLensProvider = languages.registerCodeLensProvider("*", this);
-    }
-
-    static get Instance(): CodeFlowCodeLensProvider {
-        if (CodeFlowCodeLensProvider.instance === undefined) {
-            CodeFlowCodeLensProvider.instance = new CodeFlowCodeLensProvider();
-        }
-
-        return CodeFlowCodeLensProvider.instance;
+    public constructor(explorerController: ExplorerController, diagnosticCollection: SVDiagnosticCollection) {
+        this.disposables.push(this.onDidChangeCodeLensesEmitter);
+        this.disposables.push(languages.registerCodeLensProvider("*", this));
+        this.disposables.push(explorerController.onDidChangeVerbosity(this.onDidChangeVerbosity.bind(this)));
+        this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }
 
     /**
      * For disposing on extension close
      */
-    public dispose() {
-        this.codeLensProvider.dispose();
+    public dispose(): void {
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     public get onDidChangeCodeLenses(): Event<void> {
@@ -49,31 +45,25 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
      * @param token A cancellation token.
      */
     public provideCodeLenses(document: TextDocument, token: CancellationToken): ProviderResult<CodeLens[]> {
-        const codeLenses: CodeLens[] = [];
-        const explorerController = ExplorerController.Instance;
-        const verbosity = explorerController.selectedVerbosity || "important";
 
-        if (explorerController.activeSVDiagnostic !== undefined) {
-            const codeFlows = explorerController.activeSVDiagnostic.resultInfo.codeFlows;
-            if (codeFlows !== undefined) {
-                for (const cFIndex of codeFlows.keys()) {
-                    const codeFlow = codeFlows[cFIndex];
-                    for (const tFIndex of codeFlow.threads.keys()) {
-                        const threadFlow = codeFlow.threads[tFIndex];
-                        for (const stepIndex of threadFlow.steps.keys()) {
-                            const step = threadFlow.steps[stepIndex];
-                            const stepLoc = step.location;
-                            if (stepLoc.uri !== undefined) {
-                                if (stepLoc.uri.toString() === document.uri.toString()) {
-                                    if (step.importance === "essential" ||
-                                        verbosity === "unimportant" ||
-                                        step.importance === verbosity) {
-                                        const codeLens = new CodeLens(stepLoc.range, step.codeLensCommand);
-                                        codeLenses.push(codeLens);
-                                    }
-                                }
-                            }
-                        }
+        if (!this.activeDiagnostic) {
+            return [];
+        }
+        const codeLenses: CodeLens[] = [];
+
+        for (const codeFlow of this.activeDiagnostic.resultInfo.codeFlows) {
+            for (const  threadFlow of codeFlow.threads) {
+                for (const step of threadFlow.steps) {
+                    const stepLoc: Location | undefined = step.location;
+                    if (!stepLoc || !stepLoc.uri || stepLoc.uri.toString() !== document.uri.toString()) {
+                        continue;
+                    }
+
+                    // If the importance is "essential", then we never hide it from the user.
+                    // If the users has selected "unimportant", then we will show them everything.
+                    // It the step matches the selected verbosity, then we are good to go.
+                    if (step.importance === "essential" || this.selectedVerbosity === "unimportant" || step.importance === this.selectedVerbosity) {
+                        codeLenses.push(new CodeLens(stepLoc.range, step.codeLensCommand));
                     }
                 }
             }
@@ -85,7 +75,16 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider {
     /**
      * Use to trigger a refresh of the CodeFlow CodeLenses
      */
-    public triggerCodeLensRefresh() {
+    private onDidChangeVerbosity(verbosity: sarif.ThreadFlowLocation.importance): void {
+        this.selectedVerbosity = verbosity;
+        this.onDidChangeCodeLensesEmitter.fire();
+    }
+
+    /**
+     * Use to trigger a refresh of the CodeFlow CodeLenses
+     */
+    public onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
+        this.activeDiagnostic = diagnostic;
         this.onDidChangeCodeLensesEmitter.fire();
     }
 }

@@ -1,87 +1,107 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
-import { commands, extensions, Range, Uri, ViewColumn, WebviewPanel, window } from "vscode";
-import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
-import { CodeFlowDecorations } from "./CodeFlowDecorations";
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+import * as path from "path";
+import * as sarif from "sarif";
+import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import { MessageType } from "./common/Enums";
-import {
-    DiagnosticData, Location, LocationData, ResultsListData, SarifViewerDiagnostic, WebviewMessage,
-} from "./common/Interfaces";
-import { LocationFactory } from "./LocationFactory";
-import { ResultsListController } from "./ResultsListController";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
+import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { Utilities } from "./Utilities";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
  */
-export class ExplorerController {
+export class ExplorerController implements Disposable {
+    private disposables: Disposable[] = [];
+
     public static readonly ExplorerLaunchCommand = "extension.sarif.LaunchExplorer";
-    public static readonly SendCFSelectionToExplorerCommand = "extension.sarif.SendCFSelectionToExplorer";
-    public static readonly ExplorerTitle = "SARIF Explorer";
+    private static readonly ExplorerTitle = "SARIF Explorer";
 
-    private static instance: ExplorerController;
+    public resultsListData: ResultsListData | undefined;
 
-    public activeSVDiagnostic: SarifViewerDiagnostic;
-    public resultsListData: ResultsListData;
-    public selectedVerbosity: string;
+    /**
+     * Contains the active diagnostic as known to the diagnostic collection.
+     */
+    private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
-    private activeTab: string;
-    private extensionPath: string;
-    private selectedRow: string;
-    private wvPanel: WebviewPanel;
+    // Verbosity setting, and corresponding event.
+    private currentVerbosity: sarif.ThreadFlowLocation.importance = "important";
 
-    public static get Instance(): ExplorerController {
-        return ExplorerController.instance || (ExplorerController.instance = new ExplorerController());
+    private onDidChangeVerbosityEventEmitter: EventEmitter<sarif.ThreadFlowLocation.importance> = new EventEmitter<sarif.ThreadFlowLocation.importance>();
+
+    public get onDidChangeVerbosity(): Event<sarif.ThreadFlowLocation.importance> {
+        return this.onDidChangeVerbosityEventEmitter.event;
     }
+
+    public get selectedVerbosity(): sarif.ThreadFlowLocation.importance {
+        return this.currentVerbosity;
+    }
+
+    public set selectedVerbosity(value: sarif.ThreadFlowLocation.importance) {
+        if (this.currentVerbosity !== value) {
+            this.currentVerbosity = value;
+            this.onDidChangeVerbosityEventEmitter.fire(value);
+        }
+    }
+
+    // Web view message events
+    private onWebViewMessageEventEmitter: EventEmitter<WebviewMessage> = new EventEmitter<WebviewMessage>();
+
+    public get onWebViewMessage(): Event<WebviewMessage> {
+        return this.onWebViewMessageEventEmitter.event;
+    }
+
+    private activeTab: string | undefined;
+    private selectedCodeFlowRow: string | undefined;
+    private wvPanel: WebviewPanel | undefined;
 
     private get webviewPanel(): WebviewPanel {
-        if (this.wvPanel === undefined) {
-            this.createWebview();
-        }
-
-        return this.wvPanel;
+        return this.createWebview();
     }
 
-    private constructor() {
-        this.extensionPath = extensions.getExtension("MS-SarifVSCode.sarif-viewer").extensionPath;
+    public constructor(private readonly extensionContext: ExtensionContext, diagnosticCollection: SVDiagnosticCollection) {
+        this.disposables.push(this.onDidChangeVerbosityEventEmitter);
+        this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
+        this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
+    }
 
-        window.onDidChangeVisibleTextEditors(CodeFlowDecorations.onVisibleTextEditorsChanged, this);
+    public dispose(): void {
+        Disposable.from(...this.disposables).dispose();
+        this.disposables = [];
     }
 
     /**
      * Creates the Webview panel
      */
-    public createWebview(): void {
-        if (this.wvPanel !== undefined) {
-            if (!this.wvPanel.visible) {
-                this.wvPanel.reveal(undefined, false);
-            }
-        } else {
+    public createWebview(): WebviewPanel {
+        if (!this.wvPanel) {
             this.wvPanel = window.createWebviewPanel("sarifExplorer", ExplorerController.ExplorerTitle,
                 { preserveFocus: true, viewColumn: ViewColumn.Two },
                 {
                     enableScripts: true,
                     localResourceRoots: [
-                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "resources", "explorer")),
-                        Uri.file(Utilities.Path.posix.join(this.extensionPath, "out", "explorer")),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("node_modules", "requirejs"))),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("resources", "explorer"))),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("out", "explorer"))),
                     ],
                 },
             );
 
             this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage, this);
             this.wvPanel.onDidDispose(this.onWebviewDispose, this);
-            this.wvPanel.webview.html = this.getWebviewContent();
+            this.wvPanel.webview.html = this.getWebviewContent(this.wvPanel);
         }
+
+        return this.wvPanel;
     }
 
     /**
      * Clears the webviewpanel field if the weview gets closed
      */
-    public onWebviewDispose() {
+    public onWebviewDispose(): void {
         this.wvPanel = undefined;
     }
 
@@ -89,132 +109,93 @@ export class ExplorerController {
      * Handles when a message comes in from the Webview
      * @param message the message from the webview describing the type and data of the message
      */
-    public onReceivedMessage(message: WebviewMessage) {
+    public async onReceivedMessage(message: WebviewMessage): Promise<void> {
+        // Have the explorer controller set up whatever state it needs
+        // BEFORE firing the event out so the stat is consistent in the
+        // explorer controller before others receive the web view message.
         switch (message.type) {
-            case MessageType.AttachmentSelectionChange:
-                const selectionId = (message.data as string).split("_");
-                const attachmentId = parseInt(selectionId[0], 10);
-                if (selectionId.length > 1) {
-                    CodeFlowDecorations.updateAttachmentSelection(attachmentId, parseInt(selectionId[1], 10));
-                } else {
-                    const diagnostic = ExplorerController.Instance.activeSVDiagnostic;
-                    LocationFactory.getOrRemap(diagnostic.resultInfo.attachments[attachmentId].file,
-                        diagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                        this.activeSVDiagnostic.resultInfo.runId,
-                    ).then((loc: Location) => {
-                        commands.executeCommand("vscode.open", loc.uri,
-                            ViewColumn.One);
-                    });
-                }
-                break;
             case MessageType.CodeFlowSelectionChange:
-                this.selectedRow = message.data;
-                CodeFlowDecorations.updateCodeFlowSelection(this.selectedRow);
+                this.selectedCodeFlowRow = message.data;
                 break;
-            case MessageType.SourceLinkClicked:
-                const locData = JSON.parse(message.data) as LocationData;
-                const location = {
-                    mapped: true,
-                    range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
-                        parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
-                    uri: Uri.parse(locData.file),
-                } as Location;
-                CodeFlowDecorations.updateSelectionHighlight(location, undefined);
-                break;
+
             case MessageType.VerbosityChanged:
-                if (this.selectedVerbosity !== message.data) {
-                    this.selectedVerbosity = message.data;
-                    CodeFlowCodeLensProvider.Instance.triggerCodeLensRefresh();
-                }
+                    if (!Utilities.isThreadFlowImportance(message.data)) {
+                        throw new Error("Unhandled verbosity level");
+                    }
+
+                    if (this.selectedVerbosity !== message.data) {
+                        this.selectedVerbosity = message.data;
+                    }
                 break;
+
             case MessageType.ExplorerLoaded:
-                if (this.resultsListData !== undefined) {
-                    const jsonData = JSON.stringify(this.resultsListData);
-                    this.sendMessage({ data: jsonData, type: MessageType.ResultsListDataSet } as WebviewMessage, false);
+                if (this.resultsListData) {
+                    const webViewMessage: WebviewMessage = {
+                        data: JSON.stringify(this.resultsListData),
+                        type: MessageType.ResultsListDataSet
+                    };
+                    this.sendMessage(webViewMessage);
                 }
 
-                if (this.activeSVDiagnostic !== undefined) {
-                    this.sendActiveDiagnostic(true);
+                if (this.activeDiagnostic) {
+                    this.sendActiveDiagnostic();
                 }
                 break;
+
             case MessageType.TabChanged:
                 this.activeTab = message.data;
                 break;
-            case MessageType.ResultsListColumnToggled:
-            case MessageType.ResultsListFilterApplied:
-            case MessageType.ResultsListFilterCaseToggled:
-            case MessageType.ResultsListGroupChanged:
-            case MessageType.ResultsListResultSelected:
-            case MessageType.ResultsListSortChanged:
-                ResultsListController.Instance.onResultsListMessage(message);
-                break;
         }
-    }
 
-    /**
-     * Sets the active diagnostic that's showns in the Webview, resets the saved webview state(selected row, etc.)
-     * @param diag diagnostic to show
-     * @param mappingUpdate optional flag to indicate a mapping update and the state shouldn't be reset
-     */
-    public setActiveDiagnostic(diag: SarifViewerDiagnostic, mappingUpdate?: boolean) {
-        if (this.activeSVDiagnostic === undefined || this.activeSVDiagnostic !== diag || mappingUpdate) {
-            this.activeSVDiagnostic = diag;
-            if (!mappingUpdate) {
-                this.activeTab = undefined;
-                this.selectedRow = undefined;
-                this.selectedVerbosity = undefined;
-            }
-            this.sendActiveDiagnostic(false);
-        }
+        this.onWebViewMessageEventEmitter.fire(message);
     }
 
     /**
      * Sets the results list data and updates the Explore's results list data
      * @param dataSet new dataset to set
      */
-    public setResultsListData(dataSet: ResultsListData) {
+    public setResultsListData(dataSet: ResultsListData): void {
         this.resultsListData = dataSet;
-        const jsonData = JSON.stringify(dataSet);
-        this.sendMessage({ data: jsonData, type: MessageType.ResultsListDataSet } as WebviewMessage, false);
+        const webviewMessage: WebviewMessage = {
+            data: JSON.stringify(dataSet),
+            type: MessageType.ResultsListDataSet
+        };
+        this.sendMessage(webviewMessage);
     }
 
     /**
      * sets the selected codeflow row, tells the webview to show and select the row
      * @param id Id of the codeflow row
      */
-    public setSelectedCodeFlow(id: string) {
-        this.selectedRow = id;
-        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange } as WebviewMessage, false);
+    public setSelectedCodeFlow(id: string): void {
+        this.selectedCodeFlowRow = id;
+        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange });
     }
 
     /**
      * Joins the path and converts it to a vscode resource schema
-     * @param path relative path to the file from the extension folder
-     * @param file name of the file
+     * @param pathParts The path parts to join
      */
-    private getVSCodeResourcePath(path: string, file: string): Uri {
-        const vscodeResource = "vscode-resource";
-        const diskPath: string = Utilities.Path.posix.join(this.extensionPath, path, file);
-        const uri = Uri.file(diskPath);
+    private getVSCodeResourcePath(...pathParts: string[]): Uri {
+        const vscodeResource: string = "vscode-resource";
+        const diskPath: string = this.extensionContext.asAbsolutePath(path.join(...pathParts));
+        const uri: Uri = Uri.file(diskPath);
         return uri.with({ scheme: vscodeResource });
     }
 
     /**
      * defines the default webview html content
      */
-    private getWebviewContent(): string {
-        const resourcesPath = "resources/explorer/";
-        const scriptsPath = "out/explorer/explorer/";
+    private getWebviewContent(webViewPanel: WebviewPanel): string {
+        const resourcesPath: string[] = ["resources", "explorer"];
 
-        const cssExplorerDiskPath = this.getVSCodeResourcePath(resourcesPath, "explorer.css");
-        const cssListTableDiskPath = this.getVSCodeResourcePath(resourcesPath, "listTable.css");
-        const cssResultsListDiskPath = this.getVSCodeResourcePath(resourcesPath, "resultsList.css");
-        const jQueryDiskPath = this.getVSCodeResourcePath(resourcesPath, "jquery-3.3.1.min.js");
-        const colResizeDiskPath = this.getVSCodeResourcePath(resourcesPath, "colResizable-1.6.min.js");
-
-        const webviewDiskPath = this.getVSCodeResourcePath(scriptsPath, "webview.js");
-        const resultsListDiskPath = this.getVSCodeResourcePath(scriptsPath, "resultsList.js");
-        const enumDiskPath = this.getVSCodeResourcePath(scriptsPath, "enums.js");
+        const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "explorer.css");
+        const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "listTable.css");
+        const cssResultsListDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "resultsList.css");
+        const jQueryDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "jquery-3.3.1.min.js");
+        const colResizeDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "colResizable-1.6.min.js");
+        const requireJsPath: Uri = this.getVSCodeResourcePath("node_modules", "requirejs", "require.js");
+        const explorerPath: Uri = this.getVSCodeResourcePath("out", "explorer", "systemExplorer.js");
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -225,8 +206,10 @@ export class ExplorerController {
             <link rel="stylesheet" type="text/css" href = "${cssListTableDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssExplorerDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssResultsListDiskPath}">
+            <srcipt src="./node_modules/systemjs/dist/system.js"></script>
             <script src="${jQueryDiskPath}"></script>
             <script src="${colResizeDiskPath}"></script>
+            <script data-main="${explorerPath}" src="${requireJsPath}"></script>
         </head>
         <body>
             <div id="resultslistheader" class="headercontainer expanded"></div>
@@ -238,39 +221,59 @@ export class ExplorerController {
             </div>
             <div id="resultdetailsheader" class="headercontainer expanded"></div>
             <div id="resultdetailscontainer"></div>
-            <script src="${enumDiskPath}"></script>
-            <script src="${resultsListDiskPath}"></script>
-            <script src="${webviewDiskPath}"></script>
+            <script>
+               requirejs(['systemExplorer'], function () {
+                 require(["explorer/webview"], function(webView) {
+                    webView.startExplorer();
+                 });
+               });
+            </script>
         </body>
         </html>`;
     }
 
     /**
-     * Creates the webview message based on the current active dialog and saved state and sends to the webview
-     * @param focus flag for setting focus to the webview
+     * Creates the webview message based on the current active diagnostic and saved state and sends to the webview
      */
-    private sendActiveDiagnostic(focus: boolean) {
-        const diagData = {
+    private sendActiveDiagnostic(): void {
+
+        if (!this.activeDiagnostic) {
+            // Empty string is used to signal no selected diagnostic
+            this.sendMessage({data: "", type: MessageType.NewDiagnostic});
+            return;
+        }
+
+        const diagData: DiagnosticData = {
             activeTab: this.activeTab,
-            resultInfo: this.activeSVDiagnostic.resultInfo,
-            runInfo: SVDiagnosticCollection.Instance.getRunInfo(this.activeSVDiagnostic.resultInfo.runId),
-            selectedRow: this.selectedRow,
+            selectedRow: this.selectedCodeFlowRow,
             selectedVerbosity: this.selectedVerbosity,
-        } as DiagnosticData;
-        this.sendMessage({
-            data: JSON.stringify(diagData), type: MessageType.NewDiagnostic,
-        } as WebviewMessage, focus);
+            resultInfo: this.activeDiagnostic.resultInfo,
+            runInfo: this.activeDiagnostic.resultInfo.runInfo
+        };
+
+        const dataString: string = JSON.stringify(diagData);
+        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic});
     }
 
     /**
      * Handles sending a message to the webview
      * @param message Message to send, message has a type and data
-     * @param focus flag for if the webview panel should be given focus
      */
-    private sendMessage(message: WebviewMessage, focus: boolean) {
-        if (!this.webviewPanel.visible) {
-            this.webviewPanel.reveal(undefined, !focus);
-        }
+    private sendMessage(message: WebviewMessage): void {
+        // We do not want to wait for this promise to finish as we are
+        // just adding the message to the web-views queue.
+        // tslint:disable-next-line: no-floating-promises
         this.webviewPanel.webview.postMessage(message);
+    }
+
+    private onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
+        // When the active diagnostic changes, then clear the active tab (which is the "Result Info", "Run Info", "Code Flow", etc.)
+        // to be undefined. That will cause the web-view to default to either "Result Info" or "Code Flow" tabs
+        // depending on what is present in the data.
+        this.activeTab = undefined;
+        this.selectedCodeFlowRow = undefined;
+        this.activeDiagnostic = diagnostic;
+
+        this.sendActiveDiagnostic();
     }
 }

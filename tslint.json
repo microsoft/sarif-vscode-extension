@@ -1,16 +1,68 @@
-{
-    "defaultSeverity": "error",
-    "extends": [
-        "tslint:recommended"
-    ],
-    "jsRules": {},
+{    
     "rules": {
-        "completed-docs": [
-            true,
-                "classes",
-                "methods"
+        "curly": true,
+        "file-header": [true, 
+            {
+                "match": "Copyright \\(c\\) Microsoft Corporation\\. All Rights Reserved\\.",
+                "default" : "Copyright (c) Microsoft Corporation. All Rights Reserved.",
+                "allow-single-line-comments": true
+            }
         ],
-        "no-reference": false
+        "indent": [true, "spaces", 4],
+        "new-parens": true,
+        "no-consecutive-blank-lines": true,
+        "no-floating-promises": [true, "Thenable"],
+        "no-invalid-this": true,
+        "no-construct": true,
+        "no-duplicate-variable": true,
+        "no-trailing-whitespace": true,
+        "no-unused-expression-chai": true,
+        "no-var-keyword": true,
+        "return-undefined": true,
+        "one-line": [true, "check-catch", "check-finally", "check-else", "check-open-brace", "check-whitespace"],
+        "prefer-const": true,
+        "promise-must-complete": true,
+        "semicolon": true,
+        "triple-equals": true,
+        "type-literal-delimiter": true,
+        "typedef": [true, "variable-declaration", "call-signature"],
+        "member-access": [
+            true,
+            "check-constructor"
+        ],
+        "no-irregular-whitespace": true,
+        "typedef-whitespace": [
+            true, {
+                "call-signature": "nospace",
+                "index-signature": "nospace",
+                "parameter": "nospace",
+                "property-declaration": "nospace",
+                "variable-declaration": "nospace"
+            }
+        ],
+        "max-classes-per-file": true,
+        "whitespace": [
+            true,
+            "check-module",
+            "check-rest-spread",
+            "check-type-operator",
+            "check-type-cast",
+            "check-branch",
+            "check-operator",
+            "check-separator",
+            "check-preblock",
+            "check-type",
+            "check-decl"],
+        "no-any": true,
+        "no-unused-expression": true,
+        "no-unnecessary-initializer": true,
+        "await-promise": [true, "Thenable"]
     },
-    "rulesDirectory": []
+    "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
+    "linterOptions": {
+        "exclude": [
+            "**/vscode.proposed.d.ts",
+            "src/test/*"
+        ]
+    }
 }

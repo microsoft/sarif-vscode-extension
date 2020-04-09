@@ -1,72 +1,61 @@
-// /********************************************************
-// *                                                       *
-// *   Copyright (C) Microsoft. All rights reserved.       *
-// *                                                       *
-// ********************************************************/
-import * as sarif from "sarif";
-import { commands, ExtensionContext } from "vscode";
+/*!
+ * Copyright (c) Microsoft Corporation. All Rights Reserved.
+ */
+
+import { ExtensionContext } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
 import { ExplorerController } from "./ExplorerController";
 import { FileConverter } from "./FileConverter";
-import { FileMapper } from "./FileMapper";
 import { LogReader } from "./LogReader";
 import { SVCodeActionProvider } from "./SVCodeActionProvider";
 import { Utilities } from "./Utilities";
+import { ResultsListController } from "./ResultsListController";
+import { FileMapper } from "./FileMapper";
+import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+
+// This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
+// If you don't do this... you crash using the extension methods.
+import './utilities/stringUtilities';
 
 /**
  * This method is called when the extension is activated.
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: ExtensionContext) {
-    // Create the launch Explorer command
-    context.subscriptions.push(
-        commands.registerCommand(ExplorerController.ExplorerLaunchCommand, () => {
-            ExplorerController.Instance.createWebview();
-        }));
+export async function activate(context: ExtensionContext): Promise<void> {
+    Utilities.initialize(context);
+    FileConverter.initialize(context);
 
-    context.subscriptions.push(
-        commands.registerCommand(ExplorerController.SendCFSelectionToExplorerCommand, (id: string) => {
-            CodeFlowDecorations.updateCodeFlowSelection(id);
-            ExplorerController.Instance.setSelectedCodeFlow(id);
-        }));
+    context.subscriptions.push(FileMapper.InitializeFileMapper());
 
-    // Create File mapper command
-    context.subscriptions.push(
-        commands.registerCommand(FileMapper.MapCommand, (fileLocation: sarif.ArtifactLocation, runId: number) => {
-            const uriBase = Utilities.getUriBase(fileLocation, runId);
-            const uri = Utilities.combineUriWithUriBase(fileLocation.uri, uriBase);
-            FileMapper.Instance.getUserToChooseFile(uri, uriBase);
-        }));
+    const diagnosticCollection: SVDiagnosticCollection = new SVDiagnosticCollection();
+    context.subscriptions.push(diagnosticCollection);
 
-    context.subscriptions.push(
-        commands.registerCommand(CodeFlowDecorations.selectNextCFStepCommand, CodeFlowDecorations.selectNextCFStep),
-    );
-    context.subscriptions.push(
-        commands.registerCommand(CodeFlowDecorations.selectPrevCFStepCommand, CodeFlowDecorations.selectPrevCFStep),
-    );
+    const explorerController: ExplorerController = new ExplorerController(context, diagnosticCollection);
+    context.subscriptions.push(explorerController);
 
-    context.subscriptions.push(
-        commands.registerCommand(FileConverter.ConvertCommand, FileConverter.selectConverter),
-    );
+    const codeActionProvider: SVCodeActionProvider = new SVCodeActionProvider(diagnosticCollection);
+    context.subscriptions.push(codeActionProvider);
 
-    // Instantiate the providers and filemaper which will register their listeners and register their disposables
-    context.subscriptions.push(SVCodeActionProvider.Instance);
-    context.subscriptions.push(CodeFlowCodeLensProvider.Instance);
-    context.subscriptions.push(FileMapper.Instance);
+    context.subscriptions.push(new ResultsListController(explorerController, codeActionProvider, diagnosticCollection));
+
+    context.subscriptions.push(new CodeFlowCodeLensProvider(explorerController, diagnosticCollection));
+
+    context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
     // Read the initial set of open SARIF files
-    const reader = LogReader.Instance;
+    const reader: LogReader = (new LogReader(diagnosticCollection));
     context.subscriptions.push(reader);
-    reader.readAll();
+
+    // We do not need to block extension startup for reading any open documents.
+    void reader.readAll();
 }
 
 /**
  * Clean up extension if it gets deactivated
  */
-export function deactivate() {
+export function deactivate(): void {
     // ToDo: rusty: Close html preview, unregister events, clear diagnostic collection
     Utilities.removeSarifViewerTempDirectory();
-    return undefined;
 }

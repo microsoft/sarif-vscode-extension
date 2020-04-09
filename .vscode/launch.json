@@ -1,6 +1,6 @@
 // A launch configuration that compiles the extension and then opens it inside a new window
 {
-    "version": "0.1.0",
+    "version": "2.0.0",
     "configurations": [
         {
             "name": "Extension",
@@ -13,7 +13,10 @@
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceRoot}/out/**/*.js"
+                "${workspaceRoot}/out/*.js",
+                "${workspaceRoot}/out/common/*.js",
+                "${workspaceRoot}/out/explorer/common/*.js",
+                "${workspaceRoot}/out/explorer/explorer/*.js",
             ],
             "preLaunchTask": "npm: watch"
         },
@@ -24,7 +27,7 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+                "--extensionTestsPath=${workspaceFolder}/out/test"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
