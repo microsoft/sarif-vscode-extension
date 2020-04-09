@@ -186,7 +186,7 @@ export class Utilities {
             path.join(pathObj.dir.replace(pathObj.root, ""), path.win32.basename(filePath)));
         tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
         basePath = Utilities.createDirectoryInTemp(basePath);
-        tempPath = path.posix.join(basePath, tempPath);
+        tempPath = path.join(basePath, tempPath);
 
         return tempPath;
     }
