@@ -38,7 +38,7 @@ export class FileConverter {
             "ClangAnalyzer": ["xml"],
             "CppCheck": ["xml"],
             "ContrastSecurity": ["xml"],
-            "Fortify": ["xml"],
+            "Fortify": ["plist", "xml"],
             "FortifyFpr": ["fpr"],
             "FxCop": ["fxcop", "xml"],
             "PREfast": ["xml"],
@@ -63,7 +63,8 @@ export class FileConverter {
 
         const toolName: string = `${tool.label} log files`;
         const filters: { [name: string]: string[] } = {};
-        filters[toolName] = tool.extensions;
+        filters[toolName] = tool.extensions; // We want this to display first and by default.
+        filters["All files"] = ["*"];
 
         const openUris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
             canSelectFiles: true,
