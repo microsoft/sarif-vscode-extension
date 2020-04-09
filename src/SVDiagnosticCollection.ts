@@ -340,6 +340,10 @@ export class SVDiagnosticCollection implements Disposable {
         for (const [key, unmappedDiagnostics] of this.unmappedIssuesCollection.entries()) {
             const indexOfUnmappedDiagnostic: number = unmappedDiagnostics.indexOf(diagnostic);
             if (indexOfUnmappedDiagnostic >= 0) {
+                // If we have a large number of diagnostics, deleting the key
+                // and resetting it is far better than having two allocations going at once.
+                this.unmappedIssuesCollection.delete(key);
+
                 unmappedDiagnostics.splice(indexOfUnmappedDiagnostic, 1);
                 this.unmappedIssuesCollection.set(key, unmappedDiagnostics);
 
@@ -347,7 +351,9 @@ export class SVDiagnosticCollection implements Disposable {
                 this.addToCollection(this.mappedIssuesCollection, diagnostic);
 
                 // Attempt to automatically re-map the renamining unmapped diagnostics.
-                remainingUnmappedDiagnostics = unmappedDiagnostics;
+                if (!this.remappingDiagnostics) {
+                    remainingUnmappedDiagnostics = unmappedDiagnostics;
+                }
                 break;
             }
         }
@@ -373,14 +379,20 @@ export class SVDiagnosticCollection implements Disposable {
      * that as the active selection which causes pretty much all the UI to update.
      * @param textEditorSelectionChanged The type of text editor selection change.
      */
-    private onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent ): void {
+    private async onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent ): Promise<void> {
         // If the selection changed to a text editor that isn't visible, then we will ignore it.
         if (!window.visibleTextEditors.find((visibleTextEdtior) => visibleTextEdtior === textEditorSelectionChanged.textEditor)) {
             return;
         }
 
         // If there isn't a valid selction, then we will also ignore it.
-        if (textEditorSelectionChanged.selections.length <= 0 ) {
+        if (textEditorSelectionChanged.selections.length !== 1 ) {
+            return;
+        }
+
+        // If the selection isn't a single line (or isn't empty - meaning just the cursor), then skip it.
+        const firstRange: Range = textEditorSelectionChanged.selections[0];
+        if (!firstRange.isSingleLine || !firstRange.isEmpty) {
             return;
         }
 
@@ -393,9 +405,15 @@ export class SVDiagnosticCollection implements Disposable {
 
         // Now, if we can find an intersection between the selection and a diagnostic range then
         // make that the active diagnostic.
-        const firstRange: Range = textEditorSelectionChanged.selections[0];
         for (const diagnosticForDocument of diagnosticsForDocument) {
-            if (diagnosticForDocument.location.range.intersection(firstRange)) {
+            // So for single point ranges in SARIF locations (which is apparently common),
+            // If the location range is empty (which means single point) and a single line
+            // and it is on the same line as the selection, then let's use it.
+            // Otherwise, if they intersect, use it as well.
+            if ((diagnosticForDocument.location.range.isEmpty &&
+                diagnosticForDocument.location.range.isSingleLine &&
+                diagnosticForDocument.location.range.start.line === firstRange.start.line) ||
+                (diagnosticForDocument.location.range.intersection(firstRange))) {
                 this.activeDiagnostic = diagnosticForDocument;
                 break;
             }

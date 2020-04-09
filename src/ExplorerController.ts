@@ -206,7 +206,6 @@ export class ExplorerController implements Disposable {
             <link rel="stylesheet" type="text/css" href = "${cssListTableDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssExplorerDiskPath}">
             <link rel="stylesheet" type="text/css" href = "${cssResultsListDiskPath}">
-            <srcipt src="./node_modules/systemjs/dist/system.js"></script>
             <script src="${jQueryDiskPath}"></script>
             <script src="${colResizeDiskPath}"></script>
             <script data-main="${explorerPath}" src="${requireJsPath}"></script>
