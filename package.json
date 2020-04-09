@@ -42,7 +42,7 @@
                     "default": [
                         "c:\\sample\\path"
                     ],
-                    "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)"
+                    "description": "%configuration.sarif-viewer.rootpaths.description%"
                 },
                 "sarif-viewer.resultsListHideColumns": {
                     "default": [
@@ -54,7 +54,7 @@
                         "runId",
                         "sarifFile"
                     ],
-                    "description": "The list of columns to hide from the results list",
+                    "description": "%configuration.sarif-viewer.resultsListHideColumns.description%",
                     "type": "array",
                     "items": {
                         "enum": [
@@ -73,12 +73,29 @@
                             "sarifFile",
                             "severityLevel",
                             "tool"
-                        ]
+                        ],
+                        "enumDescriptions": [
+                            "%automationCat.description%",
+                            "%automationId.description%",
+                            "%baselineState.description%",
+                            "%kind.description%",
+                            "%message.description%",
+                            "%rank.description%",
+                            "%resultFile.description%",
+                            "%resultStartPos.description%",
+                            "%logicalLocation.description%",
+                            "%ruleId.description%",
+                            "%ruleName.description%",
+                            "%runId.description%",
+                            "%sarifFile.description%",
+                            "%severityLevel.description%",
+                            "%tool.description%"
+                        ]    
                     }
                 },
                 "sarif-viewer.resultsListGroupBy": {
                     "default": "resultFile",
-                    "description": "The column to group the results list by",
+                    "description": "%configuration.sarif-viewer.resultsListGroupBy.description%",
                     "type": "string",
                     "enum": [
                         "automationCat",
@@ -96,6 +113,23 @@
                         "sarifFile",
                         "severityLevel",
                         "tool"
+                    ],
+                    "enumDescriptions": [
+                        "%automationCat.description%",
+                        "%automationId.description%",
+                        "%baselineState.description%",
+                        "%kind.description%",
+                        "%message.description%",
+                        "%rank.description%",
+                        "%resultFile.description%",
+                        "%resultStartPos.description%",
+                        "%logicalLocation.description%",
+                        "%ruleId.description%",
+                        "%ruleName.description%",
+                        "%runId.description%",
+                        "%sarifFile.description%",
+                        "%severityLevel.description%",
+                        "%tool.description%"
                     ]
                 },
                 "sarif-viewer.resultsListSortBy": {
@@ -103,7 +137,7 @@
                         "column": "severityLevel",
                         "ascending": true
                     },
-                    "description": "The column to sort the results list by(per group) and the order",
+                    "description": "%configuration.sarif-viewer.resultsListSortBy.description%",
                     "type": "object",
                     "properties": {
                         "column": {
@@ -144,23 +178,23 @@
         "commands": [
             {
                 "command": "extension.sarif.Convert",
-                "title": "Convert and open a non-sarif file",
-                "category": "Sarif"
+                "title": "%commands.extension.sarif.Convert.title%",
+                "category": "%commands.category%"
             },
             {
                 "command": "extension.sarif.LaunchExplorer",
-                "title": "Launch the Sarif Explorer",
-                "category": "Sarif"
+                "title": "%commands.extension.sarif.LaunchExplorer.title%",
+                "category": "%commands.category%"
             },
             {
                 "command": "extension.sarif.nextCodeFlowStep",
-                "title": "Next Code Flow step",
-                "category": "Sarif"
+                "title": "%commands.extension.sarif.nextCodeFlowStep.title%",
+                "category": "%commands.category%"
             },
             {
                 "command": "extension.sarif.previousCodeFlowStep",
-                "title": "Previous Code Flow step",
-                "category": "Sarif"
+                "title": "%commands.extension.sarif.previousCodeFlowStep.title%",
+                "category": "%commands.category%"
             }
         ],
         "keybindings": [
@@ -204,7 +238,8 @@
         "typescript": "^3.8.3",
         "vscode-test": "^1.0.2",
         "tslint-microsoft-contrib": "^6.0.0",
-        "tslint-no-unused-expression-chai": "^0.1.4"
+        "tslint-no-unused-expression-chai": "^0.1.4",
+        "vscode-nls-dev": "^3.2.6"
     },
     "dependencies": {
         "json-source-map": "^0.4.0",
@@ -212,6 +247,7 @@
         "markdown-it": "^9.0.1",
         "systemjs": "^6.2.5",
         "requirejs": "^2.3.6",
-        "@microsoft/sarif-multitool": "2.2.2"
+        "@microsoft/sarif-multitool": "2.2.2",
+        "vscode-nls": "^3.2.5"
     }
 }

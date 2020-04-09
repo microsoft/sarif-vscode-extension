@@ -12,6 +12,9 @@ import {
 import { ProgressHelper } from "./ProgressHelper";
 import { Utilities } from "./Utilities";
 import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/Interfaces";
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 const RootPathSample: string = "c:\\sample\\path";
 const ConfigRootPaths: string = "rootpaths";
@@ -100,7 +103,7 @@ export class FileMapper implements Disposable {
      */
     public async getUserToChooseFile(origUri: Uri, uriBase?: string): Promise<Uri | undefined> {
         const oldProgressMsg: string | undefined = ProgressHelper.Instance.CurrentMessage;
-        await ProgressHelper.Instance.setProgressReport("Waiting for user input");
+        await ProgressHelper.Instance.setProgressReport(localize("fileMapper.WaitingForUserInput", "Waiting for user input"));
 
         const remapResult: string | undefined = await this.openRemappingInputDialog(origUri);
 
