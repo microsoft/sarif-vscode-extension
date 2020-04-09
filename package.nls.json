@@ -1,0 +1,31 @@
+{
+    "configuration.sarif-viewer.rootpaths.description" : "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)",
+    "configuration.sarif-viewer.resultsListHideColumns.description": "The list of columns to hide from the results list",
+    "configuration.sarif-viewer.resultsListGroupBy.description": "The column to group the results list by",
+    "automationCat.description": "Automation Category",
+    "automationId.description": "Automation Identifier",
+    "baselineState.description": "Baseline State",
+    "kind.description": "Result Kind",
+    "message.description": "Result Message",
+    "rank.description": "Result Rank",
+    "resultFile.description": "Result File",
+    "resultStartPos.description": "Start position",
+    "logicalLocation.description": "Logical Location",
+    "ruleId.description": "Rule Identifier",
+    "ruleName.description": "Rule Name",
+    "runId.description": "Run Identifier",
+    "sarifFile.description": "SARIF File",
+    "severityLevel.description": "Severity Level",
+    "too.description": "Tool Description",
+
+    "configuration.sarif-viewer.resultsListSortBy.description": "The column to sort the results list by(per group) and the order",
+
+    "commands.category": "Sarif",
+
+    "commands.extension.sarif.Convert.title" : "Convert and open a non-sarif file",
+    "commands.extension.sarif.LaunchExplorer.title": "Launch the Sarif Explorer",
+    "commands.extension.sarif.nextCodeFlowStep.title": "Next Code Flow step",
+    "commands.extension.sarif.previousCodeFlowStep.title": "Previous Code Flow step",
+
+    "fileMapper.WaitingForUserInput": "Waiting for user input"
+}
