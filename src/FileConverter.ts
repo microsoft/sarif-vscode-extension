@@ -199,9 +199,13 @@ export class FileConverter {
         const fileOutputPath: string = output;
         const errorData: string[] = [];
         const converted: boolean = await new Promise<boolean>((resolve) => {
-            const proc: ChildProcess = spawn(multiToolPath,
-                ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"],
-            );
+            const launchMultiToolPath: string = multiToolPath;
+            const args: string[] = ["transform", `"${doc.uri.fsPath}"`, "-o", `"${fileOutputPath}"`, "-p", "-f"];
+            const proc: ChildProcess = spawn(launchMultiToolPath, args);
+
+            proc.stderr.on("data", (data) => {
+                errorData.push(data.toString());
+            });
 
             proc.stdout.on("data", (data) => {
                 errorData.push(data.toString());
