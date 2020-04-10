@@ -2,18 +2,17 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
+import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import * as path from "path";
 import * as sarif from "sarif";
-import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import { MessageType } from "./common/Enums";
 import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { Utilities } from "./Utilities";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
-
-import * as nls from 'vscode-nls';
-
-const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -22,7 +21,7 @@ export class ExplorerController implements Disposable {
     private disposables: Disposable[] = [];
 
     public static readonly ExplorerLaunchCommand = 'extension.sarif.LaunchExplorer';
-    private static readonly ExplorerTitle = localize('explorer.Title', "SARIF Explorer");
+    //private static readonly ExplorerTitle = localize('explorer.Title', "SARIF Explorer");
 
     public resultsListData: ResultsListData | undefined;
 
@@ -82,7 +81,7 @@ export class ExplorerController implements Disposable {
      */
     public createWebview(): WebviewPanel {
         if (!this.wvPanel) {
-            this.wvPanel = window.createWebviewPanel('sarifExplorer', ExplorerController.ExplorerTitle,
+            this.wvPanel = window.createWebviewPanel('sarifExplorer', localize('explorer.Title', "SARIF Explorer"),
                 { preserveFocus: true, viewColumn: ViewColumn.Two },
                 {
                     enableScripts: true,

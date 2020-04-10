@@ -9,6 +9,9 @@ import { Utilities } from "./Utilities";
 import { ChildProcess, spawn } from "child_process";
 import multiToolPath from "@microsoft/sarif-multitool";
 
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 /**
  * Handles converting a non sarif static analysis file to a sarif file via the sarif-sdk multitool
  */
@@ -19,7 +22,7 @@ export class FileConverter {
 
     private  static registerCommands(extensionContext: vscode.ExtensionContext): void {
         extensionContext.subscriptions.push(
-            vscode.commands.registerCommand("extension.sarif.Convert", FileConverter.selectConverter),
+            vscode.commands.registerCommand('extension.sarif.Convert', FileConverter.selectConverter),
         );
     }
 
@@ -29,30 +32,32 @@ export class FileConverter {
     public static async selectConverter(): Promise<void> {
         interface ToolQuickPickItem extends vscode.QuickPickItem {
             readonly extensions: string[];
+            readonly toolKey: string;
         }
 
         // This really should have a friendly UI name as well as the extension list.
         // We can leave that for another day.
-        const fileConverterTools: { [toolName: string]: string[] } = {
-            "AndroidStudio": ["xml"],
-            "ClangAnalyzer": ["xml"],
-            "CppCheck": ["xml"],
-            "ContrastSecurity": ["xml"],
-            "Fortify": ["plist", "xml"],
-            "FortifyFpr": ["fpr"],
-            "FxCop": ["fxcop", "xml"],
-            "PREfast": ["xml"],
-            "Pylint": ["json"],
-            "SemmleQL": ["csv"],
-            "StaticDriverVerifier": ["tt"],
-            "TSLint": ["json"]
+        const fileConverterTools: { [toolNameForMultiTool: string]:  { extensions: string[]; name: string } } = {
+            AndroidStudio:  { extensions: ['xml'], name: localize("converterTool.AndroidStudio", "Android Studio") },
+            ClangAnalyzer: { extensions:  ['xml'], name: localize("converterTool.ClangAnalyzer", "CLang Analyzer") },
+            CppCheck: { extensions: ['xml'], name: localize("converterTool.CppCheck", "CppCheck") },
+            ContrastSecurity: { extensions: ['xml'], name: localize("converterTool.ContrastSecurity", "Contrast Security") },
+            Fortify: { extensions: ['plist', 'xml'], name: localize("converterTool.Fortify", "Fortify") },
+            FortifyFpr: { extensions: ['fpr'], name: localize("converterTool.FortifyFpr", "Fortify Fpr") },
+            FxCop: { extensions: ['fxcop', 'xml'], name: localize("converterTool.FxCop", "FxCop") },
+            PREfast: { extensions: ['xml'], name: localize("converterTool.PREfast", "PREfast") },
+            Pylint:  { extensions: ['json'], name: localize("converterTool.Pylint", "Pylint") },
+            SemmleQL: { extensions: ['csv'], name: localize("converterTool.SemmleQL", "Semmle QL") },
+            StaticDriverVerifier: { extensions: ['tt'], name: localize("converterTool.StaticDriverVerifier", "Static Driver Verifier") },
+            TSLint: { extensions: ['json'], name: localize("converterTool.TSLint", "TSLint") }
         };
 
         const quickPickItems: ToolQuickPickItem[] = [];
-        for (const toolName of Object.keys(fileConverterTools)) {
+        for (const tooleNameKey of Object.keys(fileConverterTools)) {
             quickPickItems.push({
-                label: toolName,
-                extensions: fileConverterTools[toolName]
+                label: fileConverterTools[tooleNameKey].name,
+                extensions: fileConverterTools[tooleNameKey].extensions,
+                toolKey: tooleNameKey
             });
         }
 
@@ -61,10 +66,10 @@ export class FileConverter {
             return;
         }
 
-        const toolName: string = `${tool.label} log files`;
+        const toolName: string = localize('converterTool.OpenFileDialogTitle', "{0} log files", tool.label);
         const filters: { [name: string]: string[] } = {};
         filters[toolName] = tool.extensions; // We want this to display first and by default.
-        filters["All files"] = ["*"];
+        filters[localize('converterTool.AllFiles', "All files")] = ['*'];
 
         const openUris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
             canSelectFiles: true,
@@ -76,9 +81,7 @@ export class FileConverter {
             return;
         }
 
-        // The "label" used for the quick-pick item is the tool name we will
-        // ultimately pass to the multi-tool conversion that exists in the SDK.
-        FileConverter.convert(openUris[0], tool.label);
+        FileConverter.convert(openUris[0], tool.toolKey);
     }
 
     /**
@@ -96,15 +99,15 @@ export class FileConverter {
             return false;
         }
 
-        if (schema === "http://json.schemastore.org/sarif-2.1.0-rtm.1") {
+        if (schema === 'http://json.schemastore.org/sarif-2.1.0-rtm.1') {
             // By passes a bug in the multitool, remove after fix https://github.com/microsoft/sarif-sdk/issues/1584
             return false;
         }
 
         let parsedSchemaVer: SarifVersion | undefined;
         let tryToUpgrade: boolean = false;
-        if (schema && (schema.startsWith("http://json.schemastore.org/sarif-") ||
-            schema.startsWith("https://schemastore.azurewebsites.net/schemas/json/sarif-"))) {
+        if (schema && (schema.startsWith('http://json.schemastore.org/sarif-') ||
+            schema.startsWith('https://schemastore.azurewebsites.net/schemas/json/sarif-'))) {
             parsedSchemaVer = FileConverter.parseSchema(schema);
 
             if (!parsedSchemaVer) {
@@ -126,9 +129,10 @@ export class FileConverter {
             // tslint:disable-next-line: no-floating-promises
             FileConverter.upgradeSarif(doc, parsedVer, parsedSchemaVer);
         } else {
-            await vscode.window.showErrorMessage(`Sarif version '${version}'(schema '${schema}') is not yet supported by the Viewer.
-            Make sure you have the latest extension version and check
-            https://github.com/Microsoft/sarif-vscode-extension for future support.`);
+                await vscode.window.showErrorMessage(localize(
+                    'converterTool.UpgraderErrorMessage',
+                    "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.",
+                    version, schema));
         }
 
         return tryToUpgrade;
@@ -144,30 +148,28 @@ export class FileConverter {
      */
     public static async upgradeSarif(doc: vscode.TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
         const saveTempChoice: vscode.MessageItem =  {
-            title: "Yes (Save Temp)"
+            title: localize('converterTool.Upgrade.SaveTemp', "Yes (Save Temp)")
         };
 
         const saveAsChoice: vscode.MessageItem = {
-            title: "Yes (Save As)"
+            title: localize('converterTool.Upgrade.SaveAs', "Yes (Save As)")
         };
 
         const noChoice: vscode.MessageItem = {
-            title: "No"
+            title: localize('converterTool.Upgrade.No', "No")
         };
 
-        let curVersion: string;
-        let version: string;
+        let upgradeMessage: string;
 
         if (sarifSchema) {
-            curVersion = `schema version '${FileConverter.MultiToolCurrentSchemaVersion.original}'`;
-            version = `schema version '${sarifSchema.original}'`;
+            upgradeMessage = localize('converterTool.Upgrade.AskWithSchema', "Sarif schema version {0} is not supported. Upgrade to the latest schema version {1}?", sarifSchema.original, FileConverter.MultiToolCurrentSchemaVersion.original);
         } else {
-            curVersion = `version '${FileConverter.MultiToolCurrentVersion.original}'`;
-            version = `version '${sarifVersion && sarifVersion.original ? sarifVersion.original : "Unknown"}'`;
+            upgradeMessage = localize('converterTool.Upgrade.AskWithVersion', "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
+                sarifVersion && sarifVersion.original ? sarifVersion.original : localize('converterTool.Upgrade.UnknownVersion', "Unknown"),  FileConverter.MultiToolCurrentSchemaVersion.original);
         }
 
         const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
-            `Sarif ${version} is not supported. Upgrade to the latest ${curVersion}?`,
+            upgradeMessage,
             { modal: false },
             saveTempChoice, saveAsChoice, noChoice);
 
@@ -184,7 +186,7 @@ export class FileConverter {
             case saveAsChoice:
                 const selectedUri: vscode.Uri | undefined = await vscode.window.showSaveDialog({
                     defaultUri: doc.uri,
-                    filters: { sarif: ["sarif"] }
+                    filters: { sarif: ['sarif'] }
                 });
 
                 if (selectedUri) {
@@ -203,33 +205,33 @@ export class FileConverter {
             // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
             // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
             // can be over-ridden for testing.
-            const proc: ChildProcess =  spawn(multiToolPath, ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"]);
+            const proc: ChildProcess =  spawn(multiToolPath, ['transform', doc.uri.fsPath, '-o', fileOutputPath, '-p', '-f']);
 
-            proc.stderr.on("data", (data) => {
+            proc.stderr.on('data', (data) => {
                 errorData.push(data.toString());
             });
 
-            proc.stdout.on("data", (data) => {
+            proc.stdout.on('data', (data) => {
                 errorData.push(data.toString());
             });
 
-            proc.on("close", async (code) => {
+            proc.on('close', (code) => {
                 resolve (code === 0);
             });
         });
 
         if (!converted) {
-            await vscode.window.showErrorMessage(`Sarif upgrade failed with error: ${errorData.join('\n')}`, { modal: false });
+            await vscode.window.showErrorMessage(localize('converterTool.Upgrade.FailedMessage', "Sarif upgrade failed with error:{0}", errorData.join('\n'), { modal: false }));
             return false;
         }
 
         const textEditor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
 
         if (textEditor && textEditor.document.fileName === doc.fileName) {
-            await vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
         }
 
-        await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(output), {
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(output), {
                 preserveFocus: false,
                 preview: false,
                 viewColumn: vscode.ViewColumn.One,
@@ -239,9 +241,9 @@ export class FileConverter {
     }
 
     private static multiToolSchemaVersion: SarifVersion | undefined;
-    private static multiToolRawSchema = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json";
+    private static multiToolRawSchema = 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json';
     private static multiToolVersion: SarifVersion | undefined;
-    private static multiToolRawVersion: sarif.Log.version = "2.1.0";
+    private static multiToolRawVersion: sarif.Log.version = '2.1.0';
     private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
 
     private static get MultiToolCurrentSchemaVersion(): SarifVersion {
@@ -250,7 +252,7 @@ export class FileConverter {
         }
 
         if (!FileConverter.multiToolSchemaVersion) {
-            throw new Error("Expected to be able to parse the multi-tool schema.");
+            throw new Error('Expected to be able to parse the multi-tool schema.');
         }
 
         return FileConverter.multiToolSchemaVersion;
@@ -270,14 +272,14 @@ export class FileConverter {
      * @param tool tool that generated the file to convert
      */
     private static convert(uri: vscode.Uri, tool: string): void {
-        const output: string = Utilities.generateTempPath(uri.fsPath) + ".sarif";
+        const output: string = `${Utilities.generateTempPath(uri.fsPath)}.sarif`;
         const proc: ChildProcess = spawn(multiToolPath,
-            ["convert", "-t", tool, "-o", output, "-p", "-f", uri.fsPath],
+            ['convert', '-t', tool, '-o', output, '-p', '-f', uri.fsPath],
         );
 
-        proc.on("close", async (code) => {
+        proc.on('close', async (code) => {
             if (code === 0) {
-                await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(output),
+                await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(output),
                     { preserveFocus: false, preview: false, viewColumn: vscode.ViewColumn.One });
             } else {
                 await vscode.window.showErrorMessage(`Sarif converter failed with error code: ${code} `,
@@ -337,7 +339,7 @@ export class FileConverter {
      * @param version version from the sarif log to parse
      */
     private static parseVersion(version: string): SarifVersion {
-        const splitVer: string[] = version.split(".");
+        const splitVer: string[] = version.split('.');
 
         const sarifVersion: SarifVersion = {
             major: parseInt(splitVer[0], 10),
@@ -346,15 +348,15 @@ export class FileConverter {
             original: version.toString()
         };
 
-        if (splitVer[2].indexOf("-csd") !== -1) {
-            const splitSub: string[] = splitVer[2].split("-");
+        if (splitVer[2].indexOf('-csd') !== -1) {
+            const splitSub: string[] = splitVer[2].split('-');
             sarifVersion.sub = parseInt(splitSub[0], 10);
             sarifVersion.csd = parseInt(splitVer[3], 10);
-            const splitDate: string[] = splitVer[5].split("-");
+            const splitDate: string[] = splitVer[5].split('-');
             sarifVersion.csdDate = new Date(parseInt(splitDate[0], 10), parseInt(splitDate[1], 10),
                 parseInt(splitDate[2], 10));
-        } else if (splitVer[2].indexOf("-rtm") !== -1) {
-            const splitSub: string[] = splitVer[2].split("-");
+        } else if (splitVer[2].indexOf('-rtm') !== -1) {
+            const splitSub: string[] = splitVer[2].split('-');
             sarifVersion.sub = parseInt(splitSub[0], 10);
             sarifVersion.rtm = parseInt(splitVer[3], 10);
         } else {
@@ -376,7 +378,7 @@ export class FileConverter {
             return undefined;
         }
 
-        const rawSchemaVersion: string = matchArray[0].replace(".json", "");
+        const rawSchemaVersion: string = matchArray[0].replace('.json', '');
 
         return FileConverter.parseVersion(rawSchemaVersion);
     }

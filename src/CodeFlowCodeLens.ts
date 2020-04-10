@@ -16,11 +16,11 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
     private disposables: Disposable[]  = [];
     private onDidChangeCodeLensesEmitter: EventEmitter<void> = new EventEmitter<void>();
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
-    private selectedVerbosity: sarif.ThreadFlowLocation.importance = "important";
+    private selectedVerbosity: sarif.ThreadFlowLocation.importance = 'important';
 
     public constructor(explorerController: ExplorerController, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(this.onDidChangeCodeLensesEmitter);
-        this.disposables.push(languages.registerCodeLensProvider("*", this));
+        this.disposables.push(languages.registerCodeLensProvider('*', this));
         this.disposables.push(explorerController.onDidChangeVerbosity(this.onDidChangeVerbosity.bind(this)));
         this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }
@@ -62,7 +62,7 @@ export class CodeFlowCodeLensProvider implements CodeLensProvider, Disposable {
                     // If the importance is "essential", then we never hide it from the user.
                     // If the users has selected "unimportant", then we will show them everything.
                     // It the step matches the selected verbosity, then we are good to go.
-                    if (step.importance === "essential" || this.selectedVerbosity === "unimportant" || step.importance === this.selectedVerbosity) {
+                    if (step.importance === 'essential' || this.selectedVerbosity === 'unimportant' || step.importance === this.selectedVerbosity) {
                         codeLenses.push(new CodeLens(stepLoc.range, step.codeLensCommand));
                     }
                 }

@@ -1,6 +1,8 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as sarif from "sarif";
 
@@ -17,9 +19,9 @@ import { CodeFlowFactory } from "./factories/CodeFlowFactory";
 import { FileMapper } from "./FileMapper";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
-const selectNextCFStepCommand: string = "extension.sarif.nextCodeFlowStep";
-const selectPrevCFStepCommand: string = "extension.sarif.previousCodeFlowStep";
-export const sendCFSelectionToExplorerCommand: string = "extension.sarif.SendCFSelectionToExplorer";
+const selectNextCFStepCommand: string = 'extension.sarif.nextCodeFlowStep';
+const selectPrevCFStepCommand: string = 'extension.sarif.previousCodeFlowStep';
+export const sendCFSelectionToExplorerCommand: string = 'extension.sarif.SendCFSelectionToExplorer';
 
 /**
  * Handles adding and updating the decorations for Code Flows of the current Result open in the Explorer
@@ -119,7 +121,7 @@ export class CodeFlowDecorations implements Disposable {
                 for (const step of codeflow.threads[0].steps) {
                     const decoration: DecorationOptions | undefined = await CodeFlowDecorations.createHighlightDecoration(step, editor);
                     if (decoration) {
-                        if (step.importance === "unimportant") {
+                        if (step.importance === 'unimportant') {
                             unimportantDecorations.push(decoration);
                         } else {
                             decorations.push(decoration);
@@ -188,7 +190,7 @@ export class CodeFlowDecorations implements Disposable {
             this.explorerController.setSelectedCodeFlow(`${nextId.cFId}_${nextId.tFId}_${nextId.stepId}`);
         } else {
             if (this.activeDiagnostic.resultInfo.codeFlows.length > 0) {
-                const firstStepId: string = "0_0_0";
+                const firstStepId: string = '0_0_0';
                 await this.updateCodeFlowSelection(firstStepId);
                 this.explorerController.setSelectedCodeFlow(firstStepId);
             }
@@ -314,7 +316,7 @@ export class CodeFlowDecorations implements Disposable {
     private static get GutterErrorDecorationType(): TextEditorDecorationType {
         if (!CodeFlowDecorations.gutterErrorDecorationType) {
             CodeFlowDecorations.gutterErrorDecorationType = window.createTextEditorDecorationType({
-                gutterIconPath: Utilities.IconsPath + "error.svg",
+                gutterIconPath: `${Utilities.IconsPath}error.svg`,
             });
         }
 
@@ -325,7 +327,7 @@ export class CodeFlowDecorations implements Disposable {
     private static get GutterInfoDecorationType(): TextEditorDecorationType {
         if (!CodeFlowDecorations.gutterInfoDecorationType) {
             CodeFlowDecorations.gutterInfoDecorationType = window.createTextEditorDecorationType({
-                gutterIconPath: Utilities.IconsPath + "info.svg",
+                gutterIconPath: `${Utilities.IconsPath}info.svg`,
             });
         }
 
@@ -336,7 +338,7 @@ export class CodeFlowDecorations implements Disposable {
     private static get GutterWarningDecorationType(): TextEditorDecorationType {
         if (!CodeFlowDecorations.gutterWarningDecorationType) {
             CodeFlowDecorations.gutterWarningDecorationType = window.createTextEditorDecorationType({
-                gutterIconPath: Utilities.IconsPath + "warning.svg",
+                gutterIconPath: `${Utilities.IconsPath}warning.svg`,
             });
         }
 
@@ -346,38 +348,38 @@ export class CodeFlowDecorations implements Disposable {
 
     private static LocationDecorationType = window.createTextEditorDecorationType({
         dark: {
-            backgroundColor: "rgba(50,50,200,.5)",
+            backgroundColor: `rgba(50,50,200,.5)`,
         },
         light: {
-            backgroundColor: "rgba(50,50,200,.3)",
+            backgroundColor: `rgba(50,50,200,.3)`,
         },
-        overviewRulerColor: "blue",
+        overviewRulerColor: `blue`,
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static SelectionDecorationType = window.createTextEditorDecorationType({
-        borderStyle: "solid",
-        borderWidth: "1px",
+        borderStyle: `solid`,
+        borderWidth: `1px`,
         dark: {
-            borderColor: "white",
+            borderColor: `white`,
         },
         light: {
-            borderColor: "black",
+            borderColor: `black`,
         },
-        overviewRulerColor: "red",
+        overviewRulerColor: `red`,
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static UnimportantLocationDecorationType = window.createTextEditorDecorationType({
         dark: {
-            backgroundColor: "rgba(150,150,150,.4)",
+            backgroundColor: `rgba(150,150,150,.4)`,
         },
         light: {
-            backgroundColor: "rgba(150,150,150,.4)",
+            backgroundColor: `rgba(150,150,150,.4)`,
         },
-        overviewRulerColor: "grey",
+        overviewRulerColor: `grey`,
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
@@ -411,8 +413,8 @@ export class CodeFlowDecorations implements Disposable {
 
             beforeDecoration = {
                 before: {
-                    height: "16px",
-                    width: "16px",
+                    height: `16px`,
+                    width: `16px`,
                 },
                 dark: {
                     before: {
@@ -428,7 +430,7 @@ export class CodeFlowDecorations implements Disposable {
         }
 
         return {
-            hoverMessage: `[CodeFlow] ${step.messageWithStep}`,
+            hoverMessage: localize('codeFlow.HoverMessage', "[Code Flow] {0}", step.messageWithStep),
             range: stepRange,
             renderOptions: beforeDecoration,
         };
@@ -437,7 +439,7 @@ export class CodeFlowDecorations implements Disposable {
     private async onWebviewMessage(webViewMessage: WebviewMessage): Promise<void> {
         switch (webViewMessage.type) {
             case MessageType.AttachmentSelectionChange:
-                const selectionId: string[] = (webViewMessage.data as string).split("_");
+                const selectionId: string[] = webViewMessage.data.split('_');
                 if (selectionId.length !== 2) {
                     throw new Error('Selection id is incorrectly formatted');
                 }
@@ -461,7 +463,7 @@ export class CodeFlowDecorations implements Disposable {
                         return;
                     }
 
-                    await commands.executeCommand("vscode.open", mappedLocation, ViewColumn.One);
+                    await commands.executeCommand('vscode.open', mappedLocation, ViewColumn.One);
                 }
                 break;
 
@@ -476,7 +478,7 @@ export class CodeFlowDecorations implements Disposable {
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
-                    toJSON: Utilities.LocationToJson,
+                    toJSON:  Utilities.LocationToJson,
                     mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
                     get locationMapped(): Event<Location> {
                         // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544

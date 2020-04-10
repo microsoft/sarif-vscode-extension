@@ -2,6 +2,9 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+nls.config({locale: process.env.VSCODE_NLS_CONFIG});
+
 import { ExtensionContext } from "vscode";
 import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
 import { CodeFlowDecorations } from "./CodeFlowDecorations";
@@ -23,7 +26,7 @@ import './utilities/stringUtilities';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export async function activate(context: ExtensionContext): Promise<void> {
+export function activate(context: ExtensionContext): void {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
