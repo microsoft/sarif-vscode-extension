@@ -109,7 +109,20 @@
         "interface-name": false,
         "cyclomatic-complexity": false,
         "strict-comparisons": false,
-        "no-http-string": false
+        "no-http-string": false,
+        "static-this": false,
+        "non-literal-fs-path": false,
+        "prefer-function-over-method": false,
+        "max-func-body-length": false,
+        "no-angle-bracket-type-assertion": false,
+        "no-for-in": false,
+        "arrow-return-shorthand": false,
+        "no-require-imports": false,
+        "no-string-literal": false,
+        "prefer-type-cast": false,
+        "no-non-null-assertion": false,
+        "ban-ts-ignore": false,
+        "no-namespace": false
     },
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {

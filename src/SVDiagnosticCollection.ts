@@ -1,6 +1,10 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable, workspace, TextDocument, window, TextEditorSelectionChangeEvent } from "vscode";
 import { RunInfo, Location } from "./common/Interfaces";
 import { Utilities } from "./Utilities";
@@ -276,11 +280,10 @@ export class SVDiagnosticCollection implements Disposable {
             let diags: Diagnostic[];
 
             if (issues.length > SVDiagnosticCollection.MaxDiagCollectionSize) {
-                const msg: string = `Only displaying ${SVDiagnosticCollection.MaxDiagCollectionSize} of the total
-                    ${issues.length} results in the SARIF log.`;
+                const msg: string =  localize('diagnosticCollection.limitingResults', "Only displaying {0} of the total {1} results in the SARIF log.", SVDiagnosticCollection.MaxDiagCollectionSize, issues.length);
                 const maxReachedDiag: Diagnostic = new Diagnostic(new Range(0, 0, 0, 0), msg, DiagnosticSeverity.Error);
-                maxReachedDiag.code = "SARIFReader";
-                maxReachedDiag.source = "SARIFViewer";
+                maxReachedDiag.code = 'SARIFReader';
+                maxReachedDiag.source = 'SARIFViewer';
                 diags = [maxReachedDiag].concat(issues.slice(0, SVDiagnosticCollection.MaxDiagCollectionSize));
             } else {
                 diags = issues;
@@ -316,7 +319,7 @@ export class SVDiagnosticCollection implements Disposable {
         }
 
         if (diagnosticsRemoved.length > 0) {
-            this.diagnosticCollectionChangedEventEmitter.fire( {
+            this.diagnosticCollectionChangedEventEmitter.fire({
                 diagnostics: diagnosticsRemoved,
                 type: 'Remove'
             });
@@ -377,12 +380,12 @@ export class SVDiagnosticCollection implements Disposable {
             for (const [key, unmappedDiagnosticIndices] of this.remappedDiagnosticsIndices) {
                 const unmappedDiagnosticCollection: SarifViewerVsCodeDiagnostic[] | undefined =  this.unmappedIssuesCollection.get(key);
                 if (!unmappedDiagnosticCollection) {
-                    throw new Error("Expected to be able to find diagnostic collection during remapping");
+                    throw new Error('Expected to be able to find diagnostic collection during remapping');
                 }
 
                 // We need to walk through the indices backwards so that when we slice the unmapped diagnostic
                 // collection the indices remain valid.
-                const sortedIndices: number[] = unmappedDiagnosticIndices.sort((a, b) => b - a );
+                const sortedIndices: number[] = unmappedDiagnosticIndices.sort((a, b) => b - a);
                 for (const unmappedDiagnosticIndex of sortedIndices) {
                     unmappedDiagnosticCollection.splice(unmappedDiagnosticIndex, 1);
                 }
@@ -404,14 +407,14 @@ export class SVDiagnosticCollection implements Disposable {
      * that as the active selection which causes pretty much all the UI to update.
      * @param textEditorSelectionChanged The type of text editor selection change.
      */
-    private onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent ): void {
+    private onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent): void {
         // If the selection changed to a text editor that isn't visible, then we will ignore it.
         if (!window.visibleTextEditors.find((visibleTextEdtior) => visibleTextEdtior === textEditorSelectionChanged.textEditor)) {
             return;
         }
 
         // If there isn't a valid selction, then we will also ignore it.
-        if (textEditorSelectionChanged.selections.length !== 1 ) {
+        if (textEditorSelectionChanged.selections.length !== 1) {
             return;
         }
 
