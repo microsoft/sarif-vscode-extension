@@ -11,13 +11,13 @@ import {
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable, Event
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
+import { ExplorerController } from "./explorerController";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { MessageType } from "./common/Enums";
-import { CodeFlowFactory } from "./factories/CodeFlowFactory";
-import { FileMapper } from "./FileMapper";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { MessageType } from "./common/enums";
+import { CodeFlowFactory } from "./factories/codeFlowFactory";
+import { FileMapper } from "./fileMapper";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 const selectNextCFStepCommand: string = 'extension.sarif.nextCodeFlowStep';
 const selectPrevCFStepCommand: string = 'extension.sarif.previousCodeFlowStep';

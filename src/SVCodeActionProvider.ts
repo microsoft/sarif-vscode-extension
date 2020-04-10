@@ -6,9 +6,9 @@ import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from "vscode";
-import { FileMapper } from "./FileMapper";
+import { FileMapper } from "./fileMapper";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes

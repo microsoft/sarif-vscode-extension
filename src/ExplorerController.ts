@@ -8,11 +8,11 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
 import * as path from "path";
 import * as sarif from "sarif";
-import { MessageType } from "./common/Enums";
+import { MessageType } from "./common/enums";
 import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { Utilities } from "./Utilities";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel

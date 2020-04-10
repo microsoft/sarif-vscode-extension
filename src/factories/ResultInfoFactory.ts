@@ -3,8 +3,8 @@
  */
 
 import * as sarif from "sarif";
-import { CodeFlowFactory } from  "./CodeFlowFactory";
-import { LocationFactory } from "./LocationFactory";
+import { CodeFlowFactory } from  "./codeFlowFactory";
+import { LocationFactory } from "./locationFactory";
 
 import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent, RunInfo

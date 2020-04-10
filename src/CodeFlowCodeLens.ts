@@ -3,11 +3,11 @@
  */
 
 import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
-import { ExplorerController } from "./ExplorerController";
+import { ExplorerController } from "./explorerController";
 import { Location } from "./common/Interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import * as sarif from "sarif";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * This class handles providing the CodeFlow step codelenses for the current diagnostic

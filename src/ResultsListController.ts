@@ -8,15 +8,15 @@ import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
     WorkspaceConfiguration, Uri, TextDocument, TextEditor
 } from "vscode";
-import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
+import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/enums";
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
 } from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
-import { SVCodeActionProvider } from "./SVCodeActionProvider";
-import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./SVDiagnosticCollection";
+import { ExplorerController } from "./explorerController";
+import { SVCodeActionProvider } from "./svCodeActionProvider";
+import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
 import { Utilities } from "./Utilities";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 

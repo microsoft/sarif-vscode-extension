@@ -8,18 +8,18 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 import * as path from "path";
 import * as sarif from "sarif";
 
-import { LocationFactory } from "./factories/LocationFactory";
-import { ResultInfoFactory } from "./factories/ResultInfoFactory";
-import { RunInfoFactory } from "./factories/RunInfoFactory";
+import { LocationFactory } from "./factories/locationFactory";
+import { ResultInfoFactory } from "./factories/resultInfoFactory";
+import { RunInfoFactory } from "./factories/runInfoFactory";
 
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
 import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
-import { FileConverter } from "./FileConverter";
+import { FileConverter } from "./fileConverter";
 import { ProgressHelper } from "./ProgressHelper";
 import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { CodeFlowFactory } from "./factories/CodeFlowFactory";
+import { CodeFlowFactory } from "./factories/codeFlowFactory";
 import { Utilities } from "./Utilities";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * Optinos used when readining\import SARIF files.

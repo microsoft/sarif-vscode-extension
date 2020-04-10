@@ -7,7 +7,7 @@ import * as fs from "fs";
 import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
 import { Utilities } from "../Utilities";
-import { FileMapper } from "../FileMapper";
+import { FileMapper } from "../fileMapper";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations

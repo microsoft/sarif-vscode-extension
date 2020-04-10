@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+// tslint:disable-next-line: no-single-line-block-comment
 /** Updating this also requires an update to the matching enum in the explorer folder */
 export enum MessageType {
     AttachmentSelectionChange,
