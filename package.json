@@ -223,7 +223,6 @@
         "pretest": "npm run compile",
         "test": "node ./out/test/runTest.js",
         "lint": "tslint --project ./ -t verbose",
-        "lintExplorer": "tslint --config ./tslint.json -t verbose src/explorer.*.ts",
         "installNodeModules": "npm install"
     },
     "devDependencies": {
