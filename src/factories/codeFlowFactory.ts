@@ -8,7 +8,7 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 import * as sarif from "sarif";
 import { LocationFactory } from "./locationFactory";
 import { Command } from "vscode";
-import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/Interfaces";
+import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
 

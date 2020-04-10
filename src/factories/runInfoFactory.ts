@@ -4,7 +4,7 @@
 
 import * as path from "path";
 import * as sarif from "sarif";
-import { RunInfo } from "../common/Interfaces";
+import { RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 
 let nextRunInfoId: number = 0;

@@ -9,7 +9,7 @@ import * as path from "path";
 import * as sarif from "sarif";
 import * as os from "os";
 import * as vscode from "vscode";
-import { Location, Message, RunInfo, FixChange } from "./common/Interfaces";
+import { Location, Message, RunInfo, FixChange } from "./common/interfaces";
 import MarkdownIt = require("markdown-it");
 
 /**

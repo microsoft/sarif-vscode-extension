@@ -3,7 +3,7 @@
  */
 
 import * as assert from "assert";
-import { SarifVersion } from "../common/Interfaces";
+import { SarifVersion } from "../common/interfaces";
 import { FileConverter } from "../fileConverter";
 
 suite("canUpgradeVersion", () => {

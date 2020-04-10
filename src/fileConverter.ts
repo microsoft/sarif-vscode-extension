@@ -4,7 +4,7 @@
 
 import * as sarif from "sarif";
 import * as vscode from "vscode";
-import { SarifVersion } from "./common/Interfaces";
+import { SarifVersion } from "./common/interfaces";
 import { Utilities } from "./utilities";
 import { ChildProcess, spawn } from "child_process";
 import multiToolPath from "@microsoft/sarif-multitool";

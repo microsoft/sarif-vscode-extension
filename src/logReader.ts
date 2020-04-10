@@ -13,9 +13,9 @@ import { ResultInfoFactory } from "./factories/resultInfoFactory";
 import { RunInfoFactory } from "./factories/runInfoFactory";
 
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
-import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
+import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/interfaces";
 import { FileConverter } from "./fileConverter";
-import { ProgressHelper } from "./ProgressHelper";
+import { ProgressHelper } from "./progressHelper";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/codeFlowFactory";
 import { Utilities } from "./utilities";

@@ -5,7 +5,7 @@
 import * as sarif from "sarif";
 import * as fs from "fs";
 import { Range, Uri, Event } from "vscode";
-import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
+import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 

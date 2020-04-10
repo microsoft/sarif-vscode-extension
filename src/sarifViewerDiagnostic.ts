@@ -5,7 +5,7 @@ import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from 'vscode';
-import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/Interfaces';
+import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/interfaces';
 import * as sarif from 'sarif';
 
 const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, vscode.DiagnosticSeverity> = new Map<sarif.Result.level, vscode.DiagnosticSeverity>([

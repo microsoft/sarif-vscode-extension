@@ -10,7 +10,7 @@ import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
     Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable, Event
 } from "vscode";
-import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
+import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/interfaces";
 import { ExplorerController } from "./explorerController";
 import { Utilities } from "./utilities";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";

@@ -44,6 +44,14 @@
             "problemMatcher": {
                 "base": "$tslint5"
             }
+        },
+        {
+            "label": "tslint explorer",
+            "type": "npm",
+            "script": "lintExplorer",
+            "problemMatcher": {
+                "base": "$tslint5"
+            }
         }
     ]
 }

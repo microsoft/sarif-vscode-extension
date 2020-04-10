@@ -13,7 +13,7 @@ import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
-} from "./common/Interfaces";
+} from "./common/interfaces";
 import { ExplorerController } from "./explorerController";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";

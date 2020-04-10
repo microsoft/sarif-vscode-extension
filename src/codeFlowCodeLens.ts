@@ -4,7 +4,7 @@
 
 import { CancellationToken, CodeLens, CodeLensProvider, Disposable, Event, EventEmitter, languages, ProviderResult, TextDocument } from "vscode";
 import { ExplorerController } from "./explorerController";
-import { Location } from "./common/Interfaces";
+import { Location } from "./common/interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import * as sarif from "sarif";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";

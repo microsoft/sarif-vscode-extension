@@ -13,9 +13,9 @@ import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, QuickInputButton, Uri,
     window, workspace, WorkspaceConfiguration, InputBox, commands
 } from "vscode";
-import { ProgressHelper } from "./ProgressHelper";
+import { ProgressHelper } from "./progressHelper";
 import { Utilities } from "./utilities";
-import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/Interfaces";
+import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/interfaces";
 
 const RootPathSample: string = 'c:\\sample\\path';
 const ConfigRootPaths: string = 'rootpaths';

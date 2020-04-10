@@ -10,7 +10,7 @@ import { LocationFactory } from "./locationFactory";
 
 import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent, RunInfo
-} from "../common/Interfaces";
+} from "../common/interfaces";
 import { Utilities } from "../utilities";
 
 /**

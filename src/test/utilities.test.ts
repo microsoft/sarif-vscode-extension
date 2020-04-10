@@ -9,7 +9,7 @@ import * as path from "path";
 import * as sarif from "sarif";
 
 import { Range, Uri, Position, Event } from "vscode";
-import { RunInfo, Message, Location } from "../common/Interfaces";
+import { RunInfo, Message, Location } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 

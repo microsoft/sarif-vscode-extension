@@ -9,7 +9,7 @@ import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, Even
 import * as path from "path";
 import * as sarif from "sarif";
 import { MessageType } from "./common/enums";
-import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/Interfaces";
+import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/interfaces";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { Utilities } from "./utilities";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
