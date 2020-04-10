@@ -5,21 +5,20 @@
 import * as vscode from 'vscode';
 import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/Interfaces';
 import * as sarif from 'sarif';
-import { DiagnosticSeverity } from 'vscode';
 
-const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
-    [ "error", DiagnosticSeverity.Error],
-    [ "none", DiagnosticSeverity.Information],
-    [ "note", DiagnosticSeverity.Information],
-    [ "warning", DiagnosticSeverity.Warning],
+const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, vscode.DiagnosticSeverity> = new Map<sarif.Result.level, vscode.DiagnosticSeverity>([
+    [ 'error', vscode.DiagnosticSeverity.Error],
+    [ 'none', vscode.DiagnosticSeverity.Information],
+    [ 'note', vscode.DiagnosticSeverity.Information],
+    [ 'warning', vscode.DiagnosticSeverity.Warning],
 ]);
 
 /**
  * Translates the Result level to a DiagnosticSeverity
  * @param level severity level for the result in the sarif file
  */
-function getSeverity(level: sarif.Result.level): DiagnosticSeverity {
-    return sarifLevelToVsCodeSeverityMap.get(level) || DiagnosticSeverity.Warning;
+function getSeverity(level: sarif.Result.level): vscode.DiagnosticSeverity {
+    return sarifLevelToVsCodeSeverityMap.get(level) || vscode.DiagnosticSeverity.Warning;
 }
 
 /**

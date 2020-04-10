@@ -233,20 +233,20 @@
         "@types/node": "^7.10.7",
         "@types/sarif": "^2.1.2",
         "mocha": "^6.2.0",
-        "tslint": "^5.20.1",
         "tslint-microsoft-contrib": "^6.0.0",
         "tslint-no-unused-expression-chai": "^0.1.4",
         "typescript": "^3.8.3",
+        "vscode": "^1.1.36",
         "vscode-nls-dev": "^3.2.6",
         "vscode-test": "^1.0.2",
-        "vscode": "^1.1.36"
+        "tslint": "^6.1.1"
     },
     "dependencies": {
+        "@microsoft/sarif-multitool": "2.2.2",
         "json-source-map": "^0.4.0",
         "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1",
         "requirejs": "^2.3.6",
-        "@microsoft/sarif-multitool": "2.2.2",
         "vscode-nls": "^3.2.5"
     }
 }
