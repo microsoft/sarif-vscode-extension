@@ -38,7 +38,7 @@ export class FileConverter {
             "ClangAnalyzer": ["xml"],
             "CppCheck": ["xml"],
             "ContrastSecurity": ["xml"],
-            "Fortify": ["xml"],
+            "Fortify": ["plist", "xml"],
             "FortifyFpr": ["fpr"],
             "FxCop": ["fxcop", "xml"],
             "PREfast": ["xml"],
@@ -63,7 +63,8 @@ export class FileConverter {
 
         const toolName: string = `${tool.label} log files`;
         const filters: { [name: string]: string[] } = {};
-        filters[toolName] = tool.extensions;
+        filters[toolName] = tool.extensions; // We want this to display first and by default.
+        filters["All files"] = ["*"];
 
         const openUris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
             canSelectFiles: true,
@@ -199,9 +200,14 @@ export class FileConverter {
         const fileOutputPath: string = output;
         const errorData: string[] = [];
         const converted: boolean = await new Promise<boolean>((resolve) => {
-            const proc: ChildProcess = spawn(multiToolPath,
-                ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"],
-            );
+            // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
+            // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
+            // can be over-ridden for testing.
+            const proc: ChildProcess =  spawn(multiToolPath, ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"]);
+
+            proc.stderr.on("data", (data) => {
+                errorData.push(data.toString());
+            });
 
             proc.stdout.on("data", (data) => {
                 errorData.push(data.toString());

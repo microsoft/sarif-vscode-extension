@@ -1,5 +1,8 @@
 # Change Log
 
+## 2.16.0
+* Open file dialogs for tool file conversion now include an "All files" ("*") filter. [issue #200](https://github.com/Microsoft/sarif-vscode-extension/issues/200)
+
 ## 2.15.0
 * Added Markdown text support [issue #184](https://github.com/Microsoft/sarif-vscode-extension/issues/184)
 * Added support for line breaks in plain text messages [issue #186](https://github.com/Microsoft/sarif-vscode-extension/issues/186)
