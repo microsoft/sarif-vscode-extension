@@ -66,6 +66,11 @@ export class SVDiagnosticCollection implements Disposable {
     private remappingDiagnostics: boolean = false;
 
     /**
+     * Used to keep track of the diagnostics indices that need to be remapped after automatic remapping is complete.
+     */
+    private remappedDiagnosticsIndices: Map<string, number[]> = new Map<string, number[]>();
+
+    /**
      * Constructs a new instance of the diagnostic collection.
      */
     public constructor() {
@@ -335,40 +340,60 @@ export class SVDiagnosticCollection implements Disposable {
      * @param mappedLocation The newly mapped location.
      */
     private async locationMapped(diagnostic: SarifViewerVsCodeDiagnostic, mappedLocation: Location): Promise<void> {
-        let remainingUnmappedDiagnostics: SarifViewerVsCodeDiagnostic[] | undefined;
-
         for (const [key, unmappedDiagnostics] of this.unmappedIssuesCollection.entries()) {
             const indexOfUnmappedDiagnostic: number = unmappedDiagnostics.indexOf(diagnostic);
             if (indexOfUnmappedDiagnostic >= 0) {
-                // If we have a large number of diagnostics, deleting the key
-                // and resetting it is far better than having two allocations going at once.
-                this.unmappedIssuesCollection.delete(key);
+                // We cannot "slice" the unmapped diagnostic collection here because
+                // when we attempt to remap the remaining diagnostics below (which is async), we cannot
+                // iterate and modify the array in place at the same time.
+                let existingIndices: number[] | undefined = this.remappedDiagnosticsIndices.get(key);
+                if (!existingIndices) {
+                    existingIndices = [];
+                    this.remappedDiagnosticsIndices.set(key, existingIndices);
+                }
 
-                unmappedDiagnostics.splice(indexOfUnmappedDiagnostic, 1);
-                this.unmappedIssuesCollection.set(key, unmappedDiagnostics);
+                existingIndices.push(indexOfUnmappedDiagnostic);
 
+                // Move it over to the mapped location list, we will handle moving it out of the unmapped collection below.
                 diagnostic.updateToMappedLocation(mappedLocation);
                 this.addToCollection(this.mappedIssuesCollection, diagnostic);
-
-                // Attempt to automatically re-map the renamining unmapped diagnostics.
-                if (!this.remappingDiagnostics) {
-                    remainingUnmappedDiagnostics = unmappedDiagnostics;
-                }
                 break;
             }
         }
 
-        if (remainingUnmappedDiagnostics) {
+        if (!this.remappingDiagnostics) {
             // Since this can cause other calls to this function (locationMapped)
             // we don't want to synchronize the diagnostics repeatedly while it occurs.
             this.remappingDiagnostics = true;
-            for (const remainingUnmappedDiagnostic of remainingUnmappedDiagnostics) {
-                await remainingUnmappedDiagnostic.attemptToMapLocation({ promptUser: false });
+            for (const remainingUnmappedDiagnosticCollections of this.unmappedIssuesCollection.values()) {
+                for (const remainingUnmappedDiagnostic of remainingUnmappedDiagnosticCollections) {
+                    await remainingUnmappedDiagnostic.attemptToMapLocation({ promptUser: false });
+                }
             }
             this.remappingDiagnostics = false;
         }
 
         if (!this.remappingDiagnostics) {
+            for (const [key, unmappedDiagnosticIndices] of this.remappedDiagnosticsIndices) {
+                const unmappedDiagnosticCollection: SarifViewerVsCodeDiagnostic[] | undefined =  this.unmappedIssuesCollection.get(key);
+                if (!unmappedDiagnosticCollection) {
+                    throw new Error("Expected to be able to find diagnostic collection during remapping");
+                }
+
+                // We need to walk through the indices backwards so that when we slice the unmapped diagnostic
+                // collection the indices remain valid.
+                const sortedIndices: number[] = unmappedDiagnosticIndices.sort((a, b) => b - a );
+                for (const unmappedDiagnosticIndex of sortedIndices) {
+                    unmappedDiagnosticCollection.splice(unmappedDiagnosticIndex, 1);
+                }
+
+                // If there is nothing left, then delete the key from the unmapped issue collection.
+                if (unmappedDiagnosticCollection.length === 0) {
+                    this.unmappedIssuesCollection.delete(key);
+                }
+            }
+
+            this.remappedDiagnosticsIndices.clear();
             this.syncIssuesWithDiagnosticCollection();
         }
     }
@@ -379,7 +404,7 @@ export class SVDiagnosticCollection implements Disposable {
      * that as the active selection which causes pretty much all the UI to update.
      * @param textEditorSelectionChanged The type of text editor selection change.
      */
-    private async onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent ): Promise<void> {
+    private onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent ): void {
         // If the selection changed to a text editor that isn't visible, then we will ignore it.
         if (!window.visibleTextEditors.find((visibleTextEdtior) => visibleTextEdtior === textEditorSelectionChanged.textEditor)) {
             return;
@@ -410,10 +435,11 @@ export class SVDiagnosticCollection implements Disposable {
             // If the location range is empty (which means single point) and a single line
             // and it is on the same line as the selection, then let's use it.
             // Otherwise, if they intersect, use it as well.
-            if ((diagnosticForDocument.location.range.isEmpty &&
-                diagnosticForDocument.location.range.isSingleLine &&
-                diagnosticForDocument.location.range.start.line === firstRange.start.line) ||
-                (diagnosticForDocument.location.range.intersection(firstRange))) {
+            const diagnosticRang: Range = diagnosticForDocument.location.range;
+            if ((diagnosticRang.isEmpty &&
+                diagnosticRang.isSingleLine &&
+                diagnosticRang.start.line === firstRange.start.line) ||
+                (diagnosticRang.intersection(firstRange))) {
                 this.activeDiagnostic = diagnosticForDocument;
                 break;
             }
