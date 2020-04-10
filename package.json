@@ -238,7 +238,6 @@
         "tslint-no-unused-expression-chai": "^0.1.4",
         "typescript": "^3.8.3",
         "vscode": "^1.1.36",
-        "vscode-nls-dev": "^3.2.6",
         "vscode-test": "^1.0.2",
         "tslint": "^6.1.1"
     },
@@ -248,6 +247,6 @@
         "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1",
         "requirejs": "^2.3.6",
-        "vscode-nls": "^3.2.5"
+        "vscode-nls": "^4.1.2"
     }
 }

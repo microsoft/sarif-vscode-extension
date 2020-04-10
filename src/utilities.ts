@@ -47,7 +47,10 @@ export class Utilities {
         }
 
         let duration: string = '';
-
+        let hoursString: string = '';
+        let minutesString: string = '';
+        let secondsString: string = '';
+        let msString: string = '';
         const diff: number = new Date(end).getTime() - new Date(start).getTime();
         if (diff > 0) {
             const msDiff: number = diff % 1000;
@@ -56,22 +59,22 @@ export class Utilities {
             const hDiff: number = Math.floor(diff / 3600000);
 
             if (hDiff > 0) {
-                duration = (hDiff === 1) ? localize('time.hour', "{0} hr", hDiff) : localize('time.hours', "{0} hrs", hDiff);
+                hoursString = (hDiff === 1) ? localize('time.hour', "{0} hr", hDiff) : localize('time.hours', "{0} hrs", hDiff);
             }
 
             if (mDiff > 0) {
-                duration = (mDiff === 1) ? localize('time.minute', "{0} min", mDiff) : localize('time.minutes', "{0} mins", mDiff);
+                minutesString = (mDiff === 1) ? localize('time.minute', "{0} min", mDiff) : localize('time.minutes', "{0} mins", mDiff);
             }
 
             if (sDiff > 0) {
-                duration = (sDiff === 1) ? localize('time.second', "{0} sec", sDiff) : localize('time.seconds', "{0} secs", sDiff);
+                secondsString = (sDiff === 1) ? localize('time.second', "{0} sec", sDiff) : localize('time.seconds', "{0} secs", sDiff);
             }
 
             if (msDiff > 0) {
-                duration =  localize('time.withMilliseconds', "{0} {1} ms", duration, msDiff);
+                msString =  localize('time.withMilliseconds', "{0} ms", msDiff);
             }
 
-            duration = duration.trim();
+            duration = localize("time.hmsms", "{0} {1} {2} {3}", hoursString, minutesString, secondsString, msString).trim();
 
         } else {
             duration = localize("time.none", "0 ms");

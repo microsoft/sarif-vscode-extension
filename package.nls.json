@@ -119,5 +119,6 @@
     "time.seconds": "{0} secs",
     "time.second": "{0} sec",
     "time.none": "0 ms",
-    "time.withMilliseconds": "{0} {1} ms"
+    "time.hmsms": "{0} {1} {2} {3}",
+    "time.withMilliseconds": "{0} ms"
 }

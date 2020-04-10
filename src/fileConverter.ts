@@ -221,7 +221,7 @@ export class FileConverter {
         });
 
         if (!converted) {
-            await vscode.window.showErrorMessage(localize('converterTool.Upgrade.FailedMessage', "Sarif upgrade failed with error:{0}", errorData.join('\n'), { modal: false }));
+            await vscode.window.showErrorMessage(localize('converterTool.Upgrade.FailedMessage', "Sarif upgrade failed with error:{0}", errorData.join('\n')), { modal: false });
             return false;
         }
 
