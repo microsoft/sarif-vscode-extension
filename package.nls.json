@@ -27,5 +27,7 @@
     "commands.extension.sarif.nextCodeFlowStep.title": "Next Code Flow step",
     "commands.extension.sarif.previousCodeFlowStep.title": "Previous Code Flow step",
 
+    "explorer.Title": "SARIF Explorer",
+    
     "fileMapper.WaitingForUserInput": "Waiting for user input"
 }

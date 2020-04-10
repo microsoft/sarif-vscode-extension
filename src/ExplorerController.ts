@@ -11,14 +11,18 @@ import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
 import { Utilities } from "./Utilities";
 import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
 
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
  */
 export class ExplorerController implements Disposable {
     private disposables: Disposable[] = [];
 
-    public static readonly ExplorerLaunchCommand = "extension.sarif.LaunchExplorer";
-    private static readonly ExplorerTitle = "SARIF Explorer";
+    public static readonly ExplorerLaunchCommand = 'extension.sarif.LaunchExplorer';
+    private static readonly ExplorerTitle = localize('explorer.Title', "SARIF Explorer");
 
     public resultsListData: ResultsListData | undefined;
 
@@ -28,7 +32,7 @@ export class ExplorerController implements Disposable {
     private activeDiagnostic: SarifViewerVsCodeDiagnostic | undefined;
 
     // Verbosity setting, and corresponding event.
-    private currentVerbosity: sarif.ThreadFlowLocation.importance = "important";
+    private currentVerbosity: sarif.ThreadFlowLocation.importance = 'important';
 
     private onDidChangeVerbosityEventEmitter: EventEmitter<sarif.ThreadFlowLocation.importance> = new EventEmitter<sarif.ThreadFlowLocation.importance>();
 
@@ -78,20 +82,20 @@ export class ExplorerController implements Disposable {
      */
     public createWebview(): WebviewPanel {
         if (!this.wvPanel) {
-            this.wvPanel = window.createWebviewPanel("sarifExplorer", ExplorerController.ExplorerTitle,
+            this.wvPanel = window.createWebviewPanel('sarifExplorer', ExplorerController.ExplorerTitle,
                 { preserveFocus: true, viewColumn: ViewColumn.Two },
                 {
                     enableScripts: true,
                     localResourceRoots: [
-                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("node_modules", "requirejs"))),
-                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("resources", "explorer"))),
-                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join("out", "explorer"))),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join('node_modules', 'requirejs'))),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join('resources', 'explorer'))),
+                        Uri.file(this.extensionContext.asAbsolutePath(path.posix.join('out', 'explorer'))),
                     ],
                 },
             );
 
-            this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage, this);
-            this.wvPanel.onDidDispose(this.onWebviewDispose, this);
+            this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage.bind(this), this);
+            this.wvPanel.onDidDispose(this.onWebviewDispose.bind(this), this);
             this.wvPanel.webview.html = this.getWebviewContent(this.wvPanel);
         }
 
@@ -109,7 +113,7 @@ export class ExplorerController implements Disposable {
      * Handles when a message comes in from the Webview
      * @param message the message from the webview describing the type and data of the message
      */
-    public async onReceivedMessage(message: WebviewMessage): Promise<void> {
+    public  onReceivedMessage(message: WebviewMessage): void {
         // Have the explorer controller set up whatever state it needs
         // BEFORE firing the event out so the stat is consistent in the
         // explorer controller before others receive the web view message.
@@ -120,7 +124,7 @@ export class ExplorerController implements Disposable {
 
             case MessageType.VerbosityChanged:
                     if (!Utilities.isThreadFlowImportance(message.data)) {
-                        throw new Error("Unhandled verbosity level");
+                        throw new Error('Unhandled verbosity level');
                     }
 
                     if (this.selectedVerbosity !== message.data) {
@@ -177,7 +181,7 @@ export class ExplorerController implements Disposable {
      * @param pathParts The path parts to join
      */
     private getVSCodeResourcePath(...pathParts: string[]): Uri {
-        const vscodeResource: string = "vscode-resource";
+        const vscodeResource: string = 'vscode-resource';
         const diskPath: string = this.extensionContext.asAbsolutePath(path.join(...pathParts));
         const uri: Uri = Uri.file(diskPath);
         return uri.with({ scheme: vscodeResource });
@@ -187,15 +191,15 @@ export class ExplorerController implements Disposable {
      * defines the default webview html content
      */
     private getWebviewContent(webViewPanel: WebviewPanel): string {
-        const resourcesPath: string[] = ["resources", "explorer"];
+        const resourcesPath: string[] = ['resources', 'explorer'];
 
-        const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "explorer.css");
-        const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "listTable.css");
-        const cssResultsListDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "resultsList.css");
-        const jQueryDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "jquery-3.3.1.min.js");
-        const colResizeDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, "colResizable-1.6.min.js");
-        const requireJsPath: Uri = this.getVSCodeResourcePath("node_modules", "requirejs", "require.js");
-        const explorerPath: Uri = this.getVSCodeResourcePath("out", "explorer", "systemExplorer.js");
+        const cssExplorerDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, 'explorer.css');
+        const cssListTableDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, 'listTable.css');
+        const cssResultsListDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, 'resultsList.css');
+        const jQueryDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, 'jquery-3.3.1.min.js');
+        const colResizeDiskPath: Uri = this.getVSCodeResourcePath(...resourcesPath, 'colResizable-1.6.min.js');
+        const requireJsPath: Uri = this.getVSCodeResourcePath('node_modules', 'requirejs', 'require.js');
+        const explorerPath: Uri = this.getVSCodeResourcePath('out', 'explorer', 'systemExplorer.js');
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -238,7 +242,7 @@ export class ExplorerController implements Disposable {
 
         if (!this.activeDiagnostic) {
             // Empty string is used to signal no selected diagnostic
-            this.sendMessage({data: "", type: MessageType.NewDiagnostic});
+            this.sendMessage({data: '', type: MessageType.NewDiagnostic});
             return;
         }
 
