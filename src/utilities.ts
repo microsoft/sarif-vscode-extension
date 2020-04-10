@@ -1,6 +1,8 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as fs from "fs";
 import * as path from "path";
@@ -20,15 +22,15 @@ export class Utilities {
         Utilities.extensionContext = extensionContext;
     }
 
-    public static readonly configSection = "sarif-viewer";
+    public static readonly configSection = 'sarif-viewer';
 
     public static get IconsPath(): string {
         if (!Utilities.extensionContext) {
-            throw new Error("The utilities were not properly initialized");
+            throw new Error('The utilities were not properly initialized');
         }
 
         if (!Utilities.iconsPath) {
-            Utilities.iconsPath = Utilities.extensionContext.asAbsolutePath("/resources/icons/");
+            Utilities.iconsPath = Utilities.extensionContext.asAbsolutePath('/resources/icons/');
         }
 
         return Utilities.iconsPath;
@@ -44,7 +46,7 @@ export class Utilities {
             return undefined;
         }
 
-        let duration: string = "";
+        let duration: string = '';
 
         const diff: number = new Date(end).getTime() - new Date(start).getTime();
         if (diff > 0) {
@@ -54,28 +56,25 @@ export class Utilities {
             const hDiff: number = Math.floor(diff / 3600000);
 
             if (hDiff > 0) {
-                const label: string = (hDiff === 1) ? "hr" : "hrs";
-                duration = `${hDiff} ${label}`;
+                duration = (hDiff === 1) ? localize('time.hour', "{0} hr", hDiff) : localize('time.hours', "{0} hrs", hDiff);
             }
 
             if (mDiff > 0) {
-                const label: string = (mDiff === 1) ? "min" : "mins";
-                duration = `${duration} ${mDiff} ${label}`;
+                duration = (mDiff === 1) ? localize('time.minute', "{0} min", mDiff) : localize('time.minutes', "{0} mins", mDiff);
             }
 
             if (sDiff > 0) {
-                const label: string = (sDiff === 1) ? "sec" : "secs";
-                duration = `${duration} ${sDiff} ${label}`;
+                duration = (sDiff === 1) ? localize('time.second', "{0} sec", sDiff) : localize('time.seconds', "{0} secs", sDiff);
             }
 
             if (msDiff > 0) {
-                duration = `${duration} ${msDiff} ms`;
+                duration =  localize('time.withMilliseconds', "{0} {1} ms", duration, msDiff);
             }
 
             duration = duration.trim();
 
         } else {
-            duration = `0 ms`;
+            duration = localize("time.none", "0 ms");
         }
 
         return duration;
@@ -107,10 +106,10 @@ export class Utilities {
                 return baseUri.with({
                     path: path.posix.join(baseUri.path, uriPathAsUri.path) // Use the POSIX separator for "/"
                 });
-            } else {
-                // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
-                return vscode.Uri.parse(uriPath, true);
             }
+
+            // Let's try strict parsing, meaning the "URI" base will have a scheme (such as file://)
+            return vscode.Uri.parse(uriPath, true);
         } catch (e) {
             // URI malformed will happen if the combined path is something like %srcroot%/folder/file.ext
             // if it's malformed in the next if statement we force it to file schema
@@ -161,11 +160,11 @@ export class Utilities {
     public static joinPath(start: string, end: string): string {
         let joined: string = start;
 
-        if (joined !== "" && joined[joined.length - 1] !== "/") {
-            joined = joined + "/";
+        if (joined !== '' && joined[joined.length - 1] !== '/') {
+            joined = `${joined}/`;
         }
 
-        if (end[0] === "/") {
+        if (end[0] === '/') {
             joined = joined + end.slice(1);
         } else {
             joined = joined + end;
@@ -181,10 +180,10 @@ export class Utilities {
      */
     public static generateTempPath(filePath: string, hashValue?: string): string {
         const pathObj: path.ParsedPath = path.parse(filePath);
-        let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || "");
+        let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || '');
         let tempPath: string = Utilities.makeFileNameSafe(
-            path.join(pathObj.dir.replace(pathObj.root, ""), path.win32.basename(filePath)));
-        tempPath = tempPath.split("#").join(""); // remove the #s to not create a folder structure with fragments
+            path.join(pathObj.dir.replace(pathObj.root, ''), path.win32.basename(filePath)));
+        tempPath = tempPath.split('#').join(''); // remove the #s to not create a folder structure with fragments
         basePath = Utilities.createDirectoryInTemp(basePath);
         tempPath = path.join(basePath, tempPath);
 
@@ -197,7 +196,7 @@ export class Utilities {
      * @param fileName file name to modify
      */
     public static makeFileNameSafe(fileName: string): string {
-        return fileName.replace(/[/\\?%*:|"<>]/g, "-");
+        return fileName.replace(/[/\\?%*:|"<>]/g, '-');
     }
 
     /**
@@ -206,11 +205,11 @@ export class Utilities {
      * @param uri path to a directory
      */
     public static getDisplayableRootpath(uri: vscode.Uri): string {
-        if (uri.scheme === "file") {
+        if (uri.scheme === 'file') {
             return Utilities.getFsPathWithFragment(uri);
-        } else {
-            return path.normalize(uri.toString(true));
         }
+
+        return path.normalize(uri.toString(true));
     }
 
     /**
@@ -218,9 +217,9 @@ export class Utilities {
      * @param uri uri to pull the fspath and fragment from
      */
     public static getFsPathWithFragment(uri: vscode.Uri): string {
-        let fragment: string = "";
-        if (uri.fragment !== "") {
-            fragment = "#" + uri.fragment;
+        let fragment: string = '';
+        if (uri.fragment !== '') {
+            fragment = `#${uri.fragment}`;
         }
 
         return path.normalize(uri.fsPath + fragment);
@@ -267,12 +266,12 @@ export class Utilities {
             if (sarifMessage.arguments) {
                 if (msgText) {
                     for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
-                        msgText = msgText.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        msgText = msgText.split(`{${index}}`).join(sarifMessage.arguments[index]);
                     }
                 }
                 if (markdown) {
                     for (let index: number = 0; index < sarifMessage.arguments.length; index++) {
-                        markdown = markdown.split("{" + index + "}").join(sarifMessage.arguments[index]);
+                        markdown = markdown.split(`{${index}}`).join(sarifMessage.arguments[index]);
                     }
                 }
             }
@@ -320,7 +319,7 @@ export class Utilities {
      * The path passed into this function must exist on the file-system.
      * @param uri The URI for which to fix the casing.
      */
-    public static fixUriCasing(uri: vscode.Uri | string ): vscode.Uri {
+    public static fixUriCasing(uri: vscode.Uri | string): vscode.Uri {
         let pathParts: string[];
 
         if (typeof uri === 'string') {
@@ -373,13 +372,13 @@ export class Utilities {
             const directoryEntries: string[] = fs.readdirSync(directoryToRead);
             const fixedPathPart: string | undefined =
                 directoryEntries.find((directoryEntry) =>
-                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+                    directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: 'base'}) === 0);
             if (!fixedPathPart) {
                 if (typeof uri === 'string') {
                     throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri}`);
-                } else {
-                    throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
                 }
+
+                throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
             }
 
             fixedPath = path.join(fixedPath, fixedPathPart);
@@ -393,7 +392,7 @@ export class Utilities {
     private static embeddedRegEx = /(<a href=)"(\d+)">/g;
     private static linkRegEx = /<a.*?href="(.*?)".*?>(.*?)<\/a>/g;
     private static iconsPath: string;
-    private static readonly SarifViewerTempDir = "SarifViewerExtension";
+    private static readonly SarifViewerTempDir = 'SarifViewerExtension';
 
     /**
      * Loops through the passed in path's directories and creates the directory structure
@@ -408,7 +407,7 @@ export class Utilities {
             try {
                 fs.mkdirSync(createPath);
             } catch (error) {
-                if (error.code !== "EEXIST") { throw error; }
+                if (error.code !== 'EEXIST') { throw error; }
             }
         }
 
@@ -421,7 +420,7 @@ export class Utilities {
      * @param baseIds all the base ids
      */
     private static expandBaseId(id: string, baseIds: { [key: string]: sarif.ArtifactLocation }): string {
-        let base: string = "";
+        let base: string = '';
         const artifactLocation: sarif.ArtifactLocation | undefined = baseIds[id];
         if (artifactLocation && artifactLocation.uriBaseId) {
             base = Utilities.expandBaseId(artifactLocation.uriBaseId, baseIds);
@@ -476,12 +475,12 @@ export class Utilities {
                         `data-eCol="${location.range.end.character}"`;
                     const onClick: string = `onclick="explorerWebview.onSourceLinkClickedBind(event)"`;
                     return `${p1}"#0" ${className} ${data} ${tooltip} ${onClick}>`;
-                } else {
-                    return `${p1}"${location.uri.toString(true)}">`;
                 }
-            } else {
-                return match;
+
+                return `${p1}"${location.uri.toString(true)}">`;
             }
+
+            return match;
         });
     }
 
@@ -490,7 +489,7 @@ export class Utilities {
      * @param text text to remove the escape characters from
      */
     private static unescapeBrackets(text: string): string {
-        return text.split("\\[").join("[").split("\\]").join("]");
+        return text.split('\\[').join('[').split('\\]').join(']');
     }
 
     /**
@@ -540,7 +539,7 @@ export class Utilities {
      * @param value The string value to confirm.
      */
     public static isThreadFlowImportance(value: string): value is sarif.ThreadFlowLocation.importance {
-        const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>["essential", "important", "unimportant"];
+        const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>['essential', 'important', 'unimportant'];
         return allowedKeys.indexOf(value) !== -1;
     }
 
@@ -552,13 +551,13 @@ export class Utilities {
         // SARIF spec says that the file name can end in ".sarif" or ".sarif.json";
         const stringCheck: (stringToCheck: string) => boolean = (stringToCheck) => {
             const stringCheckUpperCase: string = stringToCheck.toLocaleUpperCase('root');
-            return stringCheckUpperCase.endsWith(".SARIF") || stringCheckUpperCase.endsWith(".SARIF.JSON");
+            return stringCheckUpperCase.endsWith('.SARIF') || stringCheckUpperCase.endsWith('.SARIF.JSON');
         };
 
         if (typeof doc === 'string') {
             return stringCheck(doc);
         }
 
-        return doc.languageId === "json" && stringCheck(doc.fileName);
+        return doc.languageId === 'json' && stringCheck(doc.fileName);
     }
 }

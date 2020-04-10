@@ -12,7 +12,7 @@ import { ExplorerController } from "./explorerController";
 import { FileConverter } from "./fileConverter";
 import { LogReader } from "./logReader";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
-import { Utilities } from "./Utilities";
+import { Utilities } from "./utilities";
 import { ResultsListController } from "./resultsListController";
 import { FileMapper } from "./fileMapper";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";

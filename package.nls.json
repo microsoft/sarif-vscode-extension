@@ -103,5 +103,21 @@
 
     "diagnosticCollection.limitingResults": "Only displaying {0} of the total {1} results in the SARIF log.",
 
-    "resultInfoFactory.noMessageProvided": "No Message Provided"
+    "resultInfoFactory.noMessageProvided": "No Message Provided",
+
+    "daignostic.noMessage": "No message",
+    "daignostic.unknownTool": "Unknown tool",
+
+    "codeFlowFactory.returnCall": "[return call]",
+    "codeFlowFactory.noDescription": "[no description]",
+    "codeFlowFactory.messageWithStepText": "Step {0}: {1}",
+
+    "time.hours": "{0} hrs",
+    "time.hour": "{0} hr",
+    "time.minutes": "{0} mins",
+    "time.minnute": "{0} min",
+    "time.seconds": "{0} secs",
+    "time.second": "{0} sec",
+    "time.none": "0 ms",
+    "time.withMilliseconds": "{0} {1} ms"
 }

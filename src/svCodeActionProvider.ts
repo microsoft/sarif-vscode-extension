@@ -7,7 +7,7 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from "vscode";
 import { FileMapper } from "./fileMapper";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**

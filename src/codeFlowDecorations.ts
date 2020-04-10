@@ -12,8 +12,8 @@ import {
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/Interfaces";
 import { ExplorerController } from "./explorerController";
-import { Utilities } from "./Utilities";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { Utilities } from "./utilities";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { MessageType } from "./common/enums";
 import { CodeFlowFactory } from "./factories/codeFlowFactory";
 import { FileMapper } from "./fileMapper";

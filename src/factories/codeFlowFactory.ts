@@ -1,12 +1,15 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as sarif from "sarif";
-import { LocationFactory } from "./LocationFactory";
+import { LocationFactory } from "./locationFactory";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/Interfaces";
-import { Utilities } from "../Utilities";
+import { Utilities } from "../utilities";
 import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
@@ -29,7 +32,7 @@ export namespace CodeFlowFactory {
 
         const codeFlows: CodeFlow[] = [];
         for (let cFIndex: number = 0; cFIndex < sarifCodeFlows.length; cFIndex++) {
-            codeFlows.push(await CodeFlowFactory.createCodeFlow(runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`));
+            codeFlows.push(await createCodeFlow(runInfo, sarifCodeFlows[cFIndex], `${cFIndex}`));
         }
 
         return codeFlows;
@@ -43,8 +46,8 @@ export namespace CodeFlowFactory {
     export function parseCodeFlowId(idText: string): CodeFlowStepId | undefined {
         let codeFlowId: CodeFlowStepId | undefined;
 
-        if (idText !== "-1") {
-            const cFSelectionId: string[] = idText.split("_");
+        if (idText !== '-1') {
+            const cFSelectionId: string[] = idText.split('_');
             if (cFSelectionId.length === 3) {
                 codeFlowId = {
                     cFId: parseInt(cFSelectionId[0], 10),
@@ -84,7 +87,7 @@ export namespace CodeFlowFactory {
             codeFlow.message = Utilities.parseSarifMessage(sarifCF.message).text;
         }
         for (let tFIndex: number = 0; tFIndex < sarifCF.threadFlows.length; tFIndex++) {
-            await CodeFlowFactory.createThreadFlow(runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`).then(
+            await createThreadFlow(runInfo, sarifCF.threadFlows[tFIndex], `${indexId}_${tFIndex}`).then(
                 (threadFlow: ThreadFlow) => {
                     codeFlow.threads.push(threadFlow);
                 });
@@ -112,7 +115,7 @@ export namespace CodeFlowFactory {
         }
 
         for (let index: number = 0; index < sarifTF.locations.length; index++) {
-            await CodeFlowFactory.createCodeFlowStep(runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
+            await createCodeFlowStep(runInfo, sarifTF.locations[index], sarifTF.locations[index + 1],
                 `${indexId}_${index}`, index + 1).then((step: CodeFlowStep) => {
                     threadFlow.steps.push(step);
                 });
@@ -122,7 +125,7 @@ export namespace CodeFlowFactory {
         let hasUndefinedNestingLevel: boolean = false;
         let hasZeroNestingLevel: boolean = false;
         for (const index of threadFlow.steps.keys()) {
-            threadFlow.steps[index].beforeIcon = CodeFlowFactory.getBeforeIcon(index, threadFlow);
+            threadFlow.steps[index].beforeIcon = getBeforeIcon(index, threadFlow);
 
             // flag if step has undefined or 0 nestingLevel values
             if (threadFlow.steps[index].nestingLevel === -1) {
@@ -132,7 +135,7 @@ export namespace CodeFlowFactory {
             }
         }
 
-        threadFlow.lvlsFirstStepIsNested = CodeFlowFactory.getLevelsFirstStepIsNested(threadFlow.steps[0],
+        threadFlow.lvlsFirstStepIsNested = getLevelsFirstStepIsNested(threadFlow.steps[0],
             hasUndefinedNestingLevel, hasZeroNestingLevel);
 
         return threadFlow;
@@ -195,12 +198,12 @@ export namespace CodeFlowFactory {
         if (message !== undefined && message.text !== undefined) {
             messageText = message.text;
         } else if (isLastChildFlag) {
-            messageText = "[return call]";
+            messageText = localize('codeFlowFactory.returnCall', "[return call]");
         } else {
-            messageText = "[no description]";
+            messageText = localize('codeFlowFactory.noDescription', "[no description]");
         }
 
-        const messageWithStepText: string = `Step ${stepNumber}: ${messageText}`;
+        const messageWithStepText: string = localize("codeFlowFactory.messageWithStepText", "Step {0}: {1}", stepNumber, messageText);
 
         const command: Command = {
             arguments: [indexId],
@@ -216,7 +219,7 @@ export namespace CodeFlowFactory {
         const step: CodeFlowStep = {
             beforeIcon: undefined,
             codeLensCommand: command,
-            importance: tFLoc.importance || "important",
+            importance: tFLoc.importance || 'important',
             isLastChild: isLastChildFlag,
             isParent: isParentFlag,
             location: loc,
@@ -240,19 +243,19 @@ export namespace CodeFlowFactory {
         let iconName: string | undefined;
         const step: CodeFlowStep = threadFlow.steps[index];
         if (step.isParent) {
-            iconName = "call-no-return.svg";
+            iconName = 'call-no-return.svg';
             for (let nextIndex: number = index + 1; nextIndex < threadFlow.steps.length; nextIndex++) {
                 if (threadFlow.steps[nextIndex].nestingLevel <= step.nestingLevel) {
-                    iconName = "call-with-return.svg";
+                    iconName = 'call-with-return.svg';
                     break;
                 }
             }
         } else if (step.isLastChild) {
-            iconName = "return-no-call.svg";
+            iconName = 'return-no-call.svg';
             if (step.nestingLevel !== -1) {
                 for (let prevIndex: number = index - 1; prevIndex >= 0; prevIndex--) {
                     if (threadFlow.steps[prevIndex].nestingLevel < step.nestingLevel) {
-                        iconName = "return-with-call.svg";
+                        iconName = 'return-with-call.svg';
                         break;
                     }
                 }
@@ -279,15 +282,15 @@ export namespace CodeFlowFactory {
             case -1:
                 break;
             case 0:
-                if (hasUndefinedNL === true) {
+                if (hasUndefinedNL) {
                     lvlsFirstStepIsNested++;
                 }
                 break;
             default:
-                if (hasUndefinedNL === true) {
+                if (hasUndefinedNL) {
                     lvlsFirstStepIsNested++;
                 }
-                if (hasZeroNL === true) {
+                if (hasZeroNL) {
                     lvlsFirstStepIsNested++;
                 }
                 lvlsFirstStepIsNested = lvlsFirstStepIsNested + (firstNestingLevel - 1);

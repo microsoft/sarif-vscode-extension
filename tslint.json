@@ -121,7 +121,9 @@
         "prefer-type-cast": false,
         "no-non-null-assertion": false,
         "ban-ts-ignore": false,
-        "no-namespace": false
+        "no-namespace": false,
+        "no-unnecessary-local-variable": false,
+        "prefer-conditional-expression": false
     },
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {

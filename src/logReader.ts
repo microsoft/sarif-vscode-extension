@@ -16,9 +16,9 @@ import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, 
 import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
 import { FileConverter } from "./fileConverter";
 import { ProgressHelper } from "./ProgressHelper";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { CodeFlowFactory } from "./factories/codeFlowFactory";
-import { Utilities } from "./Utilities";
+import { Utilities } from "./utilities";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**

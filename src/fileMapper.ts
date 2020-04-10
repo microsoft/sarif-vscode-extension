@@ -14,7 +14,7 @@ import {
     window, workspace, WorkspaceConfiguration, InputBox, commands
 } from "vscode";
 import { ProgressHelper } from "./ProgressHelper";
-import { Utilities } from "./Utilities";
+import { Utilities } from "./utilities";
 import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/Interfaces";
 
 const RootPathSample: string = 'c:\\sample\\path';

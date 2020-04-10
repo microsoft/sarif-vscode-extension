@@ -10,7 +10,7 @@ import * as sarif from "sarif";
 
 import { Range, Uri, Position, Event } from "vscode";
 import { RunInfo, Message, Location } from "../common/Interfaces";
-import { Utilities } from "../Utilities";
+import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 
 suite("combineUriWithUriBase", () => {

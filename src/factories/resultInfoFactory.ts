@@ -11,7 +11,7 @@ import { LocationFactory } from "./locationFactory";
 import {
     Attachment, CodeFlow, Fix, FixChange, FixFile, Frame, Location, ResultInfo, Stack, Stacks, Message, StackColumnWithContent, RunInfo
 } from "../common/Interfaces";
-import { Utilities } from "../Utilities";
+import { Utilities } from "../utilities";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif results (and runs)

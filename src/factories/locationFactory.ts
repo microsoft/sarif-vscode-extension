@@ -6,7 +6,7 @@ import * as sarif from "sarif";
 import * as fs from "fs";
 import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/Interfaces";
-import { Utilities } from "../Utilities";
+import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 
 /**
@@ -46,12 +46,12 @@ export namespace LocationFactory {
                     mappedToLocalPath = fs.existsSync(uri.fsPath);
                 }
 
-                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf("/") + 1);
+                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
             }
         }
 
         if (physLocation && physLocation.region) {
-            parsedRange = LocationFactory.parseRange(physLocation.region);
+            parsedRange = parseRange(physLocation.region);
             message = Utilities.parseSarifMessage(physLocation.region.message);
         }
 
@@ -98,8 +98,8 @@ export namespace LocationFactory {
      * @param resultIndex the index of the result in the SARIF file
      */
     export function mapToSarifFileResult(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location {
-        const resultPath: string = "/runs/" + runIndex + "/results/" + resultIndex;
-        return LocationFactory.createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath, true);
+        const resultPath: string = `'/runs/${runIndex}/results/${resultIndex}`;
+        return createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath, true);
     }
 
     /**
@@ -112,7 +112,7 @@ export namespace LocationFactory {
     export function createLocationOfMapping(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, resultPath: string, insertionPtr?: boolean): Location {
         const sarifMapping: JsonMapping | undefined = sarifJSONMapping.get(sarifUri.toString());
         if (!sarifMapping) {
-            throw new Error("Expected to be able to find JSON path mapping");
+            throw new Error('Expected to be able to find JSON path mapping');
         }
 
         const locationMapping: JsonPointer = sarifMapping.pointers[resultPath];
@@ -123,7 +123,7 @@ export namespace LocationFactory {
 
         const resultLocation: Location = {
             endOfLine: false,
-            fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf("\\") + 1),
+            fileName: sarifUri.fsPath.substring(sarifUri.fsPath.lastIndexOf('\\') + 1),
             mappedToLocalPath: false,
             range: new Range(locationMapping.value.line, locationMapping.value.column,
                 locationMapping.valueEnd.line, locationMapping.valueEnd.column),
@@ -170,7 +170,7 @@ export namespace LocationFactory {
                     if (region.snippet.text !== undefined) {
                         endcol = region.snippet.text.length - 2;
                     } else if (region.snippet.binary !== undefined) {
-                        endcol = Buffer.from(region.snippet.binary, "base64").toString().length;
+                        endcol = Buffer.from(region.snippet.binary, 'base64').toString().length;
                     }
                 } else {
                     endline++;

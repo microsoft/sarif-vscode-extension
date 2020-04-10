@@ -1,6 +1,8 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from 'vscode';
 import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/Interfaces';
@@ -37,9 +39,9 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
         public readonly resultInfo: ResultInfo,
         public readonly rawResult: sarif.Result,
         private currentLocation: Location) {
-        super(currentLocation.range, resultInfo.message.text || "No message", getSeverity(resultInfo.severityLevel));
+        super(currentLocation.range, resultInfo.message.text || localize("daignostic.noMessage", "No message"), getSeverity(resultInfo.severityLevel));
         this.code = resultInfo.ruleId;
-        this.source = resultInfo.runInfo.toolName || "Unknown tool";
+        this.source = resultInfo.runInfo.toolName || localize('daignostic.unknownTool', "Unknown tool");
     }
 
     /**
@@ -55,7 +57,7 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
      */
     public updateToMappedLocation(mappedLocation: Location): void {
         if (!mappedLocation.mappedToLocalPath) {
-            throw new Error("Only expect mapped locations");
+            throw new Error('Only expect mapped locations');
         }
 
         this.currentLocation = mappedLocation;

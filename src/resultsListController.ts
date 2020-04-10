@@ -17,8 +17,8 @@ import {
 import { ExplorerController } from "./explorerController";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
-import { Utilities } from "./Utilities";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+import { Utilities } from "./utilities";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
