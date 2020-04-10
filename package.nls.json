@@ -101,5 +101,7 @@
 
     "command.mapToSource.title": "Map To Source",
 
-    "diagnosticCollection.limitingResults": "Only displaying {0} of the total {1} results in the SARIF log."
+    "diagnosticCollection.limitingResults": "Only displaying {0} of the total {1} results in the SARIF log.",
+
+    "resultInfoFactory.noMessageProvided": "No Message Provided"
 }

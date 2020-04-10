@@ -1,9 +1,11 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as sarif from "sarif";
-import { CodeFlowFactory } from  "./codeFlowFactory";
+import { CodeFlowFactory } from "./codeFlowFactory";
 import { LocationFactory } from "./locationFactory";
 
 import {
@@ -30,8 +32,8 @@ export namespace ResultInfoFactory {
         tool: sarif.Tool,
         id: number,
         resultLocationInSarifFile: Location): Promise<ResultInfo> {
-        const locations: Location[] = await ResultInfoFactory.parseLocations(runInfo, result.locations);
-        const relatedLocations: Location[] = await ResultInfoFactory.parseLocations(runInfo, result.relatedLocations);
+        const locations: Location[] = await parseLocations(runInfo, result.locations);
+        const relatedLocations: Location[] = await parseLocations(runInfo, result.relatedLocations);
         const attachments: Attachment[] = await parseAttachments(runInfo, result.attachments);
         const fixes: Fix[] = await parseFixes(runInfo, result.fixes);
         const codeFlows: CodeFlow[] = await CodeFlowFactory.create(runInfo, result.codeFlows);
@@ -99,19 +101,20 @@ export namespace ResultInfoFactory {
             ...result.message
         };
 
-        if (result.message.text === undefined ) {
+        if (result.message.text === undefined) {
             resultMessage = {
                 ...resultMessage,
-                text: ruleMessage || "No Message Provided"
+                text: ruleMessage || localize('resultInfoFactory.noMessageProvided', "No Message Provided")
+
             };
         }
 
         return {
             runInfo,
             id,
-            resultLocationInSarifFile: resultLocationInSarifFile,
+            resultLocationInSarifFile,
             runId: runInfo.id,
-            baselineState: result.baselineState || "new",
+            baselineState: result.baselineState || 'new',
             locations,
 
             // To ease other logic, don't assign assignedLocation if the location exist, but it has no URI.
@@ -129,9 +132,9 @@ export namespace ResultInfoFactory {
             ruleDescription,
             rank: result.rank || ruleRank,
             ruleId,
-            severityLevel: severityLevel || "warning",
+            severityLevel: severityLevel || 'warning',
             message: Utilities.parseSarifMessage(resultMessage, allLocations),
-            kind: result.kind || "fail"
+            kind: result.kind || 'fail'
         };
     }
 
@@ -263,7 +266,7 @@ export namespace ResultInfoFactory {
 
         if (!sarifStacks) {
             return {
-                columnsWithContent: columnsWithContent,
+                columnsWithContent,
                 stacks: []
             };
         }
@@ -287,7 +290,7 @@ export namespace ResultInfoFactory {
                 const frameNameParts: string[] = [];
 
                 if (sarifFrame.module) {
-                    frameNameParts.push(sarifFrame.module + "!");
+                    frameNameParts.push(`${sarifFrame.module}!`);
                 }
 
                 if (frameLocation.logicalLocations) {
@@ -326,10 +329,10 @@ export namespace ResultInfoFactory {
      * @param hasContent the current set of hasContent flags
      */
     function checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
-        columnsWithContent.message = columnsWithContent.message && frame.message.text !== undefined && frame.message.text !== "";
-        columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== "";
+        columnsWithContent.message = columnsWithContent.message && frame.message.text !== undefined && frame.message.text !== '';
+        columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== '';
         columnsWithContent.location = columnsWithContent.location && frame.location.range.start.line !== 0;
-        columnsWithContent.filename = columnsWithContent.filename && frame.location.fileName !== undefined && frame.location.fileName !== "";
+        columnsWithContent.filename = columnsWithContent.filename && frame.location.fileName !== undefined && frame.location.fileName !== '';
         columnsWithContent.parameters = columnsWithContent.parameters && frame.parameters.length !== 0;
         columnsWithContent.threadId = columnsWithContent.threadId && frame.threadId !== undefined;
         return columnsWithContent;
