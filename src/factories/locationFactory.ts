@@ -98,7 +98,7 @@ export namespace LocationFactory {
      * @param resultIndex the index of the result in the SARIF file
      */
     export function mapToSarifFileResult(sarifJSONMapping: Map<string, JsonMapping>, sarifUri: Uri, runIndex: number, resultIndex: number): Location {
-        const resultPath: string = `'/runs/${runIndex}/results/${resultIndex}`;
+        const resultPath: string = `/runs/${runIndex}/results/${resultIndex}`;
         return createLocationOfMapping(sarifJSONMapping, sarifUri, resultPath, true);
     }
 
