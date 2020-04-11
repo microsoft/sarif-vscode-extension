@@ -10,7 +10,7 @@ import { LocationFactory } from "./locationFactory";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
-import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
+import { sendCFSelectionToExplorerCommand } from "../codeFlowDecorations";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 
@@ -149,7 +149,7 @@ export namespace CodeFlowFactory {
      * @param indexId The id based on the index in the codeflow, threadflow and locations arrays (ex: "0_2_1")
      * @param stepNumber The 1 based number that's used for displaying the step in the viewer
      */
-    export async function  createCodeFlowStep(
+    export async function createCodeFlowStep(
         runInfo: RunInfo,
         tFLocOrig: sarif.ThreadFlowLocation,
         nextTFLocOrig: sarif.ThreadFlowLocation,

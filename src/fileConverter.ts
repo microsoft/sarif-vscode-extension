@@ -89,9 +89,9 @@ export class FileConverter {
      * Returns false if Version and Schema Version match and the file can be loaded the way it is
      * @param version The version from the sarif file
      * @param schema The Schema from the sarif file
-     * @param doc the text document of the sarif file to convert
+     * @param sarifFile the text document of the sarif file to convert
      */
-    public static async sarifUpgradeNeeded(version: sarif.Log.version, schema: string, doc: vscode.TextDocument): Promise<boolean> {
+    public static async sarifUpgradeNeeded(version: sarif.Log.version, schema: string, sarifFile: vscode.Uri): Promise<boolean> {
         const mTCurVersion: SarifVersion = FileConverter.MultiToolCurrentVersion;
         const parsedVer: SarifVersion = FileConverter.parseVersion(version);
 
@@ -127,7 +127,7 @@ export class FileConverter {
             // as it open the converted document when it is done whic starts
             // the read SARIF cycle again.
             // tslint:disable-next-line: no-floating-promises
-            FileConverter.upgradeSarif(doc, parsedVer, parsedSchemaVer);
+            FileConverter.upgradeSarif(sarifFile, parsedVer, parsedSchemaVer);
         } else {
                 await vscode.window.showErrorMessage(localize(
                     'converterTool.UpgraderErrorMessage',
@@ -142,11 +142,11 @@ export class FileConverter {
      * Upgrades the sarif file, allows the user to choose to save temp or choose a file location
      * If it's able upgrade then it will close the current file and open the new file
      * Displays a message to the user about the upgrade
-     * @param doc the text document of the sarif file to convert
+     * @param sarifFile the text document of the sarif file to convert
      * @param sarifVersion version of the sarif log
      * @param sarifSchema version of the sarif logs schema
      */
-    public static async upgradeSarif(doc: vscode.TextDocument, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
+    public static async upgradeSarif(sarifFile: vscode.Uri, sarifVersion?: SarifVersion, sarifSchema?: SarifVersion): Promise<boolean> {
         const saveTempChoice: vscode.MessageItem =  {
             title: localize('converterTool.Upgrade.SaveTemp', "Yes (Save Temp)")
         };
@@ -180,12 +180,12 @@ export class FileConverter {
         let output: string | undefined;
         switch (choice) {
             case saveTempChoice:
-                output = Utilities.generateTempPath(doc.uri.fsPath);
+                output = Utilities.generateTempPath(sarifFile.fsPath);
                 break;
 
             case saveAsChoice:
                 const selectedUri: vscode.Uri | undefined = await vscode.window.showSaveDialog({
-                    defaultUri: doc.uri,
+                    defaultUri: sarifFile,
                     filters: { sarif: ['sarif'] }
                 });
 
@@ -205,7 +205,7 @@ export class FileConverter {
             // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
             // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
             // can be over-ridden for testing.
-            const proc: ChildProcess =  spawn(multiToolPath, ['transform', doc.uri.fsPath, '-o', fileOutputPath, '-p', '-f']);
+            const proc: ChildProcess =  spawn(multiToolPath, ['transform', sarifFile.fsPath, '-o', fileOutputPath, '-p', '-f']);
 
             proc.stderr.on('data', (data) => {
                 errorData.push(data.toString());
@@ -227,7 +227,7 @@ export class FileConverter {
 
         const textEditor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
 
-        if (textEditor && textEditor.document.fileName === doc.fileName) {
+        if (textEditor && textEditor.document.fileName === sarifFile.fsPath) {
             await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
         }
 

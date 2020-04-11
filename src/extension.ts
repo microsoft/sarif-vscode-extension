@@ -5,12 +5,12 @@
 import * as nls from 'vscode-nls';
 nls.config({locale: process.env.VSCODE_NLS_CONFIG});
 
-import { ExtensionContext } from "vscode";
+import * as vscode from "vscode";
 import { CodeFlowCodeLensProvider } from "./codeFlowCodeLens";
 import { CodeFlowDecorations } from "./codeFlowDecorations";
 import { ExplorerController } from "./explorerController";
 import { FileConverter } from "./fileConverter";
-import { LogReader } from "./logReader";
+import { LogReader, ReadResult } from "./logReader";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { Utilities } from "./utilities";
 import { ResultsListController } from "./resultsListController";
@@ -26,7 +26,7 @@ import './utilities/stringUtilities';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): void {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
@@ -48,11 +48,56 @@ export function activate(context: ExtensionContext): void {
     context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = (new LogReader(diagnosticCollection));
+    const reader: LogReader = (new LogReader());
     context.subscriptions.push(reader);
 
+    // Listen for new sarif files to open or close
+    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(async (textDocument) => {
+        await onDocumentOpened(textDocument, reader, diagnosticCollection);
+    }));
+
+    context.subscriptions.push(vscode.workspace.onDidCloseTextDocument((textDocument) => {
+        onDocumentClosed(textDocument, diagnosticCollection);
+    }));
+
     // We do not need to block extension startup for reading any open documents.
-    void reader.readAll();
+    void readOpenedDocuments(reader, diagnosticCollection);
+}
+
+/**
+ * When a sarif document opens we read it and sync to the list of issues to add it to the problems panel
+ * @param doc document that was opened
+ */
+async function onDocumentOpened(doc: vscode.TextDocument, logReader: LogReader, diagnosticCollection: SVDiagnosticCollection): Promise<void> {
+    if (!doc.uri.isFile() || !Utilities.isSarifFile(doc)) {
+        return;
+    }
+
+    const readResults: ReadResult[] = await logReader.read([doc.uri]);
+    diagnosticCollection.addReadResults(readResults, {supressEventsDuringAdd: true, synchronizeUI: true});
+}
+
+/**
+ * Enumerates open workspace files and parse them and places them into the diagnostic collection.
+ * @param logReader The log reader that will be used to parse the results.
+ * @param diagnosticCollection The diagnostic collection to add the results too.
+ */
+async function readOpenedDocuments(logReader: LogReader, diagnosticCollection: SVDiagnosticCollection): Promise<void> {
+    // Spin through VSCode's documents and read any SARIF files that are opened.
+    const urisToParse: vscode.Uri[] = vscode.workspace.textDocuments.filter((doc) => Utilities.isSarifFile(doc)).map((doc) => doc.uri);
+    const readResults: ReadResult[] = await logReader.read(urisToParse);
+    diagnosticCollection.addReadResults(readResults, {supressEventsDuringAdd: true, synchronizeUI: true});
+}
+
+/**
+ * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
+ * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
+ * @param doc document that was closed
+ */
+function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiagnosticCollection): void {
+    if (Utilities.isSarifFile(doc)) {
+        diagnosticCollection.removeRuns(doc.fileName);
+    }
 }
 
 /**

@@ -134,7 +134,8 @@ export namespace ResultInfoFactory {
             ruleId,
             severityLevel: severityLevel || 'warning',
             message: Utilities.parseSarifMessage(resultMessage, allLocations),
-            kind: result.kind || 'fail'
+            kind: result.kind || 'fail',
+            rawResult: result
         };
     }
 
