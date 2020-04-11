@@ -125,7 +125,8 @@
         "no-unnecessary-local-variable": false,
         "prefer-conditional-expression": false,
         "no-reference": false,
-        "no-inner-html": false
+        "no-inner-html": false,
+        "no-single-line-block-comment": false
     },
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {

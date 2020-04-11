@@ -21,7 +21,6 @@ export class ExplorerController implements Disposable {
     private disposables: Disposable[] = [];
 
     public static readonly ExplorerLaunchCommand = 'extension.sarif.LaunchExplorer';
-    //private static readonly ExplorerTitle = localize('explorer.Title', "SARIF Explorer");
 
     public resultsListData: ResultsListData | undefined;
 
