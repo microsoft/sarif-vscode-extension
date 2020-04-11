@@ -99,11 +99,14 @@ export class ResultsList {
             curSelected[0].classList.remove("selected");
         }
 
-        const rows: HTMLCollectionOf<HTMLElement> = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName("listtablerow");
+        const rows: HTMLCollectionOf<HTMLTableRowElement> = <HTMLCollectionOf<HTMLTableRowElement>>document.getElementsByClassName("listtablerow");
         // @ts-ignore: compiler complains even though results can be iterated
         for (const row of rows) {
             if (row.dataset.id === id) {
                 row.classList.add("selected");
+                this.expandGroupForResult(row);
+                row.scrollIntoView();
+                break;
             }
         }
     }
@@ -617,6 +620,31 @@ export class ResultsList {
                 } else {
                     result.classList.remove("hidden");
                 }
+            }
+        }
+    }
+
+    /**
+     * Toggles the group row as well as any result rows that match the group
+     * @param row Group row to toggled
+     */
+    private expandGroupForResult(row: HTMLTableRowElement): void {
+
+        if (row.dataset.group === undefined) {
+            throw new Error("Expected to have collapse group.");
+        }
+
+        if (row.classList.contains(`${ToggleState.collapsed}`)) {
+            row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
+            this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
+        }
+
+        const results: NodeListOf<Element> = document.querySelectorAll("#resultslisttable > tbody > .listtablerow");
+
+        for (const result of results) {
+            // @ts-ignore: compiler complains even though result does have a dataset
+            if (result.dataset.group === row.dataset.group) {
+                result.classList.remove("hidden");
             }
         }
     }
