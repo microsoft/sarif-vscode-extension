@@ -203,7 +203,7 @@ export class FileConverter {
             // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
             // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
             // can be over-ridden for testing.
-            const proc: ChildProcess =  spawn(multiToolPath, ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"]);
+            const proc: ChildProcess =  spawn("d:\\Gabriel\\Documents\\Repos\\sarif-sdk\\bld\\bin\\AnyCPU_Debug\\Sarif.Multitool\\net461\\Sarif.Multitool.exe", ["transform", doc.uri.fsPath, "-o", fileOutputPath, "-p", "-f"]);
 
             proc.stderr.on("data", (data) => {
                 errorData.push(data.toString());

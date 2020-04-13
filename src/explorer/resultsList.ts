@@ -600,12 +600,12 @@ export class ResultsList {
         }
 
         let hideRow: boolean = false;
-        if (row.classList.contains(`${ToggleState.expanded}`)) {
-            row.classList.replace(`${ToggleState.expanded}`, `${ToggleState.collapsed}`);
+        if (row.classList.contains(ToggleState.expanded)) {
+            row.classList.replace(ToggleState.expanded, ToggleState.collapsed);
             this.collapsedGroups.push(row.dataset.group);
             hideRow = true;
         } else {
-            row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
+            row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
             this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
         }
 
@@ -634,8 +634,8 @@ export class ResultsList {
             throw new Error("Expected to have collapse group.");
         }
 
-        if (row.classList.contains(`${ToggleState.collapsed}`)) {
-            row.classList.replace(`${ToggleState.collapsed}`, `${ToggleState.expanded}`);
+        if (row.classList.contains(ToggleState.collapsed)) {
+            row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
             this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
         }
 
