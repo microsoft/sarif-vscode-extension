@@ -1,22 +1,24 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
     WorkspaceConfiguration, Uri, TextDocument, TextEditor
 } from "vscode";
-import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/Enums";
+import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/enums";
 import {
     ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
     ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
-} from "./common/Interfaces";
-import { ExplorerController } from "./ExplorerController";
-import { SVCodeActionProvider } from "./SVCodeActionProvider";
-import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./SVDiagnosticCollection";
-import { Utilities } from "./Utilities";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
+} from "./common/interfaces";
+import { ExplorerController } from "./explorerController";
+import { SVCodeActionProvider } from "./svCodeActionProvider";
+import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
+import { Utilities } from "./utilities";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -27,11 +29,11 @@ export class ResultsListController implements Disposable {
     private columns: { [key: string]: ResultsListColumn } = {};
 
     private groupBy: string = ResultsListController.defaultGroupBy;
-    private static defaultGroupBy: string = "resultFile";
+    private static defaultGroupBy: string = 'resultFile';
 
     private static defaultSortBy: ResultsListSortBy = {
         ascending: true,
-        column: "severityLevel"
+        column: 'severityLevel'
     };
     private sortBy: ResultsListSortBy = ResultsListController.defaultSortBy;
 
@@ -41,9 +43,9 @@ export class ResultsListController implements Disposable {
     private filterText: string;
     private postFilterListRows: string[];
 
-    private readonly configHideColumns = "resultsListHideColumns";
-    private readonly configGroupBy = "resultsListGroupBy";
-    private readonly configSortBy = "resultsListSortBy";
+    private readonly configHideColumns = 'resultsListHideColumns';
+    private readonly configGroupBy = 'resultsListGroupBy';
+    private readonly configSortBy = 'resultsListSortBy';
 
     public constructor(private readonly explorerController: ExplorerController,
                        private readonly codeActionProvider: SVCodeActionProvider,
@@ -51,7 +53,7 @@ export class ResultsListController implements Disposable {
         this.resultsListRows = new Map<string, ResultsListRow>();
         this.postFilterListRows = [];
         this.filterCaseMatch = false;
-        this.filterText = "";
+        this.filterText = '';
         this.initializeColumns();
         this.onSettingsChanged({ affectsConfiguration: (section: string, resource?: Uri) => true});
         this.disposables.push(workspace.onDidChangeConfiguration(this.onSettingsChanged, this));
@@ -74,7 +76,7 @@ export class ResultsListController implements Disposable {
      */
     public updateResultsListData(diagnosticsChangedEvent: SVDiagnosticsChangedEvent): void {
         if (!diagnosticsChangedEvent.diagnostics) {
-            throw new Error ("Should always have changed diagnostics");
+            throw new Error ('Should always have changed diagnostics');
         }
 
         if (diagnosticsChangedEvent.type === 'Remove') {
@@ -206,17 +208,17 @@ export class ResultsListController implements Disposable {
             const sarifConfig: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
 
             let changed: boolean = false;
-            if (this.checkIfColumnsChanged(sarifConfig) === true) {
+            if (this.checkIfColumnsChanged(sarifConfig)) {
                 changed = true;
             }
-            if (this.checkIfGroupByChanged(sarifConfig) === true) {
+            if (this.checkIfGroupByChanged(sarifConfig)) {
                 changed = true;
             }
-            if (this.checkIfSortByChanged(sarifConfig) === true) {
+            if (this.checkIfSortByChanged(sarifConfig)) {
                 changed = true;
             }
 
-            if (changed === true) {
+            if (changed) {
                 this.postDataToExplorer();
             }
         }
@@ -296,27 +298,27 @@ export class ResultsListController implements Disposable {
 
         let baselineOrder: BaselineOrder = BaselineOrder.absent;
         switch (resultInfo.baselineState) {
-            case "absent": baselineOrder = BaselineOrder.absent; break;
-            case "new": baselineOrder = BaselineOrder.new; break;
-            case "unchanged": baselineOrder = BaselineOrder.unchanged; break;
-            case "updated": baselineOrder = BaselineOrder.updated; break;
+            case 'absent': baselineOrder = BaselineOrder.absent; break;
+            case 'new': baselineOrder = BaselineOrder.new; break;
+            case 'unchanged': baselineOrder = BaselineOrder.unchanged; break;
+            case 'updated': baselineOrder = BaselineOrder.updated; break;
         }
 
         let kindOrder: KindOrder = KindOrder.fail;
         switch (resultInfo.kind) {
-            case "fail": kindOrder = KindOrder.fail; break;
-            case "notApplicable": kindOrder = KindOrder.notApplicable; break;
-            case "open": kindOrder = KindOrder.open; break;
-            case "pass": kindOrder = KindOrder.pass; break;
-            case "review": kindOrder = KindOrder.review; break;
+            case 'fail': kindOrder = KindOrder.fail; break;
+            case 'notApplicable': kindOrder = KindOrder.notApplicable; break;
+            case 'open': kindOrder = KindOrder.open; break;
+            case 'pass': kindOrder = KindOrder.pass; break;
+            case 'review': kindOrder = KindOrder.review; break;
         }
 
         let sevOrder: SeverityLevelOrder = SeverityLevelOrder.error;
         switch (resultInfo.severityLevel) {
-            case "error": sevOrder = SeverityLevelOrder.error; break;
-            case "warning": sevOrder = SeverityLevelOrder.warning; break;
-            case "none": sevOrder = SeverityLevelOrder.none; break;
-            case "note": sevOrder = SeverityLevelOrder.note; break;
+            case 'error': sevOrder = SeverityLevelOrder.error; break;
+            case 'warning': sevOrder = SeverityLevelOrder.warning; break;
+            case 'none': sevOrder = SeverityLevelOrder.none; break;
+            case 'note': sevOrder = SeverityLevelOrder.note; break;
         }
 
         let resultFileName: string | undefined;
@@ -369,7 +371,7 @@ export class ResultsListController implements Disposable {
         const regEx: RegExp = this.generateFilterRegExp();
 
         this.resultsListRows.forEach((row: ResultsListRow, key: string) => {
-            if (this.filterText === "" || this.applyFilterToRow(row, regEx) === true) {
+            if (this.filterText === '' || this.applyFilterToRow(row, regEx)) {
                 this.postFilterListRows.push(key);
             }
         });
@@ -405,10 +407,10 @@ export class ResultsListController implements Disposable {
     private generateFilterRegExp(): RegExp {
         let flags: string | undefined;
         if (!this.filterCaseMatch) {
-            flags = "i";
+            flags = 'i';
         }
 
-        const pattern: string = this.filterText !== "" ? this.filterText : ".*";
+        const pattern: string = this.filterText !== '' ? this.filterText : '.*';
 
         return new RegExp(pattern, flags);
     }
@@ -443,7 +445,7 @@ export class ResultsListController implements Disposable {
             let key: any = resultsListValue.value;
 
             // special case for the columns that only show the file name of a uri, we need to sort on the full path
-            if (this.groupBy === "sarifFile" || this.groupBy === "resultFile") {
+            if (this.groupBy === 'sarifFile' || this.groupBy === 'resultFile') {
                 key = resultsListValue.tooltip;
             }
 
@@ -453,7 +455,7 @@ export class ResultsListController implements Disposable {
             } else {
                 groups.set(key, {
                     rows: [row], text: resultsListValue.value, tooltip: resultsListValue.tooltip,
-                } as ResultsListGroup);
+                });
             }
         }
 
@@ -495,7 +497,7 @@ export class ResultsListController implements Disposable {
                 } else if ((valueA as ResultsListCustomOrderValue).order !== undefined) {
                     comp = (valueA as ResultsListCustomOrderValue).order -
                         (valueB as ResultsListCustomOrderValue).order;
-                } else if (typeof valueA.value === "number") {
+                } else if (typeof valueA.value === 'number') {
                     comp = valueA.value - valueB.value;
                 } else {
                     comp = valueA.value.localeCompare(valueB.value);
@@ -513,69 +515,94 @@ export class ResultsListController implements Disposable {
      */
     private initializeColumns(): void {
         this.columns = {
-            baselineState: <ResultsListColumn>{
-                description: "The state of a result relative to a baseline of a previous run.",
-                hide: false, title: "Baseline",
-            },
-            message: <ResultsListColumn>{
-                description: "Result message", hide: false, title: "Message"
+            baselineState: {
+                description:  localize('column.baselineState.description', "The state of a result relative to a baseline of a previous run."),
+                title: localize('column.baselineState.title', "Baseline"),
+                hide: false,
             },
 
-            resultFile: <ResultsListColumn>{
-                description: "Result file location ", hide: false, title: "File" },
-
-                resultStartPos: <ResultsListColumn>{
-                description: "Results position in the file", hide: false, title: "Position",
+            message: {
+                description: localize('column.message.description', "Result message"),
+                title: localize('column.message.title', "Result message"),
+                hide: false,
             },
 
-            // Space above is needed to keep the order without tslint complaining
-            logicalLocation: <ResultsListColumn>{
-                description: "Logical Location", hide: false, title: "Logical Location",
+            resultFile: {
+                description: localize('column.resultFile.description', "Result file location"),
+                title: localize('column.resultFile.title', "File"),
+                hide: false,
             },
 
-            ruleId: <ResultsListColumn>{
-                description: "Rule Id", hide: false, title: "Rule Id"
+            resultStartPos: {
+                description: localize('column.resultStartPos.description', "Results position in the file"),
+                title: localize('"column.resultStartPos.title', "Position"),
+                hide: false,
             },
 
-            ruleName: <ResultsListColumn>{
-                description: "Rule Name", hide: false, title: "Rule Name"
+            logicalLocation: {
+                description: localize('column.logicalLocation.description', "Logical Location"),
+                title: localize('column.logicalLocation.title', "Logical Location"),
+                hide: false,
             },
 
-            runId: <ResultsListColumn>{
-                description: "Run Id generated based on order in the Sarif file", hide: false, title: "Run Id",
+            ruleId: {
+                description: localize('column.ruleId.description', "Rule Id"),
+                title: localize('column.ruleId.title', "Rule Id"),
+                hide: false,
             },
 
-            sarifFile: <ResultsListColumn>{
-                description: "Sarif file the result data is from", hide: false, title: "Sarif File",
+            ruleName: {
+                description: localize('column.ruleName.description', "Rule Name"),
+                title: localize('column.ruleName.title', "Rule Name"),
+                hide: false,
             },
 
-            severityLevel: <ResultsListColumn>{
-                description: "Severity Level", hide: false, title: "Severity"
+            runId: {
+                description: localize('column.runId.description', "Run Id generated based on order in the Sarif file"),
+                title: localize('column.runId.title', "Run Id"),
+                hide: false,
             },
 
-            // Space above is needed to keep the order without tslint complaining
-            kind: <ResultsListColumn>{
-                description: "Specifies the nature of the result", hide: false, title: "Kind",
+            sarifFile: {
+                description: localize('column.sarifFile.description', "Sarif file the result data is from"),
+                title: localize('column.sarifFile.title', "Sarif File"),
+                hide: false,
             },
 
-            rank: <ResultsListColumn>{
-                description: "Value representing the priority or importance of the result", hide: false, title: "Rank",
+            severityLevel: {
+                description: localize('column.severityLevel.description', "Severity Level"),
+                title: localize('column.severityLevel.title', "Severity"),
+                hide: false,
             },
 
-            tool: <ResultsListColumn>{
-                description: "Name of the analysis tool that generated the result", hide: false, title: "Tool",
+            kind: {
+                description: localize('column.kind.description', "Specifies the nature of the result"),
+                title: localize('column.kind.title', "Kind"),
+                hide: false,
             },
 
-            // Space above is needed to keep the order without tslint complaining
-            automationCat: <ResultsListColumn>{
-                description: "The automation category this results run belongs to",
-                hide: false, title: "Automation Cat",
+            rank: {
+                description: localize('column.rank.description', "Value representing the priority or importance of the result"),
+                title: localize('column.rank.title', "Rank"),
+                hide: false,
             },
 
-            automationId: <ResultsListColumn>{
-                description: "The unique automation id of this results run," +
-                    " used within the automation category if present",
-                hide: false, title: "Automation Id",
+            tool: {
+                description: localize('column.tool.description', "Name of the analysis tool that generated the result"),
+                title: localize('column.tool.title', "Tool"),
+                hide: false,
+            },
+
+            automationCat: {
+                description: localize('column.automationCat.description', "The automation category this results run belongs to"),
+                title: localize('column.automationCat.title', "Automation Category"),
+                hide: false,
+            },
+
+            automationId: {
+                description: localize('column.automationId.description', "The unique automation id of this results run, used within the automation category if present"),
+                title: localize('column.automationId.title', "Automation Id"),
+                hide: false,
             }
         };
     }

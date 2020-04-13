@@ -9,7 +9,7 @@ import * as sarif from "sarif";
 import {
     ResultsListBaselineValue, ResultsListData, ResultsListGroup, ResultsListKindValue, ResultsListRow,
     ResultsListSeverityValue, ResultsListValue, DiagnosticData,
-} from "../common/Interfaces";
+} from "../common/interfaces";
 
 import { ExplorerWebview } from "./webview";
 import { TextAndTooltip } from "./textAndTooltip";

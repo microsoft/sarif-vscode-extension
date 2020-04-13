@@ -1,11 +1,14 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from "vscode";
-import { FileMapper } from "./FileMapper";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { FileMapper } from "./fileMapper";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * A codeactionprovider for the SARIF extension that handles updating the Explorer when the result focus changes
@@ -15,7 +18,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
     private disposables: vscode.Disposable[] = [];
 
     public constructor(private readonly diagnosticCollection: SVDiagnosticCollection) {
-        this.disposables.push(vscode.languages.registerCodeActionsProvider("*", this));
+        this.disposables.push(vscode.languages.registerCodeActionsProvider('*', this));
     }
 
     /**
@@ -48,7 +51,7 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
 
         // This diagnostic with the source name of "SARIFViewer" is the place holder for the problems panel limit message,
         // can possibly put logic here to allow for showing next set of diagnostics
-        if (svDiagnostic.source === "SARIFViewer") {
+        if (svDiagnostic.source === 'SARIFViewer') {
             return [];
         }
 
@@ -83,14 +86,14 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
         const cmd: vscode.Command  = {
             arguments: [svDiagnostic.resultInfo.assignedLocation],
             command: FileMapper.MapCommand,
-            title: "Map To Source",
+            title: localize("command.mapToSource.title", "Map To Source"),
         };
 
         const action: vscode.CodeAction = {
             command: cmd,
             diagnostics:  unmappedDiagnostics,
             kind: vscode.CodeActionKind.QuickFix,
-            title: "Map To Source",
+            title: localize("command.mapToSource.title", "Map To Source"),
         };
 
         return [action];

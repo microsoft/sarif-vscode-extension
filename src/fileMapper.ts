@@ -2,6 +2,10 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 import * as fs from "fs";
 import * as path from "path";
 import * as sarif from "sarif";
@@ -9,12 +13,12 @@ import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, QuickInputButton, Uri,
     window, workspace, WorkspaceConfiguration, InputBox, commands
 } from "vscode";
-import { ProgressHelper } from "./ProgressHelper";
-import { Utilities } from "./Utilities";
-import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/Interfaces";
+import { ProgressHelper } from "./progressHelper";
+import { Utilities } from "./utilities";
+import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/interfaces";
 
-const RootPathSample: string = "c:\\sample\\path";
-const ConfigRootPaths: string = "rootpaths";
+const RootPathSample: string = 'c:\\sample\\path';
+const ConfigRootPaths: string = 'rootpaths';
 /**
  * Handles mapping file locations if the file is not in the location specified in the sarif file
  * Maintains a mapping of the files that have been remapped
@@ -25,7 +29,7 @@ export class FileMapper implements Disposable {
     private static fileMapperInstance: FileMapper;
     private locationMappedEventEmitterMap: Map<Location, EventEmitter<Location>> = new Map<Location, EventEmitter<Location>>();
 
-    public static readonly MapCommand = "extension.sarif.Map";
+    public static readonly MapCommand = 'extension.sarif.Map';
 
     /**
      * Contains a mapping of root paths (base paths) in the SARIF
@@ -76,7 +80,7 @@ export class FileMapper implements Disposable {
 
     private constructor() {
         if (FileMapper.fileMapperInstance) {
-            throw new Error("The file mapper should only be constructed once per extension session.");
+            throw new Error('The file mapper should only be constructed once per extension session.');
         }
 
         FileMapper.fileMapperInstance = this;
@@ -100,7 +104,7 @@ export class FileMapper implements Disposable {
      */
     public async getUserToChooseFile(origUri: Uri, uriBase?: string): Promise<Uri | undefined> {
         const oldProgressMsg: string | undefined = ProgressHelper.Instance.CurrentMessage;
-        await ProgressHelper.Instance.setProgressReport("Waiting for user input");
+        await ProgressHelper.Instance.setProgressReport(localize('fileMapper.WaitingForUserInput', "Waiting for user input"));
 
         const remapResult: string | undefined = await this.openRemappingInputDialog(origUri);
 
@@ -230,9 +234,9 @@ export class FileMapper implements Disposable {
      * @param hashes dictionary of hashes
      */
     private getHashValue(hashes?: { [key: string]: string }): string {
-        let value: string = "";
+        let value: string = '';
         if (hashes) {
-            const sha256Key: string  = "sha256";
+            const sha256Key: string  = 'sha256';
             if (hashes[sha256Key]) {
                 value = hashes[sha256Key];
             } else {
@@ -265,10 +269,10 @@ export class FileMapper implements Disposable {
         if (artifact.contents.text) {
             contents = artifact.contents.text;
         } else if (artifact.contents.binary) {
-            contents = Buffer.from(artifact.contents.binary, "base64").toString();
+            contents = Buffer.from(artifact.contents.binary, 'base64').toString();
         } else if (artifact.contents.rendered) {
             if (artifact.contents.rendered.markdown) {
-                tempPath = tempPath + ".md";
+                tempPath = `${tempPath}.md`;
                 contents = artifact.contents.rendered.markdown;
             } else {
                 contents = artifact.contents.rendered.text;
@@ -300,19 +304,21 @@ export class FileMapper implements Disposable {
             const input: InputBox = window.createInputBox();
             disposables.push(input);
 
-            input.title = "Sarif Result Location Remapping";
+            input.title = localize('openRemappingInputDialog.title', "Sarif Result Location Remapping");
             input.value = uri.fsPath;
-            input.prompt = `Valid path, confirm if it maps to '${uri.fsPath}' or its rootpath`;
-            input.validationMessage = `'${uri.fsPath}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
+            input.prompt = localize("openRemappingInputDialog.prompt", "Valid path, confirm if it maps to '{0}' or its rootpath", uri.fsPath);
+            input.validationMessage = localize('openRemappingInputDialog.validationMessage',
+                "'{0}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)",
+                uri.fsPath);
             input.ignoreFocusOut = true;
 
             input.buttons = <RemappingQuickInputButtons[]>[{
-                iconPath: Utilities.IconsPath + "open-folder.svg",
-                tooltip: "Open file picker",
+                iconPath: `${Utilities.IconsPath}open-folder.svg`,
+                tooltip: localize('openRemappingInputDialog.openTooltip', "Open file picker"),
                 remappingType: 'Open'
             }, {
-                iconPath: Utilities.IconsPath + "next.svg",
-                tooltip: "Skip to next",
+                iconPath: `${Utilities.IconsPath}next.svg`,
+                tooltip: localize('openRemappingInputDialog.skipTooltip', "Skip to next"),
                 remappingType: 'Skip'
             }];
 
@@ -333,7 +339,7 @@ export class FileMapper implements Disposable {
                     case 'Open':
                         const selectedUris: Uri[] | undefined = await window.showOpenDialog({
                             canSelectMany: false,
-                            openLabel: "Map"
+                            openLabel: localize('openRemappingInputDialog.openDialogLabel', "Map")
                         });
 
                         if (selectedUris && selectedUris.length === 1) {
@@ -349,9 +355,10 @@ export class FileMapper implements Disposable {
 
             disposables.push(input.onDidChangeValue(() => {
                 const directory: string = input.value;
-                let message: string | undefined = `'${uri.fsPath}' can not be found.
-                Correct the path to: the local file (c:/example/repo1/source.js) for this session or the local
-                rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)`;
+                let message: string | undefined =
+                input.validationMessage = localize('openRemappingInputDialog.validationMessage',
+                    "'{0}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)",
+                    uri.fsPath);
 
                 if (directory && directory.length !== 0) {
                     let validateUri: Uri | undefined;
@@ -360,7 +367,7 @@ export class FileMapper implements Disposable {
                     try {
                         validateUri = Uri.file(directory);
                     } catch (error) {
-                        if (error.message !== "URI malformed") {
+                        if (error.message !== 'URI malformed') {
                             throw error;
                         }
                     }
@@ -371,11 +378,11 @@ export class FileMapper implements Disposable {
                         } catch (error) {
                             switch (error.code) {
                                 // Path not found.
-                                case "ENOENT":
+                                case 'ENOENT':
                                     break;
 
-                                case "UNKNOWN":
-                                    if (validateUri.authority !== "") {
+                                case 'UNKNOWN':
+                                    if (validateUri.authority !== '') {
                                         break;
                                     }
                                     throw error;
@@ -388,8 +395,7 @@ export class FileMapper implements Disposable {
                         if (isDirectory) {
                             const rootPathIndex: number = this.rootpaths.indexOf(validateUri.fsPath);
                             if (rootPathIndex !== -1) {
-                                message = `'${validateUri.fsPath}' already exists in the settings
-                                    (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)`;
+                                message = localize('openRemappingInputDialog.alreadyExistsInRoot', "'{0}' already exists in the settings (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)", validateUri.fsPath);
                             } else {
                                 resolvedString = this.rootpaths[rootPathIndex];
                                 input.hide();
@@ -424,7 +430,7 @@ export class FileMapper implements Disposable {
             const relativePath: string = oPath.substring(oPath.indexOf(uriBase) + uriBase.length);
             const index: number = rPath.indexOf(relativePath);
             if (index !== -1) {
-                this.baseRemapping.set(oPath.replace(relativePath, ""), rPath.replace(relativePath, ""));
+                this.baseRemapping.set(oPath.replace(relativePath, ''), rPath.replace(relativePath, ''));
                 return;
             }
         }
@@ -455,11 +461,11 @@ export class FileMapper implements Disposable {
             }
         } catch (error) {
             switch (error.code) {
-                case "ENOENT":
+                case 'ENOENT':
                     break;
 
-                case "UNKNOWN":
-                    if (uri.authority !== "") {
+                case 'UNKNOWN':
+                    if (uri.authority !== '') {
                         break;
                     }
                     break;
@@ -497,7 +503,7 @@ export class FileMapper implements Disposable {
      */
     private tryConfigRootPathsUri(uri: Uri, uriBase?: string): Uri | undefined {
         const originPath: path.ParsedPath = path.parse(Utilities.getFsPathWithFragment(uri));
-        const dir: string = originPath.dir.replace(originPath.root, "");
+        const dir: string = originPath.dir.replace(originPath.root, '');
 
         for (const rootpath of this.rootpaths) {
             const dirParts: string[] = dir.split(path.sep);
@@ -544,7 +550,7 @@ export class FileMapper implements Disposable {
         });
     }
 
-    private mapFileCommand(location: Location): Promise<Uri | undefined>  {
+    private async mapFileCommand(location: Location): Promise<Uri | undefined>  {
         return location.mapLocationToLocalPath({ promptUser: true });
     }
 

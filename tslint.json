@@ -1,4 +1,9 @@
 {    
+    "extends": [
+        "tslint:all",
+        "tslint-microsoft-contrib/latest",
+        "tslint-no-unused-expression-chai"        
+    ],
     "rules": {
         "curly": true,
         "file-header": [true, 
@@ -40,7 +45,11 @@
                 "variable-declaration": "nospace"
             }
         ],
+        "no-relative-imports": {"severity": "off"},
+        "strict-boolean-expressions": false,
         "max-classes-per-file": true,
+        "max-line-length": false,
+        "only-arrow-functions": {"options": ["allow-declarations"]},
         "whitespace": [
             true,
             "check-module",
@@ -56,13 +65,76 @@
         "no-any": true,
         "no-unused-expression": true,
         "no-unnecessary-initializer": true,
-        "await-promise": [true, "Thenable"]
+        "await-promise": [true, "Thenable"],
+        "completed-docs": false,
+        "no-unexternalized-strings": {"options": [{
+            "signatures": [
+                "localize",
+                "nls.localize"
+            ],
+            "keyIndex": 0,
+            "messageIndex": 1
+        }]},
+        "linebreak-style": false,
+        "quotemark": false,
+        "newline-per-chained-call": false,
+        "member-ordering": false,
+        "no-parameter-properties": false,
+        "no-inferrable-types": false,
+        "strict-type-predicates": false,
+        "increment-decrement": [true, "allow-post"],
+        "no-implicit-dependencies": false,
+        "ordered-imports": false,
+        "variable-name": false,
+        "prefer-readonly": false,
+        "comment-format": false,
+        "align": false,
+        "no-import-side-effect": false,
+        "switch-default": false,
+        "trailing-comma": false,
+        "switch-final-break": false,
+        "strict-string-expressions": false,
+        "newline-before-return": false,
+        "object-literal-sort-keys": false,
+        "no-suspicious-comment": false,
+        "export-name": false,
+        "no-magic-numbers": false,
+        "no-unsafe-any": false,
+        "no-unbound-method": false,
+        "detect-child-process": false,
+        "match-default-export-name": false,
+        "no-unnecessary-class": false,
+        "function-name": false,
+        "interface-name": false,
+        "cyclomatic-complexity": false,
+        "strict-comparisons": false,
+        "no-http-string": false,
+        "static-this": false,
+        "non-literal-fs-path": false,
+        "prefer-function-over-method": false,
+        "max-func-body-length": false,
+        "no-angle-bracket-type-assertion": false,
+        "no-for-in": false,
+        "arrow-return-shorthand": false,
+        "no-require-imports": false,
+        "no-string-literal": false,
+        "prefer-type-cast": false,
+        "no-non-null-assertion": false,
+        "ban-ts-ignore": false,
+        "no-namespace": false,
+        "no-unnecessary-local-variable": false,
+        "prefer-conditional-expression": false,
+        "no-reference": false,
+        "no-inner-html": false,
+        "no-single-line-block-comment": false
     },
     "rulesDirectory": ["node_modules/tslint-microsoft-contrib", "node_modules/tslint-no-unused-expression-chai/rules"],
     "linterOptions": {
         "exclude": [
-            "**/vscode.proposed.d.ts",
-            "src/test/*"
+            "node_modules/**",
+            "out/**",
+            "src/test/**",
+            "src/explorer/**"
         ]
     }
 }

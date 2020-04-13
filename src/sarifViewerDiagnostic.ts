@@ -1,25 +1,26 @@
 /*!
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from 'vscode';
-import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/Interfaces';
+import { ResultInfo, RunInfo, Location, MapLocationToLocalPathOptions } from './common/interfaces';
 import * as sarif from 'sarif';
-import { DiagnosticSeverity } from 'vscode';
 
-const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, DiagnosticSeverity> = new Map<sarif.Result.level, DiagnosticSeverity>([
-    [ "error", DiagnosticSeverity.Error],
-    [ "none", DiagnosticSeverity.Information],
-    [ "note", DiagnosticSeverity.Information],
-    [ "warning", DiagnosticSeverity.Warning],
+const sarifLevelToVsCodeSeverityMap: Map<sarif.Result.level, vscode.DiagnosticSeverity> = new Map<sarif.Result.level, vscode.DiagnosticSeverity>([
+    [ 'error', vscode.DiagnosticSeverity.Error],
+    [ 'none', vscode.DiagnosticSeverity.Information],
+    [ 'note', vscode.DiagnosticSeverity.Information],
+    [ 'warning', vscode.DiagnosticSeverity.Warning],
 ]);
 
 /**
  * Translates the Result level to a DiagnosticSeverity
  * @param level severity level for the result in the sarif file
  */
-function getSeverity(level: sarif.Result.level): DiagnosticSeverity {
-    return sarifLevelToVsCodeSeverityMap.get(level) || DiagnosticSeverity.Warning;
+function getSeverity(level: sarif.Result.level): vscode.DiagnosticSeverity {
+    return sarifLevelToVsCodeSeverityMap.get(level) || vscode.DiagnosticSeverity.Warning;
 }
 
 /**
@@ -38,9 +39,9 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
         public readonly resultInfo: ResultInfo,
         public readonly rawResult: sarif.Result,
         private currentLocation: Location) {
-        super(currentLocation.range, resultInfo.message.text || "No message", getSeverity(resultInfo.severityLevel));
+        super(currentLocation.range, resultInfo.message.text || localize("daignostic.noMessage", "No message"), getSeverity(resultInfo.severityLevel));
         this.code = resultInfo.ruleId;
-        this.source = resultInfo.runInfo.toolName || "Unknown tool";
+        this.source = resultInfo.runInfo.toolName || localize('daignostic.unknownTool', "Unknown tool");
     }
 
     /**
@@ -56,7 +57,7 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
      */
     public updateToMappedLocation(mappedLocation: Location): void {
         if (!mappedLocation.mappedToLocalPath) {
-            throw new Error("Only expect mapped locations");
+            throw new Error('Only expect mapped locations');
         }
 
         this.currentLocation = mappedLocation;

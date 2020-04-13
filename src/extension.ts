@@ -2,17 +2,20 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+nls.config({locale: process.env.VSCODE_NLS_CONFIG});
+
 import { ExtensionContext } from "vscode";
-import { CodeFlowCodeLensProvider } from "./CodeFlowCodeLens";
-import { CodeFlowDecorations } from "./CodeFlowDecorations";
-import { ExplorerController } from "./ExplorerController";
-import { FileConverter } from "./FileConverter";
-import { LogReader } from "./LogReader";
-import { SVCodeActionProvider } from "./SVCodeActionProvider";
-import { Utilities } from "./Utilities";
-import { ResultsListController } from "./ResultsListController";
-import { FileMapper } from "./FileMapper";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { CodeFlowCodeLensProvider } from "./codeFlowCodeLens";
+import { CodeFlowDecorations } from "./codeFlowDecorations";
+import { ExplorerController } from "./explorerController";
+import { FileConverter } from "./fileConverter";
+import { LogReader } from "./logReader";
+import { SVCodeActionProvider } from "./svCodeActionProvider";
+import { Utilities } from "./utilities";
+import { ResultsListController } from "./resultsListController";
+import { FileMapper } from "./fileMapper";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 // This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
 // If you don't do this... you crash using the extension methods.
@@ -23,7 +26,7 @@ import './utilities/stringUtilities';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export async function activate(context: ExtensionContext): Promise<void> {
+export function activate(context: ExtensionContext): void {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 

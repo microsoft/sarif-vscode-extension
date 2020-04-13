@@ -2,21 +2,24 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 import * as path from "path";
 import * as sarif from "sarif";
 
-import { LocationFactory } from "./factories/LocationFactory";
-import { ResultInfoFactory } from "./factories/ResultInfoFactory";
-import { RunInfoFactory } from "./factories/RunInfoFactory";
+import { LocationFactory } from "./factories/locationFactory";
+import { ResultInfoFactory } from "./factories/resultInfoFactory";
+import { RunInfoFactory } from "./factories/runInfoFactory";
 
 import { Disposable, Progress, ProgressLocation, ProgressOptions, TextDocument, Uri, window, workspace } from "vscode";
-import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/Interfaces";
-import { FileConverter } from "./FileConverter";
-import { ProgressHelper } from "./ProgressHelper";
-import { SarifViewerVsCodeDiagnostic } from "./SarifViewerDiagnostic";
-import { CodeFlowFactory } from "./factories/CodeFlowFactory";
-import { Utilities } from "./Utilities";
-import { SVDiagnosticCollection } from "./SVDiagnosticCollection";
+import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/interfaces";
+import { FileConverter } from "./fileConverter";
+import { ProgressHelper } from "./progressHelper";
+import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
+import { CodeFlowFactory } from "./factories/codeFlowFactory";
+import { Utilities } from "./utilities";
+import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
 /**
  * Optinos used when readining\import SARIF files.
@@ -62,7 +65,7 @@ export class LogReader implements Disposable {
      * When a sarif document opens we read it and sync to the list of issues to add it to the problems panel
      * @param doc document that was opened
      */
-    public onDocumentOpened(doc: TextDocument): Promise<void> {
+    public async onDocumentOpened(doc: TextDocument): Promise<void> {
         return Utilities.isSarifFile(doc) ? this.read(doc, { synchronizeDiagnosticsCollection: true }) : Promise.resolve();
     }
 
@@ -95,7 +98,7 @@ export class LogReader implements Disposable {
             const pOptions: ProgressOptions = {
                 cancellable: false,
                 location: ProgressLocation.Notification,
-                title: "Processing " + path.basename(doc.fileName),
+                title: localize('logReader.proecssingTitle', "Processing {0}", path.basename(doc.fileName)),
             };
 
             return window.withProgress(pOptions,
@@ -104,12 +107,15 @@ export class LogReader implements Disposable {
                     let runInfo: RunInfo;
 
                     let docMapping: JsonMapping;
-                    await ProgressHelper.Instance.setProgressReport("Parsing Sarif file");
+                    await ProgressHelper.Instance.setProgressReport(localize('logReader.processingSarifFile', "Parsing Sarif file"));
                     try {
-                        const jsonMap: JsonMap = require("json-source-map");
+                        const jsonMap: JsonMap = require('json-source-map');
                         docMapping = jsonMap.parse(doc.getText());
                     } catch (error) {
-                        await window.showErrorMessage(`Sarif Viewer: Cannot display results for '${doc.fileName}' because: ${error.message}`);
+                        await window.showErrorMessage(
+                            localize(
+                                "logReader.jsonFileReadingError", "Sarif Viewer: Cannot display results for '{0}' because: {1}",
+                                doc.fileName, error.message));
                         return;
                     }
 
@@ -117,8 +123,9 @@ export class LogReader implements Disposable {
                     const log: sarif.Log = docMapping.data;
 
                     if (!log.$schema) {
-                        await window.showErrorMessage(`Sarif Viewer:
-                        Cannot display results for '${doc.fileName}' because the shema was not defined.`);
+                        await window.showErrorMessage(
+                            localize('logReader.schemaNotDefined', "Sarif Viewer: Cannot display results for '{0}' because the shema was not defined.",
+                            doc.fileName));
                         return;
                     }
 
@@ -137,7 +144,8 @@ export class LogReader implements Disposable {
                         }
 
                         if (run.results) {
-                            await ProgressHelper.Instance.setProgressReport(`Loading ${run.results.length} Results`);
+                            await ProgressHelper.Instance.setProgressReport(
+                                localize('logReader.loadingResults', "Loading {0} Results", run.results.length));
                             await this.readResults(runInfo, run.results, run.tool, doc.uri, runIndex);
                         }
                     }
@@ -177,7 +185,7 @@ export class LogReader implements Disposable {
             if (showIncrement && resultIndex >= nextIncrement) {
                 nextIncrement = nextIncrement + interval;
                 percent = percent + 10;
-                const progressMsg: string = `Loading ${results.length} Results: ${percent}% completed`;
+                const progressMsg: string = localize('logReader.loadingResultsPercentage', "Loading {0} Results: {1}% completed", results.length, percent);
                 await ProgressHelper.Instance.setProgressReport(progressMsg, 10);
             }
             const sarifResult: sarif.Result = results[resultIndex];

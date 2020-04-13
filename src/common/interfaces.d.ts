@@ -5,7 +5,7 @@
 // ********************************************************/
 import * as sarif from "sarif";
 import { Command, Position, Range, Uri, Event } from "vscode";
-import { MessageType, SeverityLevelOrder, KindOrder, BaselineOrder } from "./Enums";
+import { MessageType, SeverityLevelOrder, KindOrder, BaselineOrder } from "./enums";
 
 /**
 * Interface for options to set while creating an html element

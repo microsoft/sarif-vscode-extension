@@ -6,7 +6,7 @@
 import * as assert from "assert";
 import * as sarif from "sarif";
 import { Range } from "vscode";
-import { LocationFactory } from "../factories/LocationFactory";
+import { LocationFactory } from "../factories/locationFactory";
 
 suite("parseRange", () => {
     test("Undefined range", async () => {

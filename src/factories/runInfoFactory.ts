@@ -4,8 +4,8 @@
 
 import * as path from "path";
 import * as sarif from "sarif";
-import { RunInfo } from "../common/Interfaces";
-import { Utilities } from "../Utilities";
+import { RunInfo } from "../common/interfaces";
+import { Utilities } from "../utilities";
 
 let nextRunInfoId: number = 0;
 
@@ -52,14 +52,14 @@ export namespace RunInfoFactory {
         }
 
         if (run.automationDetails  && run.automationDetails.id !== undefined) {
-            const splitId: string[] = run.automationDetails.id.split("/");
+            const splitId: string[] = run.automationDetails.id.split('/');
             const identifier: string | undefined = splitId.pop();
-            if (identifier !== "") {
+            if (identifier !== '') {
                 automationIdentifier = identifier;
             }
 
-            const category: string = splitId.join("/");
-            if (identifier !== "") {
+            const category: string = splitId.join('/');
+            if (identifier !== '') {
                 automationCategory = category;
             }
         }
