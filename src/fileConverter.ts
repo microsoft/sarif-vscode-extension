@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { SarifVersion } from "./common/interfaces";
 import { Utilities } from "./utilities";
 import { ChildProcess, spawn } from "child_process";
-import multiToolPath from "@microsoft/sarif-multitool";
+import * as nodeModulesMultiToolPath from "@microsoft/sarif-multitool";
 
 import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -20,7 +20,7 @@ export class FileConverter {
         FileConverter.registerCommands(extensionContext);
     }
 
-    private  static registerCommands(extensionContext: vscode.ExtensionContext): void {
+    private static registerCommands(extensionContext: vscode.ExtensionContext): void {
         extensionContext.subscriptions.push(
             vscode.commands.registerCommand('extension.sarif.Convert', FileConverter.selectConverter),
         );
@@ -203,9 +203,7 @@ export class FileConverter {
         const errorData: string[] = [];
         const converted: boolean = await new Promise<boolean>((resolve) => {
             // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
-            // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
-            // can be over-ridden for testing.
-            const proc: ChildProcess =  spawn(multiToolPath, ['transform', doc.uri.fsPath, '-o', fileOutputPath, '-p', '-f']);
+            const proc: ChildProcess =  spawn(FileConverter.multiToolPath, ['transform', doc.uri.fsPath, '-o', fileOutputPath, '-p', '-f']);
 
             proc.stderr.on('data', (data) => {
                 errorData.push(data.toString());
@@ -273,7 +271,7 @@ export class FileConverter {
      */
     private static convert(uri: vscode.Uri, tool: string): void {
         const output: string = `${Utilities.generateTempPath(uri.fsPath)}.sarif`;
-        const proc: ChildProcess = spawn(multiToolPath,
+        const proc: ChildProcess = spawn(FileConverter.multiToolPath,
             ['convert', '-t', tool, '-o', output, '-p', '-f', uri.fsPath],
         );
 
@@ -381,5 +379,14 @@ export class FileConverter {
         const rawSchemaVersion: string = matchArray[0].replace('.json', '');
 
         return FileConverter.parseVersion(rawSchemaVersion);
+    }
+
+    /**
+     * Returns the path to the multi-tool.
+     * The path can be overridden by setting 'sarifViewer.multiToolPath'
+     * in the process environment.
+     */
+    private static get multiToolPath(): string {
+        return process.env['sarifViewer.multiToolPath'] || nodeModulesMultiToolPath;
     }
 }
