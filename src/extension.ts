@@ -26,7 +26,7 @@ import './utilities/stringUtilities';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: ExtensionContext): void {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
     // Read the initial set of open SARIF files
-    const reader: LogReader = (new LogReader());
+    const reader: LogReader = ();
     context.subscriptions.push(reader);
 
     // Listen for new sarif files to open or close

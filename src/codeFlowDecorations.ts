@@ -348,38 +348,38 @@ export class CodeFlowDecorations implements Disposable {
 
     private static LocationDecorationType = window.createTextEditorDecorationType({
         dark: {
-            backgroundColor: `rgba(50,50,200,.5)`,
+            backgroundColor: 'rgba(50,50,200,.5)',
         },
         light: {
-            backgroundColor: `rgba(50,50,200,.3)`,
+            backgroundColor: 'rgba(50,50,200,.3)',
         },
-        overviewRulerColor: `blue`,
+        overviewRulerColor: 'blue',
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static SelectionDecorationType = window.createTextEditorDecorationType({
-        borderStyle: `solid`,
-        borderWidth: `1px`,
+        borderStyle: 'solid',
+        borderWidth: '1px',
         dark: {
-            borderColor: `white`,
+            borderColor: 'white',
         },
         light: {
-            borderColor: `black`,
+            borderColor: 'black',
         },
-        overviewRulerColor: `red`,
+        overviewRulerColor: 'red',
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
 
     private static UnimportantLocationDecorationType = window.createTextEditorDecorationType({
         dark: {
-            backgroundColor: `rgba(150,150,150,.4)`,
+            backgroundColor: 'rgba(150,150,150,.4)',
         },
         light: {
-            backgroundColor: `rgba(150,150,150,.4)`,
+            backgroundColor: 'rgba(150,150,150,.4)',
         },
-        overviewRulerColor: `grey`,
+        overviewRulerColor: 'grey',
         overviewRulerLane: OverviewRulerLane.Left,
         rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
@@ -413,8 +413,8 @@ export class CodeFlowDecorations implements Disposable {
 
             beforeDecoration = {
                 before: {
-                    height: `16px`,
-                    width: `16px`,
+                    height: '16px',
+                    width: '16px',
                 },
                 dark: {
                     before: {

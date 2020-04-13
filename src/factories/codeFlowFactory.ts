@@ -10,7 +10,7 @@ import { LocationFactory } from "./locationFactory";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
-import { sendCFSelectionToExplorerCommand } from "../codeFlowDecorations";
+import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 

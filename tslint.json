@@ -45,7 +45,6 @@
                 "variable-declaration": "nospace"
             }
         ],
-        "linebreak-style": {"options": ["CRLF"]},
         "no-relative-imports": {"severity": "off"},
         "strict-boolean-expressions": false,
         "max-classes-per-file": true,
@@ -76,6 +75,7 @@
             "keyIndex": 0,
             "messageIndex": 1
         }]},
+        "linebreak-style": false,
         "quotemark": false,
         "newline-per-chained-call": false,
         "member-ordering": false,
@@ -133,7 +133,8 @@
         "exclude": [
             "node_modules/**",
             "out/**",
-            "src/test/**"
+            "src/test/**",
+            "src/explorer/**"
         ]
     }
 }
