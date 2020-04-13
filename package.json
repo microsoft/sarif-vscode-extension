@@ -245,6 +245,7 @@
         "json-source-map": "^0.4.0",
         "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1",
-        "requirejs": "^2.3.6"
+        "requirejs": "^2.3.6",
+        "vscode-nls": "^4.1.2"
     }
 }
