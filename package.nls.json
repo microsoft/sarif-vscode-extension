@@ -64,7 +64,7 @@
     "logReader.jsonFileReadingError": "Sarif Viewer: Cannot display results for '{0}' because: {1}",
     "logReader.schemaNotDefined": "Sarif Viewer: Cannot display results for '{0}' because the shema was not defined.",
     "logReader.loadingResults": "Loading {0} Results",
-    "logReader.loadingResultsPercentage": "`Loading {0} Results: {1}% completed`",
+    "logReader.loadingResultsPercentage": "Loading {0} Results: {1}% completed`",
 
     "column.baselineState.description": "The state of a result relative to a baseline of a previous run.",
     "column.baselineState.title": "Baseline",
