@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { SarifVersion } from "./common/interfaces";
 import { Utilities } from "./utilities";
 import { ChildProcess, spawn } from "child_process";
-import * as nodeModulesMultiToolPath from "@microsoft/sarif-multitool";
+import multitoolPath from "@microsoft/sarif-multitool";
 
 import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -387,6 +387,6 @@ export class FileConverter {
      * in the process environment.
      */
     private static get multiToolPath(): string {
-        return process.env['sarifViewer.multiToolPath'] || nodeModulesMultiToolPath;
+        return process.env['sarifViewer.multiToolPath'] || multitoolPath;
     }
 }
