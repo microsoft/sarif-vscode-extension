@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { SarifVersion } from "./common/Interfaces";
 import { Utilities } from "./Utilities";
 import { ChildProcess, spawn } from "child_process";
-import * as nodeModulesMultiToolPath from "@microsoft/sarif-multitool";
+import multitoolPath from "@microsoft/sarif-multitool";
 
 /**
  * Handles converting a non sarif static analysis file to a sarif file via the sarif-sdk multitool
@@ -385,6 +385,6 @@ export class FileConverter {
      * in the process environment.
      */
     private static get multiToolPath(): string {
-        return process.env['sarifViewer.multiToolPath'] || nodeModulesMultiToolPath;
+        return process.env['sarifViewer.multiToolPath'] || multitoolPath;
     }
 }

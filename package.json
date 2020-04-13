@@ -207,10 +207,10 @@
         "tslint-no-unused-expression-chai": "^0.1.4"
     },
     "dependencies": {
+        "@microsoft/sarif-multitool": "^2.2.2",
         "json-source-map": "^0.4.0",
         "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1",
         "requirejs": "^2.3.6",
-        "@microsoft/sarif-multitool": "2.2.2"
     }
 }
