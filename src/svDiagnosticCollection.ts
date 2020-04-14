@@ -9,19 +9,7 @@ import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range,
 import { RunInfo, Location } from "./common/interfaces";
 import { Utilities } from "./utilities";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
-import { ReadResult } from './logReader';
-
-export interface AddReadResultsOptions {
-    /**
-     * Supresses firing diagnostic changed events while adding the results.
-     */
-    supressEventsDuringAdd: boolean;
-
-    /**
-     * Synchronizes the VSCode problems pane and the explorer view when all results have been added.
-     */
-    synchronizeUI: boolean;
-}
+import { ParseResults } from './logReader';
 
 export interface SVDiagnosticsChangedEvent {
     diagnostics: SarifViewerVsCodeDiagnostic[];
@@ -143,7 +131,7 @@ export class SVDiagnosticCollection implements Disposable {
      * After you finish adding all of the new diagnostics, call syncDiagnostics to get them added to the problems panel
      * @param issue diagnostic to add to the problems panel
      */
-    public add(issue: SarifViewerVsCodeDiagnostic, options: { supressEvents: boolean }): void {
+    public add(issue: SarifViewerVsCodeDiagnostic): void {
         if (issue.location.mappedToLocalPath) {
             this.addToCollection(this.mappedIssuesCollection, issue);
         } else {
@@ -153,12 +141,10 @@ export class SVDiagnosticCollection implements Disposable {
             this.addToCollection(this.unmappedIssuesCollection, issue);
         }
 
-        if (!options.supressEvents) {
-            this.diagnosticCollectionChangedEventEmitter.fire({
-                diagnostics: [issue],
-                type: 'Add'
-            });
-        }
+        this.diagnosticCollectionChangedEventEmitter.fire({
+            diagnostics: [issue],
+            type: 'Add'
+        });
     }
 
     /**
@@ -218,20 +204,18 @@ export class SVDiagnosticCollection implements Disposable {
      * Adds read results to the collection of diagnostics.
      * @param readResults Results to add.
      */
-    public addReadResults(readResults: ReadResult[], options: AddReadResultsOptions): void {
+    public addReadResults(readResults: ParseResults[]): void {
         for (const readResult of readResults) {
             this.runInfoCollection.push(readResult.runInfo);
             for (const resultInfo of readResult.results) {
                 if (resultInfo.assignedLocation) {
                     const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(readResult.runInfo, resultInfo, resultInfo.rawResult, resultInfo.assignedLocation.mappedToLocalPath ? resultInfo.assignedLocation : resultInfo.resultLocationInSarifFile);
-                    this.add(diagnostic, { supressEvents: options.supressEventsDuringAdd });
+                    this.add(diagnostic);
                 }
             }
         }
 
-        if (options.synchronizeUI) {
-            this.syncIssuesWithDiagnosticCollection();
-        }
+        this.syncIssuesWithDiagnosticCollection();
     }
 
     /**

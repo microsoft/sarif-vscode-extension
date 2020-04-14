@@ -4,13 +4,15 @@
 
 import * as nls from 'vscode-nls';
 nls.config({locale: process.env.VSCODE_NLS_CONFIG});
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as vscode from "vscode";
+import * as path from "path";
 import { CodeFlowCodeLensProvider } from "./codeFlowCodeLens";
 import { CodeFlowDecorations } from "./codeFlowDecorations";
 import { ExplorerController } from "./explorerController";
-import { FileConverter } from "./fileConverter";
-import { LogReader, ReadResult } from "./logReader";
+import { FileConverter, UpgradeSarifOptions } from "./fileConverter";
+import { LogReader, LogReaderResult } from "./logReader";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { Utilities } from "./utilities";
 import { ResultsListController } from "./resultsListController";
@@ -26,7 +28,7 @@ import './utilities/stringUtilities';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): void {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
@@ -47,8 +49,7 @@ export function activate(context: ExtensionContext): void {
 
     context.subscriptions.push(new CodeFlowDecorations(explorerController, diagnosticCollection));
 
-    // Read the initial set of open SARIF files
-    const reader: LogReader = ();
+    const reader: LogReader = new LogReader();
     context.subscriptions.push(reader);
 
     // Listen for new sarif files to open or close
@@ -65,6 +66,14 @@ export function activate(context: ExtensionContext): void {
 }
 
 /**
+ * Clean up extension if it gets deactivated
+ */
+export function deactivate(): void {
+    // ToDo: rusty: Close html preview, unregister events, clear diagnostic collection
+    Utilities.removeSarifViewerTempDirectory();
+}
+
+/**
  * When a sarif document opens we read it and sync to the list of issues to add it to the problems panel
  * @param doc document that was opened
  */
@@ -73,8 +82,7 @@ async function onDocumentOpened(doc: vscode.TextDocument, logReader: LogReader, 
         return;
     }
 
-    const readResults: ReadResult[] = await logReader.read([doc.uri]);
-    diagnosticCollection.addReadResults(readResults, {supressEventsDuringAdd: true, synchronizeUI: true});
+    await openSarifFile(doc.uri, logReader, diagnosticCollection, { promptUserForUpgrade: true, openInTextEditor: true, closeOriginalFileOnUpgrade: true });
 }
 
 /**
@@ -85,8 +93,103 @@ async function onDocumentOpened(doc: vscode.TextDocument, logReader: LogReader, 
 async function readOpenedDocuments(logReader: LogReader, diagnosticCollection: SVDiagnosticCollection): Promise<void> {
     // Spin through VSCode's documents and read any SARIF files that are opened.
     const urisToParse: vscode.Uri[] = vscode.workspace.textDocuments.filter((doc) => Utilities.isSarifFile(doc)).map((doc) => doc.uri);
-    const readResults: ReadResult[] = await logReader.read(urisToParse);
-    diagnosticCollection.addReadResults(readResults, {supressEventsDuringAdd: true, synchronizeUI: true});
+    for (const uriToParse of urisToParse) {
+        await openSarifFile(uriToParse, logReader, diagnosticCollection, { promptUserForUpgrade: true, openInTextEditor: true, closeOriginalFileOnUpgrade: true });
+    }
+}
+
+/**
+ * Used to control options when opening a SARIF file.
+ */
+interface OpenSarifFileOptions extends UpgradeSarifOptions {
+    /**
+     * Indicates whether to open the file (if not already open) and display it to the user.
+     */
+    openInTextEditor: boolean;
+
+    /**
+     * Indicates whether to close the original SARIF log file if an upgrade is performed.
+     */
+    closeOriginalFileOnUpgrade: boolean;
+}
+
+function isSarifFileOpenInTextEditor(sarifFile: vscode.Uri): boolean {
+    return vscode.window.visibleTextEditors.filter((textEditor) => textEditor.document.uri.toString() === sarifFile.toString()).length !== 0;
+}
+
+async function openSarifFileIfNotOpen(sarifFile: vscode.Uri): Promise<void> {
+    if (isSarifFileOpenInTextEditor(sarifFile))  {
+        return;
+    }
+
+    await vscode.commands.executeCommand('vscode.open', sarifFile, {
+            preserveFocus: false,
+            preview: false,
+            viewColumn: vscode.ViewColumn.One,
+    });
+}
+
+/**
+ * Enumerates open workspace files and parse them and places them into the diagnostic collection.
+ * @param logReader The log reader that will be used to parse the results.
+ * @param diagnosticCollection The diagnostic collection to add the results too.
+ * @param options Options controlling the upgrade prompt if a SARIF file is at an earlier schema version.
+ */
+async function openSarifFile(sarifFile: vscode.Uri,  logReader: LogReader, diagnosticCollection: SVDiagnosticCollection, options: OpenSarifFileOptions): Promise<void> {
+    if (!sarifFile.isFile() || !Utilities.isSarifFile(sarifFile.fsPath)) {
+        return;
+    }
+    let logReaderResult: LogReaderResult = await logReader.read(sarifFile);
+
+    // No upgraded need. Results are ready.
+    if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'No') {
+        diagnosticCollection.addReadResults(logReaderResult.parseResults);
+        if (options.openInTextEditor) {
+            await openSarifFileIfNotOpen(sarifFile);
+        }
+        return;
+    }
+
+    if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Schema Undefined') {
+        if (!logReaderResult.upgradeCheckInformation.parsedSchemaVersion) {
+            await vscode.window.showErrorMessage(
+                localize('logReader.schemaNotDefined', "Sarif Viewer: Cannot display results for '{0}' because the shema was not defined.",
+                    path.basename(sarifFile.fsPath)));
+        }
+        return;
+    }
+
+    if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Schema Unknown' && logReaderResult.sarifLog) {
+        await vscode.window.showErrorMessage(localize(
+            'converterTool.UpgraderErrorMessage',
+            "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.",
+            logReaderResult.sarifLog.version, logReaderResult.sarifLog.$schema));
+        return;
+    }
+
+    if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Yes') {
+        const upgradedUri: vscode.Uri | undefined = await FileConverter.upgradeSarif(sarifFile, logReaderResult.upgradeCheckInformation.parsedVersion, logReaderResult.upgradeCheckInformation.parsedSchemaVersion, options);
+        if (!upgradedUri) {
+            return;
+        }
+
+        if (!options.openInTextEditor) {
+            logReaderResult = await logReader.read(upgradedUri);
+
+            diagnosticCollection.addReadResults(logReaderResult.parseResults);
+            return;
+        }
+
+        if (options.closeOriginalFileOnUpgrade) {
+            const activeTextEditor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+
+            if (activeTextEditor && activeTextEditor.document.fileName === sarifFile.fsPath) {
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+            }
+        }
+
+        await openSarifFileIfNotOpen(upgradedUri);
+    }
 }
 
 /**
@@ -98,12 +201,4 @@ function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiag
     if (Utilities.isSarifFile(doc)) {
         diagnosticCollection.removeRuns(doc.fileName);
     }
-}
-
-/**
- * Clean up extension if it gets deactivated
- */
-export function deactivate(): void {
-    // ToDo: rusty: Close html preview, unregister events, clear diagnostic collection
-    Utilities.removeSarifViewerTempDirectory();
 }
