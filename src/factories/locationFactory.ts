@@ -151,41 +151,39 @@ export namespace LocationFactory {
         let endcol: number = 1;
         let eol: boolean = false;
 
-        if (region !== undefined) {
-            if (region.startLine !== undefined) {
-                startline = region.startLine - 1;
-                if (region.startColumn !== undefined) {
-                    startcol = region.startColumn - 1;
-                }
+        if (region.startLine !== undefined) {
+            startline = region.startLine - 1;
+            if (region.startColumn !== undefined) {
+                startcol = region.startColumn - 1;
+            }
 
-                if (region.endLine !== undefined) {
-                    endline = region.endLine - 1;
-                } else {
-                    endline = startline;
-                }
+            if (region.endLine !== undefined) {
+                endline = region.endLine - 1;
+            } else {
+                endline = startline;
+            }
 
-                if (region.endColumn !== undefined) {
-                    endcol = region.endColumn - 1;
-                } else if (region.snippet !== undefined) {
-                    if (region.snippet.text !== undefined) {
-                        endcol = region.snippet.text.length - 2;
-                    } else if (region.snippet.binary !== undefined) {
-                        endcol = Buffer.from(region.snippet.binary, 'base64').toString().length;
-                    }
-                } else {
-                    endline++;
-                    endcol = 0;
-                    eol = true;
+            if (region.endColumn !== undefined) {
+                endcol = region.endColumn - 1;
+            } else if (region.snippet !== undefined) {
+                if (region.snippet.text !== undefined) {
+                    endcol = region.snippet.text.length - 2;
+                } else if (region.snippet.binary !== undefined) {
+                    endcol = Buffer.from(region.snippet.binary, 'base64').toString().length;
                 }
-            } else if (region.charOffset !== undefined) {
-                startline = 0;
-                startcol = region.charOffset;
+            } else {
+                endline++;
+                endcol = 0;
+                eol = true;
+            }
+        } else if (region.charOffset !== undefined) {
+            startline = 0;
+            startcol = region.charOffset;
 
-                if (region.charLength !== undefined) {
-                    endcol = region.charLength + region.charOffset;
-                } else {
-                    endcol = startcol;
-                }
+            if (region.charLength !== undefined) {
+                endcol = region.charLength + region.charOffset;
+            } else {
+                endcol = startcol;
             }
         }
 

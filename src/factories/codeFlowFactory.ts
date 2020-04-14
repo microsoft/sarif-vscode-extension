@@ -177,11 +177,9 @@ export namespace CodeFlowFactory {
             }
 
             if (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel !== undefined) {
-                if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
-                (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
+                if (tFLoc.nestingLevel < nextTFLoc.nestingLevel) {
                     isParentFlag = true;
-                } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
-                    (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
+                } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel) {
                     isLastChildFlag = true;
                 }
             }
