@@ -18,7 +18,6 @@ import { JsonMap, JsonMapping, ResultInfo, RunInfo, Location } from "./common/in
 import { FileConverter, UpgradeCheckInformation } from "./fileConverter";
 import { ProgressHelper } from "./progressHelper";
 import { CodeFlowFactory } from "./factories/codeFlowFactory";
-import { Utilities } from "./utilities";
 
 /**
  * Optinos used when readining\import SARIF files.
@@ -92,7 +91,7 @@ export class LogReader implements Disposable {
      * @param sarifFile The URI to a sarif file to parse.
      */
     public async read(sarifFile: Uri): Promise<LogReaderResult> {
-        if (!sarifFile.isFile() && Utilities.isSarifFile(sarifFile.fsPath)) {
+        if (!sarifFile.isSarifFile()) {
             throw new Error('The URI passed in is expected to be a SARIF log file');
         }
 

@@ -38,5 +38,10 @@ declare module 'vscode' {
          * Returns true if the scheme of the URI is 'file'.
          */
         isFile(): boolean;
+
+        /**
+         * Returns true if the scheme of the URI represents a SARIF file.
+         */
+        isSarifFile(): boolean;
     }
 }

@@ -78,7 +78,7 @@ export function deactivate(): void {
  * @param doc document that was opened
  */
 async function onDocumentOpened(doc: vscode.TextDocument, logReader: LogReader, diagnosticCollection: SVDiagnosticCollection): Promise<void> {
-    if (!doc.uri.isFile() || !Utilities.isSarifFile(doc)) {
+    if (!doc.uri.isSarifFile()) {
         return;
     }
 
@@ -92,7 +92,7 @@ async function onDocumentOpened(doc: vscode.TextDocument, logReader: LogReader, 
  */
 async function readOpenedDocuments(logReader: LogReader, diagnosticCollection: SVDiagnosticCollection): Promise<void> {
     // Spin through VSCode's documents and read any SARIF files that are opened.
-    const urisToParse: vscode.Uri[] = vscode.workspace.textDocuments.filter((doc) => Utilities.isSarifFile(doc)).map((doc) => doc.uri);
+    const urisToParse: vscode.Uri[] = vscode.workspace.textDocuments.filter((doc) => doc.uri.isSarifFile()).map((doc) => doc.uri);
     for (const uriToParse of urisToParse) {
         await openSarifFile(uriToParse, logReader, diagnosticCollection, { promptUserForUpgrade: true, openInTextEditor: true, closeOriginalFileOnUpgrade: true });
     }
@@ -136,14 +136,14 @@ async function openSarifFileIfNotOpen(sarifFile: vscode.Uri): Promise<void> {
  * @param options Options controlling the upgrade prompt if a SARIF file is at an earlier schema version.
  */
 async function openSarifFile(sarifFile: vscode.Uri,  logReader: LogReader, diagnosticCollection: SVDiagnosticCollection, options: OpenSarifFileOptions): Promise<void> {
-    if (!sarifFile.isFile() || !Utilities.isSarifFile(sarifFile.fsPath)) {
+    if (!sarifFile.isSarifFile()) {
         return;
     }
     let logReaderResult: LogReaderResult = await logReader.read(sarifFile);
 
     // No upgraded need. Results are ready.
     if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'No') {
-        diagnosticCollection.addReadResults(logReaderResult.parseResults);
+        diagnosticCollection.addParseResults(logReaderResult.parseResults);
         if (options.openInTextEditor) {
             await openSarifFileIfNotOpen(sarifFile);
         }
@@ -176,7 +176,7 @@ async function openSarifFile(sarifFile: vscode.Uri,  logReader: LogReader, diagn
         if (!options.openInTextEditor) {
             logReaderResult = await logReader.read(upgradedUri);
 
-            diagnosticCollection.addReadResults(logReaderResult.parseResults);
+            diagnosticCollection.addParseResults(logReaderResult.parseResults);
             return;
         }
 
@@ -198,7 +198,7 @@ async function openSarifFile(sarifFile: vscode.Uri,  logReader: LogReader, diagn
  * @param doc document that was closed
  */
 function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiagnosticCollection): void {
-    if (Utilities.isSarifFile(doc)) {
-        diagnosticCollection.removeRuns(doc.fileName);
+    if (doc.uri.isSarifFile()) {
+        diagnosticCollection.removeRuns(doc.uri);
     }
 }

@@ -154,12 +154,22 @@ export class FileConverter {
             };
         }
 
+        let schemaUri: vscode.Uri;
+        try {
+            schemaUri = vscode.Uri.parse(sarifLog.$schema, /*strict*/ true);
+        } catch {
+            return {
+                upgradedNeeded: 'Could Not Parse Schema',
+                parsedVersion
+            };
+        }
+
         // This is parsing the "$schema" property from the SARIF json.
         // I.e.
         // {
         //   "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
         //
-        const parsedSchemaVersion: SarifVersion | undefined = sarifLog.$schema !== undefined ? FileConverter.parseSchema(sarifLog.$schema) : undefined;
+        const parsedSchemaVersion: SarifVersion | undefined = sarifLog.$schema !== undefined ? FileConverter.parseSchema(schemaUri) : undefined;
         if (!parsedSchemaVersion) {
             return {
                 upgradedNeeded: 'Could Not Parse Schema',
@@ -167,8 +177,25 @@ export class FileConverter {
             };
         }
 
-        if (!sarifLog.$schema.startsWith('http://json.schemastore.org/sarif-') &&
-            !sarifLog.$schema.startsWith('https://schemastore.azurewebsites.net/schemas/json/sarif-')) {
+        if (!schemaUri.scheme.invariantEqual('http')) {
+            return {
+                upgradedNeeded: 'Schema Unknown',
+                parsedSchemaVersion,
+                parsedVersion
+            };
+        }
+
+        if (schemaUri.authority !== 'json.schemastore.org' &&
+            schemaUri.authority !== 'schemastore.azurewebsites.net') {
+                return {
+                    upgradedNeeded: 'Schema Unknown',
+                    parsedSchemaVersion,
+                    parsedVersion
+                };
+        }
+
+        if (!schemaUri.path.startsWith('/sarif-') &&
+            !schemaUri.path.startsWith('/schemas/json/sarif-')) {
             return {
                 upgradedNeeded: 'Schema Unknown',
                 parsedSchemaVersion,
@@ -284,7 +311,7 @@ export class FileConverter {
     }
 
     private static multiToolSchemaVersion: SarifVersion | undefined;
-    private static multiToolRawSchema = 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json';
+    private static multiToolRawSchema = vscode.Uri.parse('https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json', /*strict*/ true);
     private static multiToolVersion: SarifVersion | undefined;
     private static multiToolRawVersion: sarif.Log.version = '2.1.0';
     private static regExpVersion = /\d+\.\d+\.\d+-?(.+)?/;
@@ -414,13 +441,15 @@ export class FileConverter {
      * ex. "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json"
      * @param schema schema string from the sarif log to parse
      */
-    private static parseSchema(schema: string): SarifVersion | undefined {
+    private static parseSchema(schema: vscode.Uri): SarifVersion | undefined {
         const regEx: RegExp = new RegExp(FileConverter.regExpVersion);
-        const matchArray: RegExpExecArray | null = regEx.exec(schema);
+        const matchArray: RegExpExecArray | null = regEx.exec(schema.path);
         if (!matchArray || matchArray.length === 0) {
             return undefined;
         }
 
+        // The lower-case JSON is okay here because it is part of the schema URI
+        // which IS case sensitive.
         const rawSchemaVersion: string = matchArray[0].replace('.json', '');
 
         return FileConverter.parseVersion(rawSchemaVersion);

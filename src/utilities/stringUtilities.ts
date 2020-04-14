@@ -49,3 +49,12 @@ Uri.prototype.filePathEqual = function(this: Uri, other: string | Uri): boolean 
 Uri.prototype.isFile = function(this: Uri): boolean {
     return this.scheme.invariantEqual('file', 'Ignore Case');
 };
+
+Uri.prototype.isSarifFile = function(this: Uri): boolean {
+    if (!this.isFile()) {
+        return false;
+    }
+
+    const stringCheckUpperCase: string = this.fsPath.toLocaleUpperCase('root');
+    return stringCheckUpperCase.endsWith('.SARIF') || stringCheckUpperCase.endsWith('.SARIF.JSON');
+};

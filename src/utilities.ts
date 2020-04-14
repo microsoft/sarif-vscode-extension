@@ -545,22 +545,4 @@ export class Utilities {
         const allowedKeys: string[] = <sarif.ThreadFlowLocation.importance[]>['essential', 'important', 'unimportant'];
         return allowedKeys.indexOf(value) !== -1;
     }
-
-    /**
-     * Helper method to check if the document provided is a sarif file
-     * @param doc document to check if it's a sarif file
-     */
-    public static isSarifFile(doc: vscode.TextDocument | string): boolean {
-        // SARIF spec says that the file name can end in ".sarif" or ".sarif.json";
-        const stringCheck: (stringToCheck: string) => boolean = (stringToCheck) => {
-            const stringCheckUpperCase: string = stringToCheck.toLocaleUpperCase('root');
-            return stringCheckUpperCase.endsWith('.SARIF') || stringCheckUpperCase.endsWith('.SARIF.JSON');
-        };
-
-        if (typeof doc === 'string') {
-            return stringCheck(doc);
-        }
-
-        return doc.languageId === 'json' && stringCheck(doc.fileName);
-    }
 }

@@ -202,14 +202,14 @@ export class SVDiagnosticCollection implements Disposable {
 
     /**
      * Adds read results to the collection of diagnostics.
-     * @param readResults Results to add.
+     * @param parseResults Results to add.
      */
-    public addReadResults(readResults: ParseResults[]): void {
-        for (const readResult of readResults) {
-            this.runInfoCollection.push(readResult.runInfo);
-            for (const resultInfo of readResult.results) {
+    public addParseResults(parseResults: ParseResults[]): void {
+        for (const parseResult of parseResults) {
+            this.runInfoCollection.push(parseResult.runInfo);
+            for (const resultInfo of parseResult.results) {
                 if (resultInfo.assignedLocation) {
-                    const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(readResult.runInfo, resultInfo, resultInfo.rawResult, resultInfo.assignedLocation.mappedToLocalPath ? resultInfo.assignedLocation : resultInfo.resultLocationInSarifFile);
+                    const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(parseResult.runInfo, resultInfo, resultInfo.rawResult, resultInfo.assignedLocation.mappedToLocalPath ? resultInfo.assignedLocation : resultInfo.resultLocationInSarifFile);
                     this.add(diagnostic);
                 }
             }
@@ -220,12 +220,16 @@ export class SVDiagnosticCollection implements Disposable {
 
     /**
      * Itterates through the issue collections and removes any results that originated from the file
-     * @param path Path (including file) of the file that has the runs to be removed
+     * @param sarifFile Path (including file) of the file that has the runs to be removed
      */
-    public removeRuns(path: string): void {
+    public removeRuns(sarifFile: Uri): void {
+        if (!sarifFile.isSarifFile()) {
+            return;
+        }
+
         const runsToRemove: number[] = [];
         for (let i: number = this.runInfoCollection.length - 1; i >= 0; i--) {
-            if (this.runInfoCollection[i].sarifFileFullPath === path) {
+            if (this.runInfoCollection[i].sarifFileFullPath === sarifFile.fsPath) {
                 runsToRemove.push(this.runInfoCollection[i].id);
                 this.runInfoCollection.splice(i, 1);
             }
