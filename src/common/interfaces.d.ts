@@ -155,6 +155,7 @@ export interface ResultInfo {
     runId: number;
     severityLevel: sarif.Result.level;
     stacks: Stacks;
+    rawResult: sarif.Result;
 }
 
 export interface CodeFlow {

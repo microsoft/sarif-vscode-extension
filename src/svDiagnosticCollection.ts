@@ -5,10 +5,11 @@
 import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
-import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable, workspace, TextDocument, window, TextEditorSelectionChangeEvent } from "vscode";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, languages, Range, Uri, Event, EventEmitter, Disposable,  window, TextEditorSelectionChangeEvent } from "vscode";
 import { RunInfo, Location } from "./common/interfaces";
 import { Utilities } from "./utilities";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
+import { ParseResults } from './logReader';
 
 export interface SVDiagnosticsChangedEvent {
     diagnostics: SarifViewerVsCodeDiagnostic[];
@@ -85,11 +86,6 @@ export class SVDiagnosticCollection implements Disposable {
         // @ts-ignore: _maxDiagnosticsPerFile does exist on the DiagnosticCollection object
         SVDiagnosticCollection.MaxDiagCollectionSize = this.diagnosticCollection._maxDiagnosticsPerFile - 1;
 
-        // Subscribe to document close events so we can remove the diagnostics (problems) from VSCode's
-        // problem pane. (Note this only applies to SARIF files being closed).
-        // This should very likely be an option.
-        this.disposables.push(workspace.onDidCloseTextDocument(this.onDocumentClosed.bind(this)));
-
         // Subscribe to the text editor selection changed.
         // During selection changed, we will attempt to find a diagnostic that is in the "Selected"
         // range. If we find it, we will make that the active diagnostic (which in turn causes pretty much all the UI to update).
@@ -152,14 +148,6 @@ export class SVDiagnosticCollection implements Disposable {
     }
 
     /**
-     * Adds a RunInfo object to the runinfo collection and returns it's id
-     * @param runInfo RunInfo object to add to the collection
-     */
-    public addRunInfo(runInfo: RunInfo): void {
-        this.runInfoCollection.push(runInfo);
-    }
-
-    /**
      * Clears the Problems panel of diagnostics associated with the SARIF Extension
      * and clears all of the Diagnostics that have been added
      */
@@ -213,13 +201,35 @@ export class SVDiagnosticCollection implements Disposable {
     }
 
     /**
-     * Itterates through the issue collections and removes any results that originated from the file
-     * @param path Path (including file) of the file that has the runs to be removed
+     * Adds read results to the collection of diagnostics.
+     * @param parseResults Results to add.
      */
-    private removeRuns(path: string): void {
+    public addParseResults(parseResults: ParseResults[]): void {
+        for (const parseResult of parseResults) {
+            this.runInfoCollection.push(parseResult.runInfo);
+            for (const resultInfo of parseResult.results) {
+                if (resultInfo.assignedLocation) {
+                    const diagnostic: SarifViewerVsCodeDiagnostic = new SarifViewerVsCodeDiagnostic(parseResult.runInfo, resultInfo, resultInfo.rawResult, resultInfo.assignedLocation.mappedToLocalPath ? resultInfo.assignedLocation : resultInfo.resultLocationInSarifFile);
+                    this.add(diagnostic);
+                }
+            }
+        }
+
+        this.syncIssuesWithDiagnosticCollection();
+    }
+
+    /**
+     * Itterates through the issue collections and removes any results that originated from the file
+     * @param sarifFile Path (including file) of the file that has the runs to be removed
+     */
+    public removeRuns(sarifFile: Uri): void {
+        if (!sarifFile.isSarifFile()) {
+            return;
+        }
+
         const runsToRemove: number[] = [];
         for (let i: number = this.runInfoCollection.length - 1; i >= 0; i--) {
-            if (this.runInfoCollection[i].sarifFileFullPath === path) {
+            if (this.runInfoCollection[i].sarifFileFullPath === sarifFile.fsPath) {
                 runsToRemove.push(this.runInfoCollection[i].id);
                 this.runInfoCollection.splice(i, 1);
             }
@@ -323,17 +333,6 @@ export class SVDiagnosticCollection implements Disposable {
                 diagnostics: diagnosticsRemoved,
                 type: 'Remove'
             });
-        }
-    }
-
-    /**
-     * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
-     * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
-     * @param doc document that was closed
-     */
-    private onDocumentClosed(doc: TextDocument): void {
-        if (Utilities.isSarifFile(doc)) {
-            this.removeRuns(doc.fileName);
         }
     }
 

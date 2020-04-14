@@ -3,6 +3,7 @@
  */
 
 import * as assert from "assert";
+import * as vscode from "vscode";
 import { SarifVersion } from "../common/interfaces";
 import { FileConverter } from "../fileConverter";
 
@@ -160,7 +161,7 @@ suite("parseSchemaVersion", () => {
     function callParseSchema(version: string): SarifVersion {
         const schemaPrefix = "http://json.schemastore.org/sarif-";
         // @ts-ignore parseSchema is private but ingnoring for testing
-        return FileConverter.parseSchema(schemaPrefix + version);
+        return FileConverter.parseSchema(vscode.Uri.parse(`${schemaPrefix}${version}`, /*strict*/ true));
     }
 
     test("full csd version", () => {
@@ -191,7 +192,7 @@ suite("parseSchemaVersion", () => {
 
     test("2.1.0 with alternative schema with json end", () => {
         const ver = "2.1.0";
-        const fullVer = `https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`;
+        const fullVer = vscode.Uri.parse(`https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`, /*strict*/ true);
         // @ts-ignore parseSchema is private but ingnoring for testing
         const parsedVer = FileConverter.parseSchema(fullVer);
         assert.deepEqual(parsedVer, { major: 2, minor: 1, original: ver, sub: 0 } as SarifVersion);
@@ -199,7 +200,7 @@ suite("parseSchemaVersion", () => {
 
     test("full csd with alternative schema with json end", () => {
         const ver = "2.0.0-csd.2.beta.2018-9-10";
-        const fullVer = `https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`;
+        const fullVer =  vscode.Uri.parse(`https://githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-${ver}.json`, /*strict*/ true);
         // @ts-ignore parseSchema is private but ingnoring for testing
         const parsedVer = FileConverter.parseSchema(fullVer);
         assert.deepEqual(parsedVer, {
