@@ -88,13 +88,10 @@ export class LogReader implements Disposable {
     }
 
     /**
-     * Reads a sarif file, processing the results and adding them to the issues collection for display in problems panel
-     * @param doc text document to read
-     * @param options Optional flag to sync the issues after reading this file
+     * Reads and parses a SARIF file.
+     * @param sarifFile The URI to a sarif file to parse.
      */
     public async read(sarifFile: Uri): Promise<LogReaderResult> {
-        const readResults: ParseResults[] = [];
-
         if (!sarifFile.isFile() && Utilities.isSarifFile(sarifFile.fsPath)) {
             throw new Error('The URI passed in is expected to be a SARIF log file');
         }
@@ -108,6 +105,8 @@ export class LogReader implements Disposable {
         let upgradeCheckInformation: UpgradeCheckInformation = {
             upgradedNeeded: 'No'
         };
+
+        const readResults: ParseResults[] = [];
 
         await window.withProgress(pOptions, async (progress: Progress<{ message?: string; increment?: number }>, cancleToken): Promise<void> => {
             ProgressHelper.Instance.Progress = progress;
@@ -134,6 +133,8 @@ export class LogReader implements Disposable {
             this.sarifJSONMapping.set(sarifFile.toString(), docMapping);
             const log: sarif.Log = docMapping.data;
 
+            // Check to see if the SARIF log file needs updating, if it does
+            // stop and let the caller handle it.
             upgradeCheckInformation = FileConverter.sarifLogNeedsUpgrade(log);
 
             if (upgradeCheckInformation.upgradedNeeded !== 'No') {
@@ -151,7 +152,7 @@ export class LogReader implements Disposable {
 
                 if (sarifRun.results) {
                     await ProgressHelper.Instance.setProgressReport(localize('logReader.loadingResults', "Loading {0} Results", sarifRun.results.length));
-                    resultInfos = await this.readResults(runInfo, sarifRun.results, sarifRun.tool, sarifFile, runIndex);
+                    resultInfos = await this.readResultsFromRun(runInfo, sarifRun.results, sarifRun.tool, sarifFile, runIndex);
                 }
 
                 readResults.push({
@@ -176,7 +177,7 @@ export class LogReader implements Disposable {
      * @param docUri Uri of the sarif file
      * @param runIndex Index of the run in the sarif file
      */
-    private async readResults(
+    private async readResultsFromRun(
         runInfo: RunInfo, results: sarif.Result[], tool: sarif.Tool, docUri: Uri, runIndex: number,
     ): Promise<ResultInfo[]> {
         const resultInfos: ResultInfo[] = [];
