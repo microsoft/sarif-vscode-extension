@@ -436,10 +436,6 @@ export class ResultsListController implements Disposable {
                 continue;
             }
 
-            if (!this.groupBy) {
-                continue;
-            }
-
             const resultsListValue: ResultsListValue | undefined = row[this.groupBy];
             if (!resultsListValue) {
                 continue;
@@ -484,13 +480,18 @@ export class ResultsListController implements Disposable {
                     valueB = a[this.sortBy.column];
                 }
 
-                if (valueA === undefined ||
-                    valueA.value === undefined ||
-                    valueB === undefined ||
-                    valueB.value === undefined) {
-                    if ((valueA === undefined || valueA.value === undefined) && (valueB === undefined || valueB.value === undefined)) {
+                if (valueA === undefined || valueB === undefined) {
+                    if (valueA === undefined && valueB === undefined) {
                         comp = 0;
-                    } else if (valueB === undefined || valueB.value === undefined) {
+                    } else if (valueB === undefined) {
+                        comp = 1;
+                    } else {
+                        comp = -1;
+                    }
+                } else if (valueA.value === undefined || valueB.value === undefined) {
+                    if (valueA.value === undefined && valueB.value === undefined) {
+                        comp = 0;
+                    } else if (valueB.value === undefined) {
                         comp = 1;
                     } else {
                         comp = -1;
