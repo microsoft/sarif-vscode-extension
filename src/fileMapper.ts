@@ -137,7 +137,7 @@ export class FileMapper implements Disposable {
             this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
             this.saveBasePath(origUri, uri, uriBase);
             this.fileRemapping.forEach((value: Uri | undefined, key: string) => {
-                if (value === null) {
+                if (!value) {
                     this.tryRebaseUri(Uri.file(key));
                 }
             });

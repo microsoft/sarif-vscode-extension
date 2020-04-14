@@ -312,28 +312,31 @@ export interface ResultsListRow {
     sarifFile: ResultsListStringValue,
     severityLevel: ResultsListSeverityValue,
     tool: ResultsListStringValue,
-    readonly [key: string]: ResultsListValue | ResultsListStringValue | ResultsListNumberValue | ResultsListCustomOrderValue | ResultsListPositionValue;
+    readonly [key: string]: ResultsListStringValue | ResultsListNumberValue | ResultsListCustomOrderValue | ResultsListPositionValue | undefined;
 }
 
+export type ResultsListValueKind = 'Base' | 'String' | 'Number' | 'Position' | 'Custom Order';
 export interface ResultsListValue {
+    kind: ResultsListValueKind,
     value?: any,
     tooltip?: string,
 }
 
 export interface ResultsListStringValue extends ResultsListValue {
-    value?: string,
+    kind: 'String',
 }
 
 export interface ResultsListNumberValue extends ResultsListValue {
-    value?: number
+    kind: 'Number',
 }
 
 export interface ResultsListPositionValue extends ResultsListValue {
+    kind: 'Position',
     pos?: Position,
-    value?: string,
 }
 
 export interface ResultsListCustomOrderValue extends ResultsListValue {
+    kind: 'Custom Order',
     customOrderType : 'Baseline' | 'Kind' | 'Severity';
     order: BaselineOrder | KindOrder | SeverityLevelOrder,
     value?: sarif.Result.baselineState | sarif.Result.kind | sarif.Result.level,

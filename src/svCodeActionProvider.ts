@@ -43,19 +43,28 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
         range: vscode.Range,
         context: vscode.CodeActionContext,
         token?: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
-        const index: number = context.diagnostics.findIndex((x) => (<SarifViewerVsCodeDiagnostic>x).resultInfo !== undefined);
-        if (context.only || index === -1) {
-            return [];
-        }
-        const svDiagnostic: SarifViewerVsCodeDiagnostic = <SarifViewerVsCodeDiagnostic>context.diagnostics[index];
+        const codeActions: vscode.CodeAction[] = [];
 
-        // This diagnostic with the source name of "SARIFViewer" is the place holder for the problems panel limit message,
-        // can possibly put logic here to allow for showing next set of diagnostics
-        if (svDiagnostic.source === 'SARIFViewer') {
-            return [];
+        for (const diagnostic of context.diagnostics) {
+            if (token?.isCancellationRequested) {
+                return [];
+            }
+
+            if (diagnostic instanceof SarifViewerVsCodeDiagnostic) {
+                // This diagnostic with the source name of "SARIFViewer" is the place holder for the problems panel limit message,
+                // can possibly put logic here to allow for showing next set of diagnostics
+                if (diagnostic.source === 'SARIFViewer') {
+                    continue;
+                }
+
+                const action: vscode.CodeAction | undefined = this.getCodeAction(document.uri, diagnostic);
+                if (action) {
+                    codeActions.push(action);
+                }
+            }
         }
 
-        return this.getCodeActions(document.uri, svDiagnostic);
+        return codeActions;
     }
 
     /**
@@ -63,24 +72,24 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
      * @param sarifFileUri The Sarif file for which to get the unmapped diagnostics from.
      * @param svDiagnostic the Sarif Viewer Diagnostic to create the code actions from
      */
-    private getCodeActions(sarifFileUri: vscode.Uri, svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction[] {
+    private getCodeAction(sarifFileUri: vscode.Uri, svDiagnostic: SarifViewerVsCodeDiagnostic): vscode.CodeAction | undefined {
         // If the location has already been mapped, then we don't need to map it again.
         if (svDiagnostic.location.mappedToLocalPath) {
-            return [];
+            return undefined;
         }
 
         // If we don't have a location to map, then we obviously can't map it :)
         if (!svDiagnostic.resultInfo.assignedLocation) {
-            return [];
+            return undefined;
         }
 
         const unmappedDiagnostics: SarifViewerVsCodeDiagnostic[] = this.diagnosticCollection.getAllUnmappedDiagnostics(sarifFileUri);
         if (unmappedDiagnostics.length === 0) {
-            return [];
+            return undefined;
         }
 
         if (unmappedDiagnostics.find((unmappedDiagnostic) => unmappedDiagnostic === svDiagnostic) === undefined) {
-            return [];
+            return undefined;
         }
 
         const cmd: vscode.Command  = {
@@ -89,13 +98,11 @@ export class SVCodeActionProvider implements vscode.CodeActionProvider, vscode.D
             title: localize("command.mapToSource.title", "Map To Source"),
         };
 
-        const action: vscode.CodeAction = {
+        return {
             command: cmd,
             diagnostics:  unmappedDiagnostics,
             kind: vscode.CodeActionKind.QuickFix,
             title: localize("command.mapToSource.title", "Map To Source"),
         };
-
-        return [action];
     }
 }

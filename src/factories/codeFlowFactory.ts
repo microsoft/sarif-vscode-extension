@@ -10,7 +10,7 @@ import { LocationFactory } from "./locationFactory";
 import { Command } from "vscode";
 import { CodeFlow, CodeFlowStep, CodeFlowStepId, Location, Message, ThreadFlow, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
-import { sendCFSelectionToExplorerCommand } from "../CodeFlowDecorations";
+import { sendCFSelectionToExplorerCommand } from "../codeFlowDecorations";
 
 const threadFlowLocations: Map<string, sarif.ThreadFlowLocation> = new Map<string, sarif.ThreadFlowLocation>();
 
@@ -177,11 +177,9 @@ export namespace CodeFlowFactory {
             }
 
             if (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel !== undefined) {
-                if ((tFLoc.nestingLevel < nextTFLoc.nestingLevel) ||
-                (tFLoc.nestingLevel === undefined && nextTFLoc.nestingLevel !== undefined)) {
+                if (tFLoc.nestingLevel < nextTFLoc.nestingLevel) {
                     isParentFlag = true;
-                } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel ||
-                    (tFLoc.nestingLevel !== undefined && nextTFLoc.nestingLevel === undefined)) {
+                } else if (tFLoc.nestingLevel > nextTFLoc.nestingLevel) {
                     isLastChildFlag = true;
                 }
             }

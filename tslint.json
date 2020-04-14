@@ -81,7 +81,7 @@
         "member-ordering": false,
         "no-parameter-properties": false,
         "no-inferrable-types": false,
-        "strict-type-predicates": false,
+        "strict-type-predicates": true,
         "increment-decrement": [true, "allow-post"],
         "no-implicit-dependencies": false,
         "ordered-imports": false,

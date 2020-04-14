@@ -330,7 +330,7 @@ export namespace ResultInfoFactory {
      */
     function checkFrameContent(frame: Frame, columnsWithContent: StackColumnWithContent): StackColumnWithContent {
         columnsWithContent.message = columnsWithContent.message && frame.message.text !== undefined && frame.message.text !== '';
-        columnsWithContent.name = columnsWithContent.name && frame.name !== undefined && frame.name !== '';
+        columnsWithContent.name = columnsWithContent.name && frame.name.length !== 0;
         columnsWithContent.location = columnsWithContent.location && frame.location.range.start.line !== 0;
         columnsWithContent.filename = columnsWithContent.filename && frame.location.fileName !== undefined && frame.location.fileName !== '';
         columnsWithContent.parameters = columnsWithContent.parameters && frame.parameters.length !== 0;

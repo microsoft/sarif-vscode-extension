@@ -10,8 +10,7 @@ import {
 } from "vscode";
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/enums";
 import {
-    ResultInfo, ResultsListColumn, ResultsListCustomOrderValue, ResultsListData, ResultsListGroup,
-    ResultsListPositionValue, ResultsListRow, ResultsListSortBy, ResultsListValue,
+    ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
 } from "./common/interfaces";
 import { ExplorerController } from "./explorerController";
@@ -19,6 +18,7 @@ import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
 import { Utilities } from "./utilities";
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
+import { isResultsListPositionValue, isResultsListCustomOrderValue, isResultsListStringValue, isResultsListNumberValue } from './common/resultValueHelpers';
 
 /**
  * Class that acts as the data controller for the ResultsList in the Sarif Explorer
@@ -343,22 +343,22 @@ export class ResultsListController implements Disposable {
         }
 
         return {
-            baselineState: { customOrderType: 'Baseline', order: baselineOrder, value: resultInfo.baselineState },
-            kind: { customOrderType: 'Kind', order: kindOrder, value: resultInfo.kind },
-            severityLevel: { customOrderType: 'Severity', order: sevOrder, value: resultInfo.severityLevel },
-            message: { value: resultInfo.message.text },
-            resultStartPos:  {pos: startPosition, value: startPositionString },
-            resultId: { value: resultInfo.id },
-            ruleId: { value: resultInfo.ruleId },
-            ruleName: { value: resultInfo.ruleName },
-            runId: { value: resultInfo.runId },
-            automationCat: { value: run && run.automationCategory },
-            automationId:  { value: run && run.automationIdentifier },
-            sarifFile: { value: run && run.sarifFileName, tooltip: run && run.sarifFileFullPath },
-            tool: { value: run && run.toolName, tooltip: run && run.toolFullName },
-            resultFile: { tooltip: resultFsPath, value: resultFileName },
-            logicalLocation: { value: logicalLocation },
-            rank: { value: resultInfo.rank },
+            baselineState: { kind: 'Custom Order', customOrderType: 'Baseline', order: baselineOrder, value: resultInfo.baselineState },
+            kind: { kind: 'Custom Order', customOrderType: 'Kind', order: kindOrder, value: resultInfo.kind },
+            severityLevel: { kind: 'Custom Order', customOrderType: 'Severity', order: sevOrder, value: resultInfo.severityLevel },
+            message: { kind: 'String', value: resultInfo.message.text },
+            resultStartPos:  {kind: 'Position', pos: startPosition, value: startPositionString },
+            resultId: { kind: 'Number', value: resultInfo.id },
+            ruleId: { kind: 'String', value: resultInfo.ruleId },
+            ruleName: { kind: 'String', value: resultInfo.ruleName },
+            runId: { kind: 'Number', value: resultInfo.runId },
+            automationCat: { kind: 'String', value: run && run.automationCategory },
+            automationId:  { kind: 'String', value: run && run.automationIdentifier },
+            sarifFile: { kind: 'String', value: run && run.sarifFileName, tooltip: run && run.sarifFileFullPath },
+            tool: { kind: 'String', value: run && run.toolName, tooltip: run && run.toolFullName },
+            resultFile: { kind: 'String', tooltip: resultFsPath, value: resultFileName },
+            logicalLocation: { kind: 'String', value: logicalLocation },
+            rank: { kind: 'Number', value: resultInfo.rank },
         };
     }
 
@@ -436,11 +436,11 @@ export class ResultsListController implements Disposable {
                 continue;
             }
 
-            if (!this.groupBy) {
+            const resultsListValue: ResultsListValue | undefined = row[this.groupBy];
+            if (!resultsListValue) {
                 continue;
             }
 
-            const resultsListValue: ResultsListValue = row[this.groupBy];
             // tslint:disable-next-line: no-any
             let key: any = resultsListValue.value;
 
@@ -469,9 +469,9 @@ export class ResultsListController implements Disposable {
         // sort rows in each group
         for (const group of data.groups) {
             group.rows.sort((a, b) => {
-                let comp: number;
-                let valueA: ResultsListValue;
-                let valueB: ResultsListValue;
+                let comp: number = 0;
+                let valueA: ResultsListValue | undefined;
+                let valueB: ResultsListValue | undefined;
                 if (this.sortBy.ascending) {
                     valueA = a[this.sortBy.column];
                     valueB = b[this.sortBy.column];
@@ -480,26 +480,34 @@ export class ResultsListController implements Disposable {
                     valueB = a[this.sortBy.column];
                 }
 
-                if (valueA === undefined || valueA.value === undefined) {
-                    comp = -1;
-                    if (valueB === undefined || valueB.value === undefined) {
+                if (valueA === undefined || valueB === undefined) {
+                    if (valueA === undefined && valueB === undefined) {
                         comp = 0;
+                    } else if (valueB === undefined) {
+                        comp = 1;
+                    } else {
+                        comp = -1;
                     }
-                } else if (valueB === undefined || valueB.value === undefined) {
-                    comp = 1;
-                } else if ((valueA as ResultsListPositionValue).pos !== undefined && (valueB as ResultsListPositionValue).pos !== undefined) {
-                    const posA: Position = (valueA as ResultsListPositionValue).pos!;
-                    const posB: Position = (valueB as ResultsListPositionValue).pos!;
+                } else if (valueA.value === undefined || valueB.value === undefined) {
+                    if (valueA.value === undefined && valueB.value === undefined) {
+                        comp = 0;
+                    } else if (valueB.value === undefined) {
+                        comp = 1;
+                    } else {
+                        comp = -1;
+                    }
+                } else if (isResultsListPositionValue(valueA) && isResultsListPositionValue(valueB)) {
+                    const posA: Position = valueA.pos || new Position(0, 0);
+                    const posB: Position = valueB.pos || new Position(0, 0);
                     comp = posA.line - posB.line;
                     if (comp === 0) {
                         comp = posA.character - posB.character;
                     }
-                } else if ((valueA as ResultsListCustomOrderValue).order !== undefined) {
-                    comp = (valueA as ResultsListCustomOrderValue).order -
-                        (valueB as ResultsListCustomOrderValue).order;
-                } else if (typeof valueA.value === 'number') {
+                } else if (isResultsListCustomOrderValue(valueA) && isResultsListCustomOrderValue(valueB)) {
+                    comp = valueA.order - valueB.order;
+                } else if (isResultsListNumberValue(valueA) && isResultsListNumberValue(valueB)) {
                     comp = valueA.value - valueB.value;
-                } else {
+                } else if (isResultsListStringValue(valueA) && isResultsListStringValue(valueB)) {
                     comp = valueA.value.localeCompare(valueB.value);
                 }
 
