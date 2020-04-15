@@ -195,6 +195,14 @@
                 "command": "extension.sarif.previousCodeFlowStep",
                 "title": "%commands.extension.sarif.previousCodeFlowStep.title%",
                 "category": "%commands.category%"
+            },
+            {
+                "command": "extension.sarif.openLogFiles",
+                "title": "%commands.extension.sarif.openeLogFiles"
+            },
+            {
+                "command": "extension.sarif.closeLogFiles",
+                "title": "%commands.extension.sarif.closeLogFiles"
             }
         ],
         "keybindings": [

@@ -23,6 +23,8 @@
     "commands.extension.sarif.LaunchExplorer.title": "Launch the Sarif Explorer",
     "commands.extension.sarif.nextCodeFlowStep.title": "Next Code Flow step",
     "commands.extension.sarif.previousCodeFlowStep.title": "Previous Code Flow step",
+    "commands.extension.sarif.closeLogFiles": "Close log files",
+    "commands.extension.sarif.openLogFiles": "Open log files",
 
     "explorer.Title": "SARIF Explorer",
 
