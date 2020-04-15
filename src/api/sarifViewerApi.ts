@@ -6,11 +6,6 @@ import * as vscode from 'vscode';
 
 export interface OpenLogFileArguments {
     /**
-     * The array of SARIF log files to open. The log file URIs must be of scheme 'file' and be valid SARIF JSON files.
-     */
-    readonly sarifFiles: vscode.Uri[];
-
-    /**
      * Specifies options indicating whether to prompt the user when the
      * SARIF log file shcmea is needs to be ugpraded to the latest one.
      * If not specified, the user will be prompted. (Default is true).
