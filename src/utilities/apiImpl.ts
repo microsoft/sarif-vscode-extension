@@ -38,7 +38,7 @@ export class ApiImpl implements sarifApi.Api {
             this.diagnosticCollection.removeRuns(sarifUri);
         }
 
-        return Promise.resolve();
+        return;
     }
 
     /**
@@ -46,6 +46,7 @@ export class ApiImpl implements sarifApi.Api {
      */
     public async closeAllLogs(): Promise<void> {
         this.diagnosticCollection.removeAllRuns();
-        return Promise.resolve();
+
+        return;
     }
 }
