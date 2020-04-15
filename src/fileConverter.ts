@@ -169,7 +169,7 @@ export class FileConverter {
         // {
         //   "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
         //
-        const parsedSchemaVersion: SarifVersion | undefined = sarifLog.$schema !== undefined ? FileConverter.parseSchema(schemaUri) : undefined;
+        const parsedSchemaVersion: SarifVersion | undefined = FileConverter.parseSchema(schemaUri);
         if (!parsedSchemaVersion) {
             return {
                 upgradedNeeded: 'Could Not Parse Schema',
