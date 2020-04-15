@@ -241,6 +241,16 @@ export class SVDiagnosticCollection implements Disposable {
     }
 
     /**
+     * Removes all information from the diagnostic collection.
+     */
+    public removeAllRuns(): void {
+        this.runInfoCollection.length = 0;
+        this.mappedIssuesCollection.clear();
+        this.unmappedIssuesCollection.clear();
+        this.syncIssuesWithDiagnosticCollection();
+    }
+
+    /**
      * Sets the active diagnostic in the collection and fires the active diagnostic changed event.
      * @param newDiagnostic The new diagnostic to set.
      */

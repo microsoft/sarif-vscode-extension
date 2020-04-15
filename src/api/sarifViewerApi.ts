@@ -4,9 +4,6 @@
 
 import * as vscode from 'vscode';
 
-/**
- * The expected arguments for the @see openLogFileCommand.
- */
 export interface OpenLogFileArguments {
     /**
      * The array of SARIF log files to open. The log file URIs must be of scheme 'file' and be valid SARIF JSON files.
@@ -33,24 +30,22 @@ export interface OpenLogFileArguments {
     readonly openViewerOnNoResults?: boolean;
 }
 
-/**
- * The command the SARIF extension exposes to open SARIF log files.
- * The expected arguments are of type @see OpenLogFileArguments
- */
-export const openLogFilesCommand: string = 'extension.sarif.openLogFiles';
-
-/**
- * The expected arguments for the @see closeLogFileCommand.
- */
-export interface CloseLogFileArguments {
+export interface Api {
     /**
-     * The array of SARIF log files to close.
+     * Instructs the SARIF viewer to open log files.
+     * @param sarifFiles The log files to open..
+     * @param openLogFileArguments Parameters that control how the log files are opened.
      */
-    readonly sarifFiles: vscode.Uri[];
-}
+    openLogFiles(sarifFiles: vscode.Uri[], openLogFileArguments?: OpenLogFileArguments): Promise<void>;
 
-/**
- * The command the SARIF extension exposes to open SARIF log files.
- * The expected arguments are of type @see CloseLogFileArguments
- */
-export const closeLogFilesCommand: string = 'extension.sarif.closeLogFiles';
+    /**
+     * Instructs the SARIF viewer to close log files.
+     * @param sarifFiles The log files to close.
+     */
+    closeLogFiles(sarifFiles: vscode.Uri[]): Promise<void>;
+
+    /**
+     * Instructs the SARIF viewer to closs all log files.
+     */
+    closeAllLogFiles(): Promise<void>;
+}

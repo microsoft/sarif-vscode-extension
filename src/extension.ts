@@ -23,13 +23,14 @@ import * as sarifViewrApi from "./api/sarifViewerApi";
 // This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
+import { ApiImpl } from './utilities/apiImpl';
 
 /**
  * This method is called when the extension is activated.
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): sarifViewrApi.Api {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
@@ -65,9 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // We do not need to block extension startup for reading any open documents.
     void readOpenedDocuments(logReader, diagnosticCollection);
 
-    context.subscriptions.push(vscode.commands.registerCommand(sarifViewrApi.openLogFilesCommand, (args) => onOpenLogFilesCommand(logReader, diagnosticCollection, args)));
-
-    context.subscriptions.push(vscode.commands.registerCommand(sarifViewrApi.closeLogFilesCommand, (args) => onCloseLogFilesCommand(diagnosticCollection, args)));
+    return new ApiImpl(logReader, diagnosticCollection);
 }
 
 /**
@@ -140,7 +139,7 @@ async function openSarifFileIfNotOpen(sarifFile: vscode.Uri): Promise<void> {
  * @param diagnosticCollection The diagnostic collection to add the results too.
  * @param options Options controlling the upgrade prompt if a SARIF file is at an earlier schema version.
  */
-async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader, diagnosticCollection: SVDiagnosticCollection, options: OpenSarifFileOptions): Promise<void> {
+export async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader, diagnosticCollection: SVDiagnosticCollection, options: OpenSarifFileOptions): Promise<void> {
     if (!sarifFile.isSarifFile()) {
         return;
     }
@@ -205,35 +204,5 @@ async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader, diagno
 function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiagnosticCollection): void {
     if (doc.uri.isSarifFile()) {
         diagnosticCollection.removeRuns(doc.uri);
-    }
-}
-
-/**
- * Responds to the @see sarifViewerApi.openLogFilesCommand
- */
-async function onOpenLogFilesCommand(logReader: LogReader, diagnosticCollection: SVDiagnosticCollection, openLogFileArguments?: sarifViewrApi.OpenLogFileArguments): Promise<void> {
-    if (!openLogFileArguments) {
-        return;
-    }
-
-    for (const sarifUri of openLogFileArguments.sarifFiles) {
-        await openSarifFile(sarifUri, logReader, diagnosticCollection, {
-            closeOriginalFileOnUpgrade: true,
-            openInTextEditor: openLogFileArguments.openInTextEditor === undefined ? true : openLogFileArguments.openInTextEditor,
-            promptUserForUpgrade: openLogFileArguments.promptUserForUpgrade === undefined ? true : openLogFileArguments.promptUserForUpgrade
-        });
-    }
-}
-
-/**
- * Responds to the @see sarifViewerApi.closeLogFilesCommand
- */
-async function onCloseLogFilesCommand(diagnosticCollection: SVDiagnosticCollection, closeLogFileArguments?: sarifViewrApi.CloseLogFileArguments): Promise<void> {
-    if (!closeLogFileArguments) {
-        return;
-    }
-
-    for (const sarifUri of closeLogFileArguments.sarifFiles) {
-        diagnosticCollection.removeRuns(sarifUri);
     }
 }
