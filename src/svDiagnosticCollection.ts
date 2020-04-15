@@ -222,21 +222,24 @@ export class SVDiagnosticCollection implements Disposable {
      * Iterates through the issue collections and removes any results that originated from the file
      * @param sarifFile Path (including file) of the file that has the runs to be removed
      */
-    public removeRuns(sarifFile: Uri): void {
-        if (!sarifFile.isSarifFile()) {
-            return;
-        }
-
-        const runsToRemove: number[] = [];
-        for (let i: number = this.runInfoCollection.length - 1; i >= 0; i--) {
-            if (this.runInfoCollection[i].sarifFileFullPath === sarifFile.fsPath) {
-                runsToRemove.push(this.runInfoCollection[i].id);
-                this.runInfoCollection.splice(i, 1);
+    public removeRuns(sarifFiles: Uri[]): void {
+        for (const sarifFile of sarifFiles) {
+            if (!sarifFile.isSarifFile()) {
+                return;
             }
+
+            const runsToRemove: number[] = [];
+            for (let i: number = this.runInfoCollection.length - 1; i >= 0; i--) {
+                if (this.runInfoCollection[i].sarifFileFullPath === sarifFile.fsPath) {
+                    runsToRemove.push(this.runInfoCollection[i].id);
+                    this.runInfoCollection.splice(i, 1);
+                }
+            }
+
+            this.removeResults(runsToRemove, this.mappedIssuesCollection);
+            this.removeResults(runsToRemove, this.unmappedIssuesCollection);
         }
 
-        this.removeResults(runsToRemove, this.mappedIssuesCollection);
-        this.removeResults(runsToRemove, this.unmappedIssuesCollection);
         this.syncIssuesWithDiagnosticCollection();
     }
 
@@ -244,10 +247,7 @@ export class SVDiagnosticCollection implements Disposable {
      * Removes all information from the diagnostic collection.
      */
     public removeAllRuns(): void {
-        this.runInfoCollection.length = 0;
-        this.mappedIssuesCollection.clear();
-        this.unmappedIssuesCollection.clear();
-        this.syncIssuesWithDiagnosticCollection();
+        this.removeRuns(this.runInfoCollection.map((runInfo) => Uri.file(runInfo.sarifFileFullPath)));
     }
 
     /**

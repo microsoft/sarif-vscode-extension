@@ -35,7 +35,7 @@ export class ApiImpl implements sarifApi.Api {
      */
     public async closeLogs(logs: vscode.Uri[]): Promise<void> {
         for (const log of logs) {
-            this.diagnosticCollection.removeRuns(log);
+            this.diagnosticCollection.removeRuns([log]);
         }
 
         return;

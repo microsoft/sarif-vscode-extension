@@ -203,6 +203,6 @@ export async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader,
  */
 function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiagnosticCollection): void {
     if (doc.uri.isSarifFile()) {
-        diagnosticCollection.removeRuns(doc.uri);
+        diagnosticCollection.removeRuns([doc.uri]);
     }
 }
