@@ -20,12 +20,12 @@ export class ApiImpl implements sarifApi.Api {
     /**
      * @inheritdoc
      */
-    public async openLogs(sarifFiles: vscode.Uri[], openLogFileArguments?: sarifApi.OpenLogArguments): Promise<void> {
-        for (const sarifUri of sarifFiles) {
-            await openSarifFile(sarifUri, this.logReader, this.diagnosticCollection, {
+    public async openLogs(logs: vscode.Uri[], openLogFileArguments?: sarifApi.OpenLogArguments): Promise<void> {
+        for (const log of logs) {
+            await openSarifFile(log, this.logReader, this.diagnosticCollection, {
                 closeOriginalFileOnUpgrade: true,
                 openInTextEditor: false,
-                promptUserForUpgrade: openLogFileArguments?.promptUserForUpgrade ?? true
+                promptUserForUpgrade: openLogFileArguments?.promptForUpgrade ?? true
             });
         }
     }
@@ -33,9 +33,9 @@ export class ApiImpl implements sarifApi.Api {
     /**
      * @inheritdoc
      */
-    public async closeLogs(sarifFiles: vscode.Uri[]): Promise<void> {
-        for (const sarifUri of sarifFiles) {
-            this.diagnosticCollection.removeRuns(sarifUri);
+    public async closeLogs(logs: vscode.Uri[]): Promise<void> {
+        for (const log of logs) {
+            this.diagnosticCollection.removeRuns(log);
         }
 
         return;
