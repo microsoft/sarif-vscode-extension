@@ -249,7 +249,7 @@
         "tslint": "^6.1.1"
     },
     "dependencies": {
-        "@microsoft/sarif-multitool": "^2.2.2",
+        "@microsoft/sarif-multitool": "^2.2.3",
         "json-source-map": "^0.4.0",
         "jsonpointer": "4.0.1",
         "markdown-it": "^9.0.1",
