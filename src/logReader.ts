@@ -20,7 +20,7 @@ import { ProgressHelper } from "./progressHelper";
 import { CodeFlowFactory } from "./factories/codeFlowFactory";
 
 /**
- * Optinos used when readining\import SARIF files.
+ * Options used when reading\import SARIF files.
  */
 export interface ReadOptions {
     /**
@@ -73,7 +73,7 @@ export class LogReader implements Disposable {
 
     /**
      * Contains a map between a parsed SARIF file (the key) to a JsonMapping object which contains
-     * the result of the JSON parsing. This contains the actual SAIRF content and the "pointers" (which are like xpath's for XML)
+     * the result of the JSON parsing. This contains the actual SARIF content and the "pointers" (which are like xpath's for XML)
      * to elements found in the JSON.
      */
     private readonly sarifJSONMapping: Map<string, JsonMapping> = new Map<string, JsonMapping>();
@@ -98,7 +98,7 @@ export class LogReader implements Disposable {
         const pOptions: ProgressOptions = {
             cancellable: false,
             location: ProgressLocation.Notification,
-            title: localize('logReader.proecssingTitle', "Processing {0}", path.basename(sarifFile.fsPath)),
+            title: localize('logReader.processingTitle', "Processing {0}", path.basename(sarifFile.fsPath)),
         };
 
         let upgradeCheckInformation: UpgradeCheckInformation = {
@@ -107,7 +107,7 @@ export class LogReader implements Disposable {
 
         const readResults: ParseResults[] = [];
 
-        await window.withProgress(pOptions, async (progress: Progress<{ message?: string; increment?: number }>, cancleToken): Promise<void> => {
+        await window.withProgress(pOptions, async (progress: Progress<{ message?: string; increment?: number }>, cancelToken): Promise<void> => {
             ProgressHelper.Instance.Progress = progress;
             let runInfo: RunInfo;
 

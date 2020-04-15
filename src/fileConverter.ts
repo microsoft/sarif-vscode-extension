@@ -90,11 +90,11 @@ export class FileConverter {
         };
 
         const quickPickItems: ToolQuickPickItem[] = [];
-        for (const tooleNameKey of Object.keys(fileConverterTools)) {
+        for (const toolNameKey of Object.keys(fileConverterTools)) {
             quickPickItems.push({
-                label: fileConverterTools[tooleNameKey].name,
-                extensions: fileConverterTools[tooleNameKey].extensions,
-                toolKey: tooleNameKey
+                label: fileConverterTools[toolNameKey].name,
+                extensions: fileConverterTools[toolNameKey].extensions,
+                toolKey: toolNameKey
             });
         }
 
@@ -135,9 +135,9 @@ export class FileConverter {
         const parsedVersion: SarifVersion = FileConverter.parseVersion(sarifLog.version);
 
         // If the SARIF log has the same version as the multi-tool version, then there is nothing to convert.
-        // The version here is not the version off the shchema string, it is just the version
+        // The version here is not the version off the schema string, it is just the version
         // property in the SARIF JSON.
-        // (Assuming of course that the multi-tool is kept in sync with the SARF npm package this extension relies on).
+        // (Assuming of course that the multi-tool is kept in sync with the SARIF npm package this extension relies on).
         // We need to open an issue on this as the @types/sarif version and the multi-tool version can stray apart because
         // the multi-tool code package has no exports to say what version of the schema it is on.
         if (parsedVersion.original === mTCurVersion.original) {
@@ -285,7 +285,7 @@ export class FileConverter {
         const errorData: string[] = [];
         const converted: boolean = await new Promise<boolean>((resolve) => {
             // If you are tempted to put quotes around these strings, please don't as "spawn" does that internally.
-            // Something to consider is adding an option to the SARIF viewr so the path to the multi-tool
+            // Something to consider is adding an option to the SARIF viewer so the path to the multi-tool
             // can be over-ridden for testing.
             const proc: ChildProcess = spawn(FileConverter.multiToolPath, ['transform', sarifFile.fsPath, '-o', fileOutputPath, '-p', '-f']);
 

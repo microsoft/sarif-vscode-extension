@@ -42,7 +42,7 @@
     "converterTool.AllFiles": "All Files",
     "converterTool.OpenFileDialogTitle": "{0} log files",
 
-    "converterTool.UpgraderErrorMessage": "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.`",
+    "converterTool.UpgradedErrorMessage": "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.`",
     "converterTool.Upgrade.SaveTemp": "Yes (Save Temp)",
     "converterTool.Upgrade.SaveAs": "Yes (Save As)",
     "converterTool.Upgrade.No": "No",
@@ -59,10 +59,10 @@
     "openRemappingInputDialog.openDialogLabel": "Map",
     "openRemappingInputDialog.alreadyExistsInRoot": "'{0}' already exists in the settings (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)",
 
-    "logReader.proecssingTitle": "Processing {0}",
+    "logReader.processingTitle": "Processing {0}",
     "logReader.processingSarifFile": "Parsing Sarif file",
     "logReader.jsonFileReadingError": "Sarif Viewer: Cannot display results for '{0}' because: {1}",
-    "logReader.schemaNotDefined": "Sarif Viewer: Cannot display results for '{0}' because the shema was not defined.",
+    "logReader.schemaNotDefined": "Sarif Viewer: Cannot display results for '{0}' because the schema was not defined.",
     "logReader.loadingResults": "Loading {0} Results",
     "logReader.loadingResultsPercentage": "Loading {0} Results: {1}% completed`",
 
@@ -105,8 +105,8 @@
 
     "resultInfoFactory.noMessageProvided": "No Message Provided",
 
-    "daignostic.noMessage": "No message",
-    "daignostic.unknownTool": "Unknown tool",
+    "diagnostic.noMessage": "No message",
+    "diagnostic.unknownTool": "Unknown tool",
 
     "codeFlowFactory.returnCall": "[return call]",
     "codeFlowFactory.noDescription": "[no description]",
@@ -115,7 +115,7 @@
     "time.hours": "{0} hrs",
     "time.hour": "{0} hr",
     "time.minutes": "{0} mins",
-    "time.minnute": "{0} min",
+    "time.minute": "{0} min",
     "time.seconds": "{0} secs",
     "time.second": "{0} sec",
     "time.none": "0 ms",

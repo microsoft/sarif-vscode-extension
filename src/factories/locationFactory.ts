@@ -81,7 +81,7 @@ export namespace LocationFactory {
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
             get locationMapped(): Event<Location> {
-                // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                // See this git-hub issue for discussion of this rule => https://github.com/palantir/tslint/issues/1544
                 // tslint:disable-next-line: no-invalid-this
                 return FileMapper.uriMappedForLocation.bind(this)();
             }
@@ -131,7 +131,7 @@ export namespace LocationFactory {
             toJSON: Utilities.LocationToJson,
             mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
             get locationMapped(): Event<Location> {
-                // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                // See this git-hub issue for discussion of this rule => https://github.com/palantir/tslint/issues/1544
                 // tslint:disable-next-line: no-invalid-this
                 return FileMapper.uriMappedForLocation.bind(this)();
             }

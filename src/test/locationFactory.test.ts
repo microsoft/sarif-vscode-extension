@@ -10,7 +10,7 @@ import { LocationFactory } from "../factories/locationFactory";
 
 suite("parseRange", () => {
     test("Undefined range", async () => {
-        const region: sarif.Region | undefined = undefined;
+        const region: sarif.Region = {};
         const expected: Range = new Range(0, 0, 0, 1);
         // @ts-ignore parseRange is a private static method on LocationFactory
         const result: { range: Range; endOfLine: boolean } = LocationFactory.parseRange(region);

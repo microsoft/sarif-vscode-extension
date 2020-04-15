@@ -289,7 +289,7 @@ export class FileMapper implements Disposable {
     }
 
     /**
-     * Shows the Inputbox with message for getting the user to select the mapping
+     * Shows the input box with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
      */
     private async openRemappingInputDialog(uri: Uri): Promise<string | undefined> {
