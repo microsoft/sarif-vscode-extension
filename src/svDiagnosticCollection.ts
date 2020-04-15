@@ -17,7 +17,7 @@ export interface SVDiagnosticsChangedEvent {
 }
 
 /**
- * Manager for the Diagnostic Collection contianing the sarif result diagnostics
+ * Manager for the Diagnostic Collection containing the sarif result diagnostics
  * Allows us to control which diagnostics we send to the Problems panel, so we can show a custom message on max entries
  * And lets us easily try to map those that weren't mapped previously
  */
@@ -35,7 +35,7 @@ export class SVDiagnosticCollection implements Disposable {
     private readonly diagnosticCollection: DiagnosticCollection = languages.createDiagnosticCollection(SVDiagnosticCollection.name);
 
     /**
-     * The 'mapped' collection cotnains diagnostics that have had their file-paths mapped to a local path.
+     * The 'mapped' collection contains diagnostics that have had their file-paths mapped to a local path.
      * The "key" is the Uri to the mapped file (i.e. file://a/b/c/foo.cpp)
      */
     private readonly mappedIssuesCollection: Map<string, SarifViewerVsCodeDiagnostic[]> = new Map<string, SarifViewerVsCodeDiagnostic[]>();
@@ -219,7 +219,7 @@ export class SVDiagnosticCollection implements Disposable {
     }
 
     /**
-     * Itterates through the issue collections and removes any results that originated from the file
+     * Iterates through the issue collections and removes any results that originated from the file
      * @param sarifFile Path (including file) of the file that has the runs to be removed
      */
     public removeRuns(sarifFile: Uri): void {
@@ -418,11 +418,11 @@ export class SVDiagnosticCollection implements Disposable {
      */
     private onDidChangeTextEditorSelection(textEditorSelectionChanged: TextEditorSelectionChangeEvent): void {
         // If the selection changed to a text editor that isn't visible, then we will ignore it.
-        if (!window.visibleTextEditors.find((visibleTextEdtior) => visibleTextEdtior === textEditorSelectionChanged.textEditor)) {
+        if (!window.visibleTextEditors.find((visibleTextEditor) => visibleTextEditor === textEditorSelectionChanged.textEditor)) {
             return;
         }
 
-        // If there isn't a valid selction, then we will also ignore it.
+        // If there isn't a valid selection, then we will also ignore it.
         if (textEditorSelectionChanged.selections.length !== 1) {
             return;
         }

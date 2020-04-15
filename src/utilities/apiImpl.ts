@@ -20,12 +20,12 @@ export class ApiImpl implements sarifApi.Api {
     /**
      * @inheritdoc
      */
-    public async openLogFiles(sarifFiles: vscode.Uri[], openLogFileArguments?: sarifApi.OpenLogFileArguments): Promise<void> {
+    public async openLogs(sarifFiles: vscode.Uri[], openLogFileArguments?: sarifApi.OpenLogArguments): Promise<void> {
         for (const sarifUri of sarifFiles) {
             await openSarifFile(sarifUri, this.logReader, this.diagnosticCollection, {
                 closeOriginalFileOnUpgrade: true,
-                openInTextEditor: openLogFileArguments?.openInTextEditor === undefined ? true : openLogFileArguments.openInTextEditor,
-                promptUserForUpgrade: openLogFileArguments?.promptUserForUpgrade === undefined ? true : openLogFileArguments.promptUserForUpgrade
+                openInTextEditor: openLogFileArguments?.openInEditor ?? true,
+                promptUserForUpgrade: openLogFileArguments?.promptUserForUpgrade ?? true
             });
         }
     }
@@ -33,7 +33,7 @@ export class ApiImpl implements sarifApi.Api {
     /**
      * @inheritdoc
      */
-    public async closeLogFiles(sarifFiles: vscode.Uri[]): Promise<void> {
+    public async closeLogs(sarifFiles: vscode.Uri[]): Promise<void> {
         for (const sarifUri of sarifFiles) {
             this.diagnosticCollection.removeRuns(sarifUri);
         }
@@ -44,7 +44,7 @@ export class ApiImpl implements sarifApi.Api {
     /**
      * @inheritdoc
      */
-    public async closeAllLogFiles(): Promise<void> {
+    public async closeAllLogs(): Promise<void> {
         this.diagnosticCollection.removeAllRuns();
         return Promise.resolve();
     }

@@ -18,9 +18,9 @@ import { Utilities } from "./utilities";
 import { ResultsListController } from "./resultsListController";
 import { FileMapper } from "./fileMapper";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
-import * as sarifViewrApi from "./api/sarifViewerApi";
+import { Api } from "./api/sarifViewerApi";
 
-// This is equiavelnt to "including" the generated javscript to get the code to run that sets the prototypes for the extension methods.
+// This is equivalent to "including" the generated javascript to get the code to run that sets the prototypes for the extension methods.
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
 import { ApiImpl } from './utilities/apiImpl';
@@ -30,7 +30,7 @@ import { ApiImpl } from './utilities/apiImpl';
  * Creates the explorer, reader, provider
  * Process any open SARIF Files
  */
-export function activate(context: vscode.ExtensionContext): sarifViewrApi.Api {
+export function activate(context: vscode.ExtensionContext): Api {
     Utilities.initialize(context);
     FileConverter.initialize(context);
 
@@ -157,7 +157,7 @@ export async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader,
     if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Schema Undefined') {
         if (!logReaderResult.upgradeCheckInformation.parsedSchemaVersion) {
             await vscode.window.showErrorMessage(
-                localize('logReader.schemaNotDefined', "Sarif Viewer: Cannot display results for '{0}' because the shema was not defined.",
+                localize('logReader.schemaNotDefined', "Sarif Viewer: Cannot display results for '{0}' because the schema was not defined.",
                     path.basename(sarifFile.fsPath)));
         }
         return;
@@ -165,7 +165,7 @@ export async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader,
 
     if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Schema Unknown' && logReaderResult.sarifLog) {
         await vscode.window.showErrorMessage(localize(
-            'converterTool.UpgraderErrorMessage',
+            'converterTool.UpgradedErrorMessage',
             "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.",
             logReaderResult.sarifLog.version, logReaderResult.sarifLog.$schema));
         return;
@@ -198,7 +198,7 @@ export async function openSarifFile(sarifFile: vscode.Uri, logReader: LogReader,
 
 /**
  * When a sarif document closes we need to clear all of the list of issues and reread the open sarif docs
- * Can't selectivly remove issues becuase the issues don't have a link back to the sarif file it came from
+ * Can't selectively remove issues because the issues don't have a link back to the sarif file it came from
  * @param doc document that was closed
  */
 function onDocumentClosed(doc: vscode.TextDocument, diagnosticCollection: SVDiagnosticCollection): void {

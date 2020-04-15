@@ -4,43 +4,49 @@
 
 import * as vscode from 'vscode';
 
-export interface OpenLogFileArguments {
+/**
+ * Options used when the SARIF viewer is opening logs.
+ */
+export interface OpenLogArguments {
     /**
-     * Specifies options indicating whether to prompt the user when the
-     * SARIF log file shcmea is needs to be ugpraded to the latest one.
-     * If not specified, the user will be prompted. (Default is true).
+     * Indicates whether to prompt the user when the
+     * SARIF log schema is needs to be upgraded to the latest one schema version.
+     * The default is true.
      */
     readonly promptUserForUpgrade?: boolean;
 
     /**
-     * Indicates whether to open the files (if not already open) and display it to the user.
-     * If not specified, the files will be displayed. (Default is true).
+     * Indicates whether to open SARIF logs inside the VSCode editor.
+     * The default is true.
      */
-    readonly openInTextEditor?: boolean;
+    readonly openInEditor?: boolean;
 
     /**
-     * Indicates whether the SARIF viewer should upen when there are no results to display.
-     * If not specificm, the viewer will be displayed. (Default is true).
+     * Indicates whether the SARIF viewer should open when there are no results in the logs to display.
+     * The default is true.
      */
     readonly openViewerOnNoResults?: boolean;
 }
 
+/**
+ * API exposed by the SARIF viewer extension.
+ */
 export interface Api {
     /**
-     * Instructs the SARIF viewer to open log files.
-     * @param sarifFiles The log files to open..
-     * @param openLogFileArguments Parameters that control how the log files are opened.
+     * Instructs the SARIF viewer to open logs.
+     * @param logs The logs to open.
+     * @param openLogArguments Parameters that control how the logs are opened.
      */
-    openLogFiles(sarifFiles: vscode.Uri[], openLogFileArguments?: OpenLogFileArguments): Promise<void>;
+    openLogs(logs: vscode.Uri[], openLogArguments?: OpenLogArguments): Promise<void>;
 
     /**
-     * Instructs the SARIF viewer to close log files.
-     * @param sarifFiles The log files to close.
+     * Instructs the SARIF viewer to close logs.
+     * @param logs The log to close.
      */
-    closeLogFiles(sarifFiles: vscode.Uri[]): Promise<void>;
+    closeLogs(logs: vscode.Uri[]): Promise<void>;
 
     /**
-     * Instructs the SARIF viewer to closs all log files.
+     * Instructs the SARIF viewer to close all logs.
      */
-    closeAllLogFiles(): Promise<void>;
+    closeAllLogs(): Promise<void>;
 }
