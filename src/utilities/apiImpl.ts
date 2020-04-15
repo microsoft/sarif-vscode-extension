@@ -24,7 +24,7 @@ export class ApiImpl implements sarifApi.Api {
         for (const sarifUri of sarifFiles) {
             await openSarifFile(sarifUri, this.logReader, this.diagnosticCollection, {
                 closeOriginalFileOnUpgrade: true,
-                openInTextEditor: openLogFileArguments?.openInEditor ?? true,
+                openInTextEditor: false,
                 promptUserForUpgrade: openLogFileArguments?.promptUserForUpgrade ?? true
             });
         }

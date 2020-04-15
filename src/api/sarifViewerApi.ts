@@ -16,12 +16,6 @@ export interface OpenLogArguments {
     readonly promptUserForUpgrade?: boolean;
 
     /**
-     * Indicates whether to open SARIF logs inside the VSCode editor.
-     * The default is true.
-     */
-    readonly openInEditor?: boolean;
-
-    /**
      * Indicates whether the SARIF viewer should open when there are no results in the logs to display.
      * The default is true.
      */
