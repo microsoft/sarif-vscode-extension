@@ -289,11 +289,11 @@ export class FileConverter {
             // can be over-ridden for testing.
             const proc: ChildProcess = spawn(FileConverter.multiToolPath, ['transform', sarifFile.fsPath, '-o', fileOutputPath, '-p', '-f']);
 
-            proc.stderr.on('data', (data) => {
+            proc.stderr?.on('data', (data) => {
                 errorData.push(data.toString());
             });
 
-            proc.stdout.on('data', (data) => {
+            proc.stdout?.on('data', (data) => {
                 errorData.push(data.toString());
             });
 
