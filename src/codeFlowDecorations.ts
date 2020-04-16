@@ -150,14 +150,7 @@ export class CodeFlowDecorations implements Disposable {
             const region: sarif.Region | undefined =  attachment.regions[regionId];
             if (region) {
                 const location: Location = this.activeDiagnostic.resultInfo.attachments[attachmentId].regionsOfInterest[regionId];
-                const sarifPhysicalLocation: sarif.PhysicalLocation = {
-                    artifactLocation: this.activeDiagnostic.rawResult.attachments[attachmentId].artifactLocation,
-                    region,
-                };
-
-                const sarifLocation: sarif.Location = { physicalLocation: sarifPhysicalLocation };
-
-                await this.updateSelectionHighlight(location, sarifLocation);
+                await this.updateSelectionHighlight(location);
             }
         }
     }
@@ -268,30 +261,20 @@ export class CodeFlowDecorations implements Disposable {
             return;
         }
 
-        const rawResultLocation: sarif.Location | undefined = rawResultCodeFlow.threadFlows[id.tFId].locations[id.stepId].location;
-        if (!rawResultLocation) {
-            return;
-        }
-
         const resultInfoLocation: Location | undefined = resultInfoCodeFlow.threads[id.tFId].steps[id.stepId].location;
         if (!resultInfoLocation) {
             return;
         }
 
-        await this.updateSelectionHighlight(resultInfoLocation, rawResultLocation);
+        await this.updateSelectionHighlight(resultInfoLocation);
     }
 
     /**
      * Updates the decoration that represents the currently selected Code Flow in the Explorer
      * @param location processed location to put the highlight at
-     * @param sarifLocation raw sarif location used if location isn't mapped to get the user to try to map
      */
-    private async updateSelectionHighlight(location: Location, sarifLocation?: sarif.Location): Promise<void> {
-        if (!this.activeDiagnostic || !this.activeDiagnostic.location.mappedToLocalPath) {
-            return;
-        }
-
-        const mappedUri: Uri | undefined = this.activeDiagnostic.location.uri;
+    private async updateSelectionHighlight(location: Location): Promise<void> {
+        const mappedUri: Uri | undefined = await location.mapLocationToLocalPath({ promptUser: true });
         if (!mappedUri) {
             return;
         }
@@ -486,7 +469,7 @@ export class CodeFlowDecorations implements Disposable {
                         return FileMapper.uriMappedForLocation.bind(this)();
                     }
                 };
-                await this.updateSelectionHighlight(location, undefined);
+                await this.updateSelectionHighlight(location);
                 break;
         }
     }
