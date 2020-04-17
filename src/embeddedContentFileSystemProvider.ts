@@ -6,12 +6,20 @@ import * as vscode from "vscode";
 import * as sarif from "sarif";
 import * as fs from "fs";
 import { JsonMapping, JsonMap } from "./common/interfaces";
+import * as nls from 'vscode-nls';
+nls.config({locale: process.env.VSCODE_NLS_CONFIG});
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
+/**
+ * Represents information parsed from the 'sarifEmbeddedContent' URI.
+ * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
+ */
 interface ParsedUriData {
-    log: vscode.Uri;
-    fileName: string;
-    runIndex: number;
-    artifactIndex: number;
+    readonly log: vscode.Uri;
+    readonly originalFileName: string;
+    readonly vscodeFileName: string;
+    readonly runIndex: number;
+    readonly artifactIndex: number;
 }
 
 export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvider, vscode.Disposable {
@@ -23,24 +31,31 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
     private static indexOfRunInMatch: number = 1;
     private static indexOfArtifactInMatch: number = 2;
 
-    private static binaryDataMarkdownHeader: string = '|Offset|0|1|2|3|4|5|6|7|\r\n|-|-|-|-|-|-|-|-|-|';
+    private static binaryDataMarkdownHeader: string = localize("embeddedContent.tableHeader", "|Offset|0|1|2|3|4|5|6|7|\r\n|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|");
 
-    private static parseUri(embeddedContentUri: vscode.Uri): ParsedUriData {
-        if (!embeddedContentUri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
+    private static parseUri(uri: vscode.Uri): ParsedUriData {
+        if (!uri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
             throw new Error('Incorrect scheme');
         }
 
-        const matchArray: RegExpExecArray | null = EmbeddedContentFileSystemProvider.indicesRegex.exec(embeddedContentUri.query);
+        const matchArray: RegExpExecArray | null = EmbeddedContentFileSystemProvider.indicesRegex.exec(uri.query);
         if (!matchArray || matchArray.length !== EmbeddedContentFileSystemProvider.expectedMatchLength) {
             throw new Error('Incorrect scheme');
         }
 
-        const logUriAsString: string = Buffer.from(embeddedContentUri.fragment, 'base64').toString('UTF8');
+        const fsPathSplit: string[] = uri.path.split('/').filter((pathPart) => pathPart.length !== 0) ;
+        if (fsPathSplit.length !== 2) {
+            throw new Error('The path of the embedded content URI is expected to have 2 path portions. One for the original file name, and the one presented to VSCode.')
+        }
+
+        const logUriAsString: string = Buffer.from(uri.fragment, 'base64').toString('UTF8');
+        const originalFileNameAsString: string = Buffer.from(fsPathSplit[0], 'base64').toString('UTF8');
         return {
             log: vscode.Uri.parse(logUriAsString, /*strict*/ true),
             runIndex: Number.parseInt(matchArray[EmbeddedContentFileSystemProvider.indexOfRunInMatch], 10),
             artifactIndex: Number.parseInt(matchArray[EmbeddedContentFileSystemProvider.indexOfArtifactInMatch], 10),
-            fileName: embeddedContentUri.path
+            originalFileName: originalFileNameAsString,
+            vscodeFileName: fsPathSplit[1]
         };
     }
 
@@ -190,14 +205,16 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
 
         if (artifact.contents.binary) {
             const binaryBuffer: Buffer =  Buffer.from(artifact.contents.binary, 'base64');
-            let markDownContent: string = EmbeddedContentFileSystemProvider.binaryDataMarkdownHeader;
+            let markDownContent: string = localize("embeddedContent.fileInfoHeader", "# File {0}\r\n", parsedUriData.originalFileName);
+            markDownContent = markDownContent.concat(localize("embeddedContent.fileInfoHeader", "Total bytes {0}\r\n", binaryBuffer.length));
+            markDownContent =  markDownContent.concat(EmbeddedContentFileSystemProvider.binaryDataMarkdownHeader);
             for (let bufferIndex: number = 0; bufferIndex < binaryBuffer.length; bufferIndex++) {
                 const bufferByte: number = binaryBuffer[bufferIndex];
                 if (bufferIndex % 8 === 0) {
-                    markDownContent = markDownContent.concat(`\r\n|0x${bufferIndex.toString(16)}`);
+                    markDownContent = markDownContent.concat(`\r\n|0x${bufferIndex < 16 ? '0' : ''}${bufferIndex.toString(16)}`);
                 }
 
-                markDownContent = markDownContent.concat(`|0x${bufferByte.toString(16)}`);
+                markDownContent = markDownContent.concat(`|0x${bufferByte < 16 ? '0' : ''}${bufferByte.toString(16)}`);
 
                 if ((bufferIndex + 1) % 8 === 0) {
                     markDownContent = markDownContent.concat(`|`);
@@ -274,11 +291,14 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         // We render binary contents as markdown.
         // Add the ".md" extension for VSCode to detect that.
         const uriFileName: string = artifact.contents.binary ? `${fileName}.md` : fileName;
-
+        const originalFileNameAsBase64: string = new Buffer(fileName).toString('base64');
         const logPathAsBase64: string = new Buffer(logPath.toString(/*skipEncoding*/ true), 'UTF8').toString('base64');
-        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${uriFileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);
+        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${originalFileNameAsBase64}/${uriFileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);
     }
 
+    /**
+     * Creates in instance of the embedded content file system provider.
+     */
     public constructor() {
         this.disposables.push(this.onDidChangeFileEventEmitter);
         this.disposables.push(vscode.workspace.registerFileSystemProvider(EmbeddedContentFileSystemProvider.EmbeddedContentScheme, this, {
