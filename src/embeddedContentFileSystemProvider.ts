@@ -18,7 +18,10 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
     private static EmbeddedContentScheme: string = 'sarifEmbeddedContent';
     private disposables: vscode.Disposable[] = [];
     private readonly onDidChangeFileEventEmitter: vscode.EventEmitter<vscode.FileChangeEvent[]> = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-    private static indicesRegex: RegExp = new RegExp(/\/runs\/\d+\/artifacts\/\d+\//);
+    private static indicesRegex: RegExp = new RegExp(/\/runs\/(\d+)\/artifacts\/(\d+)\//);
+    private static expectedMatchLength: number = 3;
+    private static indexOfRunInMatch: number = 1;
+    private static indexOfArtifactInMatch: number = 2;
 
     private static parseUri(embeddedContentUri: vscode.Uri): ParsedUriData {
         if (!embeddedContentUri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
@@ -26,14 +29,15 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         }
 
         const matchArray: RegExpExecArray | null = EmbeddedContentFileSystemProvider.indicesRegex.exec(embeddedContentUri.query);
-        if (!matchArray || matchArray.length !== 2) {
+        if (!matchArray || matchArray.length !== EmbeddedContentFileSystemProvider.expectedMatchLength) {
             throw new Error('Incorrect scheme');
         }
 
+        const logUriAsString: string = Buffer.from(embeddedContentUri.fragment, 'base64').toString('UTF8');
         return {
-            log: vscode.Uri.parse(Buffer.from(embeddedContentUri.authority, 'base64').toString(), /*strict*/ true),
-            runIndex: Number.parseInt(matchArray[0], 10),
-            artifactIndex: Number.parseInt(matchArray[1], 10),
+            log: vscode.Uri.parse(logUriAsString, /*strict*/ true),
+            runIndex: Number.parseInt(matchArray[EmbeddedContentFileSystemProvider.indexOfRunInMatch], 10),
+            artifactIndex: Number.parseInt(matchArray[EmbeddedContentFileSystemProvider.indexOfArtifactInMatch], 10),
             fileName: embeddedContentUri.path
         };
     }
@@ -240,8 +244,8 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
             throw new Error(`${logPath.toString()} is not a SARIF file`);
         }
 
-        const logPathAsBase64: string = new Buffer(logPath.fsPath).toString('base64');
-        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:${logPathAsBase64}/${fileName}?/runs/${runIndex}/artifacts/${artifactIndex}/`, /*strict*/ true);
+        const logPathAsBase64: string = new Buffer(logPath.toString(/*skipEncoding*/ true), 'UTF8').toString('base64');
+        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${fileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);
     }
 
     public constructor() {

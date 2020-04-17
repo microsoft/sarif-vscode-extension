@@ -46,6 +46,7 @@ export namespace LocationFactory {
                         if (artifact.contents) {
                             fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
                             uri = EmbeddedContentFileSystemProvider.createUri(Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
+                            mappedToLocalPath = true;
                         }
                     }
                 }
