@@ -23,6 +23,8 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
     private static indexOfRunInMatch: number = 1;
     private static indexOfArtifactInMatch: number = 2;
 
+    private static binaryDataMarkdownHeader: string = '|Offset|0|1|2|3|4|5|6|7|\r\n|-|-|-|-|-|-|-|-|-|';
+
     private static parseUri(embeddedContentUri: vscode.Uri): ParsedUriData {
         if (!embeddedContentUri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
             throw new Error('Incorrect scheme');
@@ -187,7 +189,22 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         }
 
         if (artifact.contents.binary) {
-            return Buffer.from(artifact.contents.binary, 'base64');
+            const binaryBuffer: Buffer =  Buffer.from(artifact.contents.binary, 'base64');
+            let markDownContent: string = EmbeddedContentFileSystemProvider.binaryDataMarkdownHeader;
+            for (let bufferIndex: number = 0; bufferIndex < binaryBuffer.length; bufferIndex++) {
+                const bufferByte: number = binaryBuffer[bufferIndex];
+                if (bufferIndex % 8 === 0) {
+                    markDownContent = markDownContent.concat(`\r\n|0x${bufferIndex.toString(16)}`);
+                }
+
+                markDownContent = markDownContent.concat(`|0x${bufferByte.toString(16)}`);
+
+                if ((bufferIndex + 1) % 8 === 0) {
+                    markDownContent = markDownContent.concat(`|`);
+                }
+            }
+
+            return Buffer.from(markDownContent, 'utf8');
         }
 
         if (artifact.contents.rendered) {
@@ -200,7 +217,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
             }
         }
 
-        throw new Error(`There is no tenderable contents associated with artifact index ${parsedUriData.runIndex} for run index ${parsedUriData.runIndex}.`);
+        throw new Error(`There is no contents that can be rendered associated with artifact index ${parsedUriData.runIndex} for run index ${parsedUriData.runIndex}.`);
     }
 
     /**
@@ -234,18 +251,32 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
 
     /**
      * Creates an embedded content URI.
+     * @param sarifLog The raw sarif log.
      * @param logPath The full path to the SARIF log file.
      * @param fileName The file name that VSCode will display in the editor and use for detection of type.
      * @param runIndex The index of the run in the SARIF file.
      * @param artifactIndex The artifact index.
      */
-    public static createUri(logPath: vscode.Uri, fileName: string, runIndex: number, artifactIndex: number): vscode.Uri {
+    public static createUri(sarifLog: sarif.Log, logPath: vscode.Uri, fileName: string, runIndex: number, artifactIndex: number): vscode.Uri | undefined {
         if (!logPath.isSarifFile()) {
             throw new Error(`${logPath.toString()} is not a SARIF file`);
         }
 
+        const run: sarif.Run | undefined = sarifLog.runs[runIndex];
+        if (!run || !run.artifacts) {
+            return undefined;
+        }
+        const artifact: sarif.Artifact | undefined = run.artifacts[artifactIndex];
+        if (!artifact || !artifact.contents) {
+            return undefined;
+        }
+
+        // We render binary contents as markdown.
+        // Add the ".md" extension for VSCode to detect that.
+        const uriFileName: string = artifact.contents.binary ? `${fileName}.md` : fileName;
+
         const logPathAsBase64: string = new Buffer(logPath.toString(/*skipEncoding*/ true), 'UTF8').toString('base64');
-        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${fileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);
+        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${uriFileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);
     }
 
     public constructor() {

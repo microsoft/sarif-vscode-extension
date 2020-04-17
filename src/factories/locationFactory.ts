@@ -40,14 +40,11 @@ export namespace LocationFactory {
             if (uri) {
                 // Check for embedded content.
                 if (physLocation.artifactLocation.index !== undefined) {
-                    const run: sarif.Run | undefined = sarifLog.runs[runInfo.runIndex];
-                    if (run && run.artifacts) {
-                        const artifact: sarif.Artifact | undefined = run.artifacts[physLocation.artifactLocation.index];
-                        if (artifact.contents) {
-                            fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
-                            uri = EmbeddedContentFileSystemProvider.createUri(Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
-                            mappedToLocalPath = true;
-                        }
+                    fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
+                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.createUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
+                    if (embeddedUri) {
+                        uri = embeddedUri;
+                        mappedToLocalPath = true;
                     }
                 }
 
