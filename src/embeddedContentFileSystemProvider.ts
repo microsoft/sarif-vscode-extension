@@ -7,6 +7,7 @@ import * as sarif from "sarif";
 import * as fs from "fs";
 import { JsonMapping, JsonMap } from "./common/interfaces";
 import * as nls from 'vscode-nls';
+import { BinaryContentRenderer } from "./binaryContentRenderer";
 nls.config({locale: process.env.VSCODE_NLS_CONFIG});
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
@@ -204,24 +205,8 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         }
 
         if (artifact.contents.binary) {
-            const binaryBuffer: Buffer =  Buffer.from(artifact.contents.binary, 'base64');
-            let markDownContent: string = localize("embeddedContent.fileInfoHeader", "# File {0}\r\n", parsedUriData.originalFileName);
-            markDownContent = markDownContent.concat(localize("embeddedContent.fileInfoHeader", "Total bytes {0}\r\n", binaryBuffer.length));
-            markDownContent =  markDownContent.concat(EmbeddedContentFileSystemProvider.binaryDataMarkdownHeader);
-            for (let bufferIndex: number = 0; bufferIndex < binaryBuffer.length; bufferIndex++) {
-                const bufferByte: number = binaryBuffer[bufferIndex];
-                if (bufferIndex % 8 === 0) {
-                    markDownContent = markDownContent.concat(`\r\n|0x${bufferIndex < 16 ? '0' : ''}${bufferIndex.toString(16)}`);
-                }
-
-                markDownContent = markDownContent.concat(`|0x${bufferByte < 16 ? '0' : ''}${bufferByte.toString(16)}`);
-
-                if ((bufferIndex + 1) % 8 === 0) {
-                    markDownContent = markDownContent.concat(`|`);
-                }
-            }
-
-            return Buffer.from(markDownContent, 'utf8');
+            const binaryContentRenderer: BinaryContentRenderer = new BinaryContentRenderer(artifact.contents.binary);
+            return Buffer.from(binaryContentRenderer.renderAsMarkdown(parsedUriData.originalFileName), 'utf8');
         }
 
         if (artifact.contents.rendered) {
