@@ -10,19 +10,38 @@ import { BinaryContentRenderer } from "./binaryContentRenderer";
 
 /**
  * Represents information parsed from the 'sarifEmbeddedContent' URI.
- * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
+ * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName>?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
  */
 interface ParsedUriData {
+    /**
+     * The SARIF log the URI was created from.
+     */
     readonly log: vscode.Uri;
+
+    /**
+     * The original file name specified in the location object of the SARIF.
+     */
     readonly originalFileName: string;
+
+    /**
+     * The filename we present to VSCode (for example, we append .md) so VSCode knows it's markdown.
+     */
     readonly vscodeFileName: string;
+
+    /**
+     * The run index in the SARIF log.
+     */
     readonly runIndex: number;
+
+    /**
+     * The artifact index in the SARIF log (relative to the run).
+     */
     readonly artifactIndex: number;
 }
 
 /**
  * A file system provider that handles embedded content.
- * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
+ * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName>?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
  */
 export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvider, vscode.Disposable {
     private disposables: vscode.Disposable[] = [];
@@ -185,6 +204,9 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         throw new Error('Not implemented');
     }
 
+    /**
+     * @inheritdoc
+     */
     public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
         const parsedUriData: ParsedUriData = EmbeddedContentFileSystemProvider.parseUri(uri);
         const log: sarif.Log = await EmbeddedContentFileSystemProvider.readLog(uri);
