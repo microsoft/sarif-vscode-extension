@@ -9,6 +9,7 @@ import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 import { EmbeddedContentFileSystemProvider } from "../embeddedContentFileSystemProvider";
+import { BinaryContentRenderer } from "../binaryContentRenderer";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -38,13 +39,29 @@ export namespace LocationFactory {
             uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
             if (uri) {
-                // Check for embedded content.
+                // Check for embedded content and create our embedded content URI if it is embedded.
                 if (physLocation.artifactLocation.index !== undefined) {
                     fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
-                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.createUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
+                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
                     if (embeddedUri) {
                         uri = embeddedUri;
                         mappedToLocalPath = true;
+
+                        // See if we can parse the range.
+                        if (physLocation &&
+                            physLocation.region) {
+                                // In theory what we would do here is map the ranges based on each embedded content types as appropriate.
+                                // For now let's just do this for the binary content as we render that as markdown.
+                                const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
+                                if (binaryContentRenderer) {
+                                    if (physLocation.region.byteOffset !== undefined && physLocation.region.byteLength !== undefined) {
+                                        parsedRange = {
+                                        range: binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteOffset),
+                                        endOfLine: false
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -60,9 +77,11 @@ export namespace LocationFactory {
             }
         }
 
-        if (physLocation && physLocation.region) {
-            parsedRange = parseRange(physLocation.region);
-            message = Utilities.parseSarifMessage(physLocation.region.message);
+        if (!parsedRange) {
+            if (physLocation && physLocation.region) {
+                parsedRange = parseRange(physLocation.region);
+                message = Utilities.parseSarifMessage(physLocation.region.message);
+            }
         }
 
         const logLocations: sarif.LogicalLocation[] | undefined = sarifLocation.logicalLocations;

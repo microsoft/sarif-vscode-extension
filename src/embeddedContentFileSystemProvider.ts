@@ -259,7 +259,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      * @param runIndex The index of the run in the SARIF file.
      * @param artifactIndex The artifact index.
      */
-    public static createUri(sarifLog: sarif.Log, logPath: vscode.Uri, fileName: string, runIndex: number, artifactIndex: number): vscode.Uri | undefined {
+    public static tryCreateUri(sarifLog: sarif.Log, logPath: vscode.Uri, fileName: string, runIndex: number, artifactIndex: number): vscode.Uri | undefined {
         if (!logPath.isSarifFile()) {
             throw new Error(`${logPath.toString()} is not a SARIF file`);
         }
