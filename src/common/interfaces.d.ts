@@ -79,19 +79,23 @@ export interface Location {
      * Serializes "start" and "stop" properties of VSCode's range as part of the location.
      * That way we can properly type the web view code.
      * @param this Represents the location being serialized.
-     * @param key The "key" in the outer object that respresents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
+     * @param key The "key" in the outer object that represents the location: (i.e. "locationInSarifFile: Location"  - the key is "locationInSarifFile")
      * @param value The current location value.
      */
     toJSON(this: Location, key: any, value: any): any
 
     /**
-     * Eevent that is fired when the location is mapped..
+     * Event that is fired when the location is mapped..
      */
     locationMapped: Event<Location>;
 }
 
 
 export interface RunInfo {
+    /**
+     * The index of the run in the SARIF log.
+     */
+    readonly runIndex: number;
     readonly additionalProperties?: { [key: string]: string };
     readonly automationCategory?: string;
     readonly automationIdentifier?: string;

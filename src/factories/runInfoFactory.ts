@@ -17,9 +17,10 @@ export namespace RunInfoFactory {
     /**
      * Processes the run passed in and creates a new RunInfo object with the information processed
      * @param run SARIF run object to process
+     * @param runIndex The index of the run in the SARIF file (array index).
      * @param sarifFileName path and file name of the sarif file this run is in
      */
-    export function create(run: sarif.Run, sarifFileName: string): RunInfo {
+    export function create(run: sarif.Run, runIndex: number, sarifFileName: string): RunInfo {
         const tool: sarif.ToolComponent  = run.tool.driver;
 
         let toolFullName: string = tool.fullName || tool.name;
@@ -65,6 +66,7 @@ export namespace RunInfoFactory {
         }
 
         return {
+            runIndex,
             id: nextRunInfoId++,
             toolName: tool.name,
             toolFullName,

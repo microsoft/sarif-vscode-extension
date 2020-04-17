@@ -8,6 +8,7 @@ import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
+import { EmbeddedContentFileSystemProvider } from "../embeddedContentFileSystemProvider";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -16,10 +17,11 @@ import { FileMapper } from "../fileMapper";
 export namespace LocationFactory {
     /**
      * Processes the passed in sarif location and creates a new Location
+     * @param sarifLog The raw sarif log.
      * @param runInfo The run the location belongs to.
      * @param sarifLocation location from result in sarif file
      */
-    export async function create(runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
+    export async function create(sarifLog: sarif.Log, runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -36,6 +38,17 @@ export namespace LocationFactory {
             uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
             if (uri) {
+                // Check for embedded content.
+                if (physLocation.artifactLocation.index !== undefined) {
+                    const run: sarif.Run | undefined = sarifLog.runs[runInfo.runIndex];
+                    if (run && run.artifacts) {
+                        const artifact: sarif.Artifact | undefined = run.artifacts[physLocation.artifactLocation.index];
+                        if (artifact.contents) {
+                            fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
+                            uri = EmbeddedContentFileSystemProvider.createUri(Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
+                        }
+                    }
+                }
 
                 // If the URI is of file scheme, then we will try to fix the casing
                 // because VSCode treats URIs as case sensitive and if the case
@@ -44,9 +57,8 @@ export namespace LocationFactory {
                 if (uri.isFile()) {
                     uri = Utilities.fixUriCasing(uri);
                     mappedToLocalPath = fs.existsSync(uri.fsPath);
+                    fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
                 }
-
-                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
             }
         }
 
