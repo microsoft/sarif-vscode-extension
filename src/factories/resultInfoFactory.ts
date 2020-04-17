@@ -120,7 +120,7 @@ export namespace ResultInfoFactory {
 
             // To ease other logic, don't assign assignedLocation if the location exist, but it has no URI.
             // Which, can actually happen. For example, when doing code-analysis on C++ using Microsoft's compiler, if there is an error
-            // in reading the rule-set file, it produces an error result with that information, with a location without a vliad URI.
+            // in reading the rule-set file, it produces an error result with that information, with a location without a valid URI.
             assignedLocation: (locations.length > 0 && locations[0].uri) ? locations[0] : undefined,
             codeFlows,
             stacks,

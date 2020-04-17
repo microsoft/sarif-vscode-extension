@@ -8,14 +8,13 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import * as fs from "fs";
 import * as path from "path";
-import * as sarif from "sarif";
 import {
     ConfigurationChangeEvent, Disposable, Event, EventEmitter, QuickInputButton, Uri,
     window, workspace, WorkspaceConfiguration, InputBox, commands
 } from "vscode";
 import { ProgressHelper } from "./progressHelper";
 import { Utilities } from "./utilities";
-import { RunInfo, Location, MapLocationToLocalPathOptions } from "./common/interfaces";
+import { Location, MapLocationToLocalPathOptions } from "./common/interfaces";
 
 const RootPathSample: string = 'c:\\sample\\path';
 const ConfigRootPaths: string = 'rootpaths';
@@ -45,38 +44,10 @@ export class FileMapper implements Disposable {
     private readonly fileRemapping: Map<string, Uri | undefined> = new Map<string, Uri | undefined>();
 
     /**
-     * Maintains a mapping of sarif artifacts to a "key" into fileMapping.
-     * The key of this map is in the form of "RunID_ArtifactIndex".
-     * As an example, each SARIF file can have multiple "runs" inside, and each one
-     * with its own list of artifacts.
-     * "runs:" [
-     *    {
-     *       artifacts:
-     *       [
-     *          {}, {}
-     *       ]
-     *    },
-     *    {
-     *       artifacts:
-     *       [
-     *          {}, {}
-     *       ]
-     *    }
-     * ]
-     *
-     * So the "key" is the run identifier concatenated with the index of the artifact.
-     * For example, 1_0 would indicate the first artifact of the second run.
-     * IMPORTANT NOTE: The run identifier is not simply an index into the SARIF file.
-     * The run identifier is dynamically calculated as a run's information is added to VSCode's
-     * diagnostic collection. As SARIF files are opened and closed, the identifier grows.
-     */
-    private readonly fileIndexKeyMapping: Map<string, string> = new Map<string, string>();
-
-    /**
      * Contains the root paths configured in the settings by the user or
      * paths automatically added when the user uses the remap UI flow.
      */
-    private rootpaths: string[] = [];
+    private rootPaths: string[] = [];
 
     private constructor() {
         if (FileMapper.fileMapperInstance) {
@@ -127,7 +98,7 @@ export class FileMapper implements Disposable {
             }
 
             rootpaths.push(Utilities.getDisplayableRootpath(uri));
-            this.rootpaths = rootpaths;
+            this.rootPaths = rootpaths;
             await config.update(ConfigRootPaths, rootpaths, true);
 
             if (!this.tryConfigRootPathsUri(origUri, uriBase)) {
@@ -187,36 +158,6 @@ export class FileMapper implements Disposable {
     }
 
     /**
-     * Call to map the files in the Sarif run artifact objects
-     * @param artifacts array of sarif.Artifact that needs to be mapped
-     * @param runId id of the run these files are from
-     */
-    public async mapArtifacts(runInfo: RunInfo, artifacts: sarif.Artifact[], runId: number): Promise<void> {
-        for (const [artifactIndex, artifact] of artifacts.entries()) {
-            const fileLocation: sarif.ArtifactLocation | undefined = artifact.location;
-
-            if (!artifact.location || !artifact.location.uri) {
-                continue;
-            }
-
-            const uriBase: string | undefined = Utilities.getUriBase(runInfo, fileLocation);
-            const uriWithBase: Uri = Utilities.combineUriWithUriBase(artifact.location.uri, uriBase);
-
-            const key: string = Utilities.getFsPathWithFragment(uriWithBase);
-
-            if (artifact.contents) {
-                // If the artifact has embedded contents, then a temporary file is created and that will be
-                // used for the file mapping.
-                this.mapEmbeddedContent(key, artifact);
-            } else {
-                await this.map(uriWithBase, uriBase, { promptUser: true });
-            }
-
-            this.fileIndexKeyMapping.set(`${runId}_${artifactIndex}`, key);
-        }
-    }
-
-    /**
      * Adds a file/Uri mapping to the fileRemapping, also calls toString to generate the .external for the webview
      * @param key the original file path
      * @param uri the uri of the mapped file path
@@ -227,65 +168,6 @@ export class FileMapper implements Disposable {
         }
 
         this.fileRemapping.set(key, uri);
-    }
-
-    /**
-     * Gets the hash value for the embedded content. Preference for sha256, if not found it uses the first hash value
-     * @param hashes dictionary of hashes
-     */
-    private getHashValue(hashes?: { [key: string]: string }): string {
-        let value: string = '';
-        if (hashes) {
-            const sha256Key: string  = 'sha256';
-            if (hashes[sha256Key]) {
-                value = hashes[sha256Key];
-            } else {
-                for (const key in hashes) {
-                    if (hashes.hasOwnProperty(key)) {
-                        value = hashes[key];
-                        break;
-                    }
-                }
-            }
-        }
-
-        return value;
-    }
-
-    /**
-     * Creates a temp file with the decoded content and adds the new temp file to the mapping
-     * @param fileKey key of the original file path that needs to be mapped
-     * @param artifact file object that contains the hash and embedded content
-     */
-    private mapEmbeddedContent(fileKey: string, artifact: sarif.Artifact): void {
-        const hashValue: string = this.getHashValue(artifact.hashes);
-        let tempPath: string = Utilities.generateTempPath(fileKey, hashValue);
-
-        if (!artifact.contents) {
-            return;
-        }
-
-        let contents: string | undefined;
-        if (artifact.contents.text) {
-            contents = artifact.contents.text;
-        } else if (artifact.contents.binary) {
-            contents = Buffer.from(artifact.contents.binary, 'base64').toString();
-        } else if (artifact.contents.rendered) {
-            if (artifact.contents.rendered.markdown) {
-                tempPath = `${tempPath}.md`;
-                contents = artifact.contents.rendered.markdown;
-            } else {
-                contents = artifact.contents.rendered.text;
-            }
-        }
-
-        if (contents) {
-            Utilities.createReadOnlyFile(tempPath, contents);
-        }
-
-        // Even if we did not write any contents, this file must still exist as we
-        // created a temporary file for it and expect it to be mapped.
-        this.addToFileMapping(fileKey, Uri.file(tempPath));
     }
 
     /**
@@ -393,11 +275,11 @@ export class FileMapper implements Disposable {
                         }
 
                         if (isDirectory) {
-                            const rootPathIndex: number = this.rootpaths.indexOf(validateUri.fsPath);
+                            const rootPathIndex: number = this.rootPaths.indexOf(validateUri.fsPath);
                             if (rootPathIndex !== -1) {
                                 message = localize('openRemappingInputDialog.alreadyExistsInRoot', "'{0}' already exists in the settings (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)", validateUri.fsPath);
                             } else {
-                                resolvedString = this.rootpaths[rootPathIndex];
+                                resolvedString = this.rootPaths[rootPathIndex];
                                 input.hide();
                             }
                         } else if (this.isLocalFile(validateUri)) {
@@ -505,7 +387,7 @@ export class FileMapper implements Disposable {
         const originPath: path.ParsedPath = path.parse(Utilities.getFsPathWithFragment(uri));
         const dir: string = originPath.dir.replace(originPath.root, '');
 
-        for (const rootpath of this.rootpaths) {
+        for (const rootpath of this.rootPaths) {
             const dirParts: string[] = dir.split(path.sep);
             dirParts.push(originPath.base);
 
@@ -534,8 +416,8 @@ export class FileMapper implements Disposable {
                 return value !== RootPathSample;
             });
 
-            if (this.rootpaths.sort().toString() !== newRootPaths.sort().toString()) {
-                this.rootpaths = newRootPaths;
+            if (this.rootPaths.sort().toString() !== newRootPaths.sort().toString()) {
+                this.rootPaths = newRootPaths;
                 this.updateMappingsWithRootPaths();
             }
         }

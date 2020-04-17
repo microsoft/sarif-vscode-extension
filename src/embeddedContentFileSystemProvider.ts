@@ -6,10 +6,7 @@ import * as vscode from "vscode";
 import * as sarif from "sarif";
 import * as fs from "fs";
 import { JsonMapping, JsonMap } from "./common/interfaces";
-import * as nls from 'vscode-nls';
 import { BinaryContentRenderer } from "./binaryContentRenderer";
-nls.config({locale: process.env.VSCODE_NLS_CONFIG});
-const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 /**
  * Represents information parsed from the 'sarifEmbeddedContent' URI.
@@ -23,16 +20,29 @@ interface ParsedUriData {
     readonly artifactIndex: number;
 }
 
+/**
+ * A file system provider that handles embedded content.
+ * The URI is of the format 'sarifEmbeddedContent:///<originalFileNameAsBase64>/<vscodeFileName?/runs/<runIndex>/artifact/<artifactIndex>#<sarifLogFileAsBase64>
+ */
 export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvider, vscode.Disposable {
-    private static EmbeddedContentScheme: string = 'sarifEmbeddedContent';
     private disposables: vscode.Disposable[] = [];
-    private readonly onDidChangeFileEventEmitter: vscode.EventEmitter<vscode.FileChangeEvent[]> = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+
+    // The URI scheme for the content.
+    private static EmbeddedContentScheme: string = 'sarifEmbeddedContent';
+
+    // The regular expression used to parse the run and artifact index.
     private static indicesRegex: RegExp = new RegExp(/\/runs\/(\d+)\/artifacts\/(\d+)\//);
+
+    // The number of matches we expect back from executing the regular expression.
     private static expectedMatchLength: number = 3;
+
+    // The index of the "run" in the regular expression match.
     private static indexOfRunInMatch: number = 1;
+
+    // The index of the artifact in the regular expression match.
     private static indexOfArtifactInMatch: number = 2;
 
-    private static binaryDataMarkdownHeader: string = localize("embeddedContent.tableHeader", "|Offset|0|1|2|3|4|5|6|7|\r\n|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|");
+    private readonly onDidChangeFileEventEmitter: vscode.EventEmitter<vscode.FileChangeEvent[]> = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
     private static parseUri(uri: vscode.Uri): ParsedUriData {
         if (!uri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
@@ -46,7 +56,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
 
         const fsPathSplit: string[] = uri.path.split('/').filter((pathPart) => pathPart.length !== 0) ;
         if (fsPathSplit.length !== 2) {
-            throw new Error('The path of the embedded content URI is expected to have 2 path portions. One for the original file name, and the one presented to VSCode.')
+            throw new Error('The path of the embedded content URI is expected to have 2 path portions. One for the original file name, and the one presented to VSCode.');
         }
 
         const logUriAsString: string = Buffer.from(uri.fragment, 'base64').toString('UTF8');
@@ -137,6 +147,10 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         if (artifact.contents.text) {
             contentSize = artifact.contents.text.length;
         } else if (artifact.contents.binary) {
+            // This isn't exactly correct as we render it as markdown.
+            // We could make it correct by calling render on the binary renderer
+            // and computing the length. Turns out VSCode doesn't really use this
+            // size, so.... this is good enough.
             contentSize = artifact.contents.binary.length;
         } else if (artifact.contents.rendered) {
             if (artifact.contents.rendered.markdown) {
@@ -205,8 +219,10 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         }
 
         if (artifact.contents.binary) {
-            const binaryContentRenderer: BinaryContentRenderer = new BinaryContentRenderer(artifact.contents.binary);
-            return Buffer.from(binaryContentRenderer.renderAsMarkdown(parsedUriData.originalFileName), 'utf8');
+            const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(log, parsedUriData.runIndex, parsedUriData.artifactIndex);
+            if (binaryContentRenderer) {
+                return Buffer.from(binaryContentRenderer.renderAsMarkdown(parsedUriData.originalFileName), 'utf8');
+            }
         }
 
         if (artifact.contents.rendered) {
@@ -273,9 +289,9 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
             return undefined;
         }
 
-        // We render binary contents as markdown.
-        // Add the ".md" extension for VSCode to detect that.
-        const uriFileName: string = artifact.contents.binary ? `${fileName}.md` : fileName;
+        // We render binary and markdown content as markdown, so
+        // we add the ".md" extension for VSCode to detect that.
+        const uriFileName: string = (artifact.contents.binary  || artifact.contents.rendered?.markdown) ? `${fileName}.md` : fileName;
         const originalFileNameAsBase64: string = new Buffer(fileName).toString('base64');
         const logPathAsBase64: string = new Buffer(logPath.toString(/*skipEncoding*/ true), 'UTF8').toString('base64');
         return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}:///${originalFileNameAsBase64}/${uriFileName}?/runs/${runIndex}/artifacts/${artifactIndex}/#${logPathAsBase64}`, /*strict*/ true);

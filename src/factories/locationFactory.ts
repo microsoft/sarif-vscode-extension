@@ -52,13 +52,14 @@ export namespace LocationFactory {
                             physLocation.region) {
                                 // In theory what we would do here is map the ranges based on each embedded content types as appropriate.
                                 // For now let's just do this for the binary content as we render that as markdown.
+                                // Note that the binary render does not do anything with the content for creating the range.
                                 const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
                                 if (binaryContentRenderer) {
                                     if (physLocation.region.byteOffset !== undefined && physLocation.region.byteLength !== undefined) {
                                         parsedRange = {
                                         range: binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteOffset),
                                         endOfLine: false
-                                    }
+                                    };
                                 }
                             }
                         }
