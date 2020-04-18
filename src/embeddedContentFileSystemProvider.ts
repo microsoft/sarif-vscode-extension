@@ -50,7 +50,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
     private static EmbeddedContentScheme: string = 'sarifEmbeddedContent';
 
     // The regular expression used to parse the run and artifact index.
-    private static indicesRegex: RegExp = new RegExp(/^\/runs\/(\d{1,5})\/artifacts\/(\d{1,4})\//);
+    private static indicesRegex: RegExp = new RegExp(/^\/runs\/(\d{1,5})\/artifacts\/(\d{1,5})\//);
 
     // The number of matches we expect back from executing the regular expression.
     private static expectedMatchLength: number = 3;
@@ -70,7 +70,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
 
         const matchArray: RegExpExecArray | null = EmbeddedContentFileSystemProvider.indicesRegex.exec(uri.query);
         if (!matchArray || matchArray.length !== EmbeddedContentFileSystemProvider.expectedMatchLength) {
-            throw new Error('Incorrect scheme');
+            throw new Error('Incorrect URI format');
         }
 
         const fsPathSplit: string[] = uri.path.split('/').filter((pathPart) => pathPart.length !== 0) ;

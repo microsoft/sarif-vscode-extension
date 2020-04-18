@@ -57,7 +57,7 @@ export namespace LocationFactory {
                                 if (binaryContentRenderer) {
                                     if (physLocation.region.byteOffset !== undefined && physLocation.region.byteLength !== undefined) {
                                         parsedRange = {
-                                        range: binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteOffset),
+                                        range: binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength),
                                         endOfLine: false
                                     };
                                 }

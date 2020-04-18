@@ -9,10 +9,10 @@ import * as sarif from 'sarif';
 import MarkdownIt = require("markdown-it");
 
 /**
- * Class used to render binary embedded content.
+ * Class used to render embedded binary content.
  */
 export class BinaryContentRenderer {
-    private static bytesPerRow: number = 16;
+    private static bytesPerRow: number = 8;
     private static headerRows: number = 4;
     private static markdownTableDelimiterLength: number = '|'.length;
     private static hexNumberPrefixLength: number = '0x'.length;
@@ -37,7 +37,7 @@ export class BinaryContentRenderer {
     private createTableHeader(): string {
         // Start with the Offset column.
         const headerColumns: string[] = [BinaryContentRenderer.headerCellDelimiter, `${localize("embeddedContent.tableHeader", "Offset")}`];
-        const headerTableDelimiters: string[] = [BinaryContentRenderer.headerColumnStyle];
+        const headerTableDelimiters: string[] = [BinaryContentRenderer.headerCellDelimiter, BinaryContentRenderer.headerColumnStyle];
 
         // Create the table header and the header\row delimiter at the same time.
         for (let columnIndex: number = 0; columnIndex < BinaryContentRenderer.bytesPerRow; columnIndex++) {
@@ -155,6 +155,8 @@ export class BinaryContentRenderer {
                 dataStringBufferIndex +=  BinaryContentRenderer.bytesPerRow;
 
                 // Use mark-down it to escape anything that may affect the markdown (such as new-lines, etc.)
+                dataString = dataString.replace('\r', '-');
+                dataString = dataString.replace('\n', '-');
                 const mdText: string = mdIt.renderInline(dataString);
 
                 markdownStrings.push(mdText);
@@ -176,16 +178,20 @@ export class BinaryContentRenderer {
      * @param length The length of the desired range.
      */
     public rangeFromOffsetAndLength(startOffset: number, length: number): vscode.Range {
-        // Convert the length into and end offset.
         let startRow: number = Math.trunc(startOffset / BinaryContentRenderer.bytesPerRow);
-        let startColumn: number = startOffset - (startRow * BinaryContentRenderer.bytesPerRow);
+        let startColumn: number = startOffset % BinaryContentRenderer.bytesPerRow;
 
-        let endRowOw: number = startRow + Math.trunc((length - 1) / BinaryContentRenderer.bytesPerRow);
-        let endColumn: number = (endRowOw * BinaryContentRenderer.bytesPerRow) + Math.trunc(length / BinaryContentRenderer.bytesPerRow);
+        // The end offset is not inclusive of the length.
+        // A offset of 0 and length o 1, yields a start and end that are the same.
+        const endOffset: number = (startOffset + length) - 1;
+        let endRow: number = Math.trunc(endOffset / BinaryContentRenderer.bytesPerRow);
+        // We adjust the column by because a length of 1 doesn't mean
+        // highlight nothing.
+        let endColumn: number = (endOffset % BinaryContentRenderer.bytesPerRow) + 1;
 
-        // Offset by the known number of header rows.
+        // Offset by the known number of header rows in the markdown.
         startRow = startRow + BinaryContentRenderer.headerRows;
-        endRowOw = endRowOw + BinaryContentRenderer.headerRows;
+        endRow = endRow + BinaryContentRenderer.headerRows;
 
         // Now for the "fun" part.
         // We know that our column offset starts at "1" because of the table cell marker (|),
@@ -195,13 +201,8 @@ export class BinaryContentRenderer {
         const offsetMarkerDigits: number = startOffset < 16 ? 2 : Math.trunc((startOffset / 16));
         const offsetMarkerLength: number = offsetMarkerDigits + BinaryContentRenderer.hexNumberPrefixLength + BinaryContentRenderer.markdownTableDelimiterLength * 2;
         startColumn = startColumn * BinaryContentRenderer.contentLengthPerTableCell + offsetMarkerLength;
+        endColumn = endColumn * BinaryContentRenderer.contentLengthPerTableCell + offsetMarkerLength;
 
-        endColumn = (endColumn * BinaryContentRenderer.contentLengthPerTableCell + offsetMarkerLength);
-
-        if (startRow !== endRowOw) {
-            endColumn += offsetMarkerLength;
-        }
-
-        return new vscode.Range(startRow, startColumn, endRowOw, endColumn);
+        return new vscode.Range(startRow, startColumn, endRow, endColumn);
     }
 }
