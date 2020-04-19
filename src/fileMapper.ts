@@ -299,7 +299,7 @@ export class FileMapper implements Disposable {
 
     /**
      * Determines the base path of the remapped Uri. Does so by
-     * starting at the end of both pathes character compares
+     * starting at the end of both paths character compares
      * when it finds a mismatch it uses the index as the end of the substring of the bases for each path
      * @param originalUri Uri found in the sarif file
      * @param remappedUri Uri the originalUri has been successfully mapped to
@@ -424,7 +424,7 @@ export class FileMapper implements Disposable {
     }
 
     /**
-     * Goes through the filemappings and tries to remap any that aren't mapped(null) using the rootpaths
+     * Goes through the file mappings and tries to remap any that aren't mapped(null) using the rootpaths
      */
     private updateMappingsWithRootPaths(): void {
         this.fileRemapping.forEach((value: Uri | undefined, key: string, map: Map<string, Uri | undefined>) => {

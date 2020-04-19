@@ -108,29 +108,11 @@ export class LogReader implements Disposable {
         const readResults: ParseResults[] = [];
 
         await window.withProgress(pOptions, async (progress: Progress<{ message?: string; increment?: number }>, cancelToken): Promise<void> => {
-            ProgressHelper.Instance.Progress = progress;
             let runInfo: RunInfo;
+            const jsonMapping: JsonMapping = await LogReader.readLogJsonMapping(sarifFile, progress);
 
-            let docMapping: JsonMapping;
-            await ProgressHelper.Instance.setProgressReport(localize('logReader.processingSarifFile', "Parsing Sarif file"));
-            try {
-                const jsonBuffer: Buffer = await new Promise<Buffer>((resolve, reject) => {
-                    fs.readFile(sarifFile.fsPath, (err, data) => {
-                        err ? reject(err) : resolve(data);
-                    });
-                });
-                const jsonMap: JsonMap = require('json-source-map');
-                docMapping = jsonMap.parse(jsonBuffer.toString());
-            } catch (error) {
-                await window.showErrorMessage(
-                    localize(
-                        "logReader.jsonFileReadingError", "Sarif Viewer: Cannot display results for '{0}' because: {1}",
-                        sarifFile.fsPath, error.message));
-                return;
-            }
-
-            this.sarifJSONMapping.set(sarifFile.toString(), docMapping);
-            const sarifLog: sarif.Log = docMapping.data;
+            this.sarifJSONMapping.set(sarifFile.toString(), jsonMapping);
+            const sarifLog: sarif.Log = jsonMapping.data;
 
             // Check to see if the SARIF log file needs updating, if it does
             // stop and let the caller handle it.
@@ -167,6 +149,40 @@ export class LogReader implements Disposable {
             upgradeCheckInformation,
             parseResults: readResults
         };
+    }
+
+    /**
+     * Reads the SARIF log into a @see JsonMapping
+     * @param log The URI to a SARIF log.
+     * @param progress Optionally used to provide progress.
+     */
+    public static async readLogJsonMapping(log: Uri, progress?: Progress<{ message?: string; increment?: number }>): Promise<JsonMapping> {
+        if (!log.isSarifFile()) {
+            throw new Error('URI is not a sarif file.');
+        }
+
+        if (progress) {
+            ProgressHelper.Instance.Progress = progress;
+        }
+
+        await ProgressHelper.Instance.setProgressReport(localize('logReader.processingSarifFile', "Parsing Sarif file"));
+        try {
+            const jsonBuffer: Buffer = await new Promise<Buffer>((resolve, reject) => {
+                fs.readFile(log.fsPath, (err, data) => {
+                    err ? reject(err) : resolve(data);
+                });
+            });
+            const jsonMap: JsonMap = require('json-source-map');
+            return jsonMap.parse(jsonBuffer.toString());
+        } catch (error) {
+            await window.showErrorMessage(
+                localize(
+                    "logReader.jsonFileReadingError", "Sarif Viewer: Cannot display results for '{0}' because: {1}",
+                    log.fsPath, error.message));
+            throw error;
+        } finally {
+            ProgressHelper.Instance.Progress = undefined;
+        }
     }
 
     /**

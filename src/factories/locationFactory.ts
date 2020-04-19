@@ -42,7 +42,7 @@ export namespace LocationFactory {
                 // Check for embedded content and create our embedded content URI if it is embedded.
                 if (physLocation.artifactLocation.index !== undefined) {
                     fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
-                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), fileName, runInfo.runIndex, physLocation.artifactLocation.index);
+                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index);
                     if (embeddedUri) {
                         uri = embeddedUri;
                         mappedToLocalPath = true;
@@ -56,10 +56,13 @@ export namespace LocationFactory {
                                 const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
                                 if (binaryContentRenderer) {
                                     if (physLocation.region.byteOffset !== undefined && physLocation.region.byteLength !== undefined) {
-                                        parsedRange = {
-                                        range: binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength),
-                                        endOfLine: false
-                                    };
+                                        const binaryRange: Range | undefined = binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength);
+                                        if (binaryRange) {
+                                            parsedRange = {
+                                                range: binaryRange,
+                                                endOfLine: false
+                                        };
+                                    }
                                 }
                             }
                         }
