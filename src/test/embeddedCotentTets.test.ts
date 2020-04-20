@@ -22,8 +22,8 @@ function writeSarifLogToTempFile(log: sarif.Log): vscode.Uri {
     return vscode.Uri.file(logPath);
 }
 
-suite("testEmbeddedContent", () => {
-    const embeddedContentFileSystemProvider: EmbeddedContentFileSystemProvider = new EmbeddedContentFileSystemProvider();
+suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
+    let embeddedContentFileSystemProvider: EmbeddedContentFileSystemProvider;
     const textContent: string = Date.now().toString();
     const textContentAsBuffer = new Buffer(textContent);
     const textContentAsBinary: string = textContentAsBuffer.toString('base64');
@@ -33,6 +33,14 @@ suite("testEmbeddedContent", () => {
     const textAndBinaryContentArtifactIndex: number = 2;
     const binaryContentArtifactIndex: number = 1;
     const eightByteContentArtifactIndex: number = 3;
+
+    this.beforeAll( function(this: Mocha.Context): void  {
+        embeddedContentFileSystemProvider = new EmbeddedContentFileSystemProvider();
+    });
+
+    this.afterAll( function(this: Mocha.Context): void  {
+        embeddedContentFileSystemProvider.dispose();
+    });
 
     const log: sarif.Log = {
         version: "2.1.0",
@@ -62,21 +70,21 @@ suite("testEmbeddedContent", () => {
 
     test("Valid Run and Invalid Artifact Index", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, 15 );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, 15);
 
         assert.equal(embeddedUri, undefined);
     });
 
     test("Invalid Valid Run and Invalid Artifact Index", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 15, 15 );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 15, 15);
 
         assert.equal(embeddedUri, undefined);
     });
 
     test("Test prefer text over binary content", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textAndBinaryContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textAndBinaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -94,7 +102,7 @@ suite("testEmbeddedContent", () => {
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -115,7 +123,7 @@ suite("testEmbeddedContent", () => {
         "|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -136,7 +144,7 @@ suite("testEmbeddedContent", () => {
         "|:---:|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -161,7 +169,7 @@ suite("testEmbeddedContent", () => {
 
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -188,7 +196,7 @@ suite("testEmbeddedContent", () => {
         "|0x07|0x38|8|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -208,7 +216,7 @@ suite("testEmbeddedContent", () => {
         "|0x00|0x31|0x32|0x33|0x34|0x35|0x36|0x37|0x38|12345678|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -237,7 +245,7 @@ suite("testEmbeddedContent", () => {
         "|0x06|0x37|0x38||78|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex );
+        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
