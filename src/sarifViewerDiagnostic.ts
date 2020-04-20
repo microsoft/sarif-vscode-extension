@@ -29,7 +29,7 @@ function getSeverity(level: sarif.Result.level): vscode.DiagnosticSeverity {
 export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
     /**
      * Constructs a VSCode diagnostic for a single SARIF result.
-     * @param runInfo The run the diagnostic belons to.
+     * @param runInfo The run the diagnostic belongs to.
      * @param resultInfo The result the diagnostic belongs to.
      * @param rawResult The original SARIF result from the SARIF JSON file.
      * @param currentLocation The current location the diagnostic currently belongs to. This location can either be a location in the SARIF JSON file, or if mapped by the user, the actual file-system location of the result.
@@ -39,9 +39,9 @@ export class SarifViewerVsCodeDiagnostic extends vscode.Diagnostic {
         public readonly resultInfo: ResultInfo,
         public readonly rawResult: sarif.Result,
         private currentLocation: Location) {
-        super(currentLocation.range, resultInfo.message.text || localize("daignostic.noMessage", "No message"), getSeverity(resultInfo.severityLevel));
+        super(currentLocation.range, resultInfo.message.text || localize("diagnostic.noMessage", "No message"), getSeverity(resultInfo.severityLevel));
         this.code = resultInfo.ruleId;
-        this.source = resultInfo.runInfo.toolName || localize('daignostic.unknownTool', "Unknown tool");
+        this.source = resultInfo.runInfo.toolName || localize('diagnostic.unknownTool', "Unknown tool");
     }
 
     /**

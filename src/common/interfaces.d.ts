@@ -245,7 +245,7 @@ export interface FixChange {
      * Serializes "start" and "stop" properties of VSCode's range as part of the location.
      * That way we can properly type the web view code.
      * @param this Represents the FixChange being serialized.
-     * @param key The "key" in the outer object that respresents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
+     * @param key The "key" in the outer object that represents the location: (i.e. "changes: FixChange[]"  - the key is "changes")
      * @param value The current location value.
      */
     toJSON(this: FixChange, key: any, value: any): any
