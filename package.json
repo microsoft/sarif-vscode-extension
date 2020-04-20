@@ -164,6 +164,14 @@
                             "type": "boolean"
                         }
                     }
+                },
+                "sarif-viewer.binaryArtifactContent.bytesPerRow" : {
+                    "description": "%sarif-viewer.binaryArtifactContent.bytesPerRow.description%",
+                    "type": "integer",
+                    "enum": [
+                        1,2,4,8,16,32
+                    ],
+                    "default": 8
                 }
             }
         },

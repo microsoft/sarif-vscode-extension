@@ -8,7 +8,7 @@ import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
-import { EmbeddedContentFileSystemProvider } from "../embeddedContentFileSystemProvider";
+import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
 import { BinaryContentRenderer } from "../binaryContentRenderer";
 
 /**
@@ -39,31 +39,28 @@ export namespace LocationFactory {
             uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
             if (uri) {
-                // Check for embedded content and create our embedded content URI if it is embedded.
+                // Check for artifact content and create our artifact content URI.
+                // In order to have artifact content, the log must have a valid artifact index
+                // (represented by artifact location index) and the "contents" property of the artifact
+                // must be defined and have one of the "binary, text, or rendered" properties set.
                 if (physLocation.artifactLocation.index !== undefined) {
                     fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
-                    const embeddedUri: Uri | undefined = EmbeddedContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index);
-                    if (embeddedUri) {
-                        uri = embeddedUri;
+
+                    const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index);
+                    if (artifactContentUri) {
+                        uri = artifactContentUri;
                         mappedToLocalPath = true;
 
-                        // See if we can parse the range.
-                        if (physLocation &&
-                            physLocation.region) {
-                                // In theory what we would do here is map the ranges based on each embedded content types as appropriate.
-                                // For now let's just do this for the binary content as we render that as markdown.
-                                // Note that the binary render does not do anything with the content for creating the range.
-                                const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
-                                if (binaryContentRenderer) {
-                                    if (physLocation.region.byteOffset !== undefined && physLocation.region.byteLength !== undefined) {
-                                        const binaryRange: Range | undefined = binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength);
-                                        if (binaryRange) {
-                                            parsedRange = {
-                                                range: binaryRange,
-                                                endOfLine: false
-                                        };
-                                    }
-                                }
+                        // For binary content, we can map the byte offset and length to the "markdown" it will be converted to
+                        // for user display.
+                        const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
+                        if (binaryContentRenderer &&
+                            physLocation.region &&
+                            physLocation.region.byteOffset !== undefined &&
+                            physLocation.region.byteLength !== undefined) {
+                            const binaryRange: Range | undefined = binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength);
+                            if (binaryRange) {
+                                parsedRange = { range: binaryRange, endOfLine: false };
                             }
                         }
                     }

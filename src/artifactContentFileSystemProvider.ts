@@ -10,6 +10,21 @@ import { BinaryContentRenderer } from "./binaryContentRenderer";
 import { LogReader } from "./logReader";
 
 /**
+ * The purpose of this class is to provide a "file system provider" to artifact objects
+ * which have a "contents" property set ultimate results user display.
+ * Starting from the spec
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html
+ * An artifact can have "contents" property:
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317619
+ * The artifact contents object can have many different types of rendering.
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317422
+ * This file system provider allows the viewer to hand URIs to VSCode which it will
+ * later "read" for display in the editor.
+ * Using this technique allows us to virtualize access to the contents in the SARIF log
+ * without the necessity of writing files to the file-system.
+ */
+
+/**
  * Represents information parsed from the 'sarifEmbeddedContent' URI.
  * Returned from  @see EmbeddedContentFileSystemProvider.parseUri
  */
@@ -91,11 +106,11 @@ interface ArtifactInformationFromUri {
 /**
  * A file system provider that handles embedded content.
  */
-export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvider, vscode.Disposable {
+export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvider, vscode.Disposable {
     private disposables: vscode.Disposable[] = [];
 
     // The URI scheme for the content.
-    private static EmbeddedContentScheme: string = 'sarifEmbeddedContent';
+    private static ArtifactContentScheme: string = 'sarifArtifactContent';
 
     private readonly onDidChangeFileEventEmitter: vscode.EventEmitter<vscode.FileChangeEvent[]> = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
@@ -104,7 +119,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      */
     public constructor() {
         this.disposables.push(this.onDidChangeFileEventEmitter);
-        this.disposables.push(vscode.workspace.registerFileSystemProvider(EmbeddedContentFileSystemProvider.EmbeddedContentScheme, this, {
+        this.disposables.push(vscode.workspace.registerFileSystemProvider(ArtifactContentFileSystemProvider.ArtifactContentScheme, this, {
             isCaseSensitive: true,
             isReadonly: true
         }));
@@ -121,7 +136,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      * @inheritdoc
      */
     public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        const parsedUriData: ParsedUriData = EmbeddedContentFileSystemProvider.parseUri(uri);
+        const parsedUriData: ParsedUriData = ArtifactContentFileSystemProvider.parseUri(uri);
 
         const watcher: (currentStats: fs.Stats, previousStats: fs.Stats) => void = (currentStats, previousStats) => {
             this.onDidChangeFileEventEmitter.fire([
@@ -143,7 +158,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      * @inheritdoc
      */
     public async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-        const artifactContent: ArtifactInformationFromUri = await EmbeddedContentFileSystemProvider.getArtifactInformationFromUri(uri);
+        const artifactContent: ArtifactInformationFromUri = await ArtifactContentFileSystemProvider.getArtifactInformationFromUri(uri);
 
         let contentSize: number = 0;
         if (artifactContent.contents.text) {
@@ -184,7 +199,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      * @inheritdoc
      */
     public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-        const artifactContent: ArtifactInformationFromUri = await EmbeddedContentFileSystemProvider.getArtifactInformationFromUri(uri);
+        const artifactContent: ArtifactInformationFromUri = await ArtifactContentFileSystemProvider.getArtifactInformationFromUri(uri);
         if (artifactContent.contents.text) {
             return new Buffer(artifactContent.contents.text, artifactContent.artifact.encoding);
         }
@@ -280,11 +295,11 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
         const encodedUriDataAsBase64: string = new Buffer(JSON.stringify(encodedUriData)).toString('base64');
         const uriPath: string = path.posix.join(artifactUri.path, vscodeUri.path);
 
-        return vscode.Uri.parse(`${EmbeddedContentFileSystemProvider.EmbeddedContentScheme}://${uriPath}?${encodedUriDataAsBase64}`, /*strict*/ true);
+        return vscode.Uri.parse(`${ArtifactContentFileSystemProvider.ArtifactContentScheme}://${uriPath}?${encodedUriDataAsBase64}`, /*strict*/ true);
     }
 
     private static parseUri(uri: vscode.Uri): ParsedUriData {
-        if (!uri.scheme.invariantEqual(EmbeddedContentFileSystemProvider.EmbeddedContentScheme)) {
+        if (!uri.scheme.invariantEqual(ArtifactContentFileSystemProvider.ArtifactContentScheme)) {
             throw new Error('Incorrect scheme');
         }
 
@@ -303,7 +318,7 @@ export class EmbeddedContentFileSystemProvider implements vscode.FileSystemProvi
      * @param uri The URI to retrieve the content from.
      */
     private static async getArtifactInformationFromUri(uri: vscode.Uri): Promise<ArtifactInformationFromUri> {
-        const parsedUriData: ParsedUriData = EmbeddedContentFileSystemProvider.parseUri(uri);
+        const parsedUriData: ParsedUriData = ArtifactContentFileSystemProvider.parseUri(uri);
         const log: sarif.Log = (await LogReader.readLogJsonMapping(parsedUriData.log)).data;
         const run: sarif.Run | undefined = log.runs[parsedUriData.runIndex];
         if (!run) {

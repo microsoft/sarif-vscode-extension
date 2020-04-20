@@ -24,7 +24,7 @@ import { Api } from "./api/sarifViewerApi";
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
 import { ApiImpl } from './utilities/apiImpl';
-import { EmbeddedContentFileSystemProvider } from './embeddedContentFileSystemProvider';
+import { ArtifactContentFileSystemProvider } from './artifactContentFileSystemProvider';
 
 /**
  * This method is called when the extension is activated.
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): Api {
         onDocumentClosed(textDocument, diagnosticCollection);
     }));
 
-    context.subscriptions.push(new EmbeddedContentFileSystemProvider());
+    context.subscriptions.push(new ArtifactContentFileSystemProvider());
 
     // We do not need to block extension startup for reading any open documents.
     void readOpenedDocuments(logReader, diagnosticCollection);

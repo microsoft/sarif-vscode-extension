@@ -8,7 +8,7 @@ import * as sarif from "sarif";
 import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
-import { EmbeddedContentFileSystemProvider } from "./../embeddedContentFileSystemProvider";
+import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
 import { BinaryContentRenderer } from "../binaryContentRenderer";
 
 function writeSarifLogToTempFile(log: sarif.Log): vscode.Uri {
@@ -23,7 +23,7 @@ function writeSarifLogToTempFile(log: sarif.Log): vscode.Uri {
 }
 
 suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
-    let embeddedContentFileSystemProvider: EmbeddedContentFileSystemProvider;
+    let embeddedContentFileSystemProvider: ArtifactContentFileSystemProvider;
     const textContent: string = Date.now().toString();
     const textContentAsBuffer = new Buffer(textContent);
     const textContentAsBinary: string = textContentAsBuffer.toString('base64');
@@ -35,7 +35,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     const eightByteContentArtifactIndex: number = 3;
 
     this.beforeAll( function(this: Mocha.Context): void  {
-        embeddedContentFileSystemProvider = new EmbeddedContentFileSystemProvider();
+        embeddedContentFileSystemProvider = new ArtifactContentFileSystemProvider();
     });
 
     this.afterAll( function(this: Mocha.Context): void  {
@@ -60,7 +60,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     
     test("Valid Run and Artifact Index", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -70,21 +70,21 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
     test("Valid Run and Invalid Artifact Index", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, 15);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, 15);
 
         assert.equal(embeddedUri, undefined);
     });
 
     test("Invalid Valid Run and Invalid Artifact Index", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 15, 15);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 15, 15);
 
         assert.equal(embeddedUri, undefined);
     });
 
     test("Test prefer text over binary content", async () => {
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textAndBinaryContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, vscode.Uri.parse("readme.txt"), 0, textAndBinaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -93,7 +93,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content test header", async () => {
-        BinaryContentRenderer.bytesPerRow = 16;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 16;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -102,7 +102,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -114,7 +114,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content test header 1 byte per row", async () => {
-        BinaryContentRenderer.bytesPerRow = 1;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 1;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -123,7 +123,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -135,7 +135,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content test header 2 byte per row", async () => {
-        BinaryContentRenderer.bytesPerRow = 2;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 2;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -144,7 +144,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|:---:|:---:|:---:|:---:|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -156,7 +156,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content rendering 3 byte per row", async () => {
-        BinaryContentRenderer.bytesPerRow = 3;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 3;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -169,7 +169,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -179,7 +179,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content rendering 1 byte per row", async () => {
-        BinaryContentRenderer.bytesPerRow = 1;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 1;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -196,7 +196,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|0x07|0x38|8|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -206,7 +206,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content rendering eight bytes per row (single row)", async () => {
-        BinaryContentRenderer.bytesPerRow = 8;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 8;
         const artifactUri: vscode.Uri = vscode.Uri.parse('readme.txt');
         const expectedMarkdown: string = 
         `# File ${artifactUri.toString()}\r\n` +
@@ -216,7 +216,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|0x00|0x31|0x32|0x33|0x34|0x35|0x36|0x37|0x38|12345678|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -226,7 +226,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
     });
 
     test("Test binary content offset mapping at 3 byte per row", async () => {
-        BinaryContentRenderer.bytesPerRow = 3;
+        BinaryContentRenderer.bytesRenderedPerRowOverride = 3;
         const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(log, 0, eightByteContentArtifactIndex);
         assert.notEqual(binaryContentRenderer, undefined);
         if (!binaryContentRenderer) {
@@ -245,7 +245,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         "|0x06|0x37|0x38||78|\r\n";
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  EmbeddedContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex);
 
         assert.notEqual(embeddedUri, undefined);
 

@@ -7,20 +7,83 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 import * as vscode from 'vscode';
 import * as sarif from 'sarif';
 import MarkdownIt = require("markdown-it");
+import { Utilities } from './utilities';
+
+/**
+ * The purpose of this class is to transform artifact objects which have a "contents"
+ * property set which contains "binary" content into markdown for user display.
+ * Starting from the spec
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html
+ * An artifact can have "contents" property:
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317619
+ * The artifact contents object can have many different types of rendering.
+ * https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317422
+ * All of the content (with the exception of binary content) can be handed directly
+ * to VSCode and the user display and "diagnostic/problem ranges" will work with no modifications.
+ * Binary content, however, is a different story.
+ * The goal of this "renderer" is to present a simply user view (using markdown)
+ * that can be used with VSCode's diagnostics/problems.
+ */
 
 /**
  * Class used to render embedded binary content.
  */
 export class BinaryContentRenderer {
-    private static bytesRenderedPerRow: number = 16;
+    /**
+     * Allows for overriding the number of bytes per row for the rendering of binary content.
+     * Currently only used for testing.
+     */
+    public static bytesRenderedPerRowOverride: number | undefined;
+
+    /**
+     * The default number of bytes per row to render in the markdown.
+     */
+    private static defaultBytesRenderedPerRow: number = 8;
+
+    /**
+     * Stores the number of bytes per row to use for rendering.
+     */
+    private bytesRenderedPerRow: number;
+
+    /**
+     * The binary content rendered as markdown has 4 lines of markdown at the top.
+     * # File <data.bin>
+     * Total bytes 35
+     * |Offset|0|1|2|Data|
+     * |:---:|:---:|:---:|:---:|:---:|
+     */
     private static headerRows: number = 4;
+
+    /**
+     * Markdown character used for table cell delimiter.
+     */
     private static tableCellDelimiter: string = '|';
     private static tableCellDelimiterWidth: number = BinaryContentRenderer.tableCellDelimiter.length;
+
+    /**
+     * Characters used to render the contents of a hex byte.
+     */
     private static hexNumberPrefix: string = localize("binaryContentRenderer.hexNumberPrefix", "0x");
     private static hexNumberPrefixWidth: number = BinaryContentRenderer.hexNumberPrefix.length;
+
+    /**
+     * Represents the maximum length of a hex byte.
+     */
     private static hexNumberLength: number = 'ff'.length;
-    private static contentLengthPerTableCell: number = BinaryContentRenderer.hexNumberPrefixWidth + BinaryContentRenderer.hexNumberLength + BinaryContentRenderer.tableCellDelimiterWidth;
+
+    /**
+     * Represents the max width of hex byte (i.e. '|0xFF' )
+     */
+    private static contentWidthPerTableCell: number = BinaryContentRenderer.tableCellDelimiterWidth + BinaryContentRenderer.hexNumberPrefixWidth + BinaryContentRenderer.hexNumberLength;
+
+    /**
+     * The style used for the table cells. (Centered)
+     */
     private static headerColumnStyle: string = ':---:';
+
+    /**
+     * The text used for the header.
+     */
     private static offsetHeaderText: string = localize("binaryContentRenderer.offsetColumnHeader", "Offset");
 
     /**
@@ -28,6 +91,7 @@ export class BinaryContentRenderer {
      * @param content The string contents to be rendered as markdown.
      */
     private constructor(private readonly content: string) {
+        this.bytesRenderedPerRow = BinaryContentRenderer.bytesRenderedPerRowOverride ?? vscode.workspace.getConfiguration(Utilities.configSection).get('binaryArtifactContent.bytesPerRow', BinaryContentRenderer.defaultBytesRenderedPerRow);
     }
 
     /**
@@ -42,7 +106,7 @@ export class BinaryContentRenderer {
         const headerTableDelimiters: string[] = [BinaryContentRenderer.tableCellDelimiter, BinaryContentRenderer.headerColumnStyle];
 
         // Create the table header and the header\row delimiter at the same time.
-        for (let columnIndex: number = 0; columnIndex < BinaryContentRenderer.bytesRenderedPerRow; columnIndex++) {
+        for (let columnIndex: number = 0; columnIndex < this.bytesRenderedPerRow; columnIndex++) {
             headerColumns.push(BinaryContentRenderer.tableCellDelimiter);
             headerColumns.push(columnIndex.toString());
 
@@ -70,20 +134,6 @@ export class BinaryContentRenderer {
     }
 
     /**
-     * Gets the number of bytes rendered per row.
-     */
-    public static get bytesPerRow(): number {
-        return BinaryContentRenderer.bytesRenderedPerRow;
-    }
-
-    /**
-     * Sets the number of bytes rendered per row.
-     */
-    public static set bytesPerRow(value: number) {
-        BinaryContentRenderer.bytesRenderedPerRow = value;
-    }
-
-    /**
      * Attempts to create an instance of the binary content renderer based on a SARIF log, run index and artifact index
      * Returns undefined if the artifact contents cannot be found, or the content is not binary content.
      * @param log The SARIF log.
@@ -104,11 +154,15 @@ export class BinaryContentRenderer {
         return new BinaryContentRenderer(artifact.contents.binary);
     }
 
+    /**
+     * Renders the contents as mark-down.
+     * @param artifactUri The artifact URI to use as the file-name in the markdown.
+     */
     public renderAsMarkdown(artifactUri: vscode.Uri): string {
         const markdownStrings: string[] = [];
         const mdIt: MarkdownIt = new MarkdownIt();
         const contentBuffer: Buffer = Buffer.from(this.content, 'base64');
-        markdownStrings.push(localize("binaryContentRenderer.fileInfoHeader", "# File {0}\r\n", artifactUri.toString()));
+        markdownStrings.push(localize("binaryContentRenderer.fileInfoHeader", "# File {0}\r\n", artifactUri.path));
         markdownStrings.push(localize("binaryContentRenderer.bytesColumnHeader", "Total bytes {0}\r\n", contentBuffer.length));
         markdownStrings.push(this.createTableHeader());
 
@@ -123,7 +177,7 @@ export class BinaryContentRenderer {
             rowDataValues.push(bufferByte);
 
             // When we hit the start of a new row, add the offset marker.
-            if (bufferIndex % BinaryContentRenderer.bytesRenderedPerRow === 0) {
+            if (bufferIndex % this.bytesRenderedPerRow === 0) {
                 markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
                 markdownStrings.push(BinaryContentRenderer.valueAsHexDisplayString(bufferIndex));
             }
@@ -136,10 +190,10 @@ export class BinaryContentRenderer {
             // pad out the remaining cells in the table, add the data string representation
             // and finish off this row.
             const nextIndex: number = bufferIndex + 1;
-            if (nextIndex % BinaryContentRenderer.bytesRenderedPerRow === 0 || nextIndex === contentBuffer.length) {
+            if (nextIndex % this.bytesRenderedPerRow === 0 || nextIndex === contentBuffer.length) {
                 // Pad out the row of bytes if needed (happens at the end of the content)
                 let bytePaddingIndex: number = nextIndex;
-                while (bytePaddingIndex % BinaryContentRenderer.bytesRenderedPerRow !== 0) {
+                while (bytePaddingIndex % this.bytesRenderedPerRow !== 0) {
                     markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
                     bytePaddingIndex++;
                 }
@@ -180,17 +234,17 @@ export class BinaryContentRenderer {
             return undefined;
         }
 
-        let startRow: number = Math.trunc(startOffset / BinaryContentRenderer.bytesRenderedPerRow);
-        let startColumn: number = startOffset % BinaryContentRenderer.bytesRenderedPerRow;
+        let startRow: number = Math.trunc(startOffset / this.bytesRenderedPerRow);
+        let startColumn: number = startOffset % this.bytesRenderedPerRow;
 
         // The end offset is not inclusive of the length.
         // A offset of 0 and length of 1, yields a start and end that are the same.
         const endOffset: number = (startOffset + length) - 1;
-        let endRow: number = Math.trunc(endOffset / BinaryContentRenderer.bytesRenderedPerRow);
+        let endRow: number = Math.trunc(endOffset / this.bytesRenderedPerRow);
 
         // We adjust the column by because a length of 1 doesn't mean
         // highlight nothing.
-        let endColumn: number = (endOffset % BinaryContentRenderer.bytesRenderedPerRow) + 1;
+        let endColumn: number = (endOffset % this.bytesRenderedPerRow) + 1;
 
         // Offset by the known number of header rows in the markdown.
         startRow = startRow + BinaryContentRenderer.headerRows;
@@ -203,8 +257,8 @@ export class BinaryContentRenderer {
         // 2 for the '0x' string and then two more characters for the markdown table delimiter.
         const offsetMarkerDigits: number = startOffset < 16 ? 2 : Math.trunc((startOffset / 16));
         const offsetMarkerLength: number = offsetMarkerDigits + BinaryContentRenderer.hexNumberPrefixWidth + BinaryContentRenderer.tableCellDelimiterWidth;
-        startColumn = startColumn * BinaryContentRenderer.contentLengthPerTableCell + offsetMarkerLength + BinaryContentRenderer.tableCellDelimiterWidth;
-        endColumn = endColumn * BinaryContentRenderer.contentLengthPerTableCell + offsetMarkerLength;
+        startColumn = startColumn * BinaryContentRenderer.contentWidthPerTableCell + offsetMarkerLength + BinaryContentRenderer.tableCellDelimiterWidth;
+        endColumn = endColumn * BinaryContentRenderer.contentWidthPerTableCell + offsetMarkerLength;
 
         return new vscode.Range(startRow, startColumn, endRow, endColumn);
     }
