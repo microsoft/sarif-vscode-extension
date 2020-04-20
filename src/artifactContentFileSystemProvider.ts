@@ -6,8 +6,8 @@ import * as vscode from "vscode";
 import * as sarif from "sarif";
 import * as fs from "fs";
 import * as path from "path";
-import { BinaryContentRenderer } from "./binaryContentRenderer";
 import { LogReader } from "./logReader";
+import { ArtifactContentRenderer, tryCreateRendererForArtifactContent } from "./artifactContentRenderers/artifactContentRendering";
 
 /**
  * The purpose of this class is to provide a "file system provider" to artifact objects
@@ -200,25 +200,10 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
      */
     public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
         const artifactContent: ArtifactInformationFromUri = await ArtifactContentFileSystemProvider.getArtifactInformationFromUri(uri);
-        if (artifactContent.contents.text) {
-            return new Buffer(artifactContent.contents.text, artifactContent.artifact.encoding);
-        }
+        const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(artifactContent.log, artifactContent.contents, artifactContent.parsedUriData.runIndex, artifactContent.parsedUriData.artifactIndex);
 
-        if (artifactContent.contents.binary) {
-            const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(artifactContent.log, artifactContent.parsedUriData.runIndex, artifactContent.parsedUriData.artifactIndex);
-            if (binaryContentRenderer) {
-                return Buffer.from(binaryContentRenderer.renderAsMarkdown(artifactContent.parsedUriData.artifactUri));
-            }
-        }
-
-        if (artifactContent.contents.rendered) {
-            if (artifactContent.contents.rendered.markdown) {
-                return Buffer.from(artifactContent.contents.rendered.markdown, artifactContent.artifact.encoding);
-            }
-
-            if (artifactContent.contents.text) {
-                return Buffer.from(artifactContent.contents.rendered.text, artifactContent.artifact.encoding);
-            }
+        if (artifactContentRenderer) {
+            return Buffer.from(artifactContentRenderer.render(artifactContent.parsedUriData.artifactUri));
         }
 
         throw new Error(`There is no contents that can be rendered associated with artifact index ${artifactContent.parsedUriData.runIndex} for run index ${artifactContent.parsedUriData.runIndex}.`);
@@ -267,8 +252,9 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
      * @param artifactUri The file name that VSCode will display in the editor and use for detection of type.
      * @param runIndex The index of the run in the SARIF file.
      * @param artifactIndex The artifact index.
+     * @param artifactContentRenderer Indicates how to render binary content.
      */
-    public static tryCreateUri(sarifLog: sarif.Log, logPath: vscode.Uri, artifactUri: vscode.Uri, runIndex: number, artifactIndex: number): vscode.Uri | undefined {
+    public static tryCreateUri(sarifLog: sarif.Log, logPath: vscode.Uri, artifactUri: vscode.Uri, runIndex: number, artifactIndex: number, artifactContentRenderer: ArtifactContentRenderer | undefined): vscode.Uri | undefined {
         if (!logPath.isSarifFile()) {
             throw new Error(`${logPath.toString()} is not a SARIF file`);
         }
@@ -282,9 +268,14 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
             return undefined;
         }
 
-        // We render binary and markdown content as markdown, so
-        // we add the ".md" extension for VSCode to detect that.
-        const vscodeUri: vscode.Uri = (artifact.contents.binary || artifact.contents.rendered?.markdown) ? artifactUri.with({ path: artifactUri.path.concat('.md') }) : artifactUri;
+        let uriPath: string;
+        if (!artifactContentRenderer || !artifactContentRenderer.specificUriExtension) {
+            uriPath = artifactUri.path;
+        } else {
+            const vscodeUri: vscode.Uri = artifactUri.with({ path: artifactUri.path.concat(artifactContentRenderer.specificUriExtension) });
+            uriPath = path.posix.join(artifactUri.path, vscodeUri.path);
+        }
+
         const encodedUriData: EncodedUriData = {
             artifactIndex,
             runIndex,
@@ -293,7 +284,6 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
         };
 
         const encodedUriDataAsBase64: string = new Buffer(JSON.stringify(encodedUriData)).toString('base64');
-        const uriPath: string = path.posix.join(artifactUri.path, vscodeUri.path);
 
         return vscode.Uri.parse(`${ArtifactContentFileSystemProvider.ArtifactContentScheme}://${uriPath}?${encodedUriDataAsBase64}`, /*strict*/ true);
     }

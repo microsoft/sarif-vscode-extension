@@ -6,8 +6,10 @@ import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 import * as vscode from 'vscode';
 import * as sarif from 'sarif';
+import * as os from "os";
 import MarkdownIt = require("markdown-it");
-import { Utilities } from './utilities';
+import { Utilities } from '../utilities';
+import { ArtifactContentRenderer } from './artifactContentRendering';
 
 /**
  * The purpose of this class is to transform artifact objects which have a "contents"
@@ -28,7 +30,7 @@ import { Utilities } from './utilities';
 /**
  * Class used to render embedded binary content.
  */
-export class BinaryContentRenderer {
+export class BinaryArtifactContentRenderer implements ArtifactContentRenderer {
     /**
      * Allows for overriding the number of bytes per row for the rendering of binary content.
      * Currently only used for testing.
@@ -58,13 +60,13 @@ export class BinaryContentRenderer {
      * Markdown character used for table cell delimiter.
      */
     private static tableCellDelimiter: string = '|';
-    private static tableCellDelimiterWidth: number = BinaryContentRenderer.tableCellDelimiter.length;
+    private static tableCellDelimiterWidth: number = BinaryArtifactContentRenderer.tableCellDelimiter.length;
 
     /**
      * Characters used to render the contents of a hex byte.
      */
     private static hexNumberPrefix: string = localize("binaryContentRenderer.hexNumberPrefix", "0x");
-    private static hexNumberPrefixWidth: number = BinaryContentRenderer.hexNumberPrefix.length;
+    private static hexNumberPrefixWidth: number = BinaryArtifactContentRenderer.hexNumberPrefix.length;
 
     /**
      * Represents the maximum length of a hex byte.
@@ -74,7 +76,7 @@ export class BinaryContentRenderer {
     /**
      * Represents the max width of hex byte (i.e. '|0xFF' )
      */
-    private static contentWidthPerTableCell: number = BinaryContentRenderer.tableCellDelimiterWidth + BinaryContentRenderer.hexNumberPrefixWidth + BinaryContentRenderer.hexNumberLength;
+    private static contentWidthPerTableCell: number = BinaryArtifactContentRenderer.tableCellDelimiterWidth + BinaryArtifactContentRenderer.hexNumberPrefixWidth + BinaryArtifactContentRenderer.hexNumberLength;
 
     /**
      * The style used for the table cells. (Centered)
@@ -87,11 +89,26 @@ export class BinaryContentRenderer {
     private static offsetHeaderText: string = localize("binaryContentRenderer.offsetColumnHeader", "Offset");
 
     /**
+     * Choose the correct line ending depending on platform.
+     */
+    private static lineEnding: string = os.platform() === 'win32' ? '\r\n' : '\n';
+
+    /**
+     * The binary string contents.
+     */
+    private readonly contents: string;
+
+    /**
      * Creates an instance of the binary content renderer.
      * @param content The string contents to be rendered as markdown.
      */
-    private constructor(private readonly content: string) {
-        this.bytesRenderedPerRow = BinaryContentRenderer.bytesRenderedPerRowOverride ?? vscode.workspace.getConfiguration(Utilities.configSection).get('binaryArtifactContent.bytesPerRow', BinaryContentRenderer.defaultBytesRenderedPerRow);
+    private constructor(protected readonly artifactContent: sarif.ArtifactContent) {
+        if (!artifactContent.binary) {
+            throw new Error('Expected to have a binary content string');
+        }
+
+        this.contents = artifactContent.binary;
+        this.bytesRenderedPerRow = BinaryArtifactContentRenderer.bytesRenderedPerRowOverride ?? vscode.workspace.getConfiguration(Utilities.configSection).get('binaryArtifactContent.bytesPerRow', BinaryArtifactContentRenderer.defaultBytesRenderedPerRow);
     }
 
     /**
@@ -102,30 +119,30 @@ export class BinaryContentRenderer {
      */
     private createTableHeader(): string {
         // Start with the Offset column.
-        const headerColumns: string[] = [BinaryContentRenderer.tableCellDelimiter, BinaryContentRenderer.offsetHeaderText];
-        const headerTableDelimiters: string[] = [BinaryContentRenderer.tableCellDelimiter, BinaryContentRenderer.headerColumnStyle];
+        const headerColumns: string[] = [BinaryArtifactContentRenderer.tableCellDelimiter, BinaryArtifactContentRenderer.offsetHeaderText];
+        const headerTableDelimiters: string[] = [BinaryArtifactContentRenderer.tableCellDelimiter, BinaryArtifactContentRenderer.headerColumnStyle];
 
         // Create the table header and the header\row delimiter at the same time.
         for (let columnIndex: number = 0; columnIndex < this.bytesRenderedPerRow; columnIndex++) {
-            headerColumns.push(BinaryContentRenderer.tableCellDelimiter);
+            headerColumns.push(BinaryArtifactContentRenderer.tableCellDelimiter);
             headerColumns.push(columnIndex.toString());
 
-            headerTableDelimiters.push(BinaryContentRenderer.tableCellDelimiter);
-            headerTableDelimiters.push(BinaryContentRenderer.headerColumnStyle);
+            headerTableDelimiters.push(BinaryArtifactContentRenderer.tableCellDelimiter);
+            headerTableDelimiters.push(BinaryArtifactContentRenderer.headerColumnStyle);
         }
 
         // Add the data column to the header.
-        headerColumns.push(BinaryContentRenderer.tableCellDelimiter);
+        headerColumns.push(BinaryArtifactContentRenderer.tableCellDelimiter);
         headerColumns.push(`${localize("binaryContentRenderer.dataColumnHeader", "Data")}`);
-        headerColumns.push(BinaryContentRenderer.tableCellDelimiter);
+        headerColumns.push(BinaryArtifactContentRenderer.tableCellDelimiter);
 
         // Add the data column to the header\row delimiter.
-        headerTableDelimiters.push(BinaryContentRenderer.tableCellDelimiter);
-        headerTableDelimiters.push(BinaryContentRenderer.headerColumnStyle);
-        headerTableDelimiters.push(BinaryContentRenderer.tableCellDelimiter);
+        headerTableDelimiters.push(BinaryArtifactContentRenderer.tableCellDelimiter);
+        headerTableDelimiters.push(BinaryArtifactContentRenderer.headerColumnStyle);
+        headerTableDelimiters.push(BinaryArtifactContentRenderer.tableCellDelimiter);
 
         // Now join them all together.
-        return `${headerColumns.join('')}\r\n${headerTableDelimiters.join('')}\r\n`;
+        return `${headerColumns.join('')}${BinaryArtifactContentRenderer.lineEnding}${headerTableDelimiters.join('')}${BinaryArtifactContentRenderer.lineEnding}`;
     }
 
     private static valueAsHexDisplayString(value: number): string {
@@ -140,30 +157,33 @@ export class BinaryContentRenderer {
      * @param runIndex The run index.
      * @param artifactIndex The artifact index.
      */
-    public static tryCreateFromLog(log: sarif.Log, runIndex: number, artifactIndex: number): BinaryContentRenderer | undefined {
-        const run: sarif.Run | undefined = log.runs[runIndex];
-        if (!run || !run.artifacts) {
+    public static tryCreateFromLog(log: sarif.Log, artifactContents: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+        // If the bytes rendered per row override is set, it means we are running tests, so
+        // ignore the user preference and allow the renderer to be created.
+        if (BinaryArtifactContentRenderer.bytesRenderedPerRowOverride === undefined &&
+            !vscode.workspace.getConfiguration(Utilities.configSection).get('binaryArtifactContent.viewAsMarkdown', true)) {
             return undefined;
         }
 
-        const artifact: sarif.Artifact | undefined = run.artifacts[artifactIndex];
-        if (!(artifact?.contents?.binary)) {
+        if (!artifactContents.binary) {
             return undefined;
         }
 
-        return new BinaryContentRenderer(artifact.contents.binary);
+        return new BinaryArtifactContentRenderer(artifactContents);
     }
 
     /**
      * Renders the contents as mark-down.
      * @param artifactUri The artifact URI to use as the file-name in the markdown.
      */
-    public renderAsMarkdown(artifactUri: vscode.Uri): string {
+    public render(artifactUri: vscode.Uri): string {
         const markdownStrings: string[] = [];
         const mdIt: MarkdownIt = new MarkdownIt();
-        const contentBuffer: Buffer = Buffer.from(this.content, 'base64');
-        markdownStrings.push(localize("binaryContentRenderer.fileInfoHeader", "# File {0}\r\n", artifactUri.path));
-        markdownStrings.push(localize("binaryContentRenderer.bytesColumnHeader", "Total bytes {0}\r\n", contentBuffer.length));
+        const contentBuffer: Buffer = Buffer.from(this.contents, 'base64');
+        markdownStrings.push(localize("binaryContentRenderer.fileInfoHeader", "# File {0}",  artifactUri.path));
+        markdownStrings.push(BinaryArtifactContentRenderer.lineEnding);
+        markdownStrings.push(localize("binaryContentRenderer.bytesColumnHeader", "Total bytes {0}", contentBuffer.length));
+        markdownStrings.push(BinaryArtifactContentRenderer.lineEnding);
         markdownStrings.push(this.createTableHeader());
 
         // This is used as an index into the buffer for where the next
@@ -178,13 +198,13 @@ export class BinaryContentRenderer {
 
             // When we hit the start of a new row, add the offset marker.
             if (bufferIndex % this.bytesRenderedPerRow === 0) {
-                markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
-                markdownStrings.push(BinaryContentRenderer.valueAsHexDisplayString(bufferIndex));
+                markdownStrings.push(BinaryArtifactContentRenderer.tableCellDelimiter);
+                markdownStrings.push(BinaryArtifactContentRenderer.valueAsHexDisplayString(bufferIndex));
             }
 
             // Render the byte-value
-            markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
-            markdownStrings.push(BinaryContentRenderer.valueAsHexDisplayString(bufferByte));
+            markdownStrings.push(BinaryArtifactContentRenderer.tableCellDelimiter);
+            markdownStrings.push(BinaryArtifactContentRenderer.valueAsHexDisplayString(bufferByte));
 
             // If the next byte is a new row, or we are at the end of the content,
             // pad out the remaining cells in the table, add the data string representation
@@ -194,12 +214,12 @@ export class BinaryContentRenderer {
                 // Pad out the row of bytes if needed (happens at the end of the content)
                 let bytePaddingIndex: number = nextIndex;
                 while (bytePaddingIndex % this.bytesRenderedPerRow !== 0) {
-                    markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
+                    markdownStrings.push(BinaryArtifactContentRenderer.tableCellDelimiter);
                     bytePaddingIndex++;
                 }
 
                 // Finish off the data bytes.
-                markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
+                markdownStrings.push(BinaryArtifactContentRenderer.tableCellDelimiter);
 
                 // Add the data representation.
                 // Covert the binary data into a string
@@ -208,8 +228,8 @@ export class BinaryContentRenderer {
                 markdownStrings.push(mdText);
 
                 // This row is complete.
-                markdownStrings.push(BinaryContentRenderer.tableCellDelimiter);
-                markdownStrings.push('\r\n');
+                markdownStrings.push(BinaryArtifactContentRenderer.tableCellDelimiter);
+                markdownStrings.push(BinaryArtifactContentRenderer.lineEnding);
 
                 // Clear the buffer out for the next row.
                 rowDataValues.length = 0;
@@ -229,7 +249,14 @@ export class BinaryContentRenderer {
      * @param startOffset The start offset to compute the range from.
      * @param length The length of the desired range.
      */
-    public rangeFromOffsetAndLength(startOffset: number, length: number): vscode.Range | undefined {
+    public rangeFromRegion(region: sarif.Region): vscode.Range | undefined {
+        if (region.byteOffset === undefined || region.byteLength === undefined) {
+            return undefined;
+        }
+
+        const startOffset: number = region.byteOffset;
+        const length: number = region.byteLength;
+
         if ((startOffset < 0) || (length < 1) || ((startOffset + length) < 0)) {
             return undefined;
         }
@@ -247,8 +274,8 @@ export class BinaryContentRenderer {
         let endColumn: number = (endOffset % this.bytesRenderedPerRow) + 1;
 
         // Offset by the known number of header rows in the markdown.
-        startRow = startRow + BinaryContentRenderer.headerRows;
-        endRow = endRow + BinaryContentRenderer.headerRows;
+        startRow = startRow + BinaryArtifactContentRenderer.headerRows;
+        endRow = endRow + BinaryArtifactContentRenderer.headerRows;
 
         // Now for the "fun" part.
         // We know that our column offset starts at "1" because of the table cell marker (|),
@@ -256,9 +283,9 @@ export class BinaryContentRenderer {
         // To calculate the offset length, we need the number of hexadecimal digits (value/16) +
         // 2 for the '0x' string and then two more characters for the markdown table delimiter.
         const offsetMarkerDigits: number = startOffset < 16 ? 2 : Math.trunc((startOffset / 16));
-        const offsetMarkerLength: number = offsetMarkerDigits + BinaryContentRenderer.hexNumberPrefixWidth + BinaryContentRenderer.tableCellDelimiterWidth;
-        startColumn = startColumn * BinaryContentRenderer.contentWidthPerTableCell + offsetMarkerLength + BinaryContentRenderer.tableCellDelimiterWidth;
-        endColumn = endColumn * BinaryContentRenderer.contentWidthPerTableCell + offsetMarkerLength;
+        const offsetMarkerLength: number = offsetMarkerDigits + BinaryArtifactContentRenderer.hexNumberPrefixWidth + BinaryArtifactContentRenderer.tableCellDelimiterWidth;
+        startColumn = startColumn * BinaryArtifactContentRenderer.contentWidthPerTableCell + offsetMarkerLength + BinaryArtifactContentRenderer.tableCellDelimiterWidth;
+        endColumn = endColumn * BinaryArtifactContentRenderer.contentWidthPerTableCell + offsetMarkerLength;
 
         return new vscode.Range(startRow, startColumn, endRow, endColumn);
     }

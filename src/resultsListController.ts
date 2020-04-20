@@ -180,7 +180,7 @@ export class ResultsListController implements Disposable {
                 const preserveFocus: boolean = window.activeTextEditor !== undefined;
                 const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, preserveFocus);
                 textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
-                textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.start);
+                textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.end);
                 await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
                 break;
 

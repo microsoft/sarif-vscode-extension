@@ -9,7 +9,7 @@ import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
-import { BinaryContentRenderer } from "../binaryContentRenderer";
+import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRendering";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -44,23 +44,30 @@ export namespace LocationFactory {
                 // (represented by artifact location index) and the "contents" property of the artifact
                 // must be defined and have one of the "binary, text, or rendered" properties set.
                 if (physLocation.artifactLocation.index !== undefined) {
-                    fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
+                    const run: sarif.Run | undefined = sarifLog.runs[runInfo.runIndex];
+                    if (run && run.artifacts) {
+                        const artifact: sarif.Artifact | undefined = run.artifacts[physLocation.artifactLocation.index];
+                        if (artifact) {
+                            const artifactContent: sarif.ArtifactContent | undefined = artifact.contents;
+                            if (artifactContent) {
+                                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
 
-                    const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index);
-                    if (artifactContentUri) {
-                        uri = artifactContentUri;
-                        mappedToLocalPath = true;
+                                // See if we have a custom renderer for an artifact content object (for example, binary content).
+                                const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(sarifLog, artifactContent, runInfo.runIndex, physLocation.artifactLocation.index);
+                                const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer);
+                                if (artifactContentUri) {
+                                    uri = artifactContentUri;
+                                    mappedToLocalPath = true;
 
-                        // For binary content, we can map the byte offset and length to the "markdown" it will be converted to
-                        // for user display.
-                        const binaryContentRenderer: BinaryContentRenderer | undefined = BinaryContentRenderer.tryCreateFromLog(sarifLog, runInfo.runIndex, physLocation.artifactLocation.index);
-                        if (binaryContentRenderer &&
-                            physLocation.region &&
-                            physLocation.region.byteOffset !== undefined &&
-                            physLocation.region.byteLength !== undefined) {
-                            const binaryRange: Range | undefined = binaryContentRenderer.rangeFromOffsetAndLength(physLocation.region.byteOffset, physLocation.region.byteLength);
-                            if (binaryRange) {
-                                parsedRange = { range: binaryRange, endOfLine: false };
+                                    if (physLocation.region &&
+                                        artifactContentRenderer &&
+                                        artifactContentRenderer.rangeFromRegion) {
+                                        const rendererRange: Range | undefined = artifactContentRenderer.rangeFromRegion(physLocation.region);
+                                        if (rendererRange) {
+                                            parsedRange = { range: rendererRange, endOfLine: false };
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -174,7 +181,7 @@ export namespace LocationFactory {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    export function  parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
+    export function parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
         let startline: number = 0;
         let startcol: number = 0;
         let endline: number = 0;
@@ -215,6 +222,12 @@ export namespace LocationFactory {
             } else {
                 endcol = startcol;
             }
+        } else if (region.byteOffset !== undefined && region.byteLength !== undefined) {
+            startline = 0;
+            endline = 0;
+            startcol = region.byteOffset;
+            endcol = startcol + region.byteLength;
+            eol = true;
         }
 
         return { range: new Range(startline, startcol, endline, endcol), endOfLine: eol };
