@@ -109,7 +109,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, textContentArtifactContent, 0, textContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex,artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex,artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -131,7 +131,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, binaryContentArtifactContent, 0, binaryContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex, artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex, artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -153,7 +153,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, binaryContentArtifactContent, 0, binaryContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex, artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, binaryContentArtifactIndex, artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -179,7 +179,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, eightByteContentArtifactContent, 0, eightByteContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -207,7 +207,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, eightByteContentArtifactContent, 0, eightByteContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -228,7 +228,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
         const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(log, eightByteContentArtifactContent, 0, eightByteContentArtifactIndex);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, artifactContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 
@@ -257,7 +257,7 @@ suite("testEmbeddedContent",async function (this: Mocha.Suite): Promise<void> {
         `|0x06|0x37|0x38||78|${lineEnding}`;
 
         const logFileUri: vscode.Uri = writeSarifLogToTempFile(log);
-        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, binaryContentRenderer);
+        const embeddedUri: vscode.Uri | undefined =  ArtifactContentFileSystemProvider.tryCreateUri(log, logFileUri, artifactUri, 0, eightByteContentArtifactIndex, binaryContentRenderer?.specificUriExtension);
 
         assert.notEqual(embeddedUri, undefined);
 

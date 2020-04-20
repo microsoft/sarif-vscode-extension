@@ -54,7 +54,7 @@ export namespace LocationFactory {
 
                                 // See if we have a custom renderer for an artifact content object (for example, binary content).
                                 const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(sarifLog, artifactContent, runInfo.runIndex, physLocation.artifactLocation.index);
-                                const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer);
+                                const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer?.specificUriExtension);
                                 if (artifactContentUri) {
                                     uri = artifactContentUri;
                                     mappedToLocalPath = true;

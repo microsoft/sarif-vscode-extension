@@ -252,9 +252,9 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
      * @param artifactUri The file name that VSCode will display in the editor and use for detection of type.
      * @param runIndex The index of the run in the SARIF file.
      * @param artifactIndex The artifact index.
-     * @param artifactContentRenderer Indicates how to render binary content.
+     * @param requiredExtension Indicates how to render binary content.
      */
-    public static tryCreateUri(sarifLog: sarif.Log, logPath: vscode.Uri, artifactUri: vscode.Uri, runIndex: number, artifactIndex: number, artifactContentRenderer: ArtifactContentRenderer | undefined): vscode.Uri | undefined {
+    public static tryCreateUri(sarifLog: sarif.Log, logPath: vscode.Uri, artifactUri: vscode.Uri, runIndex: number, artifactIndex: number, requiredExtension: string | undefined): vscode.Uri | undefined {
         if (!logPath.isSarifFile()) {
             throw new Error(`${logPath.toString()} is not a SARIF file`);
         }
@@ -269,10 +269,10 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
         }
 
         let uriPath: string;
-        if (!artifactContentRenderer || !artifactContentRenderer.specificUriExtension) {
+        if (!requiredExtension) {
             uriPath = artifactUri.path;
         } else {
-            const vscodeUri: vscode.Uri = artifactUri.with({ path: artifactUri.path.concat(artifactContentRenderer.specificUriExtension) });
+            const vscodeUri: vscode.Uri = artifactUri.with({ path: artifactUri.path.concat(requiredExtension) });
             uriPath = path.posix.join(artifactUri.path, vscodeUri.path);
         }
 
