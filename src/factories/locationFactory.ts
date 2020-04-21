@@ -8,6 +8,8 @@ import { Range, Uri, Event } from "vscode";
 import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/interfaces";
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
+import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
+import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRenderer";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -16,10 +18,11 @@ import { FileMapper } from "../fileMapper";
 export namespace LocationFactory {
     /**
      * Processes the passed in sarif location and creates a new Location
+     * @param sarifLog The raw sarif log.
      * @param runInfo The run the location belongs to.
      * @param sarifLocation location from result in sarif file
      */
-    export async function create(runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
+    export async function create(sarifLog: sarif.Log, runInfo: RunInfo, sarifLocation: sarif.Location): Promise<Location> {
         const id: number | undefined = sarifLocation.id;
         const physLocation: sarif.PhysicalLocation | undefined = sarifLocation.physicalLocation;
         let uriBase: string | undefined;
@@ -31,11 +34,37 @@ export namespace LocationFactory {
         let logicalLocations: string[] | undefined;
 
         if (physLocation && physLocation.artifactLocation && physLocation.artifactLocation.uri) {
-            const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
-            uriBase = Utilities.getUriBase(runInfo, artifactLocation);
+            uriBase = Utilities.getUriBase(runInfo, physLocation.artifactLocation);
             uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
             if (uri) {
+                // Check for artifact content and create our artifact content URI.
+                // In order to have artifact content, the log must have a valid artifact index
+                // (represented by artifact location index) and the "contents" property of the artifact
+                // must be defined and have one of the "binary, text, or rendered" properties set.
+                if (physLocation.artifactLocation.index !== undefined) {
+                    const artifactContent: sarif.ArtifactContent | undefined  = sarifLog.runs[runInfo.runIndex]?.artifacts?.[physLocation.artifactLocation.index]?.contents;
+                    if (artifactContent) {
+                        fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
+
+                        // See if we have a custom renderer for an artifact content object (for example, binary content).
+                        const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(sarifLog, artifactContent);
+                        const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer?.specificUriExtension);
+                        if (artifactContentUri) {
+                            uri = artifactContentUri;
+                            mappedToLocalPath = true;
+
+                            if (physLocation.region &&
+                                artifactContentRenderer &&
+                                artifactContentRenderer.rangeFromRegion) {
+                                const rendererRange: Range | undefined = artifactContentRenderer.rangeFromRegion(physLocation.region);
+                                if (rendererRange) {
+                                    parsedRange = { range: rendererRange, endOfLine: false };
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // If the URI is of file scheme, then we will try to fix the casing
                 // because VSCode treats URIs as case sensitive and if the case
@@ -44,13 +73,12 @@ export namespace LocationFactory {
                 if (uri.isFile()) {
                     uri = Utilities.fixUriCasing(uri);
                     mappedToLocalPath = fs.existsSync(uri.fsPath);
+                    fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
                 }
-
-                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
             }
         }
 
-        if (physLocation && physLocation.region) {
+        if (!parsedRange && physLocation && physLocation.region) {
             parsedRange = parseRange(physLocation.region);
             message = Utilities.parseSarifMessage(physLocation.region.message);
         }
@@ -144,7 +172,7 @@ export namespace LocationFactory {
      * Parses the range from the Region in the SARIF file
      * @param region region the result is located
      */
-    export function  parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
+    export function parseRange(region: sarif.Region): { range: Range; endOfLine: boolean } {
         let startline: number = 0;
         let startcol: number = 0;
         let endline: number = 0;
@@ -185,6 +213,12 @@ export namespace LocationFactory {
             } else {
                 endcol = startcol;
             }
+        } else if (region.byteOffset !== undefined && region.byteLength !== undefined) {
+            startline = 0;
+            endline = 0;
+            startcol = region.byteOffset;
+            endcol = startcol + region.byteLength;
+            eol = true;
         }
 
         return { range: new Range(startline, startcol, endline, endcol), endOfLine: eol };

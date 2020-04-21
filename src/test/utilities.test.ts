@@ -331,6 +331,7 @@ suite("parseSarifMessages", () => {
 
 suite("getUirBase", () => {
     const runInfoTest: RunInfo = {
+        runIndex: 0,
         id: 0,
         toolName: "Test Tool Name",
         sarifFileName: "test.sarif",

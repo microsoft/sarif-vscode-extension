@@ -164,6 +164,32 @@
                             "type": "boolean"
                         }
                     }
+                },
+                "sarif-viewer.binaryArtifactContent.bytesPerRow": {
+                    "description": "%sarif-viewer.binaryArtifactContent.bytesPerRow.description%",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        4,
+                        8,
+                        16,
+                        32
+                    ],
+                    "default": 8,
+                    "scope": "application"
+                },
+                "sarif-viewer.binaryArtifactContent.viewAsMarkdown": {
+                    "description": "%sarif-viewer.binaryArtifactContent.viewAsMarkdown.description%",
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "application"
+                },
+                "sarif-viewer.openMarkdownPreview": {
+                    "description": "%sarif-viewer.openMarkdownPreview.description%",
+                    "type": "boolean",
+                    "default": false,
+                    "scope": "application"
                 }
             }
         },

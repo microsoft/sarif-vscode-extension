@@ -120,5 +120,9 @@
     "time.second": "{0} sec",
     "time.none": "0 ms",
     "time.hmsms": "{0} {1} {2} {3}",
-    "time.withMilliseconds": "{0} ms"
+    "time.withMilliseconds": "{0} ms",
+
+    "sarif-viewer.binaryArtifactContent.bytesPerRow.description": "When rendering binary artifact content, determines the number of bytes displayed in a row.",
+    "sarif-viewer.binaryArtifactContent.viewAsMarkdown.description": "When enabled, renders binary artifact content as markdown.",
+    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview."
 }
