@@ -13,7 +13,7 @@ import {
     ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
 } from "./common/interfaces";
-import { ExplorerController } from "./explorerController";
+import { ExplorerController, SendMessageOptions } from "./explorerController";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
 import { Utilities } from "./utilities";
@@ -130,14 +130,14 @@ export class ResultsListController implements Disposable {
                 if (input !== this.filterText) {
                     this.filterText = input;
                     this.updateFilteredRowsList();
-                    this.postDataToExplorer();
+                    this.postDataToExplorer('Should already be open');
                 }
                 break;
 
             case MessageType.ResultsListFilterCaseToggled:
                 this.filterCaseMatch = !this.filterCaseMatch;
                 this.updateFilteredRowsList();
-                this.postDataToExplorer();
+                this.postDataToExplorer('Should already be open');
                 break;
 
             case MessageType.ResultsListGroupChanged:
@@ -219,17 +219,18 @@ export class ResultsListController implements Disposable {
             }
 
             if (changed) {
-                this.postDataToExplorer();
+                this.postDataToExplorer('Only if open');
             }
         }
     }
 
     /**
      * Gets the latest Result data, grouped and sorted and sends it to the Explorer Controller to send to the Explorer
+     * @param options Controls if the explorer should be opened if not already opened.
      */
-    public postDataToExplorer(): void {
+    public postDataToExplorer(option: SendMessageOptions): void {
         const data: ResultsListData = this.getResultData();
-        this.explorerController.setResultsListData(data);
+        this.explorerController.setResultsListData(data, option);
     }
 
     /**
@@ -618,7 +619,7 @@ export class ResultsListController implements Disposable {
     private onDiagnosticCollectionChanged(diagnosticChangeEvent: SVDiagnosticsChangedEvent): void {
     switch (diagnosticChangeEvent.type) {
         case 'Synchronize':
-            this.postDataToExplorer();
+            this.postDataToExplorer('Always Open');
             break;
 
         case 'Add':

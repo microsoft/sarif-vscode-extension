@@ -164,6 +164,11 @@
                             "type": "boolean"
                         }
                     }
+                },
+                "sarif-viewer.explorer.openWhenNoResults": {
+                    "description": "%sarif-viewer.explorer.openWhenNoResults.description%",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
