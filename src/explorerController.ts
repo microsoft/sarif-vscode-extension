@@ -137,7 +137,7 @@ export class ExplorerController implements Disposable {
 
             case MessageType.ExplorerLoaded:
                 if (this.resultsListData) {
-                    this.setResultsListData(this.resultsListData, 'Only if open');
+                    this.setResultsListData(this.resultsListData, 'Should already be open');
                 }
 
                 if (this.activeDiagnostic) {
