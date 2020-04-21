@@ -36,6 +36,12 @@ export class ExplorerController implements Disposable {
 
     private onDidChangeVerbosityEventEmitter: EventEmitter<sarif.ThreadFlowLocation.importance> = new EventEmitter<sarif.ThreadFlowLocation.importance>();
 
+    /**
+     * Used by the API implementation to override the behavior of the
+     * showing the explorer when there are no results.
+     */
+    public openViewerWhenNoResults: boolean | undefined;
+
     public get onDidChangeVerbosity(): Event<sarif.ThreadFlowLocation.importance> {
         return this.onDidChangeVerbosityEventEmitter.event;
     }
@@ -154,7 +160,12 @@ export class ExplorerController implements Disposable {
      */
     public setResultsListData(dataSet: ResultsListData, options: SendMessageOptions): void {
         this.resultsListData = dataSet;
-        const openExplorer: boolean = options === 'Always Open' || dataSet.resultCount !== 0 || workspace.getConfiguration(Utilities.configSection).get('explorer.openWhenNoResults', false);
+        const openExplorer: boolean =
+            this.explorerWebviewPanel !== undefined ||
+            options === 'Always Open' ||
+            dataSet.resultCount !== 0 ||
+            this.openViewerWhenNoResults  ||
+            workspace.getConfiguration(Utilities.configSection).get('explorer.openWhenNoResults', false);
         if (openExplorer) {
             const webviewMessage: WebviewMessage = {
                 data: JSON.stringify(dataSet),
