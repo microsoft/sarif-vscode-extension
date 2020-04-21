@@ -9,7 +9,7 @@ import { Location, Message, JsonMapping, JsonPointer, RunInfo } from "../common/
 import { Utilities } from "../utilities";
 import { FileMapper } from "../fileMapper";
 import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
-import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRendering";
+import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRenderer";
 
 /**
  * Namespace that has the functions for processing (and transforming) the Sarif locations
@@ -34,8 +34,7 @@ export namespace LocationFactory {
         let logicalLocations: string[] | undefined;
 
         if (physLocation && physLocation.artifactLocation && physLocation.artifactLocation.uri) {
-            const artifactLocation: sarif.ArtifactLocation = physLocation.artifactLocation;
-            uriBase = Utilities.getUriBase(runInfo, artifactLocation);
+            uriBase = Utilities.getUriBase(runInfo, physLocation.artifactLocation);
             uri = Utilities.combineUriWithUriBase(physLocation.artifactLocation.uri, uriBase);
 
             if (uri) {
@@ -85,11 +84,9 @@ export namespace LocationFactory {
             }
         }
 
-        if (!parsedRange) {
-            if (physLocation && physLocation.region) {
-                parsedRange = parseRange(physLocation.region);
-                message = Utilities.parseSarifMessage(physLocation.region.message);
-            }
+        if (!parsedRange && physLocation && physLocation.region) {
+            parsedRange = parseRange(physLocation.region);
+            message = Utilities.parseSarifMessage(physLocation.region.message);
         }
 
         const logLocations: sarif.LogicalLocation[] | undefined = sarifLocation.logicalLocations;

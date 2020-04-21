@@ -4,42 +4,28 @@
 
 import * as vscode from 'vscode';
 import * as sarif from 'sarif';
-import { ArtifactContentRenderer } from './artifactContentRendering';
+import { ArtifactContentRenderer } from './artifactContentRenderer';
 
 /**
  * Class used to render artifact content objects with text.
  */
 export class TextArtifactContentRenderer implements ArtifactContentRenderer {
     /**
-     * The binary string contents.
-     */
-    private readonly contents: string;
-
-    /**
      * Creates an instance of the binary content renderer.
-     * @param content The string contents to be rendered as markdown.
+     * @param contents The base 64 string contents to be rendered as markdown.
      */
-    private constructor(protected readonly artifactContent: sarif.ArtifactContent) {
-        if (!artifactContent.text) {
-            throw new Error('Expected to have text content string');
-        }
-
-        this.contents = artifactContent.text;
+    private constructor(private readonly contents: string) {
     }
 
     /**
-     * Attempts to create an instance of the binary content renderer based on a SARIF log, run index and artifact index
-     * Returns undefined if the artifact contents cannot be found, or the content is not binary content.
-     * @param log The SARIF log.
-     * @param runIndex The run index.
-     * @param artifactIndex The artifact index.
+     * @inheritdoc
      */
-    public static tryCreateFromLog(log: sarif.Log, artifactContents: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
-        if (!artifactContents.text) {
+    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+        if (!artifactContent.text) {
             return undefined;
         }
 
-        return new TextArtifactContentRenderer(artifactContents);
+        return new TextArtifactContentRenderer(artifactContent.text);
     }
 
     /**
@@ -47,7 +33,6 @@ export class TextArtifactContentRenderer implements ArtifactContentRenderer {
      * @param artifactUri The artifact URI to use as the file-name in the markdown.
      */
     public render(artifactUri: vscode.Uri): string {
-        // The text property required to be UTF8 per the spec.
-        return new Buffer(this.contents).toString('utf8');
+        return this.contents;
     }
 }

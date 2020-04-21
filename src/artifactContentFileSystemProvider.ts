@@ -7,7 +7,7 @@ import * as sarif from "sarif";
 import * as fs from "fs";
 import * as path from "path";
 import { LogReader } from "./logReader";
-import { ArtifactContentRenderer, tryCreateRendererForArtifactContent } from "./artifactContentRenderers/artifactContentRendering";
+import { ArtifactContentRenderer, tryCreateRendererForArtifactContent } from "./artifactContentRenderers/artifactContentRenderer";
 
 /**
  * The purpose of this class is to provide a "file system provider" to artifact objects
@@ -159,30 +159,12 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
      */
     public async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
         const artifactContent: ArtifactInformationFromUri = await ArtifactContentFileSystemProvider.getArtifactInformationFromUri(uri);
-
-        let contentSize: number = 0;
-        if (artifactContent.contents.text) {
-            contentSize = artifactContent.contents.text.length;
-        } else if (artifactContent.contents.binary) {
-            // This isn't exactly correct as we render it as markdown.
-            // We could make it correct by calling render on the binary renderer
-            // and computing the length. Turns out VSCode doesn't really use this
-            // size, so.... this is good enough.
-            contentSize = artifactContent.contents.binary.length;
-        } else if (artifactContent.contents.rendered) {
-            if (artifactContent.contents.rendered.markdown) {
-                contentSize = artifactContent.contents.rendered.markdown.length;
-            } else if (artifactContent.contents.rendered.text) {
-                contentSize = artifactContent.contents.rendered.text.length;
-            }
-        }
-
         const time: number = artifactContent.artifact.lastModifiedTimeUtc !== undefined ? Date.parse(artifactContent.artifact.lastModifiedTimeUtc) : Date.now();
         return {
             type: vscode.FileType.File,
             ctime: time,
             mtime: time,
-            size: contentSize
+            size: 0
         };
     }
 
@@ -268,6 +250,8 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
             return undefined;
         }
 
+        // Modify the URI path to contain an extension that VSCode will use to detect it's file type
+        // which it then uses for rendering.
         let uriPath: string;
         if (!requiredExtension) {
             uriPath = artifactUri.path;

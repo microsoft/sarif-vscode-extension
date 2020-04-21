@@ -6,7 +6,7 @@ const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 import {
     ConfigurationChangeEvent, Disposable, Position, Selection, TextEditorRevealType, ViewColumn, window, workspace,
-    WorkspaceConfiguration, Uri, TextDocument, TextEditor
+    WorkspaceConfiguration, Uri, TextDocument, TextEditor, commands
 } from "vscode";
 import { BaselineOrder, KindOrder, MessageType, SeverityLevelOrder } from "./common/enums";
 import {
@@ -182,6 +182,11 @@ export class ResultsListController implements Disposable {
                 textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                 textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.end);
                 await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
+
+                if (textDocument.languageId === 'markdown' &&
+                    workspace.getConfiguration(Utilities.configSection).get('openMarkdownPreview', false)) {
+                    await commands.executeCommand('markdown.showPreviewToSide', uriToOpen);
+                }
                 break;
 
             case MessageType.ResultsListSortChanged:

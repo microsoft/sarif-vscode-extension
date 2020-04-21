@@ -10,7 +10,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { ArtifactContentFileSystemProvider } from "../artifactContentFileSystemProvider";
 import { BinaryArtifactContentRenderer } from "../artifactContentRenderers/binaryArtifactContentRenderer";
-import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRendering";
+import { tryCreateRendererForArtifactContent, ArtifactContentRenderer } from "../artifactContentRenderers/artifactContentRenderer";
 
 function writeSarifLogToTempFile(log: sarif.Log): vscode.Uri {
     const createPath: string = path.join(os.tmpdir(), 'embeddedContentTests');

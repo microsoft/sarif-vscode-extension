@@ -184,6 +184,12 @@
                     "type": "boolean",
                     "default": true,
                     "scope": "application"
+                },
+                "sarif-viewer.openMarkdownPreview": {
+                    "description": "%sarif-viewer.openMarkdownPreview.description%",
+                    "type": "boolean",
+                    "default": false,
+                    "scope": "application"
                 }
             }
         },

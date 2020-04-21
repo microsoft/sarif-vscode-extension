@@ -9,7 +9,7 @@ import * as sarif from 'sarif';
 import * as os from "os";
 import MarkdownIt = require("markdown-it");
 import { Utilities } from '../utilities';
-import { ArtifactContentRenderer } from './artifactContentRendering';
+import { ArtifactContentRenderer } from './artifactContentRenderer';
 
 /**
  * The purpose of this class is to transform artifact objects which have a "contents"
@@ -288,5 +288,12 @@ export class BinaryArtifactContentRenderer implements ArtifactContentRenderer {
         endColumn = endColumn * BinaryArtifactContentRenderer.contentWidthPerTableCell + offsetMarkerLength;
 
         return new vscode.Range(startRow, startColumn, endRow, endColumn);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public get specificUriExtension(): string {
+        return '.md';
     }
 }

@@ -4,52 +4,53 @@
 
 import * as vscode from 'vscode';
 import * as sarif from 'sarif';
-import { ArtifactContentRenderer } from './artifactContentRendering';
+import { ArtifactContentRenderer } from './artifactContentRenderer';
 
 /**
  * Class used to render artifact content objects with text.
  */
 export class RenderingArtifactContentRenderer implements ArtifactContentRenderer {
+    private readonly renderedContent: sarif.MultiformatMessageString;
+    public readonly specificUriExtension?: string;
+
+    private static tryGetMessageStringFrom(artifactContent: sarif.ArtifactContent): sarif.MultiformatMessageString | undefined {
+        if (artifactContent.rendered !== undefined && (artifactContent.rendered.markdown !== undefined || artifactContent.rendered.text?.length !== 0)) {
+            return artifactContent.rendered;
+        }
+
+        return undefined;
+    }
+
     /**
      * Creates an instance of the binary content renderer.
      * @param content The string contents to be rendered as markdown.
      */
     private constructor(protected readonly artifactContent: sarif.ArtifactContent) {
-        if (!artifactContent.rendered || (!artifactContent.rendered.markdown && !artifactContent.rendered.text)) {
+        const messageString: sarif.MultiformatMessageString | undefined = RenderingArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
+        if (!messageString) {
             throw new Error('Expected to have markdown or text content string');
         }
+
+        this.renderedContent = messageString;
+        this.specificUriExtension = messageString.markdown ? 'md' : undefined;
     }
 
     /**
-     * Attempts to create an instance of the binary content renderer based on a SARIF log, run index and artifact index
-     * Returns undefined if the artifact contents cannot be found, or the content is not binary content.
-     * @param log The SARIF log.
-     * @param runIndex The run index.
-     * @param artifactIndex The artifact index.
+     * @inheritdoc
      */
-    public static tryCreateFromLog(log: sarif.Log, artifactContents: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
-        if (!artifactContents.rendered || (!artifactContents.rendered.markdown && !artifactContents.rendered.text)) {
+    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+        const messageString: sarif.MultiformatMessageString | undefined = RenderingArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
+        if (!messageString) {
             return undefined;
         }
 
-        return new RenderingArtifactContentRenderer(artifactContents);
+        return new RenderingArtifactContentRenderer(artifactContent);
     }
 
     /**
-     * Renders the contents as mark-down.
-     * @param artifactUri The artifact URI to use as the file-name in the markdown.
+     * @inheritdoc
      */
     public render(artifactUri: vscode.Uri): string {
-        if (!this.artifactContent.rendered || (!this.artifactContent.rendered.markdown && !this.artifactContent.rendered.text)) {
-            throw new Error('Expected to have markdown or text content string');
-        }
-
-        if (this.artifactContent.rendered.markdown) {
-            // The text property required to be UTF8 per the spec.
-            return new Buffer(this.artifactContent.rendered.markdown).toString('utf8');
-        }
-
-        // The text property required to be UTF8 per the spec.
-        return new Buffer(this.artifactContent.rendered.text).toString('utf8');
+        return this.renderedContent.markdown ? this.renderedContent.markdown : this.renderedContent.text;
     }
 }
