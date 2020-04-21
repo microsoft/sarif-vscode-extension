@@ -154,10 +154,8 @@ export class BinaryArtifactContentRenderer implements ArtifactContentRenderer {
      * Attempts to create an instance of the binary content renderer based on a SARIF log, run index and artifact index
      * Returns undefined if the artifact contents cannot be found, or the content is not binary content.
      * @param log The SARIF log.
-     * @param runIndex The run index.
-     * @param artifactIndex The artifact index.
      */
-    public static tryCreateFromLog(log: sarif.Log, artifactContents: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+    public static tryCreateFromLog(log: sarif.Log, artifactContents: sarif.ArtifactContent): ArtifactContentRenderer | undefined {
         // If the bytes rendered per row override is set, it means we are running tests, so
         // ignore the user preference and allow the renderer to be created.
         if (BinaryArtifactContentRenderer.bytesRenderedPerRowOverride === undefined &&
@@ -188,13 +186,17 @@ export class BinaryArtifactContentRenderer implements ArtifactContentRenderer {
 
         // This is used as an index into the buffer for where the next
         // string representation of the data bytes will come from.
-        const rowDataValues: number[] = [];
+        const rowDataValues: string[] = [];
 
         for (let bufferIndex: number = 0; bufferIndex < contentBuffer.length; bufferIndex++) {
             const bufferByte: number = contentBuffer[bufferIndex];
 
             // Save the value for the data representation at the end of the row.
-            rowDataValues.push(bufferByte);
+            let charCodeAt: string = String.fromCharCode(bufferByte);
+            if (charCodeAt === '\r' || charCodeAt === '\n') {
+                charCodeAt = '-';
+            }
+            rowDataValues.push(charCodeAt);
 
             // When we hit the start of a new row, add the offset marker.
             if (bufferIndex % this.bytesRenderedPerRow === 0) {
@@ -223,7 +225,7 @@ export class BinaryArtifactContentRenderer implements ArtifactContentRenderer {
 
                 // Add the data representation.
                 // Covert the binary data into a string
-                const dataString: string = rowDataValues.map((rowDataValue) => String.fromCharCode(rowDataValue)).join('').replace('\r', '-').replace('\n', '-');
+                const dataString: string = rowDataValues.join('');
                 const mdText: string = mdIt.renderInline(dataString);
                 markdownStrings.push(mdText);
 

@@ -9,7 +9,7 @@ import { ArtifactContentRenderer } from './artifactContentRenderer';
 /**
  * Class used to render artifact content objects with text.
  */
-export class RenderingArtifactContentRenderer implements ArtifactContentRenderer {
+export class RenderedArtifactContentRenderer implements ArtifactContentRenderer {
     private readonly renderedContent: sarif.MultiformatMessageString;
     public readonly specificUriExtension?: string;
 
@@ -26,7 +26,7 @@ export class RenderingArtifactContentRenderer implements ArtifactContentRenderer
      * @param content The string contents to be rendered as markdown.
      */
     private constructor(protected readonly artifactContent: sarif.ArtifactContent) {
-        const messageString: sarif.MultiformatMessageString | undefined = RenderingArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
+        const messageString: sarif.MultiformatMessageString | undefined = RenderedArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
         if (!messageString) {
             throw new Error('Expected to have markdown or text content string');
         }
@@ -38,13 +38,13 @@ export class RenderingArtifactContentRenderer implements ArtifactContentRenderer
     /**
      * @inheritdoc
      */
-    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
-        const messageString: sarif.MultiformatMessageString | undefined = RenderingArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
+    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent): ArtifactContentRenderer | undefined {
+        const messageString: sarif.MultiformatMessageString | undefined = RenderedArtifactContentRenderer.tryGetMessageStringFrom(artifactContent);
         if (!messageString) {
             return undefined;
         }
 
-        return new RenderingArtifactContentRenderer(artifactContent);
+        return new RenderedArtifactContentRenderer(artifactContent);
     }
 
     /**

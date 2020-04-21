@@ -182,7 +182,7 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
      */
     public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
         const artifactContent: ArtifactInformationFromUri = await ArtifactContentFileSystemProvider.getArtifactInformationFromUri(uri);
-        const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(artifactContent.log, artifactContent.contents, artifactContent.parsedUriData.runIndex, artifactContent.parsedUriData.artifactIndex);
+        const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(artifactContent.log, artifactContent.contents);
 
         if (artifactContentRenderer) {
             return Buffer.from(artifactContentRenderer.render(artifactContent.parsedUriData.artifactUri));

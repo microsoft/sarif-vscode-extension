@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import * as sarif from "sarif";
 import { BinaryArtifactContentRenderer } from "./binaryArtifactContentRenderer";
 import { TextArtifactContentRenderer } from "./textArtifactContentRenderer";
-import { RenderingArtifactContentRenderer } from "./renderingArtifactContentRenderer";
+import { RenderedArtifactContentRenderer } from "./renderedArtifactContentRenderer";
 
 /**
  * Interface exposed from artifact content renders.
@@ -26,18 +26,18 @@ export interface ArtifactContentRenderer {
 
     /**
      * Specifies a specific file extension needed for VSCode to detect the
-     * document type. For example, makrdown => '.md'. The extension
+     * document type. For example, markdown => '.md'. The extension
      * should include any necessary periods.
      */
     specificUriExtension?: string;
 }
 
-type TryCreateLogFile = (log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number) => ArtifactContentRenderer | undefined;
+type TryCreateLogFile = (log: sarif.Log, artifactContent: sarif.ArtifactContent) => ArtifactContentRenderer | undefined;
 
 const rendererCreators: TryCreateLogFile[] = [
     TextArtifactContentRenderer.tryCreateFromLog,
     BinaryArtifactContentRenderer.tryCreateFromLog,
-    RenderingArtifactContentRenderer.tryCreateFromLog
+    RenderedArtifactContentRenderer.tryCreateFromLog
 ];
 
 /**
@@ -47,9 +47,9 @@ const rendererCreators: TryCreateLogFile[] = [
  * @param runIndex The run index the artifact content object belongs to.
  * @param artifactIndex The artifact index.
  */
-export function tryCreateRendererForArtifactContent(log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+export function tryCreateRendererForArtifactContent(log: sarif.Log, artifactContent: sarif.ArtifactContent): ArtifactContentRenderer | undefined {
     for (const rendererCreator of rendererCreators) {
-        const newRenderer: ArtifactContentRenderer | undefined = rendererCreator(log, artifactContent, runIndex, artifactIndex);
+        const newRenderer: ArtifactContentRenderer | undefined = rendererCreator(log, artifactContent);
         if (newRenderer) {
             return newRenderer;
         }

@@ -20,7 +20,7 @@ export class TextArtifactContentRenderer implements ArtifactContentRenderer {
     /**
      * @inheritdoc
      */
-    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent, runIndex: number, artifactIndex: number): ArtifactContentRenderer | undefined {
+    public static tryCreateFromLog(log: sarif.Log, artifactContent: sarif.ArtifactContent): ArtifactContentRenderer | undefined {
         if (!artifactContent.text) {
             return undefined;
         }

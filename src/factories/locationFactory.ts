@@ -43,29 +43,23 @@ export namespace LocationFactory {
                 // (represented by artifact location index) and the "contents" property of the artifact
                 // must be defined and have one of the "binary, text, or rendered" properties set.
                 if (physLocation.artifactLocation.index !== undefined) {
-                    const run: sarif.Run | undefined = sarifLog.runs[runInfo.runIndex];
-                    if (run && run.artifacts) {
-                        const artifact: sarif.Artifact | undefined = run.artifacts[physLocation.artifactLocation.index];
-                        if (artifact) {
-                            const artifactContent: sarif.ArtifactContent | undefined = artifact.contents;
-                            if (artifactContent) {
-                                fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
+                    const artifactContent: sarif.ArtifactContent | undefined  = sarifLog.runs[runInfo.runIndex]?.artifacts?.[physLocation.artifactLocation.index]?.contents;
+                    if (artifactContent) {
+                        fileName = uri.toString(true).substring(uri.toString(true).lastIndexOf('/') + 1);
 
-                                // See if we have a custom renderer for an artifact content object (for example, binary content).
-                                const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(sarifLog, artifactContent, runInfo.runIndex, physLocation.artifactLocation.index);
-                                const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer?.specificUriExtension);
-                                if (artifactContentUri) {
-                                    uri = artifactContentUri;
-                                    mappedToLocalPath = true;
+                        // See if we have a custom renderer for an artifact content object (for example, binary content).
+                        const artifactContentRenderer: ArtifactContentRenderer | undefined = tryCreateRendererForArtifactContent(sarifLog, artifactContent);
+                        const artifactContentUri: Uri | undefined = ArtifactContentFileSystemProvider.tryCreateUri(sarifLog, Uri.file(runInfo.sarifFileFullPath), uri, runInfo.runIndex, physLocation.artifactLocation.index, artifactContentRenderer?.specificUriExtension);
+                        if (artifactContentUri) {
+                            uri = artifactContentUri;
+                            mappedToLocalPath = true;
 
-                                    if (physLocation.region &&
-                                        artifactContentRenderer &&
-                                        artifactContentRenderer.rangeFromRegion) {
-                                        const rendererRange: Range | undefined = artifactContentRenderer.rangeFromRegion(physLocation.region);
-                                        if (rendererRange) {
-                                            parsedRange = { range: rendererRange, endOfLine: false };
-                                        }
-                                    }
+                            if (physLocation.region &&
+                                artifactContentRenderer &&
+                                artifactContentRenderer.rangeFromRegion) {
+                                const rendererRange: Range | undefined = artifactContentRenderer.rangeFromRegion(physLocation.region);
+                                if (rendererRange) {
+                                    parsedRange = { range: rendererRange, endOfLine: false };
                                 }
                             }
                         }
