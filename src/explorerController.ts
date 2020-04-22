@@ -14,7 +14,22 @@ import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { Utilities } from "./utilities";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
 
-export type SendMessageOptions = 'Always Open' | 'Only if open' | 'Should already be open';
+export type PostMessageOptions =
+/**
+ * 'Always Open' will ensure that the Explorer view has at least be "created" and not "disposed". It does not mean that it is "visible" to the user.
+ * It WILL be a tab somewhere on VSCode's UI where the editors are.
+ */
+'Always Open' |
+
+/**
+ * If the Explorer view is "created" (not disposed) the message will be posted to it. Otherwise it will be ignored.
+ */
+'Only if open' |
+
+/**
+ * This is used to throw an exception when a post-message is requested and the explorer view is expected to be open, but isn't.
+ */
+'Should already be open';
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -158,7 +173,7 @@ export class ExplorerController implements Disposable {
      * @param dataSet new dataset to set
      * @param options Options for how to send the result list data to the explorer.
      */
-    public setResultsListData(dataSet: ResultsListData, options: SendMessageOptions): void {
+    public setResultsListData(dataSet: ResultsListData, options: PostMessageOptions): void {
         this.resultsListData = dataSet;
         const openExplorer: boolean =
             this.explorerWebviewPanel !== undefined ||
@@ -272,7 +287,7 @@ export class ExplorerController implements Disposable {
      * @param message Message to send, message has a type and data
      * @param options Options specifying whether to show the explorer view.
      */
-    private sendMessage(message: WebviewMessage, options: SendMessageOptions): void {
+    private sendMessage(message: WebviewMessage, options: PostMessageOptions): void {
         // We do not want to wait for this promise to finish as we are
         // just adding the message to the web-views queue.
         if (options === 'Should already be open') {

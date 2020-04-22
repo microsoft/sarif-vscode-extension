@@ -168,7 +168,7 @@
                 "sarif-viewer.explorer.openWhenNoResults": {
                     "description": "%sarif-viewer.explorer.openWhenNoResults.description%",
                     "type": "boolean",
-                    "default": false
+                    "default": true
                 },
                 "sarif-viewer.binaryArtifactContent.bytesPerRow": {
                     "description": "%sarif-viewer.binaryArtifactContent.bytesPerRow.description%",

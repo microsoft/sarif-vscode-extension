@@ -13,7 +13,7 @@ import {
     ResultInfo, ResultsListColumn, ResultsListData, ResultsListGroup, ResultsListRow, ResultsListSortBy, ResultsListValue,
     WebviewMessage, Location, RunInfo
 } from "./common/interfaces";
-import { ExplorerController, SendMessageOptions } from "./explorerController";
+import { ExplorerController, PostMessageOptions } from "./explorerController";
 import { SVCodeActionProvider } from "./svCodeActionProvider";
 import { SVDiagnosticCollection, SVDiagnosticsChangedEvent } from "./svDiagnosticCollection";
 import { Utilities } from "./utilities";
@@ -233,7 +233,7 @@ export class ResultsListController implements Disposable {
      * Gets the latest Result data, grouped and sorted and sends it to the Explorer Controller to send to the Explorer
      * @param options Controls if the explorer should be opened if not already opened.
      */
-    public postDataToExplorer(option: SendMessageOptions): void {
+    public postDataToExplorer(option: PostMessageOptions): void {
         const data: ResultsListData = this.getResultData();
         this.explorerController.setResultsListData(data, option);
     }
