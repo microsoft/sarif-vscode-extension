@@ -195,12 +195,6 @@
                     "type": "boolean",
                     "default": false,
                     "scope": "application"
-                },
-                "sarif-viewer.explorer.preserveKeyboardFocus": {
-                    "description": "%sarif-viewer.explorer.preserveKeyboardFocus.description%",
-                    "type": "boolean",
-                    "default": true,
-                    "scope": "application"
                 }
             }
         },

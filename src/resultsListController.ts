@@ -173,8 +173,8 @@ export class ResultsListController implements Disposable {
                 }
 
                 const textDocument: TextDocument = await workspace.openTextDocument(uriToOpen);
-                const preserveFocus: boolean = workspace.getConfiguration(Utilities.configSection).get('explorer.preserveKeyboardFocus', true);
-                const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, preserveFocus);
+                // Just because we are switching results, it does not mean we ant to steal focus :) Leave it alone.
+                const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, /*preserveFocus*/ true);
                 textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                 textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.end);
                 await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
