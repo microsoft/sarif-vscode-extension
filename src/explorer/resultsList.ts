@@ -671,11 +671,11 @@ export class ResultsList {
         const showColButton: HTMLElement | null = document.getElementById("resultslistshowcol");
 
         if (!groupByButton) {
-            throw new Error("Epxected to find group by button.");
+            throw new Error("Expected to find group by button.");
         }
 
         if (!showColButton) {
-            throw new Error("Epxected to find show column button.");
+            throw new Error("Expected to find show column button.");
         }
 
         if (groupByButton.children.length === 1) {

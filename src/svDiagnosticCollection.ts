@@ -254,11 +254,18 @@ export class SVDiagnosticCollection implements Disposable {
      * Sets the active diagnostic in the collection and fires the active diagnostic changed event.
      * @param newDiagnostic The new diagnostic to set.
      */
-    private set activeDiagnostic(newDiagnostic: SarifViewerVsCodeDiagnostic | undefined) {
+    public set activeDiagnostic(newDiagnostic: SarifViewerVsCodeDiagnostic | undefined) {
         if (this.activeSVDiagnostic !== newDiagnostic) {
             this.activeSVDiagnostic = newDiagnostic;
             this.onDidChangeActiveDiagnosticEventEmitter.fire(newDiagnostic);
         }
+    }
+
+    /**
+     * Returns the active diagnostic (if any).
+     */
+    public get activeDiagnostic(): SarifViewerVsCodeDiagnostic | undefined {
+        return this.activeSVDiagnostic;
     }
 
     /**

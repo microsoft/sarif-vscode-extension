@@ -156,13 +156,13 @@ export class ResultsListController implements Disposable {
                     break;
                 }
 
-                if (!diagnostic.resultInfo.assignedLocation) {
-                    return;
-                }
+                // Set the active diagnostic (which causes a cascade of setting up the result info
+                // pane due to the events this fires)
+                this.diagnosticCollection.activeDiagnostic = diagnostic;
 
                 // Attempt to map the result if it hasn't been mapped
-                const diagLocation: Location = diagnostic.resultInfo.assignedLocation;
-                if (!diagLocation.uri) {
+                const diagLocation: Location | undefined = diagnostic.resultInfo.assignedLocation;
+                if (!diagLocation?.uri) {
                     return;
                 }
 

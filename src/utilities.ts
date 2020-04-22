@@ -506,6 +506,7 @@ export class Utilities {
     public static LocationToJson(this: Location, key: any, value: any): any {
         return {
             ...this,
+            uriAsString: this?.uri?.toString(/*skipEncoding*/ true),
             range: {
                 ...this.range,
                 start: this.range.start,

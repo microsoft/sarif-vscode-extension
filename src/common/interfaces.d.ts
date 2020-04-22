@@ -88,6 +88,12 @@ export interface Location {
      * Event that is fired when the location is mapped..
      */
     locationMapped: Event<Location>;
+
+    /**
+     * When a location is converted to "JSON", we covert the URI to a string and store it here
+     * so the web-view can use it since it does not have easy access to vscode's node APIs.
+     */
+    readonly uriAsString?: string;
 }
 
 
