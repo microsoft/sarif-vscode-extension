@@ -125,6 +125,5 @@
     "sarif-viewer.explorer.openWhenNoResults.description": "Indicates whether to open the explorer when there are no results in the log.",
     "sarif-viewer.binaryArtifactContent.bytesPerRow.description": "When rendering binary artifact content, determines the number of bytes displayed in a row.",
     "sarif-viewer.binaryArtifactContent.viewAsMarkdown.description": "When enabled, renders binary artifact content as markdown.",
-    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview.",
-    "sarif-viewer.explorer.preserveKeyboardFocus.description": "When selecting results in the explorer, preserve keyboard focus in the results explorer. Otherwise, move focus to the result artifact."
+    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview."
 }
