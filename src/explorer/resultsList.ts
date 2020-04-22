@@ -179,7 +179,7 @@ export class ResultsList {
             // Collapse All button
             const collapseAllButton: HTMLSpanElement = <HTMLSpanElement>expandAllButton.cloneNode();
             collapseAllButton.textContent = "-";
-            collapseAllButton.title = "Collapse all s";
+            collapseAllButton.title = "Collapse all groups";
             collapseAllButton.addEventListener("click", this.onCollapseAllGroups.bind(this));
             buttonBar.appendChild(collapseAllButton);
 
@@ -751,9 +751,7 @@ export class ResultsList {
             
         } else if (keydownEvent.keyCode === KeyCodes.RightArrow || keydownEvent.keyCode == KeyCodes.DownArrow) {
             direction = 'Next';
-        }
-
-        if (!direction) {
+        } else {
             return;
         }
 
