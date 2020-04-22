@@ -65,6 +65,8 @@ export class ResultsList {
         </svg>`;
         this.severityIconHTMLEles.set("none", sevEle);
         this.severityIconHTMLEles.set("note", sevEle);
+
+        $("#resultslisttable").keydown(this.onResultsListKeyDown.bind(this));
     }
 
     public set Data(value: ResultsListData) {
@@ -104,7 +106,7 @@ export class ResultsList {
         for (const row of rows) {
             if (row.dataset.id === id) {
                 row.classList.add("selected");
-                this.expandGroupForResult(row);
+                this.setToggleStateForGroupOfResults(row, ToggleState.expanded);
                 row.scrollIntoView();
                 break;
             }
@@ -594,57 +596,52 @@ export class ResultsList {
      * @param row Group row to toggled
      */
     private toggleGroup(row: HTMLTableRowElement): void {
-
         if (row.dataset.group === undefined) {
             throw new Error("Expected to have collapse group.");
         }
 
-        let hideRow: boolean = false;
-        if (row.classList.contains(ToggleState.expanded)) {
-            row.classList.replace(ToggleState.expanded, ToggleState.collapsed);
-            this.collapsedGroups.push(row.dataset.group);
-            hideRow = true;
-        } else {
-            row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
-            this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
-        }
-
-        const results: NodeListOf<Element> = document.querySelectorAll("#resultslisttable > tbody > .listtablerow");
-
-        // @ts-ignore: compiler complains even though results can be iterated
-        for (const result of results) {
-            // @ts-ignore: compiler complains even though result does have a dataset
-            if (result.dataset.group === row.dataset.group) {
-                if (hideRow) {
-                    result.classList.add("hidden");
-                } else {
-                    result.classList.remove("hidden");
-                }
-            }
-        }
+        this.setToggleStateForGroupOfResults(row, row.classList.contains(ToggleState.expanded) ? ToggleState.collapsed : ToggleState.expanded);
     }
 
     /**
-     * Toggles the group row as well as any result rows that match the group
+     * Expands the group row as well as any result rows that match the group
      * @param row Group row to toggled
      */
-    private expandGroupForResult(row: HTMLTableRowElement): void {
-
+    private setToggleStateForGroupOfResults(row: HTMLTableRowElement, newState: ToggleState): void {
         if (row.dataset.group === undefined) {
             throw new Error("Expected to have collapse group.");
         }
 
-        if (row.classList.contains(ToggleState.collapsed)) {
-            row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
-            this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
+        // If we are passed a row instead of a group, then go find the correct group.
+        // This is useful for handling keyboard navigation.
+        if (row.classList.contains('listtablerow')) {
+            const groups: NodeListOf<Element> = document.querySelectorAll(`#resultslisttable > tbody > .listtablegroup[data-group='${row.dataset.group}']`);
+            if (groups.length !== 1) {
+                throw new Error('Could not find expected group');
+            }
+
+            this.setToggleStateForGroupOfResults(<HTMLTableRowElement>groups[0], newState);
+
+            return;
         }
 
-        const results: NodeListOf<Element> = document.querySelectorAll("#resultslisttable > tbody > .listtablerow");
+        if (newState === ToggleState.expanded && row.classList.contains(ToggleState.collapsed)) {
+            row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
+            this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
+        } else if (newState === ToggleState.collapsed && row.classList.contains(ToggleState.expanded)) {
+            row.classList.replace(ToggleState.expanded, ToggleState.collapsed);
+            this.collapsedGroups.push(row.dataset.group);
+        } else {
+            return;
+        }
+
+        const results: NodeListOf<Element> = document.querySelectorAll(`#resultslisttable > tbody > .listtablerow[data-group='${row.dataset.group}']`);
 
         for (const result of results) {
-            // @ts-ignore: compiler complains even though result does have a dataset
-            if (result.dataset.group === row.dataset.group) {
+            if (newState === ToggleState.expanded) {
                 result.classList.remove("hidden");
+            } else {
+                result.classList.add("hidden");
             }
         }
     }
@@ -746,6 +743,62 @@ export class ResultsList {
             caseButton.classList.add("active");
         } else {
             caseButton.classList.remove("active");
+        }
+    }
+
+    /**
+     * Handler to perform keyboard navigation in the results list.
+     * @param keydownEvent Keyboard event
+     */
+    private onResultsListKeyDown(keydownEvent: JQuery.KeyDownEvent): void  {        
+        let direction: 'Previous' | 'Next' | undefined;
+        if (keydownEvent.key === 'ArrowLeft' || keydownEvent.key === 'ArrowUp') {
+            direction = 'Previous';
+            
+        } else if (keydownEvent.key === 'ArrowRight' || keydownEvent.key == 'ArrowDown') {
+            direction = 'Next';
+        } else {
+            return;
+        }
+
+        const curSelected: HTMLCollectionOf<Element> | undefined = document.getElementsByClassName("listtablerow selected");
+        if (!curSelected || curSelected.length !== 1) {
+            return;
+        }
+
+        let currentSelectedElement: Element | undefined = curSelected[0];
+        while (currentSelectedElement) {
+            const potentialElementToSelect: Element | null = direction === 'Next' ? currentSelectedElement.nextElementSibling : currentSelectedElement.previousElementSibling;
+
+            // If the element is not a table row, then we are done.
+            if (potentialElementToSelect?.tagName !==  'TR') {
+                break;
+            }
+
+            const rowElement: HTMLTableRowElement = <HTMLTableRowElement>potentialElementToSelect;
+
+            if (rowElement.classList.contains(ToggleState.collapsed) || rowElement.classList.contains('hidden')) {
+                this.setToggleStateForGroupOfResults(rowElement, ToggleState.expanded);
+            }
+
+            if (rowElement.classList.contains('listtablegroup')) {
+                // For the groups of results, if this is a left arrow and we aren't at the top of the results list
+                // then collapse the group (similar to the way a tree-view would do it).
+                // Otherwise, expand the group and search for the next result.
+                if (keydownEvent.key === 'ArrowLeft' && rowElement.dataset.group !== '0') {
+                    this.setToggleStateForGroupOfResults(rowElement, ToggleState.collapsed);
+                } else {
+                    this.setToggleStateForGroupOfResults(rowElement, ToggleState.expanded);
+                }
+
+                currentSelectedElement = rowElement;
+                continue;    
+            }
+
+            // The click handler for a "listtablerow" (onRowClicked) already deals with all the logic
+            // when a result is selected, so just invoke that.
+            rowElement.click();
+            break;
         }
     }
 }

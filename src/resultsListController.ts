@@ -173,12 +173,8 @@ export class ResultsListController implements Disposable {
                 }
 
                 const textDocument: TextDocument = await workspace.openTextDocument(uriToOpen);
-
-                // This could be an option. There have issues that have been raised that when you
-                // click on results in the web-view (explorer) that focus is taken away from it and
-                // placed on the document. Some users may want this, some may not.
-                const preserveFocus: boolean = window.activeTextEditor !== undefined;
-                const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, preserveFocus);
+                // Just because we are switching results, it does not mean we ant to steal focus :) Leave it alone.
+                const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, /*preserveFocus*/ true);
                 textEditor.revealRange(diagLocation.range, TextEditorRevealType.InCenterIfOutsideViewport);
                 textEditor.selection = new Selection(diagLocation.range.start, diagLocation.range.end);
                 await this.codeActionProvider.provideCodeActions(textDocument, diagLocation.range, { diagnostics: [diagnostic] });
