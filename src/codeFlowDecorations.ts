@@ -8,7 +8,8 @@ import * as sarif from "sarif";
 
 import {
     commands, DecorationInstanceRenderOptions, DecorationOptions, DecorationRangeBehavior, DiagnosticSeverity, OverviewRulerLane,
-    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable, Event
+    Position, Range, TextEditor, TextEditorDecorationType, TextEditorRevealType, Uri, ViewColumn, window, workspace, TextDocument, Disposable, Event,
+    Selection
 } from "vscode";
 import { CodeFlowStep, CodeFlowStepId, Location, CodeFlow, WebviewMessage, LocationData } from "./common/interfaces";
 import { ExplorerController } from "./explorerController";
@@ -291,6 +292,7 @@ export class CodeFlowDecorations implements Disposable {
         const textDocument: TextDocument = await workspace.openTextDocument(mappedUri);
         const textEditor: TextEditor = await window.showTextDocument(textDocument, ViewColumn.One, true);
         textEditor.setDecorations(CodeFlowDecorations.SelectionDecorationType, [{ range: locRange }]);
+        textEditor.selection = new Selection(locRange.start, locRange.end);
         textEditor.revealRange(locRange, TextEditorRevealType.InCenterIfOutsideViewport);
     }
 
@@ -457,14 +459,18 @@ export class CodeFlowDecorations implements Disposable {
             case MessageType.SourceLinkClicked:
                 const locData: LocationData = JSON.parse(webViewMessage.data);
                 const location: Location = {
-                    mappedToLocalPath: true,
+                    // We don't know from the location data coming back from the web-view
+                    // is really "mapped" or not, so we assume it isn't. This works out for
+                    // us because if it is, no user prompt will occur. If it isn't
+                    // then we do want the prompt since the user just clicked on a link!
+                    mappedToLocalPath: false,
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
                     toJSON:  Utilities.LocationToJson,
                     mapLocationToLocalPath: FileMapper.mapLocationToLocalPath,
                     get locationMapped(): Event<Location> {
-                        // See this git-hub issue for disucssion of this rule => https://github.com/palantir/tslint/issues/1544
+                        // See this git-hub issue for discussion of this rule => https://github.com/palantir/tslint/issues/1544
                         // tslint:disable-next-line: no-invalid-this
                         return FileMapper.uriMappedForLocation.bind(this)();
                     }

@@ -346,9 +346,8 @@ export class ExplorerWebview {
             if (options.tooltip === undefined) {
                 if (options.message !== undefined) {
                     options.tooltip = options.message;
-                } else if (options.location.uri !== undefined) {
-                    // @ts-ignore external exist on the webview side
-                    options.tooltip = options.location.uri.external.replace("%3A", ":");
+                } else if (options.location.uriAsString !== undefined) {
+                    options.tooltip = options.location.uriAsString;
                 }
             }
         }
@@ -741,9 +740,8 @@ export class ExplorerWebview {
             for (const frame of stack.frames) {
                 const fLocation: Location = frame.location;
                 let file: string | undefined;
-                if (fLocation.uri) {
-                    // @ts-ignore external exist on the webview side
-                    file = fLocation.uri.external.replace("%3A", ":");
+                if (fLocation.uriAsString !== undefined) {
+                    file = fLocation.uriAsString;
                 }
 
                 const fRow: HTMLTableRowElement = this.createElement("tr", {
@@ -843,18 +841,16 @@ export class ExplorerWebview {
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement | undefined {
         let sourceLink: HTMLAnchorElement | undefined;
-        if (location.uri && location.range) {
-            // @ts-ignore external exist on the webview side
-            const file: string = location.uri.external.replace("%3A", ":");
+        if (location.uriAsString !== undefined && location.range) {
             sourceLink = this.createElement("a", {
                 attributes: {
                     "data-eCol": location.range.end.character.toString(),
                     "data-eLine": location.range.end.line.toString(),
-                    "data-file": file,
+                    "data-file": location.uriAsString,
                     "data-sCol": location.range.start.character.toString(),
                     "data-sLine": location.range.start.line.toString(),
                     "href": "#0",
-                }, className: "sourcelink", text: linkText, tooltip: file,
+                }, className: "sourcelink", text: linkText, tooltip: location.uriAsString,
             }) as HTMLAnchorElement;
 
             sourceLink.addEventListener("click", this.onSourceLinkClicked.bind(this));
