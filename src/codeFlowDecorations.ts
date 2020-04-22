@@ -463,7 +463,7 @@ export class CodeFlowDecorations implements Disposable {
                     // is really "mapped" or not, so we assume it isn't. This works out for
                     // us because if it is, no user prompt will occur. If it isn't
                     // then we do want the prompt since the user just clicked on a link!
-                    mappedToLocalPath: false, 
+                    mappedToLocalPath: false,
                     range: new Range(parseInt(locData.sLine, 10), parseInt(locData.sCol, 10),
                         parseInt(locData.eLine, 10), parseInt(locData.eCol, 10)),
                     uri: Uri.parse(locData.file),
