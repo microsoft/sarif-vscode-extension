@@ -5,7 +5,7 @@
 import * as nls from 'vscode-nls';
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
-import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable } from "vscode";
+import { commands, Uri, ViewColumn, WebviewPanel, window, ExtensionContext, EventEmitter, Event, Disposable, workspace } from "vscode";
 import * as path from "path";
 import * as sarif from "sarif";
 import { MessageType } from "./common/enums";
@@ -13,6 +13,23 @@ import { DiagnosticData, ResultsListData, WebviewMessage } from "./common/interf
 import { SarifViewerVsCodeDiagnostic } from "./sarifViewerDiagnostic";
 import { Utilities } from "./utilities";
 import { SVDiagnosticCollection } from "./svDiagnosticCollection";
+
+export type PostMessageOptions =
+/**
+ * 'Always Open' will ensure that the Explorer view has at least be "created" and not "disposed". It does not mean that it is "visible" to the user.
+ * It WILL be a tab somewhere on VSCode's UI where the editors are.
+ */
+'Always Open' |
+
+/**
+ * If the Explorer view is "created" (not disposed) the message will be posted to it. Otherwise it will be ignored.
+ */
+'Only if open' |
+
+/**
+ * This is used to throw an exception when a post-message is requested and the explorer view is expected to be open, but isn't.
+ */
+'Should already be open';
 
 /**
  * This class handles generating and providing the HTML content for the Explorer panel
@@ -33,6 +50,12 @@ export class ExplorerController implements Disposable {
     private currentVerbosity: sarif.ThreadFlowLocation.importance = 'important';
 
     private onDidChangeVerbosityEventEmitter: EventEmitter<sarif.ThreadFlowLocation.importance> = new EventEmitter<sarif.ThreadFlowLocation.importance>();
+
+    /**
+     * Used by the API implementation to override the behavior of the
+     * showing the explorer when there are no results.
+     */
+    public openViewerWhenNoResults: boolean | undefined;
 
     public get onDidChangeVerbosity(): Event<sarif.ThreadFlowLocation.importance> {
         return this.onDidChangeVerbosityEventEmitter.event;
@@ -58,15 +81,11 @@ export class ExplorerController implements Disposable {
 
     private activeTab: string | undefined;
     private selectedCodeFlowRow: string | undefined;
-    private wvPanel: WebviewPanel | undefined;
-
-    private get webviewPanel(): WebviewPanel {
-        return this.createWebview();
-    }
+    private explorerWebviewPanel: WebviewPanel | undefined;
 
     public constructor(private readonly extensionContext: ExtensionContext, diagnosticCollection: SVDiagnosticCollection) {
         this.disposables.push(this.onDidChangeVerbosityEventEmitter);
-        this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.createWebview.bind(this)));
+        this.disposables.push(commands.registerCommand(ExplorerController.ExplorerLaunchCommand, this.onExplorerLaunchCommand.bind(this)));
         this.disposables.push(diagnosticCollection.onDidChangeActiveDiagnostic(this.onDidChangeActiveDiagnostic.bind(this)));
     }
 
@@ -78,9 +97,9 @@ export class ExplorerController implements Disposable {
     /**
      * Creates the Webview panel
      */
-    public createWebview(): WebviewPanel {
-        if (!this.wvPanel) {
-            this.wvPanel = window.createWebviewPanel('sarifExplorer', localize('explorer.Title', "SARIF Explorer"),
+    private createWebview(): WebviewPanel {
+        if (!this.explorerWebviewPanel) {
+            this.explorerWebviewPanel = window.createWebviewPanel('sarifExplorer', localize('explorer.Title', "SARIF Explorer"),
                 { preserveFocus: true, viewColumn: ViewColumn.Two },
                 {
                     enableScripts: true,
@@ -92,19 +111,20 @@ export class ExplorerController implements Disposable {
                 },
             );
 
-            this.wvPanel.webview.onDidReceiveMessage(this.onReceivedMessage.bind(this), this);
-            this.wvPanel.onDidDispose(this.onWebviewDispose.bind(this), this);
-            this.wvPanel.webview.html = this.getWebviewContent(this.wvPanel);
+            this.explorerWebviewPanel.webview.onDidReceiveMessage(this.onReceivedMessage.bind(this));
+            this.explorerWebviewPanel.onDidDispose(this.onWebviewDispose.bind(this));
+            this.explorerWebviewPanel.webview.html = this.getWebviewContent(this.explorerWebviewPanel);
         }
 
-        return this.wvPanel;
+        return this.explorerWebviewPanel;
     }
 
     /**
-     * Clears the webviewpanel field if the weview gets closed
+     * Clears the webview panel field if the webview gets closed
      */
     public onWebviewDispose(): void {
-        this.wvPanel = undefined;
+        this.explorerWebviewPanel?.dispose();
+        this.explorerWebviewPanel = undefined;
     }
 
     /**
@@ -132,11 +152,7 @@ export class ExplorerController implements Disposable {
 
             case MessageType.ExplorerLoaded:
                 if (this.resultsListData) {
-                    const webViewMessage: WebviewMessage = {
-                        data: JSON.stringify(this.resultsListData),
-                        type: MessageType.ResultsListDataSet
-                    };
-                    this.sendMessage(webViewMessage);
+                    this.setResultsListData(this.resultsListData, 'Should already be open');
                 }
 
                 if (this.activeDiagnostic) {
@@ -153,16 +169,26 @@ export class ExplorerController implements Disposable {
     }
 
     /**
-     * Sets the results list data and updates the Explore's results list data
+     * Sets the results list data and updates the Explorer's results list data
      * @param dataSet new dataset to set
+     * @param options Options for how to send the result list data to the explorer.
      */
-    public setResultsListData(dataSet: ResultsListData): void {
+    public setResultsListData(dataSet: ResultsListData, options: PostMessageOptions): void {
         this.resultsListData = dataSet;
-        const webviewMessage: WebviewMessage = {
-            data: JSON.stringify(dataSet),
-            type: MessageType.ResultsListDataSet
-        };
-        this.sendMessage(webviewMessage);
+        const openExplorer: boolean =
+            this.explorerWebviewPanel !== undefined ||
+            options === 'Always Open' ||
+            dataSet.resultCount !== 0 ||
+            this.openViewerWhenNoResults  ||
+            workspace.getConfiguration(Utilities.configSection).get('explorer.openWhenNoResults', false);
+        if (openExplorer) {
+            const webviewMessage: WebviewMessage = {
+                data: JSON.stringify(dataSet),
+                type: MessageType.ResultsListDataSet
+            };
+
+            this.sendMessage(webviewMessage, options);
+        }
     }
 
     /**
@@ -171,7 +197,7 @@ export class ExplorerController implements Disposable {
      */
     public setSelectedCodeFlow(id: string): void {
         this.selectedCodeFlowRow = id;
-        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange });
+        this.sendMessage({ data: id, type: MessageType.CodeFlowSelectionChange }, 'Only if open');
     }
 
     /**
@@ -240,7 +266,7 @@ export class ExplorerController implements Disposable {
 
         if (!this.activeDiagnostic) {
             // Empty string is used to signal no selected diagnostic
-            this.sendMessage({data: '', type: MessageType.NewDiagnostic});
+            this.sendMessage({data: '', type: MessageType.NewDiagnostic}, 'Always Open');
             return;
         }
 
@@ -253,18 +279,37 @@ export class ExplorerController implements Disposable {
         };
 
         const dataString: string = JSON.stringify(diagData);
-        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic});
+        this.sendMessage({data: dataString, type: MessageType.NewDiagnostic}, 'Always Open');
     }
 
     /**
      * Handles sending a message to the webview
      * @param message Message to send, message has a type and data
+     * @param options Options specifying whether to show the explorer view.
      */
-    private sendMessage(message: WebviewMessage): void {
+    private sendMessage(message: WebviewMessage, options: PostMessageOptions): void {
         // We do not want to wait for this promise to finish as we are
         // just adding the message to the web-views queue.
-        // tslint:disable-next-line: no-floating-promises
-        this.webviewPanel.webview.postMessage(message);
+        if (options === 'Should already be open') {
+            if (!this.explorerWebviewPanel) {
+                throw new Error('Expected the explorer view to already be open');
+            }
+
+            void this.explorerWebviewPanel.webview.postMessage(message);
+            return;
+        }
+
+        // If the explorer view is already open, then let it through.
+        if (options === 'Only if open') {
+            void this.explorerWebviewPanel?.webview.postMessage(message);
+            return;
+        }
+
+        if (options === 'Always Open' && !this.explorerWebviewPanel) {
+            this.explorerWebviewPanel = this.createWebview();
+        }
+
+        void this.explorerWebviewPanel?.webview.postMessage(message);
     }
 
     private onDidChangeActiveDiagnostic(diagnostic: SarifViewerVsCodeDiagnostic | undefined): void {
@@ -276,5 +321,11 @@ export class ExplorerController implements Disposable {
         this.activeDiagnostic = diagnostic;
 
         this.sendActiveDiagnostic();
+    }
+
+    private onExplorerLaunchCommand(): void {
+        if (this.resultsListData) {
+            this.setResultsListData(this.resultsListData, 'Always Open');
+        }
     }
 }
