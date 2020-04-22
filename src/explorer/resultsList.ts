@@ -612,6 +612,19 @@ export class ResultsList {
             throw new Error("Expected to have collapse group.");
         }
 
+        // If we are passed a row instead of a group, then go find the correct group.
+        // This is useful for handling keyboard navigation.
+        if (row.classList.contains('listtablerow')) {
+            const groups: NodeListOf<Element> = document.querySelectorAll(`#resultslisttable > tbody > .listtablegroup[data-group='${row.dataset.group}']`);
+            if (groups.length !== 1) {
+                throw new Error('Could not find expected group');
+            }
+
+            this.setToggleStateForGroupOfResults(<HTMLTableRowElement>groups[0], newState);
+
+            return;
+        }
+
         if (newState === ToggleState.expanded && row.classList.contains(ToggleState.collapsed)) {
             row.classList.replace(ToggleState.collapsed, ToggleState.expanded);
             this.collapsedGroups.splice(this.collapsedGroups.indexOf(row.dataset.group), 1);
@@ -738,18 +751,11 @@ export class ResultsList {
      * @param keydownEvent Keyboard event
      */
     private onResultsListKeyDown(keydownEvent: JQuery.KeyDownEvent): void  {        
-        enum KeyCodes {
-            LeftArrow = 37,
-            UpArrow = 38,
-            RightArrow = 39,
-            DownArrow = 40
-        }
-
         let direction: 'Previous' | 'Next' | undefined;
-        if (keydownEvent.keyCode === KeyCodes.LeftArrow || keydownEvent.keyCode === KeyCodes.UpArrow) {
+        if (keydownEvent.key === 'ArrowLeft' || keydownEvent.key === 'ArrowUp') {
             direction = 'Previous';
             
-        } else if (keydownEvent.keyCode === KeyCodes.RightArrow || keydownEvent.keyCode == KeyCodes.DownArrow) {
+        } else if (keydownEvent.key === 'ArrowRight' || keydownEvent.key == 'ArrowDown') {
             direction = 'Next';
         } else {
             return;
@@ -771,17 +777,22 @@ export class ResultsList {
 
             const rowElement: HTMLTableRowElement = (<HTMLTableRowElement>potentialElementToSelect);
 
+            if (rowElement.classList.contains(ToggleState.collapsed) || rowElement.classList.contains('hidden')) {
+                this.setToggleStateForGroupOfResults(rowElement, ToggleState.expanded);
+            }
+
             if (rowElement.classList.contains('listtablegroup')) {
                 // For the groups of results, if this is a left arrow and we aren't at the top of the results list
                 // then collapse the group (similar to the way a tree-view would do it).
                 // Otherwise, expand the group and search for the next result.
-                if (keydownEvent.keyCode === KeyCodes.LeftArrow && rowElement.dataset.group !== '0') {
+                if (keydownEvent.key === 'ArrowLeft' && rowElement.dataset.group !== '0') {
                     this.setToggleStateForGroupOfResults(rowElement, ToggleState.collapsed);
                 } else {
                     this.setToggleStateForGroupOfResults(rowElement, ToggleState.expanded);
                 }
+
                 currentSelectedElement = rowElement;
-                continue;
+                continue;    
             }
 
             // The click handler for a "listtablerow" (onRowClicked) already deals with all the logic
