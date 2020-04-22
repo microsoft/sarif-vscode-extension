@@ -841,7 +841,7 @@ export class ExplorerWebview {
      */
     private createSourceLink(location: Location, linkText: string): HTMLAnchorElement | undefined {
         let sourceLink: HTMLAnchorElement | undefined;
-        if (location.uriAsString && location.range) {
+        if (location.uriAsString !== undefined && location.range) {
             sourceLink = this.createElement("a", {
                 attributes: {
                     "data-eCol": location.range.end.character.toString(),
