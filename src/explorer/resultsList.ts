@@ -771,11 +771,11 @@ export class ResultsList {
             const potentialElementToSelect: Element | null = direction === 'Next' ? currentSelectedElement.nextElementSibling : currentSelectedElement.previousElementSibling;
 
             // If the element is not a table row, then we are done.
-            if (!potentialElementToSelect || potentialElementToSelect.tagName.localeCompare('tr', 'root', {sensitivity: 'base'}) !== 0) {
+            if (potentialElementToSelect?.tagName !==  'TR') {
                 break;
             }
 
-            const rowElement: HTMLTableRowElement = (<HTMLTableRowElement>potentialElementToSelect);
+            const rowElement: HTMLTableRowElement = <HTMLTableRowElement>potentialElementToSelect;
 
             if (rowElement.classList.contains(ToggleState.collapsed) || rowElement.classList.contains('hidden')) {
                 this.setToggleStateForGroupOfResults(rowElement, ToggleState.expanded);
