@@ -740,7 +740,7 @@ export class ExplorerWebview {
             for (const frame of stack.frames) {
                 const fLocation: Location = frame.location;
                 let file: string | undefined;
-                if (fLocation.uriAsString) {
+                if (fLocation.uriAsString !== undefined) {
                     file = fLocation.uriAsString;
                 }
 
