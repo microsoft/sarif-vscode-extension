@@ -23,6 +23,7 @@ import { OpenLogArguments, Api } from "./api/sarifViewerApi";
 // This is equivalent to "including" the generated javascript to get the code to run that sets the prototypes for the extension methods.
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
+import { ArtifactContentFileSystemProvider } from './artifactContentFileSystemProvider';
 
 export function activate(context: vscode.ExtensionContext): Api {
     return new SarifExtension(context);
@@ -89,6 +90,9 @@ class SarifExtension implements Api {
 
         this.logReader = new LogReader();
         context.subscriptions.push(this.logReader);
+
+        // Register our file system provider.
+        context.subscriptions.push(new ArtifactContentFileSystemProvider());
 
         // Listen for new sarif files to open or close
         context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(this.onDocumentOpened.bind(this)));
