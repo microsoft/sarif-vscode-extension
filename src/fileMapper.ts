@@ -179,8 +179,9 @@ export class FileMapper implements Disposable {
             remappingType: 'Open' | 'Skip';
         }
 
-        return new Promise<string>((resolve, rejected) => {
-            const disposables: Disposable[] = [];
+        const disposables: Disposable[] = [];
+
+        const inputPromise: Promise<string | undefined> = new Promise<string>((resolve, rejected) => {
             let resolvedString: string | undefined;
 
             const input: InputBox = window.createInputBox();
@@ -205,38 +206,17 @@ export class FileMapper implements Disposable {
             }];
 
             disposables.push(input.onDidAccept(() => {
-                if (resolvedString) {
+                if (resolvedString) {∏
                     input.hide();
-                    resolve(resolvedString);
                 }
             }));
 
             disposables.push(input.onDidHide(() => {
-                Disposable.from(...disposables).dispose();
                 resolve(resolvedString);
             }));
 
-            disposables.push(input.onDidTriggerButton(async (button) => {
-                switch ((<RemappingQuickInputButtons>button).remappingType) {
-                    case 'Open':
-                        const selectedUris: Uri[] | undefined = await window.showOpenDialog({
-                            canSelectMany: false,
-                            openLabel: localize('openRemappingInputDialog.openDialogLabel', "Map")
-                        });
-
-                        if (selectedUris && selectedUris.length === 1) {
-                            input.value = selectedUris[0].fsPath;
-                        }
-                        break;
-
-                    case 'Skip':
-                        input.hide();
-                        break;
-                }
-            }));
-
-            disposables.push(input.onDidChangeValue(() => {
-                const directory: string = input.value;
+            const onDiChangeValueHandler: (newValue: string) => void = (newString) => {
+                const directory: string = newString;
                 let message: string | undefined =
                 input.validationMessage = localize('openRemappingInputDialog.validationMessage',
                     "'{0}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)",
@@ -291,10 +271,38 @@ export class FileMapper implements Disposable {
                 }
 
                 input.validationMessage = message;
-            }));
+            };
 
+            disposables.push(input.onDidChangeValue(onDiChangeValueHandler.bind(this)));
+
+            disposables.push(input.onDidTriggerButton(async (button) => {
+                switch ((<RemappingQuickInputButtons>button).remappingType) {
+                    case 'Open':
+                        const selectedUris: Uri[] | undefined = await window.showOpenDialog({
+                            canSelectMany: false,
+                            openLabel: localize('openRemappingInputDialog.openDialogLabel', "Map")
+                        });
+
+                        if (selectedUris && selectedUris.length === 1) {
+                            onDiChangeValueHandler(selectedUris[0].fsPath);
+                        }
+                        break;
+
+                    case 'Skip':
+                        input.hide();
+                        break;
+                }
+            }));
             input.show();
         });
+
+        try {
+            return await inputPromise;
+        } catch {
+            return undefined;
+        } finally {
+            Disposable.from(...disposables).dispose();
+        }
     }
 
     /**
