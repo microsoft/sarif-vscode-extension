@@ -206,7 +206,7 @@ export class FileMapper implements Disposable {
             }];
 
             disposables.push(input.onDidAccept(() => {
-                if (resolvedString) {∏
+                if (resolvedString) {
                     input.hide();
                 }
             }));
