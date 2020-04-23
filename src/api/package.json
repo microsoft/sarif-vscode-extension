@@ -1,0 +1,29 @@
+{
+    "name": "sarif-viewer-api",
+    "version": "1.0.0",
+    "description": "Public API for Microsoft SARIF/Viewer",
+    "typings": "./out/api/sarifViewerApi.d.ts",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.40.0"
+    },
+    "devDependencies": {
+        "typescript": "^3.8.3"
+    },
+    "dependencies": {
+        "@types/node": "^13.13.2",
+        "@types/vscode": "^1.44.0"
+    },
+    "scripts": {
+        "compile": "npm install & tsc -p ./"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/sarif-vscode-extension.git"
+    },
+    "bugs": {
+        "url": "https://github.com/microsoft/sarif-vscode-extension.git/issues"
+    },
+    "author": "Microsoft Corporation",
+    "publisher": "Microsoft"
+}
