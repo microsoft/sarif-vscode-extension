@@ -10,3 +10,6 @@ tslint.json
 sariftypesgenerator/**
 samples/**
 workspace.code-workspace
+signconfig.xml
+workspaceinfo.xml
+directory.build.props
