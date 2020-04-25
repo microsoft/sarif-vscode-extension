@@ -2,6 +2,9 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  */
 
+import * as nls from 'vscode-nls';
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 import * as vscode from "vscode";
 import * as https from "https";
 import * as fs from "fs";
@@ -10,7 +13,7 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import { OutgoingHttpHeaders, ClientRequest } from 'http';
 import * as URL from 'url';
 import { Utilities } from "../utilities";
-import { GitHubRelease, GitHubApiBase, GitHubAsset } from "./gitHubInterfaces";
+import { GitHubRelease, GitHubApiBase, GitHubAsset, GitHubRateLimitResponse } from "./gitHubInterfaces";
 
 /**
  * The flow of this update checking is as follows.
@@ -24,12 +27,19 @@ import { GitHubRelease, GitHubApiBase, GitHubAsset } from "./gitHubInterfaces";
  * This is done using this GitHub API.
  * https://developer.github.com/v3/repos/releases/#list-assets-for-a-release
  * Once we find the asset with the correct "name", it is downloaded and installed.
+ * This implementation was adapted from the Microsoft C/C++ extension.
+ * https://github.com/microsoft/vscode-cpptools/blob/58c50dc38b1a3ebcae8139b28c0904d468d11e6e/Extension/src/githubAPI.ts
  */
 
 const gitHubRepo: string = 'Microsoft/sarif-vscode-extension';
 const vsixAssetName: string = 'Microsoft.Sarif-Viewer.vsix';
 const maxRedirectionAllowed: number = 3;
 const maxNUmberOfReleasesToInspect: number = 4;
+
+export type UpdateChannel = 'Insiders' | 'Default';
+export const DefaultUpdateChannel: UpdateChannel  = 'Default';
+export const UpdateChannelSetting: string = 'updateChannel';
+const userAgentHeaders: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
 
 /**
  * Retrieves @see HttpsProxyAgent information that may be setup in VSCode or in the process environment
@@ -153,8 +163,7 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
         throw new Error('Cannot find our own extension version???');
     }
 
-    const headers: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
-    const gitHubReleaseResponse: GitHubRelease[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${gitHubRepo}/releases`), 'gitHubReleases.json', headers);
+    const gitHubReleaseResponse: GitHubRelease[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/repos/${gitHubRepo}/releases`), 'gitHubReleases.json', userAgentHeaders);
 
     const releasesToInspect: GitHubRelease[] = gitHubReleaseResponse.slice(0, maxNUmberOfReleasesToInspect);
     for (const release of releasesToInspect) {
@@ -183,8 +192,7 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
  * @param release A candidate release found from @see findInsidersReleaseCandidate
  */
 async function findAssetForRelease(release: GitHubRelease): Promise<GitHubAsset | undefined> {
-    const headers: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
-    const gitHubAssets: GitHubAsset[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${gitHubRepo}/releases/${release.id}/assets`), 'githubAssets.json', headers);
+    const gitHubAssets: GitHubAsset[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/repos/${gitHubRepo}/releases/${release.id}/assets`), 'githubAssets.json', userAgentHeaders);
     for (const asset of gitHubAssets) {
         if (asset.content_type.invariantEqual('application/octet-stream', 'Ignore Case') &&
             asset.name.invariantEqual(vsixAssetName, 'Ignore Case')) {
@@ -239,21 +247,55 @@ async function tryDownloadVsix(asset: GitHubAsset): Promise<vscode.Uri | undefin
 /**
  * Checks GitHub for an insiders update.
  */
-export async function checkForInsiderUpdates(): Promise<void> {
+export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just check'): Promise<boolean> {
+    // If we have exceeded the rate limit (which actually would be hard to do since the limit is 60 per hour per IP
+    // for unauthorized requests), then we can't really do much.
+    // https://developer.github.com/v3/#rate-limiting
+    const gitHubRateLimit: GitHubRateLimitResponse  = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/rate_limit`), 'rateLimit.json', userAgentHeaders);
+    if (gitHubRateLimit.resources.core.remaining <= 0) {
+        return false;
+    }
+
     const gitHubRelease: GitHubRelease | undefined = await findInsidersReleaseCandidate();
     if (!gitHubRelease) {
-        return;
+        return false;
     }
 
     const gitHubAsset: GitHubAsset | undefined = await findAssetForRelease(gitHubRelease);
     if (!gitHubAsset) {
-        return;
+        return false;
     }
 
     const vsixUri: vscode.Uri | undefined = await tryDownloadVsix(gitHubAsset);
     if (!vsixUri) {
-        return;
+        return false;
+    }
+
+    // Since everything is highly async and it can take a while to download the VSIX, make sure one
+    // more time that the user is on the insiders version.
+    if (installOptions === 'Install') {
+        const updateChannel: UpdateChannel =  vscode.workspace.getConfiguration(Utilities.configSection).get(UpdateChannelSetting, DefaultUpdateChannel);
+        if (updateChannel !== 'Insiders') {
+            return false;
+        }
+    } else {
+        return true;
     }
 
     await vscode.commands.executeCommand('workbench.extensions.installExtension', vsixUri);
+
+    const reloadNowMessageItem: vscode.MessageItem = {
+        title : localize('insidersChannel.ReloadAfterUpgrade', "Reload now")
+    };
+
+    const response: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
+         localize('insidersChannel.newVersionInstalled', "A new version of the SARIF Explorer (({0})) has been installed. You will need to reload take affect.", gitHubRelease.tag_name),
+        { modal: false },
+        reloadNowMessageItem);
+
+    if (response === reloadNowMessageItem) {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+
+    return true;
 }

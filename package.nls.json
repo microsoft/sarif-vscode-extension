@@ -127,6 +127,6 @@
     "sarif-viewer.binaryArtifactContent.viewAsMarkdown.description": "When enabled, renders binary artifact content as markdown.",
     "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview.",
     "sarif-viewer.updateChannel.description": "Specifies the type of updates the extension receives.",
-    "sarif-viewer.updateChannel.default.description%": "Insiders channel. Receives upcoming features and bug fixes at a faster rate.",
-    "sarif-viewer.updateChannel.insiders.description%": "Default channel."
+    "sarif-viewer.updateChannel.insiders.description": "Insiders channel. Receives upcoming features and bug fixes at a faster rate.",
+    "sarif-viewer.updateChannel.default.description": "Default channel."
 }
