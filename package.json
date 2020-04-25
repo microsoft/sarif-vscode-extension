@@ -158,7 +158,24 @@
                                 "sarifFile",
                                 "severityLevel",
                                 "tool"
-                            ]
+                            ],
+                            "enumDescriptions": [
+                                "%automationCat.description%",
+                                "%automationId.description%",
+                                "%baselineState.description%",
+                                "%kind.description%",
+                                "%message.description%",
+                                "%rank.description%",
+                                "%resultFile.description%",
+                                "%resultStartPos.description%",
+                                "%logicalLocation.description%",
+                                "%ruleId.description%",
+                                "%ruleName.description%",
+                                "%runId.description%",
+                                "%sarifFile.description%",
+                                "%severityLevel.description%",
+                                "%tool.description%"
+                            ]        
                         },
                         "ascending": {
                             "type": "boolean"
@@ -194,6 +211,20 @@
                     "description": "%sarif-viewer.openMarkdownPreview.description%",
                     "type": "boolean",
                     "default": false,
+                    "scope": "application"
+                },
+                "sarif-viewer.updateChannel": {
+                    "description": "%sarif-viewer.updateChannel.description%",
+                    "type": "string",
+                    "enum": [
+                        "Default",
+                        "Insiders"
+                    ],
+                    "enumDescriptions": [
+                        "%sarif-viewer.updateChannel.default.description%",
+                        "%sarif-viewer.updateChannel.insiders.description%"
+                    ],
+                    "default": "Default",
                     "scope": "application"
                 }
             }

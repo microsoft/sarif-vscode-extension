@@ -12,13 +12,28 @@ import * as URL from 'url';
 import { Utilities } from "../utilities";
 import { GitHubRelease, GitHubApiBase, GitHubAsset } from "./gitHubInterfaces";
 
-const sarifRepo: string = 'Microsoft/sarif-vscode-extension';
-const vsixName: string = 'Microsoft.Sarif-Viewer.vsix';
+/**
+ * The flow of this update checking is as follows.
+ * Use the GitHub APIs to git a list of releases for the repository.
+ * https://developer.github.com/v3/repos/releases/#list-releases-for-a-repository
+ * Then look at the "tag_name" in the repositories which are created in the form
+ * "v<semver>-insiders" for insiders builds.
+ * Compare the semantic version of the release candidate to the extensions current version.
+ * If candidate version is greater than the extension version, then find the correct assets
+ * for that release and find the VSIX.
+ * This is done using this GitHub API.
+ * https://developer.github.com/v3/repos/releases/#list-assets-for-a-release
+ * Once we find the asset with the correct "name", it is downloaded and installed.
+ */
+
+const gitHubRepo: string = 'Microsoft/sarif-vscode-extension';
+const vsixAssetName: string = 'Microsoft.Sarif-Viewer.vsix';
 const maxRedirectionAllowed: number = 3;
 const maxNUmberOfReleasesToInspect: number = 4;
 
 /**
- * Retrieves @see HttpsProxyAgent information that may be setup in VSCode or in the process environment.
+ * Retrieves @see HttpsProxyAgent information that may be setup in VSCode or in the process environment
+ * to use for HTTP(s) requests.
  */
 function getHttpsProxyAgent(): HttpsProxyAgent | undefined {
     // See if we have an HTTP proxy set up in VSCode's proxy settings or
@@ -92,14 +107,13 @@ async function downloadOverHttps(uri: vscode.Uri, destinationPath: vscode.Uri, h
 
             response.on('error', (error) => {
                 reject(error);
-                return;
             });
+
             response.pipe(createdFile);
         });
 
         httpRequest.on('error', (error) => {
             reject(error);
-            return;
         });
 
         httpRequest.end();
@@ -140,7 +154,7 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
     }
 
     const headers: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
-    const gitHubReleaseResponse: GitHubRelease[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${sarifRepo}/releases`), 'gitHubReleases.json', headers);
+    const gitHubReleaseResponse: GitHubRelease[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${gitHubRepo}/releases`), 'gitHubReleases.json', headers);
 
     const releasesToInspect: GitHubRelease[] = gitHubReleaseResponse.slice(0, maxNUmberOfReleasesToInspect);
     for (const release of releasesToInspect) {
@@ -170,10 +184,10 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
  */
 async function findAssetForRelease(release: GitHubRelease): Promise<GitHubAsset | undefined> {
     const headers: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
-    const gitHubAssets: GitHubAsset[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${sarifRepo}/releases/${release.id}/assets`), 'githubAssets.json', headers);
+    const gitHubAssets: GitHubAsset[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/${gitHubRepo}/releases/${release.id}/assets`), 'githubAssets.json', headers);
     for (const asset of gitHubAssets) {
         if (asset.content_type.invariantEqual('application/octet-stream', 'Ignore Case') &&
-            asset.name.invariantEqual(vsixName, 'Ignore Case')) {
+            asset.name.invariantEqual(vsixAssetName, 'Ignore Case')) {
                 return asset;
         }
     }
@@ -181,34 +195,50 @@ async function findAssetForRelease(release: GitHubRelease): Promise<GitHubAsset 
     return undefined;
 }
 
+/**
+ * Downloads the VSIX.
+ * @param asset The GitHub asset to download.
+ */
 async function tryDownloadVsix(asset: GitHubAsset): Promise<vscode.Uri | undefined> {
-    let success: boolean = false;
-    const vsixDownloadUri: vscode.Uri = vscode.Uri.file(Utilities.generateTempPath(vsixName));
+    const vsixDownloadUri: vscode.Uri = vscode.Uri.file(Utilities.generateTempPath(vsixAssetName));
+
+    // Save VSCode's proxy support setting. This is done because
+    // we attempt two download the VSIX with and without VSCode's
+    // proxy support.
     const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
     const originalProxySupport: string | undefined = config.inspect<string>('http.proxySupport')?.globalValue;
-    let tryAgain: boolean = true;
-    while (tryAgain && !success) {
-        try {
-            await downloadOverHttps(vscode.Uri.parse(asset.browser_download_url, /*strict*/ true), vsixDownloadUri);
-            success = true;
-        } catch {
-            if (config.get('http.proxySupport', undefined) !== 'off' && originalProxySupport !== 'off') {
-                await config.update('http.proxySupport', 'off', true);
-                continue;
+    let restoreVSCodeProxySetting: boolean = false;
+
+    try {
+        let tryAgain: boolean = true;
+        while (tryAgain) {
+            try {
+                await downloadOverHttps(vscode.Uri.parse(asset.browser_download_url, /*strict*/ true), vsixDownloadUri);
+                return vsixDownloadUri;
+            } catch {
+                // If we failed to download, then turn off VSCode's proxy support (if it's not already off)
+                // and try again.
+                if (config.get('http.proxySupport', undefined) !== 'off' && originalProxySupport !== 'off') {
+                    await config.update('http.proxySupport', 'off', true);
+                    restoreVSCodeProxySetting = true;
+                    continue;
+                }
+
+                tryAgain = false;
             }
-
-            tryAgain = false;
         }
-
-        if (originalProxySupport !== config.inspect<string>('http.proxySupport')?.globalValue) {
+    } finally {
+        if (restoreVSCodeProxySetting) {
             await config.update('http.proxySupport', originalProxySupport, true); // Reset the http.proxySupport.
-            tryAgain = false;
         }
     }
 
-    return success ? vsixDownloadUri : undefined;
+    return undefined;
 }
 
+/**
+ * Checks GitHub for an insiders update.
+ */
 export async function checkForInsiderUpdates(): Promise<void> {
     const gitHubRelease: GitHubRelease | undefined = await findInsidersReleaseCandidate();
     if (!gitHubRelease) {
