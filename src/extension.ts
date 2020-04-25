@@ -24,6 +24,7 @@ import { OpenLogArguments, Api } from "./api/sarifViewerApi";
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
 import { ArtifactContentFileSystemProvider } from './artifactContentFileSystemProvider';
+import { checkForInsiderUpdates } from './insidersUpdate/updateCheck';
 
 export function activate(context: vscode.ExtensionContext): Api {
     return new SarifExtension(context);
@@ -100,6 +101,8 @@ class SarifExtension implements Api {
 
         // We do not need to block extension startup for reading any open documents.
         void this.readOpenedDocuments();
+
+        void checkForInsiderUpdates();
     }
 
     /**
