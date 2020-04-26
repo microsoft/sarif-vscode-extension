@@ -195,6 +195,20 @@
                     "type": "boolean",
                     "default": false,
                     "scope": "application"
+                },
+                "sarif-viewer.logUpgrade.prompt": {
+                    "description": "%sarif-viewer.logUpgrade.prompt.description%",
+                    "type": "string",
+                    "enum": [
+                        "Prompt",
+                        "Temporary"
+                    ],
+                    "enumDescriptions": [
+                        "%sarif-viewer.logUpgrade.prompt.prompt.description%",
+                        "%sarif-viewer.logUpgrade.prompt.temporary.description%"
+                    ],
+                    "default": "Prompt",
+                    "scope": "application"
                 }
             }
         },

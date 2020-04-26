@@ -26,31 +26,6 @@
 
     "explorer.Title": "SARIF Explorer",
 
-    "codeFlow.HoverMessage": "[Code Flow] {0}",
-    "converterTool.AndroidStudio": "Android Studio",
-    "converterTool.ClangAnalyzer": "CLang Analyzer",
-    "converterTool.CppCheck": "CppCheck",
-    "converterTool.ContrastSecurity": "Contrast Security",
-    "converterTool.Fortify": "Fortify",
-    "converterTool.FortifyFpr": "Fortify Fpr",
-    "converterTool.FxCop": "FxCop",
-    "converterTool.PREfast": "PREfast",
-    "converterTool.Pylint": "Pylint",
-    "converterTool.SemmleQL": "Semmle QL",
-    "converterTool.StaticDriverVerifier": "Static Driver Verifier",
-    "converterTool.TSLint": "TSLint",
-    "converterTool.AllFiles": "All Files",
-    "converterTool.OpenFileDialogTitle": "{0} log files",
-
-    "converterTool.UpgradedErrorMessage": "Sarif version '{0}'(schema '{1}') is not yet supported by the Viewer. Make sure you have the latest extension version and check https://github.com/Microsoft/sarif-vscode-extension for future support.`",
-    "converterTool.Upgrade.SaveTemp": "Yes (Save Temp)",
-    "converterTool.Upgrade.SaveAs": "Yes (Save As)",
-    "converterTool.Upgrade.No": "No",
-    "converterTool.Upgrade.FailedMessage": "Sarif upgrade failed with error: {0}",
-    "converterTool.Upgrade.AskWithSchema": "Sarif schema version {0} is not supported. Upgrade to the latest schema version {1}?",
-    "converterTool.Upgrade.AskWithVersion": "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
-    "converterTool.Upgrade.UnknownVersion": "Unknown",
-
     "openRemappingInputDialog.title": "Sarif Result Location Remapping",
     "openRemappingInputDialog.prompt": "Valid path, confirm if it maps to '{0}' or its rootpath",
     "openRemappingInputDialog.validationMessage": "'{0}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)",
@@ -125,5 +100,9 @@
     "sarif-viewer.explorer.openWhenNoResults.description": "Indicates whether to open the explorer when there are no results in the log.",
     "sarif-viewer.binaryArtifactContent.bytesPerRow.description": "When rendering binary artifact content, determines the number of bytes displayed in a row.",
     "sarif-viewer.binaryArtifactContent.viewAsMarkdown.description": "When enabled, renders binary artifact content as markdown.",
-    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview."
+    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview.",
+
+    "sarif-viewer.logUpgrade.prompt.description": "Determines how files are created when a SARIF log needs to be upgraded from an earlier schema.",
+    "sarif-viewer.logUpgrade.prompt.prompt.description": "Prompt for upgrade.",
+    "sarif-viewer.logUpgrade.prompt.temporary.description": "A temporary file  for the upgraded SARIF log is created, no prompt is shown."
 }

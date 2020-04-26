@@ -39,7 +39,7 @@ export function deactivate(): void {
 /**
  * Used to control options when opening a SARIF file.
  */
-interface OpenSarifFileOptions extends UpgradeSarifOptions {
+interface OpenSarifFileOptions {
     /**
      * Indicates whether to open the file (if not already open) and display it to the user.
      */
@@ -55,6 +55,12 @@ interface OpenSarifFileOptions extends UpgradeSarifOptions {
      * showing the explorer when there are no results.
      */
     readonly openViewerWhenNoResults?: boolean;
+
+    /**
+     * Controls the SARIF upgrade prompt when a log is opened
+     * from an earlier schema. If defined, overrides user settings.
+     */
+    readonly upgradeSarifOptions?: UpgradeSarifOptions;
 }
 
 /**
@@ -111,7 +117,7 @@ class SarifExtension implements Api {
             return;
         }
 
-        await this.openSarifFile(doc.uri, { promptUserForUpgrade: true, openInTextEditor: true, closeOriginalFileOnUpgrade: true });
+        await this.openSarifFile(doc.uri, { openInTextEditor: true, closeOriginalFileOnUpgrade: true });
     }
 
     /**
@@ -123,7 +129,7 @@ class SarifExtension implements Api {
         // Spin through VSCode's documents and read any SARIF files that are opened.
         const urisToParse: vscode.Uri[] = vscode.workspace.textDocuments.filter((doc) => doc.uri.isSarifFile()).map((doc) => doc.uri);
         for (const uriToParse of urisToParse) {
-            await this.openSarifFile(uriToParse, { promptUserForUpgrade: true, openInTextEditor: true, closeOriginalFileOnUpgrade: true });
+            await this.openSarifFile(uriToParse, { openInTextEditor: true, closeOriginalFileOnUpgrade: true });
         }
     }
 
@@ -186,7 +192,7 @@ class SarifExtension implements Api {
         }
 
         if (logReaderResult.upgradeCheckInformation.upgradedNeeded === 'Yes') {
-            const upgradedUri: vscode.Uri | undefined = await FileConverter.upgradeSarif(sarifFile, logReaderResult.upgradeCheckInformation.parsedVersion, logReaderResult.upgradeCheckInformation.parsedSchemaVersion, options);
+            const upgradedUri: vscode.Uri | undefined = await FileConverter.upgradeSarif(sarifFile, logReaderResult.upgradeCheckInformation.parsedVersion, logReaderResult.upgradeCheckInformation.parsedSchemaVersion, options.upgradeSarifOptions);
             if (!upgradedUri) {
                 return;
             }
@@ -232,7 +238,7 @@ class SarifExtension implements Api {
                 openViewerWhenNoResults: openLogFileArguments?.openViewerWhenNoResults,
                 closeOriginalFileOnUpgrade: true,
                 openInTextEditor: false,
-                promptUserForUpgrade: openLogFileArguments?.promptForUpgrade ?? true
+                upgradeSarifOptions: (openLogFileArguments?.promptForUpgrade !== undefined) ? (openLogFileArguments?.promptForUpgrade ? 'Prompt' : 'Temporary') : undefined
             });
         }
     }
