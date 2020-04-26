@@ -175,7 +175,7 @@
                                 "%sarifFile.description%",
                                 "%severityLevel.description%",
                                 "%tool.description%"
-                            ]        
+                            ]
                         },
                         "ascending": {
                             "type": "boolean"
