@@ -10,7 +10,6 @@ import { ChildProcess, spawn } from "child_process";
 import multitoolPath from "@microsoft/sarif-multitool";
 
 import * as nls from 'vscode-nls';
-import { ConfigurationTarget } from "vscode";
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
 export interface UpgradeCheckInformation {
@@ -44,7 +43,7 @@ export interface UpgradeCheckInformation {
  * Options used during upgrade of SARIF to later schema version.
  */
 export type UpgradeSarifOptions = 'Prompt' | 'Temporary';
-export const DefaultUpgradeOption : UpgradeSarifOptions = 'Prompt';
+export const DefaultUpgradeOption: UpgradeSarifOptions = 'Prompt';
 
 /**
  * Handles converting a non sarif static analysis file to a sarif file via the sarif-sdk multitool
@@ -221,7 +220,7 @@ export class FileConverter {
      * @param upgradeOptions Controls how the user is prompted for SARIF log upgrades.
      */
     public static async upgradeSarif(sarifFile: vscode.Uri, sarifVersion: SarifVersion | undefined, sarifSchemaVersion: SarifVersion | undefined, upgradeOptions?: UpgradeSarifOptions): Promise<vscode.Uri | undefined> {
-        const desiredUpgradeOption : UpgradeSarifOptions = upgradeOptions ?? vscode.workspace.getConfiguration(Utilities.configSection).get(FileConverter.UpgradePromptSettingName, DefaultUpgradeOption);
+        const desiredUpgradeOption: UpgradeSarifOptions = upgradeOptions ?? vscode.workspace.getConfiguration(Utilities.configSection).get(FileConverter.UpgradePromptSettingName, DefaultUpgradeOption);
 
         if (desiredUpgradeOption === 'Prompt') {
             const upgradeMessage: string = sarifSchemaVersion ?
@@ -232,7 +231,7 @@ export class FileConverter {
             const upgradeMessageItem: vscode.MessageItem = {
                 title: localize('converterTool.Upgrade.Upgrade', "Upgrade")
             };
-    
+
             const neverShowAgainMessageItem: vscode.MessageItem = {
                 title: localize('converterTool.Upgrade.NeverShow', "Don't Show Again")
             };
@@ -245,9 +244,9 @@ export class FileConverter {
             if (!choice) {
                 return undefined;
             }
-            
+
             if (choice === neverShowAgainMessageItem) {
-                await vscode.workspace.getConfiguration(Utilities.configSection).update(FileConverter.UpgradePromptSettingName, <UpgradeSarifOptions>'Temporary', ConfigurationTarget.Global);
+                await vscode.workspace.getConfiguration(Utilities.configSection).update(FileConverter.UpgradePromptSettingName, <UpgradeSarifOptions>'Temporary', vscode.ConfigurationTarget.Global);
             }
         }
 
