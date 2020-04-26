@@ -43,7 +43,7 @@ export interface UpgradeCheckInformation {
 /**
  * Options used during upgrade of SARIF to later schema version.
  */
-export type UpgradeSarifOptions = 'Prompt' | 'In Place' | 'Temporary';
+export type UpgradeSarifOptions = 'Prompt' | 'Temporary';
 export const DefaultUpgradeOption : UpgradeSarifOptions = 'Prompt';
 
 /**
