@@ -32,12 +32,19 @@ import { GitHubRelease, GitHubApiBase, GitHubAsset, GitHubRateLimitResponse } fr
  */
 
 const gitHubRepo: string = 'Microsoft/sarif-vscode-extension';
-const vsixAssetName: string = 'Microsoft.Sarif-Viewer.vsix';
+
+/**
+ * This name MUST match the name of the GitHub release asset.
+ * This asset is being produced by:
+ * https://microsoft.visualstudio.com/EngSys/_build?definitionId=51274&_a=summary
+ */
+const vsixAssetName: string = 'MS-SarifVSCode.sarif-viewer.vsix';
+
 const maxRedirectionAllowed: number = 3;
 const maxNUmberOfReleasesToInspect: number = 4;
 
 export type UpdateChannel = 'Insiders' | 'Default';
-export const DefaultUpdateChannel: UpdateChannel  = 'Default';
+export const DefaultUpdateChannel: UpdateChannel = 'Default';
 export const UpdateChannelSetting: string = 'updateChannel';
 const userAgentHeaders: OutgoingHttpHeaders = { 'User-Agent': 'microsoft.sarif-viewer' };
 
@@ -171,13 +178,18 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
             continue;
         }
 
+        const releaseSemVer: string = release.tag_name.substr(1);
+        if (!semver.prerelease(releaseSemVer)?.some((tag) => tag.invariantEqual('insiders'))) {
+            continue;
+        }
+
         const candidateReleaseVersion: semver.SemVer = new semver.SemVer(release.tag_name.substr(1));
         if (candidateReleaseVersion.prerelease.find((tag) => typeof tag === 'string' && tag.invariantEqual('insiders')) === undefined) {
             continue;
         }
 
         const extensionVersion: semver.SemVer = new semver.SemVer(versionString);
-        if (candidateReleaseVersion.compare(extensionVersion) <= 0) {
+        if (semver.lte(releaseSemVer, extensionVersion)) {
             continue;
         }
 
@@ -196,7 +208,7 @@ async function findAssetForRelease(release: GitHubRelease): Promise<GitHubAsset 
     for (const asset of gitHubAssets) {
         if (asset.content_type.invariantEqual('application/octet-stream', 'Ignore Case') &&
             asset.name.invariantEqual(vsixAssetName, 'Ignore Case')) {
-                return asset;
+            return asset;
         }
     }
 
@@ -244,14 +256,11 @@ async function tryDownloadVsix(asset: GitHubAsset): Promise<vscode.Uri | undefin
     return undefined;
 }
 
-/**
- * Checks GitHub for an insiders update.
- */
-export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just check'): Promise<boolean> {
+async function checkForInsiderUpdatesImpl(installOptions: 'Install' | 'Just check') : Promise<boolean> {
     // If we have exceeded the rate limit (which actually would be hard to do since the limit is 60 per hour per IP
     // for unauthorized requests), then we can't really do much.
     // https://developer.github.com/v3/#rate-limiting
-    const gitHubRateLimit: GitHubRateLimitResponse  = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/rate_limit`), 'rateLimit.json', userAgentHeaders);
+    const gitHubRateLimit: GitHubRateLimitResponse = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/rate_limit`), 'rateLimit.json', userAgentHeaders);
     if (gitHubRateLimit.resources.core.remaining <= 0) {
         return false;
     }
@@ -271,10 +280,9 @@ export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just c
         return false;
     }
 
-    // Since everything is highly async and it can take a while to download the VSIX, make sure one
-    // more time that the user is on the insiders version.
+    // The user can change the "update channel" setting during the download. Thus, we need to re-confirm.
     if (installOptions === 'Install') {
-        const updateChannel: UpdateChannel =  vscode.workspace.getConfiguration(Utilities.configSection).get(UpdateChannelSetting, DefaultUpdateChannel);
+        const updateChannel: UpdateChannel = vscode.workspace.getConfiguration(Utilities.configSection).get(UpdateChannelSetting, DefaultUpdateChannel);
         if (updateChannel !== 'Insiders') {
             return false;
         }
@@ -285,11 +293,11 @@ export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just c
     await vscode.commands.executeCommand('workbench.extensions.installExtension', vsixUri);
 
     const reloadNowMessageItem: vscode.MessageItem = {
-        title : localize('insidersChannel.ReloadAfterUpgrade', "Reload now")
+        title: localize('insidersChannel.ReloadAfterUpgrade', "Reload now")
     };
 
     const response: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
-         localize('insidersChannel.newVersionInstalled', "A new version of the SARIF Explorer (({0})) has been installed. You will need to reload take affect.", gitHubRelease.tag_name),
+        localize('insidersChannel.newVersionInstalled', "A new version of the SARIF Explorer ({0}) has been installed. You will need to reload take affect.", gitHubRelease.tag_name),
         { modal: false },
         reloadNowMessageItem);
 
@@ -298,4 +306,24 @@ export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just c
     }
 
     return true;
+}
+
+let checkingForUpdatesPromise: Promise<boolean> | undefined;
+
+/**
+ * Checks GitHub for an insiders update.
+ */
+export async function checkForInsiderUpdates(installOptions: 'Install' | 'Just check'): Promise<boolean> {
+    if (checkingForUpdatesPromise) {
+        return checkingForUpdatesPromise;
+    }
+
+    checkingForUpdatesPromise = new Promise<boolean>((resolve) => {
+        resolve(checkForInsiderUpdatesImpl(installOptions));
+    });
+
+    const checkForInsiderUpdatesResult: boolean = await checkingForUpdatesPromise;
+    checkingForUpdatesPromise = undefined;
+
+    return checkForInsiderUpdatesResult;
 }
