@@ -172,6 +172,12 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
 
     const gitHubReleaseResponse: GitHubRelease[] = await downloadOverHttpsAsJsonObject(vscode.Uri.parse(`${GitHubApiBase}/repos/${gitHubRepo}/releases`), 'gitHubReleases.json', userAgentHeaders);
 
+    // How the releases would look on the GitHub releases page
+    // Master = 3.4.0
+    // Insiders = 3.3.9
+    // Insiders = 3.3.8
+    // Master = 3.3.7
+    // The goal is to skip the master releases and only look for the insider ones.
     const releasesToInspect: GitHubRelease[] = gitHubReleaseResponse.slice(0, maxNUmberOfReleasesToInspect);
     for (const release of releasesToInspect) {
         if (!release.tag_name.charAt(0).invariantEqual('v')) {
@@ -183,7 +189,9 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
             continue;
         }
 
-        if (semver.lte(currentlyInstalledVersion, gitHubReleaseVersion)) {
+        // currentlyInstalledVersion = 1.2.3
+        // gitHubReleaseVersion = 4.5.6
+        if (semver.gte(currentlyInstalledVersion, gitHubReleaseVersion)) {
             continue;
         }
 
