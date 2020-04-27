@@ -165,8 +165,8 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
         throw new Error('Cannot find our own extension???');
     }
 
-    const versionString: string | undefined = ourExtension.packageJSON.version;
-    if (!versionString) {
+    const ourVersionString: string | undefined = ourExtension.packageJSON.version;
+    if (!ourVersionString) {
         throw new Error('Cannot find our own extension version???');
     }
 
@@ -183,13 +183,7 @@ async function findInsidersReleaseCandidate(): Promise<GitHubRelease | undefined
             continue;
         }
 
-        const candidateReleaseVersion: semver.SemVer = new semver.SemVer(release.tag_name.substr(1));
-        if (candidateReleaseVersion.prerelease.find((tag) => typeof tag === 'string' && tag.invariantEqual('insiders')) === undefined) {
-            continue;
-        }
-
-        const extensionVersion: semver.SemVer = new semver.SemVer(versionString);
-        if (semver.lte(releaseSemVer, extensionVersion)) {
+        if (!semver.lte(ourVersionString, releaseSemVer)) {
             continue;
         }
 
