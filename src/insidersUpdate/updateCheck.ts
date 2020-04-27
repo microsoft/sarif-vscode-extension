@@ -250,7 +250,7 @@ async function tryDownloadVsix(asset: GitHubAsset): Promise<vscode.Uri | undefin
     return undefined;
 }
 
-async function checkForInsiderUpdatesImpl(installOptions: 'Install' | 'Just check') : Promise<boolean> {
+async function checkForInsiderUpdatesImpl(installOptions: 'Install' | 'Just check'): Promise<boolean> {
     // If we have exceeded the rate limit (which actually would be hard to do since the limit is 60 per hour per IP
     // for unauthorized requests), then we can't really do much.
     // https://developer.github.com/v3/#rate-limiting
