@@ -222,7 +222,7 @@ export class FileConverter {
     public static async upgradeSarif(sarifFile: vscode.Uri, sarifVersion: SarifVersion | undefined, sarifSchemaVersion: SarifVersion | undefined, upgradeOptions?: UpgradeSarifOptions): Promise<vscode.Uri | undefined> {
         const desiredUpgradeOption: UpgradeSarifOptions = upgradeOptions ?? vscode.workspace.getConfiguration(Utilities.configSection).get(FileConverter.UpgradePromptSettingName, DefaultUpgradeOption);
 
-        if (desiredUpgradeOption === 'Prompt') {
+        if (desiredUpgradeOption !== 'Always') {
             const upgradeMessage: string = sarifSchemaVersion ?
              localize('converterTool.Upgrade.AskWithSchema', "Sarif schema version {0} is not supported. Upgrade to the latest schema version {1}?", sarifSchemaVersion.original, FileConverter.MultiToolCurrentSchemaVersion.original) :
              localize('converterTool.Upgrade.AskWithVersion', "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
