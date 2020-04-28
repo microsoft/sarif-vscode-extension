@@ -125,5 +125,8 @@
     "sarif-viewer.explorer.openWhenNoResults.description": "Indicates whether to open the explorer when there are no results in the log.",
     "sarif-viewer.binaryArtifactContent.bytesPerRow.description": "When rendering binary artifact content, determines the number of bytes displayed in a row.",
     "sarif-viewer.binaryArtifactContent.viewAsMarkdown.description": "When enabled, renders binary artifact content as markdown.",
-    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview."
+    "sarif-viewer.openMarkdownPreview.description": "When viewing artifact content containing markdown, show the markdown preview.",
+    "sarif-viewer.updateChannel.description": "Specifies the type of updates the extension receives.",
+    "sarif-viewer.updateChannel.insiders.description": "Insiders channel. Receives upcoming features and bug fixes at a faster rate.",
+    "sarif-viewer.updateChannel.default.description": "Default channel."
 }

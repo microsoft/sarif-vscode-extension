@@ -24,6 +24,8 @@ import { OpenLogArguments, Api } from "./api/sarifViewerApi";
 // If you don't do this... you crash using the extension methods.
 import './utilities/stringUtilities';
 import { ArtifactContentFileSystemProvider } from './artifactContentFileSystemProvider';
+import { checkForInsiderUpdates, DefaultUpdateChannel, UpdateChannel, UpdateChannelSetting } from './insidersUpdate/updateCheck';
+import * as DebugUtilities from "./utilities/debugUtilities";
 
 export function activate(context: vscode.ExtensionContext): Api {
     return new SarifExtension(context);
@@ -100,6 +102,8 @@ class SarifExtension implements Api {
 
         // We do not need to block extension startup for reading any open documents.
         void this.readOpenedDocuments();
+
+        this.startInsidersUpdateChecks(context);
     }
 
     /**
@@ -255,5 +259,30 @@ class SarifExtension implements Api {
         this.diagnosticCollection.removeAllRuns();
 
         return;
+    }
+
+    /**
+     * Starts checks for insiders.
+     * @param context The VSCode extension context.
+     */
+    private startInsidersUpdateChecks(context: vscode.ExtensionContext): void {
+        if (DebugUtilities.debugMode || DebugUtilities.testMode) {
+            return;
+        }
+
+        const checkForUpdates: () => void = () => {
+            const updateChannel: UpdateChannel =  vscode.workspace.getConfiguration(Utilities.configSection).get(UpdateChannelSetting, DefaultUpdateChannel);
+            if (updateChannel === 'Insiders') {
+                void checkForInsiderUpdates('Install');
+            }
+        };
+
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((configurationChangeEvent) => {
+            if (configurationChangeEvent.affectsConfiguration(UpdateChannelSetting)) {
+                checkForUpdates();
+            }
+        }));
+
+        checkForUpdates();
     }
 }

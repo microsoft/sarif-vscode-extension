@@ -267,7 +267,7 @@ export class ArtifactContentFileSystemProvider implements vscode.FileSystemProvi
             artifactUri: artifactUri.toString(/*skpEncoding*/ true)
         };
 
-        const encodedUriDataAsBase64: string = new Buffer(JSON.stringify(encodedUriData)).toString('base64');
+        const encodedUriDataAsBase64: string = Buffer.from(JSON.stringify(encodedUriData)).toString('base64');
 
         return vscode.Uri.parse(`${ArtifactContentFileSystemProvider.ArtifactContentScheme}://${uriPath}?${encodedUriDataAsBase64}`, /*strict*/ true);
     }
