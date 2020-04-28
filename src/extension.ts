@@ -242,7 +242,7 @@ class SarifExtension implements Api {
                 openViewerWhenNoResults: openLogFileArguments?.openViewerWhenNoResults,
                 closeOriginalFileOnUpgrade: true,
                 openInTextEditor: false,
-                upgradeSarifOptions: (openLogFileArguments?.promptForUpgrade !== undefined) ? (openLogFileArguments?.promptForUpgrade ? 'Prompt' : 'Temporary') : undefined
+                upgradeSarifOptions: (openLogFileArguments?.promptForUpgrade !== undefined) ? (openLogFileArguments?.promptForUpgrade ? 'Prompt' : 'Always') : undefined
             });
         }
     }
