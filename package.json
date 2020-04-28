@@ -213,6 +213,19 @@
                     "default": false,
                     "scope": "application"
                 },
+                "sarif-viewer.logUpgrade.prompt": {
+                    "description": "%sarif-viewer.logUpgrade.prompt.description%",
+                    "type": "string",
+                    "enum": [
+                        "Prompt",
+                        "Always"
+                    ],
+                    "enumDescriptions": [
+                        "%sarif-viewer.logUpgrade.prompt.prompt.description%",
+                        "%sarif-viewer.logUpgrade.prompt.always.description%"
+                    ],
+                    "default": "Prompt"
+                },
                 "sarif-viewer.updateChannel": {
                     "description": "%sarif-viewer.updateChannel.description%",
                     "type": "string",

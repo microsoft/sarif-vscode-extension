@@ -42,17 +42,15 @@ export interface UpgradeCheckInformation {
 /**
  * Options used during upgrade of SARIF to later schema version.
  */
-export interface UpgradeSarifOptions {
-    /**
-     * Indicates whether or not to prompt the user. If prompt user is 'no' a temp file will be created.
-     */
-    promptUserForUpgrade: boolean;
-}
+export type UpgradeSarifOptions = 'Prompt' | 'Always';
+export const DefaultUpgradeOption: UpgradeSarifOptions = 'Prompt';
 
 /**
  * Handles converting a non sarif static analysis file to a sarif file via the sarif-sdk multitool
  */
 export class FileConverter {
+    private static readonly UpgradePromptSettingName: string = 'logUpgrade.prompt';
+
     public static initialize(extensionContext: vscode.ExtensionContext): void {
         FileConverter.registerCommands(extensionContext);
     }
@@ -219,67 +217,40 @@ export class FileConverter {
      * @param sarifFile the text document of the sarif file to convert
      * @param sarifVersion version of the sarif log
      * @param sarifSchemaVersion version of the sarif logs schema
-     * @param options Indicates whether or not to prompt the user. If prompt user is 'no' a temp file will be created.
+     * @param upgradeOptions Controls how the user is prompted for SARIF log upgrades.
      */
-    public static async upgradeSarif(sarifFile: vscode.Uri, sarifVersion: SarifVersion | undefined, sarifSchemaVersion: SarifVersion | undefined, options: UpgradeSarifOptions): Promise<vscode.Uri | undefined> {
+    public static async upgradeSarif(sarifFile: vscode.Uri, sarifVersion: SarifVersion | undefined, sarifSchemaVersion: SarifVersion | undefined, upgradeOptions?: UpgradeSarifOptions): Promise<vscode.Uri | undefined> {
+        const desiredUpgradeOption: UpgradeSarifOptions = upgradeOptions ?? vscode.workspace.getConfiguration(Utilities.configSection).get(FileConverter.UpgradePromptSettingName, DefaultUpgradeOption);
 
-        const saveTempChoice: vscode.MessageItem = {
-            title: localize('converterTool.Upgrade.SaveTemp', "Yes (Save Temp)")
-        };
-
-        const saveAsChoice: vscode.MessageItem = {
-            title: localize('converterTool.Upgrade.SaveAs', "Yes (Save As)")
-        };
-
-        const noChoice: vscode.MessageItem = {
-            title: localize('converterTool.Upgrade.No', "No")
-        };
-
-        let choice: vscode.MessageItem | undefined;
-
-        if (options.promptUserForUpgrade) {
-            let upgradeMessage: string;
-
-            if (sarifSchemaVersion) {
-                upgradeMessage = localize('converterTool.Upgrade.AskWithSchema', "Sarif schema version {0} is not supported. Upgrade to the latest schema version {1}?", sarifSchemaVersion.original, FileConverter.MultiToolCurrentSchemaVersion.original);
-            } else {
-                upgradeMessage = localize('converterTool.Upgrade.AskWithVersion', "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
+        if (desiredUpgradeOption !== 'Always') {
+            const upgradeMessage: string = sarifSchemaVersion ?
+             localize('converterTool.Upgrade.AskWithSchema', "Sarif schema version {0} is not supported. Upgrade to the latest schema version {1}?", sarifSchemaVersion.original, FileConverter.MultiToolCurrentSchemaVersion.original) :
+             localize('converterTool.Upgrade.AskWithVersion', "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
                     sarifVersion && sarifVersion.original ? sarifVersion.original : localize('converterTool.Upgrade.UnknownVersion', "Unknown"), FileConverter.MultiToolCurrentSchemaVersion.original);
-            }
 
-            choice = await vscode.window.showInformationMessage(
+            const upgradeOnceMessageItem: vscode.MessageItem = {
+                title: localize('converterTool.Upgrade.Once', "Once")
+            };
+
+            const upgradeAlwaysMessageItem: vscode.MessageItem = {
+                title: localize('converterTool.Upgrade.Always', "Alway")
+            };
+
+            const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
                 upgradeMessage,
                 { modal: false },
-                saveTempChoice, saveAsChoice, noChoice);
+                upgradeOnceMessageItem, upgradeAlwaysMessageItem);
 
-            if (!choice || choice === noChoice) {
+            if (!choice) {
                 return undefined;
             }
-        } else {
-            choice = saveTempChoice;
+
+            if (choice === upgradeAlwaysMessageItem) {
+                await vscode.workspace.getConfiguration(Utilities.configSection).update(FileConverter.UpgradePromptSettingName, < UpgradeSarifOptions>'Always', vscode.ConfigurationTarget.Global);
+            }
         }
 
-        let output: string | undefined;
-        switch (choice) {
-            case saveTempChoice:
-                output = Utilities.generateTempPath(sarifFile.fsPath);
-                break;
-
-            case saveAsChoice:
-                const selectedUri: vscode.Uri | undefined = await vscode.window.showSaveDialog({
-                    defaultUri: sarifFile,
-                    filters: { sarif: ['sarif'] }
-                });
-
-                if (selectedUri) {
-                    output = selectedUri.fsPath;
-                }
-                break;
-        }
-
-        if (!output) {
-            return undefined;
-        }
+        const output: string =  Utilities.generateTempPath(sarifFile.fsPath);
 
         const fileOutputPath: string = output;
         const errorData: string[] = [];
