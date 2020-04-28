@@ -218,11 +218,11 @@
                     "type": "string",
                     "enum": [
                         "Prompt",
-                        "Temporary"
+                        "Always"
                     ],
                     "enumDescriptions": [
                         "%sarif-viewer.logUpgrade.prompt.prompt.description%",
-                        "%sarif-viewer.logUpgrade.prompt.temporary.description%"
+                        "%sarif-viewer.logUpgrade.prompt.always.description%"
                     ],
                     "default": "Prompt"
                 },

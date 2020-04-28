@@ -104,7 +104,7 @@
 
     "sarif-viewer.logUpgrade.prompt.description": "Determines how files are created when a SARIF log needs to be upgraded from an earlier schema.",
     "sarif-viewer.logUpgrade.prompt.prompt.description": "Prompt for upgrade.",
-    "sarif-viewer.logUpgrade.prompt.temporary.description": "A temporary file  for the upgraded SARIF log is created, no prompt is shown.",
+    "sarif-viewer.logUpgrade.prompt.always.description": "A temporary file for the upgraded SARIF log is created, no prompt is shown.",
 
     "sarif-viewer.updateChannel.description": "Specifies the type of updates the extension receives.",
     "sarif-viewer.updateChannel.insiders.description": "Insiders channel. Receives upcoming features and bug fixes at a faster rate.",

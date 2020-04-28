@@ -42,7 +42,7 @@ export interface UpgradeCheckInformation {
 /**
  * Options used during upgrade of SARIF to later schema version.
  */
-export type UpgradeSarifOptions = 'Prompt' | 'Temporary';
+export type UpgradeSarifOptions = 'Prompt' | 'Always';
 export const DefaultUpgradeOption: UpgradeSarifOptions = 'Prompt';
 
 /**
@@ -229,11 +229,11 @@ export class FileConverter {
                     sarifVersion && sarifVersion.original ? sarifVersion.original : localize('converterTool.Upgrade.UnknownVersion', "Unknown"), FileConverter.MultiToolCurrentSchemaVersion.original);
 
             const upgradeMessageItem: vscode.MessageItem = {
-                title: localize('converterTool.Upgrade.Upgrade', "Upgrade")
+                title: localize('converterTool.Upgrade.Once', "Once")
             };
 
             const neverShowAgainMessageItem: vscode.MessageItem = {
-                title: localize('converterTool.Upgrade.NeverShow', "Don't Show Again")
+                title: localize('converterTool.Upgrade.Always', "Alway")
             };
 
             const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
