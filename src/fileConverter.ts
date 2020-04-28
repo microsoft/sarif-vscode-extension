@@ -228,25 +228,25 @@ export class FileConverter {
              localize('converterTool.Upgrade.AskWithVersion', "Sarif version {0} is not supported. Upgrade to the latest version {1}?",
                     sarifVersion && sarifVersion.original ? sarifVersion.original : localize('converterTool.Upgrade.UnknownVersion', "Unknown"), FileConverter.MultiToolCurrentSchemaVersion.original);
 
-            const upgradeMessageItem: vscode.MessageItem = {
+            const upgradeOnceMessageItem: vscode.MessageItem = {
                 title: localize('converterTool.Upgrade.Once', "Once")
             };
 
-            const neverShowAgainMessageItem: vscode.MessageItem = {
+            const upgradeAlwaysMessageItem: vscode.MessageItem = {
                 title: localize('converterTool.Upgrade.Always', "Alway")
             };
 
             const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
                 upgradeMessage,
                 { modal: false },
-                upgradeMessageItem, neverShowAgainMessageItem);
+                upgradeOnceMessageItem, upgradeAlwaysMessageItem);
 
             if (!choice) {
                 return undefined;
             }
 
-            if (choice === neverShowAgainMessageItem) {
-                await vscode.workspace.getConfiguration(Utilities.configSection).update(FileConverter.UpgradePromptSettingName, <UpgradeSarifOptions>'Temporary', vscode.ConfigurationTarget.Global);
+            if (choice === upgradeAlwaysMessageItem) {
+                await vscode.workspace.getConfiguration(Utilities.configSection).update(FileConverter.UpgradePromptSettingName, < UpgradeSarifOptions>'Always', vscode.ConfigurationTarget.Global);
             }
         }
 
