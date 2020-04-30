@@ -20,13 +20,6 @@ export interface OpenLogArguments {
      * The default is true.
      */
     readonly openViewerWhenNoResults?: boolean;
-
-    /**
-     * A set of root paths to use for mapping remote artifact locations.
-     * The paths are used only for this instance of the extension.
-     * They are not persisted in the user settings.
-     */
-    readonly localRootPaths?: vscode.Uri[];
 }
 
 /**
@@ -53,9 +46,7 @@ export interface Api {
     closeAllLogs(): Promise<void>;
 
     /**
-     * A set of root paths to use for mapping remote artifact locations.
-     * The paths are used only for this instance of the extension.
-     * They are not persisted in the user settings.
+     * A set of base URIs to use for mapping remote artifact locations.
      */
-    rootPaths: vscode.Uri[];
+    baseUris: ReadonlyArray<vscode.Uri>;
 }

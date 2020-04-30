@@ -46,12 +46,12 @@ export class FileMapper implements Disposable {
      * Contains the root paths configured in the settings by the user or
      * paths automatically added when the user uses the remap UI flow.
      */
-    private rootPathsFromUserSettings: Uri[] = [];
+    private baseUrisFromUserSettings: Uri[] = [];
 
     /**
      * Contains the set of root paths set by our extension's APIs.
      */
-    private rootPathsSetByApi: Uri[] = [];
+    private baseUrisSetByApi: Uri[] = [];
 
     private constructor() {
         if (FileMapper.fileMapperInstance) {
@@ -67,25 +67,25 @@ export class FileMapper implements Disposable {
     /**
      * Gets the root paths to use for mapping remote artifact locations.
      */
-    public get rootPathsFromApi(): Uri[] {
-        return this.rootPathsSetByApi;
+    public get baseUrisFromApi(): ReadonlyArray<Uri> {
+        return this.baseUrisSetByApi;
     }
 
     /**
      * Sets the root paths to use for mapping remote artifact locations.
      */
-    public set rootPathsFromApi(localRootPaths: Uri[]) {
-        this.rootPathsSetByApi = localRootPaths.map((localRootPath) => {
-            if (!localRootPath.isFile()) {
+    public set baseUrisFromApi(baseUris: ReadonlyArray<Uri>) {
+        this.baseUrisSetByApi = baseUris.map((baseUri) => {
+            if (!baseUri.isFile()) {
                 throw new Error(localize('fileMapper.localPathMustBeFile', "The local path ({0}) must have a file scheme."));
             }
 
-            return localRootPath;
+            return baseUri;
         });
     }
 
-    private get allRootPaths(): Uri [] {
-        return this.rootPathsFromUserSettings.concat(this.rootPathsSetByApi);
+    private get allRootPaths(): ReadonlyArray<Uri>  {
+        return this.baseUrisFromUserSettings.concat(this.baseUrisSetByApi);
     }
 
     /**
@@ -261,7 +261,7 @@ export class FileMapper implements Disposable {
                 if (this.isLocalDirectory(validateUri)) {
                     const foundRootPath: Uri | undefined = this.allRootPaths.find((rootPath) => validateUri && rootPath.fsPath.invariantEqual(validateUri.fsPath));
                     if (!foundRootPath) {
-                        this.rootPathsFromUserSettings.push(validateUri);
+                        this.baseUrisFromUserSettings.push(validateUri);
                     }
                 }
 
@@ -426,7 +426,7 @@ export class FileMapper implements Disposable {
             const sarifConfig: WorkspaceConfiguration = workspace.getConfiguration(Utilities.configSection);
             const newRootPaths: string [] = sarifConfig.get(ConfigRootPaths, []);
 
-            if (this.rootPathsFromUserSettings.sort().toString() !== newRootPaths.sort().toString()) {
+            if (this.baseUrisFromUserSettings.sort().toString() !== newRootPaths.sort().toString()) {
                 const newRootPathsAsUris: Uri[] = [];
                 for (const newRootPath of newRootPaths) {
                     try {
@@ -435,7 +435,7 @@ export class FileMapper implements Disposable {
                         // Consider logging to output pane here?
                     }
                 }
-                this.rootPathsFromUserSettings = newRootPathsAsUris;
+                this.baseUrisFromUserSettings = newRootPathsAsUris;
                 this.updateMappingsWithRootPaths();
             }
         }

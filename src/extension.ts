@@ -235,10 +235,6 @@ class SarifExtension implements Api {
      * @inheritdoc
      */
     public async openLogs(logs: vscode.Uri[], openLogFileArguments?: OpenLogArguments, cancellationToken?: vscode.CancellationToken): Promise<void> {
-        if (openLogFileArguments?.localRootPaths) {
-            FileMapper.InitializeFileMapper().rootPathsFromApi = openLogFileArguments?.localRootPaths;
-        }
-
         for (const log of logs) {
             if (cancellationToken?.isCancellationRequested) {
                 return;
@@ -292,14 +288,14 @@ class SarifExtension implements Api {
     /**
      * @inheritdoc
      */
-    public get rootPaths(): vscode.Uri[] {
+    public get baseUris(): ReadonlyArray<vscode.Uri> {
         return FileMapper.InitializeFileMapper().rootPathsFromApi;
     }
 
     /**
      * @inheritdoc
      */
-    public set rootPaths(localRootPaths: vscode.Uri[]) {
+    public set baseUris(localRootPaths: ReadonlyArray<vscode.Uri>) {
         FileMapper.InitializeFileMapper().rootPathsFromApi = localRootPaths;
     }
 
