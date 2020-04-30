@@ -234,8 +234,16 @@ class SarifExtension implements Api {
     /**
      * @inheritdoc
      */
-    public async openLogs(logs: vscode.Uri[], openLogFileArguments?: OpenLogArguments): Promise<void> {
+    public async openLogs(logs: vscode.Uri[], openLogFileArguments?: OpenLogArguments, cancellationToken?: vscode.CancellationToken): Promise<void> {
+        if (openLogFileArguments?.localRootPaths) {
+            FileMapper.InitializeFileMapper().rootPathsFromApi = openLogFileArguments?.localRootPaths;
+        }
+
         for (const log of logs) {
+            if (cancellationToken?.isCancellationRequested) {
+                return;
+            }
+
             this.explorerController.openViewerWhenNoResults = openLogFileArguments?.openViewerWhenNoResults;
 
             await this.openSarifFile(log, {
@@ -251,10 +259,24 @@ class SarifExtension implements Api {
      * @inheritdoc
      */
     public async closeLogs(logs: vscode.Uri[]): Promise<void> {
+        const logsToClose: vscode.Uri[] = [];
+
         for (const log of logs) {
-            this.diagnosticCollection.removeRuns([log]);
+            if (log.isSarifFile()) {
+                logsToClose.push(log);
+                /***
+                 * The temp file path name generated is always results the same output
+                 * for the same input path.
+                 * Note that there is no need to check for existence of the file here
+                 * because it is only being used as a key for parsed results in the viewer.
+                 * Given that it is a temporary file, there is already a chance that it is
+                 * gone from the disk anyway.
+                 */
+                logsToClose.push(vscode.Uri.file(Utilities.generateTempPath(log.fsPath)));
+            }
         }
 
+        this.diagnosticCollection.removeRuns(logsToClose);
         return;
     }
 
@@ -265,6 +287,20 @@ class SarifExtension implements Api {
         this.diagnosticCollection.removeAllRuns();
 
         return;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public get rootPaths(): vscode.Uri[] {
+        return FileMapper.InitializeFileMapper().rootPathsFromApi;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public set rootPaths(localRootPaths: vscode.Uri[]) {
+        FileMapper.InitializeFileMapper().rootPathsFromApi = localRootPaths;
     }
 
     /**

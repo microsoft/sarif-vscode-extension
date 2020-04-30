@@ -39,9 +39,6 @@
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
-                    "default": [
-                        "c:\\sample\\path"
-                    ],
                     "description": "%configuration.sarif-viewer.rootpaths.description%"
                 },
                 "sarif-viewer.resultsListHideColumns": {
