@@ -387,7 +387,7 @@ export class FileMapper implements Disposable {
     /**
      * Tries to remapped path using any of the RootPaths in the config
      */
-    private tryConfigRootPathsUri(originUri: Uri, uriBase?: string, ...rootPaths: Uri[]): Uri | undefined {
+    private tryConfigRootPathsUri(originUri: Uri, uriBase: string | undefined, ...rootPaths: Uri[]): Uri | undefined {
         // Parse the remote URI into directory parts.
         const originPath: path.ParsedPath = path.parse(originUri.fsPath);
 
@@ -395,7 +395,7 @@ export class FileMapper implements Disposable {
         // So given an incoming URI such as "e:\foo\bar\xyz.cpp" we are left with "\foo\bar"
         const originPathWithoutRoot: string = path.join(originPath.dir.replace(originPath.root, ''), originPath.base);
 
-        for (const rootPath of rootPaths ?? this.allRootPaths) {
+        for (const rootPath of (rootPaths.length !== 0 ? rootPaths : this.allRootPaths)) {
             const dirParts: string[] = originPathWithoutRoot.split(path.sep);
 
             // This logic simply adds the prepends the passed in root path(s) to the directory
