@@ -289,14 +289,14 @@ class SarifExtension implements Api {
      * @inheritdoc
      */
     public get baseUris(): ReadonlyArray<vscode.Uri> {
-        return FileMapper.InitializeFileMapper().rootPathsFromApi;
+        return FileMapper.InitializeFileMapper().baseUrisFromApi;
     }
 
     /**
      * @inheritdoc
      */
     public set baseUris(localRootPaths: ReadonlyArray<vscode.Uri>) {
-        FileMapper.InitializeFileMapper().rootPathsFromApi = localRootPaths;
+        FileMapper.InitializeFileMapper().baseUrisFromApi = localRootPaths;
     }
 
     /**
