@@ -23,8 +23,8 @@ export interface OpenLogArguments {
 
     /**
      * A set of root paths to use for mapping remote artifact locations.
-     * The paths are used only for this instance
-     * of the extension and are note persisted in the user settings.
+     * The paths are used only for this instance of the extension.
+     * They are not persisted in the user settings.
      */
     readonly localRootPaths?: vscode.Uri[];
 }
@@ -54,8 +54,8 @@ export interface Api {
 
     /**
      * A set of root paths to use for mapping remote artifact locations.
-     * The paths are used only for this instance
-     * of the extension and are note persisted in the user settings.
+     * The paths are used only for this instance of the extension.
+     * They are not persisted in the user settings.
      */
     rootPaths: vscode.Uri[];
 }

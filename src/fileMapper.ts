@@ -190,6 +190,7 @@ export class FileMapper implements Disposable {
     /**
      * Shows the input box with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
+     * @param uriBase A URI base to use for the mapping if known.
      */
     private async openRemappingInputDialog(uri: Uri, uriBase?: string): Promise<string | undefined> {
         interface RemappingQuickInputButtons extends QuickInputButton {
@@ -252,7 +253,7 @@ export class FileMapper implements Disposable {
                     return;
                 }
 
-                const remappedUri: Uri | undefined = this.tryConfigRootPathsUri(uri, uriBase, [validateUri]);
+                const remappedUri: Uri | undefined = this.tryConfigRootPathsUri(uri, uriBase, validateUri);
                 if (!remappedUri) {
                     return;
                 }
@@ -386,7 +387,7 @@ export class FileMapper implements Disposable {
     /**
      * Tries to remapped path using any of the RootPaths in the config
      */
-    private tryConfigRootPathsUri(originUri: Uri, uriBase?: string, rootPaths?: Uri[]): Uri | undefined {
+    private tryConfigRootPathsUri(originUri: Uri, uriBase?: string, ...rootPaths: Uri[]): Uri | undefined {
         // Parse the remote URI into directory parts.
         const originPath: path.ParsedPath = path.parse(originUri.fsPath);
 

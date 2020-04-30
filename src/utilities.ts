@@ -183,14 +183,11 @@ export class Utilities {
      */
     public static generateTempPath(filePath: string): string {
         const pathObj: path.ParsedPath = path.parse(filePath);
-        let basePath: string = path.join(Utilities.SarifViewerTempDir, '');
         let tempPath: string = Utilities.makeFileNameSafe(
             path.join(pathObj.dir.replace(pathObj.root, ''), path.basename(filePath)));
         tempPath = tempPath.split('#').join(''); // remove the #s to not create a folder structure with fragments
-        basePath = Utilities.createDirectoryInTemp(basePath);
-        tempPath = path.join(basePath, tempPath);
-
-        return tempPath;
+        const basePath: string = Utilities.createDirectoryInTemp(Utilities.SarifViewerTempDir);
+        return path.join(basePath, tempPath);
     }
 
     /**

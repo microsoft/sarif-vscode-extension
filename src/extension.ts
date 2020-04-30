@@ -265,7 +265,7 @@ class SarifExtension implements Api {
             if (log.isSarifFile()) {
                 logsToClose.push(log);
                 /***
-                 * The temp file path name generated is always results the same output
+                 * Utilities.generateTempPath always generates the same output path
                  * for the same input path.
                  * Note that there is no need to check for existence of the file here
                  * because it is only being used as a key for parsed results in the viewer.
