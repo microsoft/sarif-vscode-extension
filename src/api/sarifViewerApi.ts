@@ -46,7 +46,7 @@ export interface Api {
     closeAllLogs(): Promise<void>;
 
     /**
-     * A set of base URIs to use for mapping remote artifact locations.
+     * A set of URIs bases to use for mapping remote artifact locations.
      */
-    baseUris: ReadonlyArray<vscode.Uri>;
+    uriBases: ReadonlyArray<vscode.Uri>;
 }

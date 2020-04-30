@@ -288,15 +288,15 @@ class SarifExtension implements Api {
     /**
      * @inheritdoc
      */
-    public get baseUris(): ReadonlyArray<vscode.Uri> {
-        return FileMapper.InitializeFileMapper().baseUrisFromApi;
+    public get uriBases(): ReadonlyArray<vscode.Uri> {
+        return FileMapper.InitializeFileMapper().uriBasesFromApi;
     }
 
     /**
      * @inheritdoc
      */
-    public set baseUris(localRootPaths: ReadonlyArray<vscode.Uri>) {
-        FileMapper.InitializeFileMapper().baseUrisFromApi = localRootPaths;
+    public set uriBases(localRootPaths: ReadonlyArray<vscode.Uri>) {
+        FileMapper.InitializeFileMapper().uriBasesFromApi = localRootPaths;
     }
 
     /**
