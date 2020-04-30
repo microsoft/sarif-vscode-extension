@@ -46,12 +46,12 @@ export class FileMapper implements Disposable {
      * Contains the root paths configured in the settings by the user or
      * paths automatically added when the user uses the remap UI flow.
      */
-    private rootPathsFromUserSettings: string[] = [];
+    private rootPathsFromUserSettings: Uri[] = [];
 
     /**
      * Contains the set of root paths set by our extension's APIs.
      */
-    private rootPathsSetByApi: string[] = [];
+    private rootPathsSetByApi: Uri[] = [];
 
     private constructor() {
         if (FileMapper.fileMapperInstance) {
@@ -68,7 +68,7 @@ export class FileMapper implements Disposable {
      * Gets the root paths to use for mapping remote artifact locations.
      */
     public get rootPathsFromApi(): Uri[] {
-        return this.rootPathsSetByApi.map((rootPathSetByApi) => Uri.file(rootPathSetByApi));
+        return this.rootPathsSetByApi;
     }
 
     /**
@@ -80,11 +80,11 @@ export class FileMapper implements Disposable {
                 throw new Error(localize('fileMapper.localPathMustBeFile', "The local path ({0}) must have a file scheme."));
             }
 
-            return localRootPath.fsPath;
+            return localRootPath;
         });
     }
 
-    private get allRootPaths(): string [] {
+    private get allRootPaths(): Uri [] {
         return this.rootPathsFromUserSettings.concat(this.rootPathsSetByApi);
     }
 
@@ -105,7 +105,7 @@ export class FileMapper implements Disposable {
         const oldProgressMsg: string | undefined = ProgressHelper.Instance.CurrentMessage;
         await ProgressHelper.Instance.setProgressReport(localize('fileMapper.WaitingForUserInput', "Waiting for user input"));
 
-        const remapResult: string | undefined = await this.openRemappingInputDialog(origUri);
+        const remapResult: string | undefined = await this.openRemappingInputDialog(origUri, uriBase);
 
         // If the user cancelled the mapping, then set undefined into the file mapping
         // map to indicate that.
@@ -114,17 +114,16 @@ export class FileMapper implements Disposable {
             return undefined;
         }
 
-        const uri: Uri = Uri.file(remapResult);
-        const filePath: string = Utilities.getFsPathWithFragment(uri);
+        const remappedUri: Uri = Uri.file(remapResult);
+        const filePath: string = Utilities.getFsPathWithFragment(remappedUri);
 
         if (fs.statSync(filePath).isDirectory()) {
-            this.rootPathsFromUserSettings.push(uri.fsPath);
             if (!this.tryConfigRootPathsUri(origUri, uriBase)) {
                 this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), undefined);
             }
         } else {
-            this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), uri);
-            this.saveBasePath(origUri, uri, uriBase);
+            this.addToFileMapping(Utilities.getFsPathWithFragment(origUri), remappedUri);
+            this.saveBasePath(origUri, remappedUri, uriBase);
             this.fileRemapping.forEach((value: Uri | undefined, key: string) => {
                 if (!value) {
                     this.tryRebaseUri(Uri.file(key));
@@ -134,7 +133,7 @@ export class FileMapper implements Disposable {
 
         await ProgressHelper.Instance.setProgressReport(oldProgressMsg);
 
-        return uri;
+        return remappedUri;
     }
 
     /**
@@ -192,7 +191,7 @@ export class FileMapper implements Disposable {
      * Shows the input box with message for getting the user to select the mapping
      * @param uri uri of the file that needs to be mapped
      */
-    private async openRemappingInputDialog(uri: Uri): Promise<string | undefined> {
+    private async openRemappingInputDialog(uri: Uri, uriBase?: string): Promise<string | undefined> {
         interface RemappingQuickInputButtons extends QuickInputButton {
             remappingType: 'Open' | 'Skip';
         }
@@ -234,62 +233,40 @@ export class FileMapper implements Disposable {
             }));
 
             const onDiChangeValueHandler: (newValue: string) => void = (newString) => {
-                const directory: string = newString;
-                let message: string | undefined =
                 input.validationMessage = localize('openRemappingInputDialog.validationMessage',
                     "'{0}' can not be found.\r\nCorrect the path to: the local file (c:/example/repo1/source.js) for this session or the local rootpath (c:/example/repo1/) to add it to the user settings (Press 'Escape' to cancel)",
                     uri.fsPath);
 
-                if (directory && directory.length !== 0) {
-                    let validateUri: Uri | undefined;
-                    let isDirectory: boolean = false;
+                if (!newString) {
+                    return;
+                }
+                let validateUri: Uri | undefined;
 
-                    try {
-                        validateUri = Uri.file(directory);
-                    } catch (error) {
-                        if (error.message !== 'URI malformed') {
-                            throw error;
-                        }
-                    }
+                try {
+                    validateUri = Uri.file(newString);
+                } catch (error) {
+                    // No reason to error here.
+                }
 
-                    if (validateUri) {
-                        try {
-                            isDirectory = fs.statSync(validateUri.fsPath).isDirectory();
-                        } catch (error) {
-                            switch (error.code) {
-                                // Path not found.
-                                case 'ENOENT':
-                                    break;
+                if (!validateUri) {
+                    return;
+                }
 
-                                case 'UNKNOWN':
-                                    if (validateUri.authority !== '') {
-                                        break;
-                                    }
-                                    throw error;
+                const remappedUri: Uri | undefined = this.tryConfigRootPathsUri(uri, uriBase, [validateUri]);
+                if (!remappedUri) {
+                    return;
+                }
 
-                                default:
-                                    throw error;
-                            }
-                        }
-
-                        if (isDirectory) {
-                            const allRootPaths: string[] = this.allRootPaths;
-                            const rootPathIndex: number = allRootPaths.indexOf(validateUri.fsPath);
-                            if (rootPathIndex !== -1) {
-                                message = localize('openRemappingInputDialog.alreadyExistsInRoot', "'{0}' already exists in the settings (sarif-viewer.rootpaths), please try a different path (Press 'Escape' to cancel)", validateUri.fsPath);
-                            } else {
-                                resolvedString = allRootPaths[rootPathIndex];
-                                input.hide();
-                            }
-                        } else if (this.isLocalFile(validateUri)) {
-                            message = undefined;
-                            resolvedString = validateUri.fsPath;
-                            input.hide();
-                        }
+                if (this.isLocalDirectory(validateUri)) {
+                    const foundRootPath: Uri | undefined = this.allRootPaths.find((rootPath) => validateUri && rootPath.fsPath.invariantEqual(validateUri.fsPath));
+                    if (!foundRootPath) {
+                        this.rootPathsFromUserSettings.push(validateUri);
                     }
                 }
 
-                input.validationMessage = message;
+                input.validationMessage = undefined;
+                resolvedString = remappedUri.fsPath;
+                input.hide();
             };
 
             disposables.push(input.onDidChangeValue(onDiChangeValueHandler.bind(this)));
@@ -361,27 +338,27 @@ export class FileMapper implements Disposable {
      * @param key key used for mapping, if undefined the mapping won't be added if it exists
      */
     private isLocalFile(uri: Uri, key?: string): boolean {
-        try {
-            if (!fs.statSync(Utilities.getFsPathWithFragment(uri)).isDirectory()) {
-                if (key !== undefined) {
-                    this.addToFileMapping(key, uri);
-                }
-                return true;
+        if (fs.existsSync(uri.fsPath) && fs.statSync(uri.fsPath).isFile()) {
+            if (key !== undefined) {
+                this.addToFileMapping(key, uri);
             }
-        } catch (error) {
-            switch (error.code) {
-                case 'ENOENT':
-                    break;
+            return true;
+        }
+        return false;
+    }
 
-                case 'UNKNOWN':
-                    if (uri.authority !== '') {
-                        break;
-                    }
-                    break;
-
-                default:
-                    throw error;
+    /**
+     * Check if the file exists at the provided path, if so and a Key was provided it will be added to the mapped files
+     * returns false if uri is a directory or if the file can't be found
+     * @param uri file uri to check if exists
+     * @param key key used for mapping, if undefined the mapping won't be added if it exists
+     */
+    private isLocalDirectory(uri: Uri, key?: string): boolean {
+        if (fs.existsSync(uri.fsPath) && fs.statSync(uri.fsPath).isDirectory()) {
+            if (key !== undefined) {
+                this.addToFileMapping(key, uri);
             }
+            return true;
         }
 
         return false;
@@ -408,20 +385,27 @@ export class FileMapper implements Disposable {
 
     /**
      * Tries to remapped path using any of the RootPaths in the config
-     * @param uri file uri to try to rebase
      */
-    private tryConfigRootPathsUri(uri: Uri, uriBase?: string): Uri | undefined {
-        const originPath: path.ParsedPath = path.parse(Utilities.getFsPathWithFragment(uri));
-        const dir: string = originPath.dir.replace(originPath.root, '');
+    private tryConfigRootPathsUri(originUri: Uri, uriBase?: string, rootPaths?: Uri[]): Uri | undefined {
+        // Parse the remote URI into directory parts.
+        const originPath: path.ParsedPath = path.parse(originUri.fsPath);
 
-        for (const rootpath of this.allRootPaths) {
-            const dirParts: string[] = dir.split(path.sep);
-            dirParts.push(originPath.base);
+        // Remove the "root" of the path. (For example, if the incoming path is e:\, remove it.)
+        // So given an incoming URI such as "e:\foo\bar\xyz.cpp" we are left with "\foo\bar"
+        const originPathWithoutRoot: string = path.join(originPath.dir.replace(originPath.root, ''), originPath.base);
 
+        for (const rootPath of rootPaths ?? this.allRootPaths) {
+            const dirParts: string[] = originPathWithoutRoot.split(path.sep);
+
+            // This logic simply adds the prepends the passed in root path(s) to the directory
+            // parts from the origin (remote)) and checks for it's existence.
+            // If it exists, then the mapping is complete, otherwise it the directory
+            // parts are shifted (removes the next root if you will => \foo\bar\xyz.cpp becomes \bar\xyz.cpp)
+            // and the loop continues until we find a match or run out of directory parts.
             while (dirParts.length !== 0) {
-                const mappedUri: Uri = Uri.file(Utilities.joinPath(rootpath, dirParts.join(path.sep)));
-                if (this.isLocalFile(mappedUri, Utilities.getFsPathWithFragment(uri))) {
-                    this.saveBasePath(uri, mappedUri, uriBase);
+                const mappedUri: Uri = Uri.file(path.join(rootPath.fsPath, ...dirParts));
+                if (this.isLocalFile(mappedUri, Utilities.getFsPathWithFragment(originUri))) {
+                    this.saveBasePath(originUri, mappedUri, uriBase);
                     return mappedUri;
                 }
 
@@ -442,7 +426,15 @@ export class FileMapper implements Disposable {
             const newRootPaths: string [] = sarifConfig.get(ConfigRootPaths, []);
 
             if (this.rootPathsFromUserSettings.sort().toString() !== newRootPaths.sort().toString()) {
-                this.rootPathsFromUserSettings = newRootPaths;
+                const newRootPathsAsUris: Uri[] = [];
+                for (const newRootPath of newRootPaths) {
+                    try {
+                        newRootPathsAsUris.push(Uri.parse(newRootPath, /*strict*/ true));
+                    } catch {
+                        // Consider logging to output pane here?
+                    }
+                }
+                this.rootPathsFromUserSettings = newRootPathsAsUris;
                 this.updateMappingsWithRootPaths();
             }
         }
