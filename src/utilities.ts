@@ -177,20 +177,17 @@ export class Utilities {
     }
 
     /**
-     * Generates a folder path matching original path in the temp location and returns the path with the file included
+     * Generates a folder path matching original path in the temp location and returns the path with the file included.
+     * The function will always return the same output for the same given input.
      * @param filePath original file path, to recreate in the temp location
-     * @param hashValue optional hash value to add to the path
      */
-    public static generateTempPath(filePath: string, hashValue?: string): string {
+    public static generateTempPath(filePath: string): string {
         const pathObj: path.ParsedPath = path.parse(filePath);
-        let basePath: string = path.join(Utilities.SarifViewerTempDir, hashValue || '');
         let tempPath: string = Utilities.makeFileNameSafe(
-            path.join(pathObj.dir.replace(pathObj.root, ''), path.win32.basename(filePath)));
+            path.join(pathObj.dir.replace(pathObj.root, ''), path.basename(filePath)));
         tempPath = tempPath.split('#').join(''); // remove the #s to not create a folder structure with fragments
-        basePath = Utilities.createDirectoryInTemp(basePath);
-        tempPath = path.join(basePath, tempPath);
-
-        return tempPath;
+        const basePath: string = Utilities.createDirectoryInTemp(Utilities.SarifViewerTempDir);
+        return path.join(basePath, tempPath);
     }
 
     /**

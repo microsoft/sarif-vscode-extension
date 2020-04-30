@@ -234,8 +234,12 @@ class SarifExtension implements Api {
     /**
      * @inheritdoc
      */
-    public async openLogs(logs: vscode.Uri[], openLogFileArguments?: OpenLogArguments): Promise<void> {
+    public async openLogs(logs: vscode.Uri[], openLogFileArguments?: OpenLogArguments, cancellationToken?: vscode.CancellationToken): Promise<void> {
         for (const log of logs) {
+            if (cancellationToken?.isCancellationRequested) {
+                return;
+            }
+
             this.explorerController.openViewerWhenNoResults = openLogFileArguments?.openViewerWhenNoResults;
 
             await this.openSarifFile(log, {
@@ -251,10 +255,24 @@ class SarifExtension implements Api {
      * @inheritdoc
      */
     public async closeLogs(logs: vscode.Uri[]): Promise<void> {
+        const logsToClose: vscode.Uri[] = [];
+
         for (const log of logs) {
-            this.diagnosticCollection.removeRuns([log]);
+            if (log.isSarifFile()) {
+                logsToClose.push(log);
+                /***
+                 * Utilities.generateTempPath always generates the same output path
+                 * for the same input path.
+                 * Note that there is no need to check for existence of the file here
+                 * because it is only being used as a key for parsed results in the viewer.
+                 * Given that it is a temporary file, there is already a chance that it is
+                 * gone from the disk anyway.
+                 */
+                logsToClose.push(vscode.Uri.file(Utilities.generateTempPath(log.fsPath)));
+            }
         }
 
+        this.diagnosticCollection.removeRuns(logsToClose);
         return;
     }
 
@@ -265,6 +283,20 @@ class SarifExtension implements Api {
         this.diagnosticCollection.removeAllRuns();
 
         return;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public get uriBases(): ReadonlyArray<vscode.Uri> {
+        return FileMapper.InitializeFileMapper().uriBasesFromApi;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public set uriBases(localRootPaths: ReadonlyArray<vscode.Uri>) {
+        FileMapper.InitializeFileMapper().uriBasesFromApi = localRootPaths;
     }
 
     /**

@@ -27,11 +27,12 @@ export interface OpenLogArguments {
  */
 export interface Api {
     /**
-     * Opens logs .
+     * Opens logs.
      * @param logs The logs to open.
      * @param openLogArguments Parameters that control how the logs are opened.
+     * @param cancellationToken Token used to cancel the open log request.
      */
-    openLogs(logs: vscode.Uri[], openLogArguments?: OpenLogArguments): Promise<void>;
+    openLogs(logs: vscode.Uri[], openLogArguments?: OpenLogArguments, cancellationToken?: vscode.CancellationToken): Promise<void>;
 
     /**
      * Closes logs.
@@ -43,4 +44,9 @@ export interface Api {
      * Closes all logs.
      */
     closeAllLogs(): Promise<void>;
+
+    /**
+     * A set of URIs bases to use for mapping remote artifact locations.
+     */
+    uriBases: ReadonlyArray<vscode.Uri>;
 }
