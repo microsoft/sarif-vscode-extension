@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import * as fs from 'fs'
 import jsonMap from 'json-source-map'
 import { join } from 'path'
@@ -89,6 +89,6 @@ export function upgradeLog(path: string) {
 	const name = tmpNameSync({ postfix: '.sarif' })
 	const multitoolExe = `Sarif.Multitool${process.platform === 'win32' ? '.exe' : ''}`
 	const multitoolExePath = join(Store.extensionPath || process.cwd(), 'out', multitoolExe)
-	execSync(`${multitoolExePath} transform "${path}" --force --pretty-print --output "${name}"`)
+	execFileSync(multitoolExePath, ['transform', path, '--force', '--pretty-print', '--output', name])
 	return name
 }
