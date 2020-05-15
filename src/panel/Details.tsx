@@ -54,7 +54,7 @@ import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 															{result.locations?.map((loc, i) => {
 																const ploc = loc.physicalLocation
 																const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation)
-																return <a key={i} href="#" className="ellipsis" title={uri}
+																return <a key={i} href="#" className="ellipsis" title={uri} rel="noopener noreferrer"
 																	onClick={e => {
 																		e.preventDefault() // Cancel # nav.
 																		postSelectArtifact(result, ploc)
