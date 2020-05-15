@@ -1,0 +1,56 @@
+.svTable {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+
+	.svTableCell {
+		padding: 0 0 0 8px;
+		display: flex;
+		align-items: center;
+		white-space: nowrap;
+
+		& > * { // Cell-part.
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		& > * + * { margin-left: 6px; } // Cell-part.
+	}
+
+	.svTableHeader {
+		display: grid;
+		grid-auto-rows: 33px;
+		color: rgb(139, 139, 139);
+		& > * { // Cell.
+			position: relative; // For resize handle.
+			&:hover { background-color: var(--vscode-list-hoverBackground); }
+		}
+	}
+
+	.svTableBody {
+		flex: 1 1;
+		display: grid;
+		grid-auto-rows: 22px;
+		overflow: auto;
+		scroll-padding: 48px 0;
+
+		.svTableRow {
+			grid-column: 1 / -1;
+			display: grid;
+			grid-template-columns: auto 1fr;
+		}
+
+		// Closely related to svDetailsCodeflow.
+		& {
+			.svTableRow:hover { background-color: var(--vscode-list-hoverBackground); }
+		}
+		&.svSelected {
+			.svTableRow.svItemSelected { background: var(--vscode-list-inactiveSelectionBackground); }
+		}
+		&.svSelected:focus {
+			outline: none !important;
+			.svTableRow.svItemSelected { background: var(--vscode-list-activeSelectionBackground); }
+		}
+	}
+}

@@ -1,326 +1,153 @@
 {
-    "name": "sarif-viewer",
-    "displayName": "Sarif Viewer",
-    "description": "The Sarif Viewer extension visualizes the results in a Sarif file",
-    "author": "Microsoft Corporation",
-    "license": "MIT",
-    "version": "2.16.0",
-    "publisher": "MS-SarifVSCode",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Microsoft/sarif-vscode-extension.git"
-    },
-    "bugs": {
-        "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
-    },
-    "icon": "icon.png",
-    "galleryBanner": {
-        "color": "#c9c2a0",
-        "theme": "light"
-    },
-    "categories": [
-        "Other"
-    ],
-    "keywords": [
-        "sarif"
-    ],
-    "engines": {
-        "vscode": "^1.44.0"
-    },
-    "activationEvents": [
-        "onLanguage:json",
-        "onCommand:extension.sarif.Convert",
-        "onCommand:extension.sarif.LaunchExplorer"
-    ],
-    "main": "./out/extension",
-    "contributes": {
-        "configuration": {
-            "title": "Sarif Viewer",
-            "properties": {
-                "sarif-viewer.rootpaths": {
-                    "type": "array",
-                    "description": "%configuration.sarif-viewer.rootpaths.description%"
-                },
-                "sarif-viewer.resultsListHideColumns": {
-                    "default": [
-                        "automationCat",
-                        "automationId",
-                        "baselineState",
-                        "rank",
-                        "logicalLocation",
-                        "runId",
-                        "sarifFile"
-                    ],
-                    "description": "%configuration.sarif-viewer.resultsListHideColumns.description%",
-                    "type": "array",
-                    "items": {
-                        "enum": [
-                            "automationCat",
-                            "automationId",
-                            "baselineState",
-                            "kind",
-                            "message",
-                            "rank",
-                            "resultFile",
-                            "resultStartPos",
-                            "logicalLocation",
-                            "ruleId",
-                            "ruleName",
-                            "runId",
-                            "sarifFile",
-                            "severityLevel",
-                            "tool"
-                        ],
-                        "enumDescriptions": [
-                            "%automationCat.description%",
-                            "%automationId.description%",
-                            "%baselineState.description%",
-                            "%kind.description%",
-                            "%message.description%",
-                            "%rank.description%",
-                            "%resultFile.description%",
-                            "%resultStartPos.description%",
-                            "%logicalLocation.description%",
-                            "%ruleId.description%",
-                            "%ruleName.description%",
-                            "%runId.description%",
-                            "%sarifFile.description%",
-                            "%severityLevel.description%",
-                            "%tool.description%"
-                        ]
-                    }
-                },
-                "sarif-viewer.resultsListGroupBy": {
-                    "default": "resultFile",
-                    "description": "%configuration.sarif-viewer.resultsListGroupBy.description%",
-                    "type": "string",
-                    "enum": [
-                        "automationCat",
-                        "automationId",
-                        "baselineState",
-                        "kind",
-                        "message",
-                        "rank",
-                        "resultFile",
-                        "resultStartPos",
-                        "logicalLocation",
-                        "ruleId",
-                        "ruleName",
-                        "runId",
-                        "sarifFile",
-                        "severityLevel",
-                        "tool"
-                    ],
-                    "enumDescriptions": [
-                        "%automationCat.description%",
-                        "%automationId.description%",
-                        "%baselineState.description%",
-                        "%kind.description%",
-                        "%message.description%",
-                        "%rank.description%",
-                        "%resultFile.description%",
-                        "%resultStartPos.description%",
-                        "%logicalLocation.description%",
-                        "%ruleId.description%",
-                        "%ruleName.description%",
-                        "%runId.description%",
-                        "%sarifFile.description%",
-                        "%severityLevel.description%",
-                        "%tool.description%"
-                    ]
-                },
-                "sarif-viewer.resultsListSortBy": {
-                    "default": {
-                        "column": "severityLevel",
-                        "ascending": true
-                    },
-                    "description": "%configuration.sarif-viewer.resultsListSortBy.description%",
-                    "type": "object",
-                    "properties": {
-                        "column": {
-                            "type": "string",
-                            "enum": [
-                                "automationCat",
-                                "automationId",
-                                "baselineState",
-                                "kind",
-                                "message",
-                                "rank",
-                                "resultFile",
-                                "resultStartPos",
-                                "logicalLocation",
-                                "ruleId",
-                                "ruleName",
-                                "runId",
-                                "sarifFile",
-                                "severityLevel",
-                                "tool"
-                            ],
-                            "enumDescriptions": [
-                                "%automationCat.description%",
-                                "%automationId.description%",
-                                "%baselineState.description%",
-                                "%kind.description%",
-                                "%message.description%",
-                                "%rank.description%",
-                                "%resultFile.description%",
-                                "%resultStartPos.description%",
-                                "%logicalLocation.description%",
-                                "%ruleId.description%",
-                                "%ruleName.description%",
-                                "%runId.description%",
-                                "%sarifFile.description%",
-                                "%severityLevel.description%",
-                                "%tool.description%"
-                            ]
-                        },
-                        "ascending": {
-                            "type": "boolean"
-                        }
-                    }
-                },
-                "sarif-viewer.explorer.openWhenNoResults": {
-                    "description": "%sarif-viewer.explorer.openWhenNoResults.description%",
-                    "type": "boolean",
-                    "default": true
-                },
-                "sarif-viewer.binaryArtifactContent.bytesPerRow": {
-                    "description": "%sarif-viewer.binaryArtifactContent.bytesPerRow.description%",
-                    "type": "integer",
-                    "enum": [
-                        1,
-                        2,
-                        4,
-                        8,
-                        16,
-                        32
-                    ],
-                    "default": 8,
-                    "scope": "application"
-                },
-                "sarif-viewer.binaryArtifactContent.viewAsMarkdown": {
-                    "description": "%sarif-viewer.binaryArtifactContent.viewAsMarkdown.description%",
-                    "type": "boolean",
-                    "default": true,
-                    "scope": "application"
-                },
-                "sarif-viewer.openMarkdownPreview": {
-                    "description": "%sarif-viewer.openMarkdownPreview.description%",
-                    "type": "boolean",
-                    "default": false,
-                    "scope": "application"
-                },
-                "sarif-viewer.logUpgrade.prompt": {
-                    "description": "%sarif-viewer.logUpgrade.prompt.description%",
-                    "type": "string",
-                    "enum": [
-                        "Prompt",
-                        "Always"
-                    ],
-                    "enumDescriptions": [
-                        "%sarif-viewer.logUpgrade.prompt.prompt.description%",
-                        "%sarif-viewer.logUpgrade.prompt.always.description%"
-                    ],
-                    "default": "Prompt"
-                },
-                "sarif-viewer.updateChannel": {
-                    "description": "%sarif-viewer.updateChannel.description%",
-                    "type": "string",
-                    "enum": [
-                        "Default",
-                        "Insiders"
-                    ],
-                    "enumDescriptions": [
-                        "%sarif-viewer.updateChannel.default.description%",
-                        "%sarif-viewer.updateChannel.insiders.description%"
-                    ],
-                    "default": "Default",
-                    "scope": "application"
-                }
-            }
-        },
-        "languages": [
-            {
-                "id": "json",
-                "extensions": [
-                    ".sarif"
-                ]
-            }
-        ],
-        "commands": [
-            {
-                "command": "extension.sarif.Convert",
-                "title": "%commands.extension.sarif.Convert.title%",
-                "category": "%commands.category%"
-            },
-            {
-                "command": "extension.sarif.LaunchExplorer",
-                "title": "%commands.extension.sarif.LaunchExplorer.title%",
-                "category": "%commands.category%"
-            },
-            {
-                "command": "extension.sarif.nextCodeFlowStep",
-                "title": "%commands.extension.sarif.nextCodeFlowStep.title%",
-                "category": "%commands.category%"
-            },
-            {
-                "command": "extension.sarif.previousCodeFlowStep",
-                "title": "%commands.extension.sarif.previousCodeFlowStep.title%",
-                "category": "%commands.category%"
-            }
-        ],
-        "keybindings": [
-            {
-                "command": "extension.sarif.nextCodeFlowStep",
-                "key": "f6",
-                "when": "!inDebugMode"
-            },
-            {
-                "command": "extension.sarif.previousCodeFlowStep",
-                "key": "shift+f6",
-                "when": "!inDebugMode"
-            },
-            {
-                "command": "extension.sarif.LaunchExplorer",
-                "key": "ctrl+l ctrl+e"
-            }
-        ]
-    },
-    "scripts": {
-        "buildExplorer": "tsc --b tsconfig.explorer.json",
-        "buildExplorerWatch": "tsc --b tsconfig.explorer.json -watch",
-        "vscode:prepublish": "npm run compile & npm run buildExplorer",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile",
-        "test": "node ./out/test/runTest.js",
-        "lint": "tslint --project ./ -t verbose",
-        "installNodeModules": "npm install"
-    },
-    "devDependencies": {
-        "@types/semver": "^7.1.0",
-        "@types/glob": "^7.1.1",
-        "@types/jquery": "^3.3.30",
-        "@types/markdown-it": "0.0.9",
-        "@types/mocha": "^7.0.2",
-        "@types/node": "^13.13.2",
-        "@types/sarif": "^2.1.2",
-        "@types/vscode": "^1.44.0",
-        "mocha": "^7.1.2",
-        "tslint": "^6.1.1",
-        "tslint-microsoft-contrib": "^6.0.0",
-        "tslint-no-unused-expression-chai": "^0.1.4",
-        "typescript": "^3.8.3",
-        "vscode-test": "^1.0.2"
-    },
-    "dependencies": {
-        "semver": "^7.3.2",
-        "@microsoft/sarif-multitool": "^2.2.4",
-        "json-source-map": "^0.4.0",
-        "jsonpointer": "4.0.1",
-        "markdown-it": "^9.0.1",
-        "requirejs": "^2.3.6",
-        "vscode-nls": "^4.1.2",
-        "https-proxy-agent": "^5.0.0"
-    }
+	"name": "sarif-viewer",
+	"displayName": "Sarif Viewer",
+	"description": "The Sarif Viewer extension visualizes the results in a Sarif file",
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"version": "2.16.0",
+	"publisher": "MS-SarifVSCode",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/sarif-vscode-extension.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
+	},
+	"icon": "icon.png",
+	"galleryBanner": {
+		"color": "#c9c2a0",
+		"theme": "light"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"sarif"
+	],
+	"engines": {
+		"vscode": "^1.44.0"
+	},
+	"activationEvents": [
+		"*"
+	],
+	"main": "./out/context.js",
+	"contributes": {
+		"configuration": {
+			"title": "Sarif Viewer",
+			"properties": {
+				"sarif-viewer.rootpaths": {
+					"type": "array",
+					"description": "%configuration.sarif-viewer.rootpaths.description%"
+				},
+				"sarif-viewer.explorer.openWhenNoResults": {
+					"description": "%sarif-viewer.explorer.openWhenNoResults.description%",
+					"type": "boolean",
+					"default": true
+				},
+				"sarif-viewer.updateChannel": {
+					"description": "%sarif-viewer.updateChannel.description%",
+					"type": "string",
+					"enum": [
+						"Default",
+						"Insiders"
+					],
+					"enumDescriptions": [
+						"%sarif-viewer.updateChannel.default.description%",
+						"%sarif-viewer.updateChannel.insiders.description%"
+					],
+					"default": "Default",
+					"scope": "application"
+				}
+			}
+		},
+		"languages": [
+			{
+				"id": "json",
+				"extensions": [
+					".sarif"
+				]
+			}
+		],
+		"commands": [
+			{
+				"command": "sarif.showPanel",
+				"title": "SARIF: Show Panel"
+			},
+			{
+				"command": "sarif.clearState",
+				"title": "SARIF: Clear State"
+			},
+			{
+				"command": "sarif.updateExtension",
+				"title": "SARIF: Update Extension"
+			},
+			{
+				"command": "sarif.apiOpenLogs",
+				"title": "SARIF: Test Open Logs via API"
+			},
+			{
+				"command": "sarif.apiCloseLogs",
+				"title": "SARIF: Test Close Logs via API"
+			},
+			{
+				"command": "sarif.apiCloseAllLogs",
+				"title": "SARIF: Test Close All Logs via API"
+			}
+		]
+	},
+	"scripts": {
+		"postinstall": "npm install --force --E @microsoft/sarif-multitool-darwin @microsoft/sarif-multitool-win32",
+		"prestart": "node install",
+		"start": "webpack --watch",
+		"server": "webpack-dev-server -d",
+		"test": "mocha",
+		"package": "vsce package",
+		"vscode:prepublish": "webpack",
+		"lint": "tslint -c tslint.json 'src/**/*.ts{,x}'"
+	},
+	"devDependencies": {
+		"@actions/core": "1.2.3",
+		"@types/follow-redirects": "1.8.0",
+		"@actions/github": "2.1.1",
+		"@types/mocha": "2.2.48",
+		"@types/node": "10.12.21",
+		"@types/react": "16.9.26",
+		"@types/react-dom": "16.9.5",
+		"@types/sarif": "2.1.2",
+		"@types/semver": "7.1.0",
+		"@types/tmp": "0.1.0",
+		"@types/vscode": "1.44.0",
+		"@zeit/ncc": "0.22.1",
+		"copy-webpack-plugin": "5.1.1",
+		"css-loader": "3.4.2",
+		"json-source-map": "0.6.1",
+		"mocha": "7.1.1",
+		"mock-require": "3.0.3",
+		"node-sass": "4.13.1",
+		"react-markdown": "4.3.1",
+		"sass-loader": "8.0.2",
+		"style-loader": "1.1.3",
+		"ts-loader": "6.2.2",
+		"ts-node": "8.8.2",
+		"tslint": "5.12.1",
+		"typescript": "3.8.3",
+		"url-loader": "4.0.0",
+		"vsce": "1.75.0",
+		"webpack": "4.42.1",
+		"webpack-cli": "3.3.11",
+		"webpack-dev-server": "3.10.3"
+	},
+	"dependencies": {
+		"follow-redirects": "1.11.0",
+		"mobx": "5.15.4",
+		"mobx-react": "6.1.8",
+		"react": "16.13.1",
+		"react-dom": "16.13.1",
+		"semver": "7.3.2",
+		"tmp": "0.1.0"
+	},
+	"optionalDependencies": {
+		"@microsoft/sarif-multitool-darwin": "2.2.3",
+		"@microsoft/sarif-multitool-win32": "2.2.3"
+	}
 }

@@ -1,4 +1,6 @@
-out
+.DS_Store
 node_modules
-.vscode-test/
-.vsix
+
+out
+devServer/index.js
+*.vsix

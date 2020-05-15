@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<link rel="stylesheet" href="index.css">
+		<style>
+			code { font-family: SF Mono, Menlo, Monaco, 'Courier New', monospace; }
+		</style>
+	</head>
+	<body class="vscode-dark">
+		<div id="root" style="margin: 50px 300px; position: relative;"></div><!-- relative for Popover -->
+		<script>
+			acquireVsCodeApi = (() => ({ postMessage: message => {
+				const {command, ...rest} = message
+				if (command === 'setState') {
+					const {state} = message
+					localStorage.setItem('state', state)
+					return
+				}
+				console.log(command, JSON.stringify(rest))
+			} }))
+			vscode = acquireVsCodeApi()
+		</script>
+		<script src="panel.js"></script>
+		<script>
+			;(async () => {
+				const defaultState = { // Some duplicated from shared/index
+					version: 0,
+					filtersRow: {
+						Level: {
+							'Error': true,
+							'Warning': true,
+							'Note': true,
+							'None': true,
+						},
+						Baseline: {
+							'New': true,
+							'Unchanged': true,
+							'Updated': true,
+							'Absent': false,
+						},
+						Suppression: {
+							'Not Suppressed': true,
+							'Suppressed': false,
+						},
+					},
+					filtersColumn: {
+						Columns: {
+							'Baseline': false,
+							'Suppression': false,
+							'Rule': false,
+						},
+					},
+				}
+				const state = localStorage.getItem('state')
+				const store = new Store(JSON.parse(state) ?? defaultState, true)
+				const file = 'yourSampleSarif.json'
+				const response = await fetch(file)
+				const log = await response.json()
+				log._uri = `file:///Users/username/projects/${file}`
+				store.logs.push(log)
+				ReactDOM.render(
+					React.createElement(Index, { store }),
+					document.getElementById('root'),
+				)
+			})()
+		</script>
+	</body>
+</html>
