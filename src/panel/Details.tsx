@@ -43,7 +43,7 @@ import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 							? <ReactMarkdown className="svMarkDown" source={result._markdown} escapeHtml={false} />
 							: renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</div>
 					<div className="svDetailsGrid">
-						<span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank">{result.ruleId}</a> : <span>{result.ruleId}</span>}
+						<span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}
 						<span>Rule Name</span>			<span>{result._rule?.name ?? '—'}</span>
 						<span>Rule Desc Short</span>	<span>{renderRuleDesc(result._rule?.shortDescription)}</span>
 						<span>Rule Desc Full</span>		<span>{renderRuleDesc(result._rule?.fullDescription)}</span>
@@ -54,7 +54,7 @@ import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 															{result.locations?.map((loc, i) => {
 																const ploc = loc.physicalLocation
 																const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation)
-																return <a key={i} href="#" className="ellipsis" title={uri} rel="noopener noreferrer"
+																return <a key={i} href="#" className="ellipsis" title={uri}
 																	onClick={e => {
 																		e.preventDefault() // Cancel # nav.
 																		postSelectArtifact(result, ploc)
