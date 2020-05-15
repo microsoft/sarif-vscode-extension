@@ -14,8 +14,8 @@ declare global {
 	interface Array<T> {
 		last: T
 		replace(items: T[]) // From Mobx, but not showing up.
-		remove(T): boolean // From Mobx, but not showing up.
-		removeWhere(predicate: (T) => boolean): T | false
+		remove(item: T): boolean // From Mobx, but not showing up.
+		removeWhere(predicate: (item: T) => boolean): T | false
 		sortBy<T>(this: T[], selector: Selector<T>, descending?: boolean): Array<T> // Not a copy
 	}
 	interface String {
