@@ -147,7 +147,7 @@
 		"tmp": "0.1.0"
 	},
 	"optionalDependencies": {
-		"@microsoft/sarif-multitool-darwin": "2.2.3",
-		"@microsoft/sarif-multitool-win32": "2.2.3"
+		"@microsoft/sarif-multitool-darwin": "2.2.5",
+		"@microsoft/sarif-multitool-win32": "2.2.5"
 	}
 }
