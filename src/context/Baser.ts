@@ -53,7 +53,8 @@ export class Baser {
 		return this.validatedPathsLocalToArtifact.get(localPath) ?? localPath
 	}
 
-	// Hacky.
+	// Hacky: We are using `openTextDocument` to test the existence of documents as VS Code does not provide a dedicated existence API.
+	// The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
 	// Note: Uri.parse()
 	// Uri.parse('a/b.c')	 => file:///a/b.c
 	// Uri.parse('/a/b.c')	 => file:///a/b.c
