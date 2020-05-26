@@ -71,27 +71,18 @@
 		"commands": [
 			{
 				"command": "sarif.showPanel",
-				"title": "SARIF: Show Panel"
+				"category": "SARIF",
+				"title": "Show Panel"
 			},
 			{
 				"command": "sarif.clearState",
-				"title": "SARIF: Clear State"
+				"category": "SARIF",
+				"title": "Clear State"
 			},
 			{
 				"command": "sarif.updateExtension",
-				"title": "SARIF: Update Extension"
-			},
-			{
-				"command": "sarif.apiOpenLogs",
-				"title": "SARIF: Test Open Logs via API"
-			},
-			{
-				"command": "sarif.apiCloseLogs",
-				"title": "SARIF: Test Close Logs via API"
-			},
-			{
-				"command": "sarif.apiCloseAllLogs",
-				"title": "SARIF: Test Close All Logs via API"
+				"category": "SARIF",
+				"title": "Update Extension"
 			}
 		]
 	},

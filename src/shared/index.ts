@@ -10,14 +10,14 @@ export type JsonMap = Record<string, JsonRange>
 export type ResultId = [string, number, number]
 export type _Region = number | [number, number] | [number, number, number, number]
 
-// Underscored members are ptional in the source files, but required after preprocessing.
+// Underscored members are optional in the source files, but required after preprocessing.
 declare module 'sarif' {
 	interface Log {
 		_uri?: string
 		_uriUpgraded?: string
 		_jsonMap?: JsonMap
 		_augmented?: boolean
-		_distinct?: Map<string, string> // Technically per Run, practially does't matter right now.
+		_distinct?: Map<string, string> // Technically per Run, practically doesn't matter right now.
 	}
 
 	interface Run {
