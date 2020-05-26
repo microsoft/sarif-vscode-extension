@@ -204,27 +204,6 @@ export async function activate(context: ExtensionContext) {
 	})
 
 	// API
-	commands.registerCommand('sarif.apiOpenLogs', async () => {
-		const sarifExt = extensions.getExtension('Jeff.sarif-vscode')
-		if (!sarifExt.isActive) await sarifExt.activate()
-		await sarifExt.exports.openLogs([
-			Uri.file('/Users/jeff/projects/sarif-tutorials/samples/3-Beyond-basics/automation-details.sarif'),
-			Uri.file('/Users/jeff/projects/sarif-tutorials/samples/3-Beyond-basics/bad-eval-related-locations.sarif'),
-			Uri.file('/Users/jeff/projects/sarif-tutorials/samples/3-Beyond-basics/bad-eval-with-code-flow.sarif'),
-		])
-	})
-	commands.registerCommand('sarif.apiCloseLogs', async () => {
-		const sarifExt = extensions.getExtension('Jeff.sarif-vscode')
-		if (!sarifExt.isActive) await sarifExt.activate()
-		await sarifExt.exports.closeLogs([
-			Uri.file('/Users/jeff/projects/sarif-tutorials/samples/3-Beyond-basics/automation-details.sarif'),
-		])
-	})
-	commands.registerCommand('sarif.apiCloseAllLogs', async () => {
-		const sarifExt = extensions.getExtension('Jeff.sarif-vscode')
-		if (!sarifExt.isActive) await sarifExt.activate()
-		await sarifExt.exports.closeAllLogs()
-	})
 	return {
 		async openLogs(logs: Uri[]) {
 			store.logs.push(...await loadLogs(logs))
