@@ -10,7 +10,7 @@ import { FilterKeywordContext } from './FilterKeywordContext'
 import { postSelectArtifact } from './IndexStore'
 import './widgets.scss'
 
-export function css(...names: (string | false)[]) {
+export function css(...names: (string | false | undefined)[]) {
 	return names.filter(name => name).join(' ')
 }
 
@@ -40,12 +40,12 @@ export class Icon extends PureComponent<{ name: string, title?: string } & React
 	}
 }
 
-// Adapated from sarif-web-component.
+// Adapted from sarif-web-component.
 export class Hi extends React.Component<React.HTMLAttributes<HTMLDivElement>> {
 	static contextType = FilterKeywordContext
 	render() {
-		let term = this.context
-		function hi(children: React.ReactNode) {
+		let term = this.context as React.ContextType<typeof FilterKeywordContext>
+		function hi(children: React.ReactNode) : React.ReactNode {
 			if (!term || term.length <= 1) return children
 			if (children === undefined)
 				return null
@@ -69,7 +69,7 @@ export class Hi extends React.Component<React.HTMLAttributes<HTMLDivElement>> {
 export interface ListProps<T> {
 	allowClear?: boolean
 	className?: string
-	horiztonal?: boolean
+	horizontal?: boolean
 	items?: ReadonlyArray<T>
 	renderItem: (item: T, i: number) => React.ReactNode
 	selection: IObservableValue<T | undefined>
@@ -97,11 +97,12 @@ export interface ListProps<T> {
 	}
 	@action.bound private onKeyDown(e: React.KeyboardEvent<Element>) {
 		const {allowClear, items, selection} = this.props
+		if (!items) return
 		const index = items.indexOf(selection.get())
 		const prev = () => selection.set(items[index - 1] ?? items[index])
 		const next = () => selection.set(items[index + 1] ?? items[index])
 		const clear = () => allowClear && selection.set(undefined)
-		const handlers = this.props.horiztonal
+		const handlers: Record<string, () => void> = this.props.horizontal
 			? { ArrowLeft: prev, ArrowRight: next, Escape: clear }
 			: { ArrowUp: prev, ArrowDown: next, Escape: clear }
 		const handler = handlers[e.key]
@@ -155,10 +156,10 @@ class OptionalDiv extends Component<React.HTMLAttributes<HTMLDivElement>> {
 	render() {
 		const {tabs, selection, extras, children} = this.props
 		const array = React.Children.toArray(children)
-		const renderItem = tab => <div>{tab + ''}</div>
+		const renderItem = (tab: T) => <div>{tab + ''}</div>
 		return <>
 			<OptionalDiv className="svListHeader">{/* Abstraction break: svListHeader */}
-				<List className="svTabs" horiztonal items={tabs} renderItem={renderItem} selection={selection} />
+				<List className="svTabs" horizontal items={tabs} renderItem={renderItem} selection={selection} />
 				{extras}
 			</OptionalDiv>
 			{array[tabs.indexOf(selection.get())]}
@@ -227,7 +228,7 @@ export function renderMessageWithEmbeddedLinks(result: Result, postMessage: (_: 
 			.split(/(\[[^\]]*\]\([^\)]+\))/g)
 			.map((item, i) => {
 				if (i % 2 === 0) return item
-				const [_, text, id] = item.match(rxLink)
+				const [_, text, id] = item.match(rxLink)! // Safe since it was split by the same RegExp.
 				return isNaN(+id)
 					? <a key={i} tabIndex={-1} href={id}>{text}</a>
 					: <a key={i} tabIndex={-1} href="#" onClick={e => {

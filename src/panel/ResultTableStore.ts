@@ -8,10 +8,14 @@ import { Column, Row, TableStore } from './TableStore'
 export class ResultTableStore<G> extends TableStore<Result, G> {
 	constructor(
 		readonly groupName: string,
-		readonly groupBy: (item: Result) => G,
+		readonly groupBy: (item: Result) => G | undefined,
 		resultsSource: { results: ReadonlyArray<Result> },
-		readonly filtersSource: { keywords, filtersRow, filtersColumn },
-		readonly selection: IObservableValue<Row>) {
+		readonly filtersSource: {
+			keywords: string,
+			filtersRow: Record<string, Record<string, boolean>>,
+			filtersColumn: Record<string, Record<string, boolean>>
+		},
+		readonly selection: IObservableValue<Row | undefined>) {
 		super(
 			groupBy,
 			resultsSource,
@@ -23,12 +27,12 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 	// Columns
 	private columnsPermanent = [
 		new Column<Result>('Line', 50, result => result._line + '', result => result._line ?? 0),
-		new Column<Result>('File', 250, result => result._relativeUri),
-		new Column<Result>('Message', 300, result => result._message),
+		new Column<Result>('File', 250, result => result._relativeUri ?? ''),
+		new Column<Result>('Message', 300, result => result._message ?? ''),
 	]
 	private columnsOptional = [
-		new Column<Result>('Baseline', 100, result => result.baselineState),
-		new Column<Result>('Suppression', 100, result => result._suppression),
+		new Column<Result>('Baseline', 100, result => result.baselineState ?? ''),
+		new Column<Result>('Suppression', 100, result => result._suppression ?? ''),
 		new Column<Result>('Rule', 220, result => `${result._rule?.name ?? '—'} ${result.ruleId ?? '—'}`),
 	]
 	get columns() {
@@ -48,7 +52,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 	protected get filter() {
 		const {keywords, filtersRow} = this.filtersSource
 		const {columns} = this
-		const mapToList = record => Object.entries(record)
+		const mapToList = (record: Record<string, boolean>) => Object.entries(record)
 			.filter(([, value]) => value)
 			.map(([label,]) => label.toLowerCase())
 
@@ -58,12 +62,12 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 		const filterKeywords = keywords.toLowerCase().split(/\s+/).filter(part => part)
 
 		return (result: Result) => {
-			if (!levels.includes(result.level)) return false
-			if (!baselines.includes(result.baselineState)) return false
-			if (!suppressions.includes(result._suppression)) return false
+			if (!levels.includes(result.level ?? '')) return false
+			if (!baselines.includes(result.baselineState ?? '')) return false
+			if (!suppressions.includes(result._suppression ?? '')) return false
 			return columns.some(col => {
 				const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword))
-				const toString = col.toString as any
+				const {toString} = col
 				const field = toString(result).toLowerCase()
 				return isMatch(field, filterKeywords)
 			})

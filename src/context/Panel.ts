@@ -105,7 +105,8 @@ export class Panel {
 				const [logUri, runIndex, resultIndex] = message.id as ResultId
 				const log = store.logs.find(log => log._uri === logUri)
 				const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex]
-				await this.selectLocal(logUri, log._uriUpgraded ?? log._uri, result?._logRegion)
+				if (!log || !result) return
+				await this.selectLocal(logUri, log._uriUpgraded ?? log._uri, result._logRegion)
 			}
 			if (command === 'setState') {
 				const oldState = Store.globalState.get('view', defaultState)
@@ -117,7 +118,7 @@ export class Panel {
 		await this.spliceLogs([], store.logs)
 	}
 
-	public async selectLocal(logUri: string, localUri: string, region: _Region) {
+	public async selectLocal(logUri: string, localUri: string, region: _Region | undefined) {
 		// Keep/pin active Log as needed
 		for (const editor of window.visibleTextEditors.slice()) {
 			if (editor.document.uri.toString() !== logUri) continue

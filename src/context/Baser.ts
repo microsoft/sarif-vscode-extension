@@ -39,13 +39,13 @@ export class Baser {
 		if (!this.validatedPathsLocalToArtifact.has(localPath)) {
 			const {file} = localPath
 			if ((	// If no workspace, then the open docs (at this moment) become the workspace.
-					// Overassuming the localPath.name is distinct. There could be 2+ open docs with the same name.
+					// Over-assuming the localPath.name is distinct. There could be 2+ open docs with the same name.
 					!workspace.workspaceFolders?.length ||
 					this.distinctLocalNames.has(file)
 				) &&
 				this.store.distinctArtifactNames.has(file)) {
 
-				const artifactPath = this.store.distinctArtifactNames.get(file)
+				const artifactPath = this.store.distinctArtifactNames.get(file)! // Not undefined due to surrounding if.
 				this.updateValidatedPaths(artifactPath, localPath)
 				this.updateBases(artifactPath.split('/'), localPath.split('/'))
 			}
@@ -102,7 +102,7 @@ export class Baser {
 			// Distinct Project Items
 			const {file} = artifactPath
 			if (this.distinctLocalNames.has(file) && this.store.distinctArtifactNames.has(file)) {
-				const localPath = this.distinctLocalNames.get(file)
+				const localPath = this.distinctLocalNames.get(file)! // Not undefined due to surrounding if.
 				this.updateValidatedPaths(artifactPath, localPath)
 				this.updateBases(artifactPath.split('/'), localPath.split('/'))
 				return localPath
@@ -126,7 +126,7 @@ export class Baser {
 			const choice = await window.showInformationMessage(`Unable to find '${artifactPath.split('/').pop()}'`, 'Locate...')
 			this.activeInfoMessages.delete(artifactPath)
 			if (choice === 'Locate...') {
-				const extension = artifactPath.match(/\.([\w]+)$/)[1]
+				const extension = artifactPath.match(/\.([\w]+)$/)?.[1] ?? ''
 				const files = await window.showOpenDialog({
 					defaultUri: workspace.workspaceFolders?.[0]?.uri,
 					filters: { 'Matching file' : [extension] },

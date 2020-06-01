@@ -4,9 +4,10 @@
 import { action, computed, IObservableValue, observable } from 'mobx'
 
 export class Column<T> {
-	width = null as IObservableValue<number>
+	width: IObservableValue<number>
 	constructor(
-		readonly name: string, width,
+		readonly name: string,
+		width: number,
 		readonly toString: (item: T) => string,
 		readonly toNumber?: (item: T) => number /* For sorting */) {
 		this.width = observable.box(width)
@@ -41,29 +42,29 @@ enum SortDir {
 
 export class TableStore<T, G> {
 	constructor(
-		readonly groupBy: (item: T) => G,
+		readonly groupBy: (item: T) => G | undefined,
 		readonly itemsSource: { results: ReadonlyArray<T> }, // Abstraction break.
-		readonly selection: IObservableValue<Row>) {
+		readonly selection: IObservableValue<Row | undefined>) {
 	}
 
 	@computed({ keepAlive: true }) public get rowItems() {
 		return this.itemsSource.results.map(result => new RowItem(result))
 	}
 	@computed private get groups() {
-		const map = new Map<G, RowGroup<T, G>>()
+		const map = new Map<G | undefined, RowGroup<T, G | undefined>>()
 		this.rowItems.forEach(item => {
 			const key = this.groupBy(item.item)
 			if (!map.has(key)) map.set(key, new RowGroup(key))
-			const group = map.get(key)
+			const group = map.get(key)!
 			group.items.push(item)
 			item.group = group
 		})
 		return [...map.values()].sortBy(g => g.items.length, true) // High to low.
 	}
 
-	get columns() { return [] }
+	get columns(): Column<any>[] { return [] }
 	protected get filter() { return (item: T) => true }
-	@observable public sortColumn = undefined as string
+	@observable public sortColumn = undefined as string | undefined
 	@observable public sortDir = SortDir.Asc
 	@action toggleSort(newCol: string) {
 		if (this.sortColumn === newCol) {
@@ -75,7 +76,9 @@ export class TableStore<T, G> {
 	}
 	sort(items: RowItem<T>[]) {
 		const {columns, sortColumn, sortDir} = this
-		const {toNumber, toString} = columns.find(col => col.name === sortColumn)
+		const column = columns.find(col => col.name === sortColumn)
+		if (!column) return
+		const {toNumber, toString} = column
 		const toSortable = toNumber ?? toString
 		items.sortBy(item => toSortable(item.item), sortDir === SortDir.Dsc)
 	}

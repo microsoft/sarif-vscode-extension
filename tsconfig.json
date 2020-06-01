@@ -4,14 +4,14 @@
 		"target": "es2019",
 		"sourceMap": true,
 		
+
 		"experimentalDecorators": true,
 		"esModuleInterop": true,
 		"jsx": "react",
 		"resolveJsonModule": true,
 
 		"noImplicitThis": true,
-		"strictBindCallApply": true,
-		"strictFunctionTypes": true,
+		"strict": true
 	},
 	"exclude": [
 		"node_modules",

@@ -23,7 +23,7 @@ export async function update() {
 					path: url.pathname,
 					headers: { 'User-Agent': 'microsoft.sarif-viewer' }
 				}, response => {
-					const totalBytes = +response.headers['content-length']
+					const totalBytes = +(response.headers['content-length'] ?? '0')
 					const totalMB = (totalBytes / MB).toFixed(0)
 					let progressBytes = 0
 					response.pipe(stream)

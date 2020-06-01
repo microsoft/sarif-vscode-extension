@@ -26,7 +26,7 @@ interface TableProps<T, G> {
 		const { columns, store, renderIconName, renderCell } = this.props
 		const { isSelected, item, gridTemplateColumns } = props
 		return <div className={css('svTableRow', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
-			ref={ele => { // TOOD: ForwardRef for Group
+			ref={ele => { // TODO: ForwardRef for Group
 				if (!isSelected || !ele) return
 				setTimeout(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' })) // requestAnimationFrame not working.
 			}}
@@ -92,7 +92,7 @@ interface TableProps<T, G> {
 			ArrowUp: () => selection.set(rows[index - 1] ?? rows[index] ?? rows[0]),
 			ArrowDown: () => selection.set(rows[index + 1] ?? rows[index]),
 			Escape: () => selection.set(undefined)
-		}
+		} as Record<string, () => void>
 		const handler = handlers[e.key]
 		if (handler) {
 			e.stopPropagation()

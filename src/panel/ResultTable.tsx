@@ -33,9 +33,9 @@ interface ResultTableProps<G> {
 				<span>{result._rule?.name ?? '—'}</span>
 				<span className="svSecondary">{result.ruleId}</span>
 			</>,
-		}
-		const defaultRenderer = result => { // Refactor
-			const capitalize = str => `${str[0].toUpperCase()}${str.slice(1)}`
+		} as Record<string, (result: Result) => ReactNode>
+		const defaultRenderer = (result: Result) => {
+			const capitalize = (str: string) => `${str[0].toUpperCase()}${str.slice(1)}`
 			return <span>{capitalize(column.toString(result))}</span>
 		}
 		const renderer = customRenderers[column.name] ?? defaultRenderer
@@ -46,7 +46,7 @@ interface ResultTableProps<G> {
 		const { store, onClearFilters, renderGroup } = this.props
 		const { renderCell } = this
 		return <Table columns={store.visibleColumns} store={store}
-			renderIconName={result => levelToIcon[result.level]}
+			renderIconName={result => levelToIcon[result.level ?? 'undefined']}
 			renderGroup={renderGroup} renderCell={renderCell}>
 			<div className="svZeroData">
 				<span>No results found with provided filter criteria.</span>

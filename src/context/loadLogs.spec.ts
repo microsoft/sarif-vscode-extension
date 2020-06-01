@@ -5,27 +5,27 @@ import assert from 'assert'
 import mock from 'mock-require'
 
 const progress = {
-	report: data => {
+	report: (data: any) => {
 		console.warn(data)
 	}
 }
 class Uri {
-	static parse(value) { return new Uri(value) }
-	static file(path) { return Uri.parse(`file://${path}`) }
+	static parse(value: string) { return new Uri(value) }
+	static file(path: any) { return Uri.parse(`file://${path}`) }
 
-	constructor(readonly value) {}
+	constructor(readonly value: string) {}
 	get path() { return this.value.replace('file://', '') }
 	get fsPath() { return this.path } // Assume Unix.
 	toString() { return this.value }
-	scheme; authority; query; fragment; with; toJSON // Stubs
+	scheme = ''; authority = ''; query = ''; fragment = ''; with = undefined as any; toJSON = {} as any // Stubs
 }
 mock('vscode', {
 	ProgressLocation: { Notification: 15 },
 	Uri,
 	window: {
 		showWarningMessage: () => {},
-		withProgress: async (_options, task) => await task(progress),
-		showErrorMessage: async (message) => {}
+		withProgress: async (_options: any, task: any) => await task(progress),
+		showErrorMessage: async (_message: string) => {}
 	}
 })
 

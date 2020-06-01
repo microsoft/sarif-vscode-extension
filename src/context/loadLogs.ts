@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/// <reference path="json-source-map.d.ts" />
 import { execFileSync } from 'child_process'
 import * as fs from 'fs'
 import jsonMap from 'json-source-map'
@@ -27,7 +28,7 @@ export async function loadLogs(uris: Uri[]) {
 				return undefined
 			}
 		})
-		.filter(log => log)
+		.filter(log => log) as Log[]
 	const logsNoUpgrade = [] as Log[]
 	const logsToUpgrade = [] as Log[]
 	const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsNoUpgrade, logsToUpgrade))

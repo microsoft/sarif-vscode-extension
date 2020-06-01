@@ -15,16 +15,16 @@ describe('activate', () => {
 	})
 
 	it('can postSelectArtifact', async () => {
-		const result = mockVscode.store.results[0]
-		await postSelectArtifact(result, result.locations[0].physicalLocation)
+		const result = mockVscode.store!.results[0]!
+		await postSelectArtifact(result, result.locations![0].physicalLocation)
 		assert.deepEqual(mockVscode.events.splice(0), [
 			'showTextDocument file:///folder/file.txt',
-			'selection 0 1 0 2',
+			'selection 0 0 0 0',
 		])
 	})
 
 	it('can postSelectLog', async () => {
-		const result = mockVscode.store.results[0]
+		const result = mockVscode.store!.results[0]
 		await postSelectLog(result)
 		assert.deepEqual(mockVscode.events.splice(0), [
 			'showTextDocument file:///.sarif/test.sarif',

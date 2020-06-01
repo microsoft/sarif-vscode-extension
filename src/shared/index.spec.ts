@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 import assert from 'assert'
-import { Log } from 'sarif'
+import { Log, Result } from 'sarif'
 import { augmentLog } from '.'
 
 describe('augmentLog', () => {
-	const log: Log = {
+	const log = {
 		version: '2.1.0',
 		runs: [{
 			tool: {
@@ -25,8 +25,8 @@ describe('augmentLog', () => {
 				}]
 			}]
 		}]
-	}
-	const result = log.runs[0].results[0]
+	} as Log
+	const result = log.runs![0].results![0]
 	// Helper to visualize: console.log(JSON.stringify(result, null, '    '))
 
 	it('add augmented fields', () => {
@@ -38,7 +38,7 @@ describe('augmentLog', () => {
 
 	it('resolves artifactLocation.index', () => {
 		log._augmented = false
-		result.locations[0].physicalLocation.artifactLocation.index = 0
+		result.locations![0].physicalLocation!.artifactLocation!.index = 0
 		log.runs[0].artifacts = [{
 			location: {
 				uri: '/folder/file.txt'

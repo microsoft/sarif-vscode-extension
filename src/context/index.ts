@@ -16,7 +16,8 @@ declare module 'vscode' {
 	}
 }
 
-export const regionToSelection = (doc: TextDocument, region: _Region) => {
+export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
+	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
 	return Array.isArray(region)
 		? (region.length === 4
 			? new Selection(...region)
@@ -49,7 +50,7 @@ export class Store {
 	@observable.shallow logs = [] as Log[]
 	@computed public get results() {
 		const runs = this.logs.map(log => log.runs).flat()
-		return runs.map(run => run.results).flat()
+		return runs.map(run => run.results).filter(run => run).flat() as Result[]
 	}
 	@computed public get distinctArtifactNames() {
 		const fileAndUris = this.logs.map(log => [...log._distinct.entries()]).flat()
@@ -105,16 +106,17 @@ export async function activate(context: ExtensionContext) {
 	const setDiags = (doc: TextDocument) => {
 		if (doc.fileName.endsWith('.git')) return
 		const artifactPath = baser.translateLocalToArtifact(doc.uri.path)
+		const severities = {
+			error: DiagnosticSeverity.Error,
+			warning: DiagnosticSeverity.Warning,
+		} as Record<string, DiagnosticSeverity>
 		const diags = store.results
 			.filter(result => result._uri === artifactPath)
 			.map(result => ({
 				_result: result,
-				message: result._message,
+				message: result._message ?? '—',
 				range: regionToSelection(doc, result._region),
-				severity: {
-						error: DiagnosticSeverity.Error,
-						warning: DiagnosticSeverity.Warning,
-					}[result.level] ?? DiagnosticSeverity.Information // note, none, undefined.
+				severity: severities[result.level ?? ''] ?? DiagnosticSeverity.Information // note, none, undefined.
 			}) )
 		diagsAll.set(doc.uri, diags)
 	}
@@ -188,15 +190,15 @@ export async function activate(context: ExtensionContext) {
 		provideTextDocumentContent: (uri, token) => {
 			const [logUriEncoded, runIndex, artifactIndex] = uri.path.split('/')
 			const logUri = decodeURIComponent(logUriEncoded)
-			const artifact = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.artifacts?.[artifactIndex]
+			const artifact = store.logs.find(log => log._uri === logUri)?.runs[+runIndex]?.artifacts?.[+artifactIndex]
 			const contents = artifact?.contents
 			if (contents?.text) return contents?.text
 			if (contents?.binary) {
-				const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g)
+				const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g) ?? []
 				return lines.reduce((sum, line, i) => {
 					const lineNo = ((i + 128) * 16).toString(16).toUpperCase().padStart(8, '0')
 					const preview = Buffer.from(line, 'hex').toString('utf8').replace(/(\x09|\x0A|\x0B|\x0C|\x0D|\x1B)/g, '?')
-					return `${sum}${lineNo}  ${line.toUpperCase().match(/.{1,2}/g).join(' ')}  ${preview}\n`
+					return `${sum}${lineNo}  ${line.toUpperCase().match(/.{1,2}/g)?.join(' ')}  ${preview}\n`
 				}, '')
 			}
 			token.isCancellationRequested = true

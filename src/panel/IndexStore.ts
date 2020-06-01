@@ -9,7 +9,7 @@ import { ResultTableStore } from './ResultTableStore'
 import { Row, RowItem } from './TableStore'
 
 export class IndexStore {
-	constructor(state, defaultSelection?: boolean) {
+	constructor(state: Record<string, any>, defaultSelection?: boolean) {
 		this.filtersRow = state.filtersRow
 		this.filtersColumn = state.filtersColumn
 		const setState = () => {
@@ -47,7 +47,7 @@ export class IndexStore {
 	@computed public get results() {
 		return this.runs.map(run => run.results || []).flat()
 	}
-	selection = observable.box(undefined as Row)
+	selection = observable.box<Row | undefined>(undefined)
 	resultTableStoreByLocation = new ResultTableStore('File', result => result._relativeUri, this, this, this.selection)
 	resultTableStoreByRule     = new ResultTableStore('Rule', result => result._rule,        this, this, this.selection)
 

@@ -12,13 +12,14 @@ import './Details.scss'
 import { postSelectArtifact, postSelectLog } from './IndexStore'
 import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 
-@observer export class Details extends Component<{ result: Result, height: IObservableValue<number> }> {
+interface DetailsProps { result: Result, height: IObservableValue<number> }
+@observer export class Details extends Component<DetailsProps> {
 	private selectedTab = observable.box('Info')
 	@computed private get threadFlowLocations() {
 		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
 			.filter(tfLocation => tfLocation.location)
 	}
-	constructor(props) {
+	constructor(props: DetailsProps) {
 		super(props)
 		autorun(() => {
 			const hasThreadFlows = !!this.threadFlowLocations?.length
@@ -77,7 +78,7 @@ import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 					{(() => {
 						const items = this.threadFlowLocations
 
-						const selection = observable.box(undefined as ThreadFlowLocation, { deep: false })
+						const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false })
 						selection.observe(change => {
 							const tfloc = change.newValue
 							postSelectArtifact(result, tfloc?.location?.physicalLocation)
@@ -88,7 +89,7 @@ import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 							return <>
 								<div className="ellipsis">{message ?? '—'}</div>
 								<div className="svSecondary">{uri?.file ?? '—'}</div>
-								<div className="svLineNum">{region.startLine}:1</div>
+								<div className="svLineNum">{region?.startLine ?? '—'}:1</div>
 							</>
 						}
 

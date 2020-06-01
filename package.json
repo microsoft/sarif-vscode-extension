@@ -98,9 +98,10 @@
 	},
 	"devDependencies": {
 		"@actions/core": "1.2.3",
-		"@types/follow-redirects": "1.8.0",
 		"@actions/github": "2.1.1",
+		"@types/follow-redirects": "1.8.0",
 		"@types/mocha": "2.2.48",
+		"@types/mock-require": "2.0.0",
 		"@types/node": "10.12.21",
 		"@types/react": "16.9.26",
 		"@types/react-dom": "16.9.5",

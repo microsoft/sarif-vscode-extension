@@ -8,16 +8,19 @@ type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key,
 export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
-export type _Region = number | [number, number] | [number, number, number, number]
+export type _Region
+	= number // single line
+	| [number, number] // byteOffset, byteLength
+	| [number, number, number, number] // start line, start char, end line, end col
 
 // Underscored members are optional in the source files, but required after preprocessing.
 declare module 'sarif' {
 	interface Log {
-		_uri?: string
+		_uri: string
 		_uriUpgraded?: string
 		_jsonMap?: JsonMap
 		_augmented?: boolean
-		_distinct?: Map<string, string> // Technically per Run, practically doesn't matter right now.
+		_distinct: Map<string, string> // Technically per Run, practically doesn't matter right now.
 	}
 
 	interface Run {
@@ -26,31 +29,31 @@ declare module 'sarif' {
 	}
 
 	interface Result {
-		_log?: Log
-		_run?: Run
-		_id?: ResultId
+		_log: Log
+		_run: Run
+		_id: ResultId
 		_logRegion?: _Region
 		_uri?: string
 		_uriContents?: string // ArtifactContent. Do not use this uri for display.
 		_relativeUri?: string
 		_region?: _Region
-		_line?: number
+		_line: number
 		_rule?: ReportingDescriptor
-		_message?: string
+		_message: string
 		_markdown?: string
 		_suppression?: 'not suppressed' | 'suppressed'
 	}
 }
 
 // console.log(format(`'{0}' was not evaluated for check '{2}' as the analysis is not relevant based on observed metadata: {1}.`, ['x', 'y', 'z']))
-function format(template: string, args?: string[]) {
+function format(template: string | undefined, args?: string[]) {
 	if (!template) return undefined
 	if (!args) return template
 	return template.replace(/{(\d+)}/g, (_, group) => args[group])
 }
 
 export function mapDistinct(pairs: [string, string][]): Map<string, string> {
-	const distinct = new Map<string, string>()
+	const distinct = new Map<string, string | undefined>()
 	for (const [key, value] of pairs) {
 		if (distinct.has(key)) {
 			const otherValue = distinct.get(key)
@@ -62,7 +65,7 @@ export function mapDistinct(pairs: [string, string][]): Map<string, string> {
 	for (const [key, value] of distinct) {
 		if (!value) distinct.delete(key)
 	}
-	return distinct
+	return distinct as Map<string, string>
 }
 
 export function augmentLog(log: Log) {
@@ -72,7 +75,7 @@ export function augmentLog(log: Log) {
 	log.runs.forEach((run, runIndex) => {
 		run._index = runIndex
 
-		let implicitBase = undefined as string[]
+		let implicitBase = undefined as string[] | undefined
 		run.results?.forEach((result, resultIndex) => {
 			result._log = log
 			result._run = run
@@ -99,10 +102,10 @@ export function augmentLog(log: Log) {
 				}
 			}
 			result._region = parseRegion(ploc?.region)
-			result._line = result._region?.[0] ?? result._region ?? -1 // _line is sugar for _region
+			result._line = (Array.isArray(result._region) ? result._region?.[0] : result._region) ?? -1 // _line is sugar for _region
 
-			result._rule = run.tool.driver.rules?.[result.ruleIndex] // If result.ruleIndex is undefined, that's okay.
-			const message = result._rule?.messageStrings?.[result.message.id] ?? result.message
+			result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
+			const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message
 			result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—'
 			result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments) // No '—', leave undefined if empty.
 
@@ -115,7 +118,7 @@ export function augmentLog(log: Log) {
 
 		run._implicitBase = implicitBase?.join('/')
 		run.results?.forEach(result => {
-			result._relativeUri = result._uri?.replace(run._implicitBase , '') ?? '' // For grouping, Empty works more predictably than undefined
+			result._relativeUri = result._uri?.replace(run._implicitBase ?? '' , '') ?? '' // For grouping, Empty works more predictably than undefined
 		})
 	})
 	log._distinct = mapDistinct(fileAndUris)
@@ -146,7 +149,7 @@ export function parseLocation(result: Result, loc?: Location) {
 	return { message, uri, uriContent, region }
 }
 
-export function parseRegion(region: Region): _Region {
+export function parseRegion(region: Region | undefined): _Region | undefined {
 	if (!region) return undefined
 
 	const {byteOffset, byteLength} = region
@@ -170,7 +173,7 @@ export function parseRegion(region: Region): _Region {
 }
 
 // Improve: `result` purely used for `_run.artifacts`.
-export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocation) {
+export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocation | undefined) {
 	if (!anyArtLoc) return [undefined, undefined]
 	const runArt = result._run.artifacts?.[anyArtLoc.index ?? -1]
 	const runArtLoc = runArt?.location
@@ -178,7 +181,7 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 
 	const uri = anyArtLoc.uri ?? runArtLoc?.uri // If index (§3.4.5) is absent, uri SHALL be present.
 	const uriContents = runArtCon?.text || runArtCon?.binary
-			? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri.file ?? 'Untitled'}`)
+			? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
 			: undefined
 	return [uri, uriContents]
 }
@@ -200,7 +203,7 @@ export const filtersRow = {
 		'Not Suppressed': true,
 		'Suppressed': false,
 	},
-}
+} as Record<string, Record<string, boolean>>
 
 export const filtersColumn = {
 	Columns: {
@@ -208,4 +211,4 @@ export const filtersColumn = {
 		'Suppression': false,
 		'Rule': false,
 	},
-}
+} as Record<string, Record<string, boolean>>

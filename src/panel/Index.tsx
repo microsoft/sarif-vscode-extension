@@ -102,7 +102,7 @@ export { IndexStore as Store } from './IndexStore'
 		</FilterKeywordContext.Provider>
 	}
 
-	private selectionAutoRunDisposer: IReactionDisposer
+	private selectionAutoRunDisposer = null as IReactionDisposer | null
 
 	componentDidMount() {
 		addEventListener('message', this.props.store.onMessage)
@@ -116,6 +116,6 @@ export { IndexStore as Store } from './IndexStore'
 
 	componentWillUnmount() {
 		removeEventListener('message', this.props.store.onMessage)
-		this.selectionAutoRunDisposer()
+		this.selectionAutoRunDisposer?.()
 	}
 }
