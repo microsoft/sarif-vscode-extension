@@ -10,7 +10,10 @@
 		"jsx": "react",
 		"resolveJsonModule": true,
 
-		"noImplicitThis": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"strict": true
 	},
 	"exclude": [
