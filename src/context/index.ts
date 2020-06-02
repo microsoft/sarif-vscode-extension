@@ -210,7 +210,7 @@ export async function activate(context: ExtensionContext) {
 	return {
 		async openLogs(logs: Uri[]) {
 			store.logs.push(...await loadLogs(logs))
-			// Check results, open panel if there are any
+			if (store.results.length) panel.show()
 		},
 		async closeLogs(logs: Uri[]) {
 			for (const uri of logs) {
