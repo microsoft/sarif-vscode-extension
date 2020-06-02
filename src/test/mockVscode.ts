@@ -116,7 +116,7 @@ export const mockVscode = {
 				})
 			}
 		},
-		findFiles: (include: string, exclude?: string) => {
+		findFiles: (include: string, _exclude?: string) => {
 			if (include === '.sarif/**/*.sarif') {
 				return [
 					new Uri('/.sarif/test.sarif')

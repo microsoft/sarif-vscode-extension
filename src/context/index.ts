@@ -3,7 +3,7 @@
 
 import { computed, IArrayWillSplice, intercept, observable, observe } from 'mobx'
 import { Log, Result } from 'sarif'
-import { commands, DiagnosticSeverity, ExtensionContext, extensions, languages, Memento, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
+import { commands, DiagnosticSeverity, ExtensionContext, languages, Memento, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
 import { mapDistinct, _Region, parseRegion } from '../shared'
 import '../shared/extension'
 import { Baser } from './Baser'
@@ -123,7 +123,7 @@ export async function activate(context: ExtensionContext) {
 	workspace.textDocuments.forEach(setDiags)
 	workspace.onDidOpenTextDocument(setDiags)
 	workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri)) // Spurious *.git deletes don't hurt.
-	observe(store.logs, change => workspace.textDocuments.forEach(setDiags))
+	observe(store.logs, () => workspace.textDocuments.forEach(setDiags))
 
 	// Open Documents <-sync-> Store.logs
 	const syncActiveLog = async (doc: TextDocument) => {
@@ -202,6 +202,7 @@ export async function activate(context: ExtensionContext) {
 				}, '')
 			}
 			token.isCancellationRequested = true
+			return ''
 		}
 	})
 
@@ -209,6 +210,7 @@ export async function activate(context: ExtensionContext) {
 	return {
 		async openLogs(logs: Uri[]) {
 			store.logs.push(...await loadLogs(logs))
+			// Check results, open panel if there are any
 		},
 		async closeLogs(logs: Uri[]) {
 			for (const uri of logs) {

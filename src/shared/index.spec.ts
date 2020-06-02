@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import assert from 'assert'
-import { Log, Result } from 'sarif'
+import { Log } from 'sarif'
 import { augmentLog } from '.'
 
 describe('augmentLog', () => {

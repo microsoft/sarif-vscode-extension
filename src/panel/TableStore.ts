@@ -63,7 +63,7 @@ export class TableStore<T, G> {
 	}
 
 	get columns(): Column<any>[] { return [] }
-	protected get filter() { return (item: T) => true }
+	protected get filter() { return (_item: T) => true }
 	@observable public sortColumn = undefined as string | undefined
 	@observable public sortDir = SortDir.Asc
 	@action toggleSort(newCol: string) {
