@@ -13,9 +13,10 @@ import { ProgressLocation, Uri, window } from 'vscode'
 import { Store } from '.'
 import { augmentLog, JsonMap } from '../shared'
 
-export async function loadLogs(uris: Uri[]) {
+export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
 	const logs = uris
 		.map(uri => {
+			if (token?.isCancellationRequested) return undefined
 			try {
 				const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
 					.replace(/^\uFEFF/, '') // Trim BOM.
@@ -38,6 +39,7 @@ export async function loadLogs(uris: Uri[]) {
 			{ location: ProgressLocation.Notification },
 			async progress => {
 				for (const [i, oldLog] of logsToUpgrade.entries()) {
+					if (token?.isCancellationRequested) break
 					progress.report({
 						message: `Upgrading ${i + 1} of ${upgrades} log${upgrades === 1 ? '' : 's'}...`,
 						increment: 1 / upgrades * 100

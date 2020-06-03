@@ -3,8 +3,8 @@
 
 import { computed, IArrayWillSplice, intercept, observable, observe } from 'mobx'
 import { Log, Result } from 'sarif'
-import { commands, DiagnosticSeverity, ExtensionContext, languages, Memento, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
-import { mapDistinct, _Region, parseRegion } from '../shared'
+import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Memento, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
+import { mapDistinct, parseRegion, _Region } from '../shared'
 import '../shared/extension'
 import { Baser } from './Baser'
 import { loadLogs } from './loadLogs'
@@ -208,8 +208,9 @@ export async function activate(context: ExtensionContext) {
 
 	// API
 	return {
-		async openLogs(logs: Uri[]) {
-			store.logs.push(...await loadLogs(logs))
+		async openLogs(logs: Uri[], cancellationToken?: CancellationToken) {
+			store.logs.push(...await loadLogs(logs, cancellationToken))
+			if (cancellationToken?.isCancellationRequested) return
 			if (store.results.length) panel.show()
 		},
 		async closeLogs(logs: Uri[]) {

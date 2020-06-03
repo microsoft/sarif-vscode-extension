@@ -4,6 +4,7 @@
 /// <reference path="../panel/global.d.ts" />
 /// Why is this also needed here.
 
+import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'
 import mock from 'mock-require'
 import { IndexStore } from '../panel/IndexStore'
@@ -25,6 +26,10 @@ class Uri {
 	static parse(uri: string) {
 		return new Uri(uri.replace('file://', ''))
 	}
+}
+
+export const mockChildProcess = {
+	onExecFileSync: undefined as (() => void) | undefined
 }
 
 export const mockVscode = {
@@ -129,8 +134,15 @@ export const mockVscode = {
 	},
 }
 
+mock('child_process', {
+	execFileSync: (command: string, args?: ReadonlyArray<string>) => {
+		mockChildProcess.onExecFileSync?.()
+		execFileSync(command, args)
+	}
+})
 mock('fs', {
 	readFileSync: (path: string, options: Record<string, any>) => {
-		return mockVscode.mockReadFile ?? readFileSync(path, options)}
+		return mockVscode.mockReadFile ?? readFileSync(path, options)
+	}
 })
 mock('vscode', mockVscode)

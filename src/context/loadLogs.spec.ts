@@ -31,15 +31,17 @@ mock('vscode', {
 
 import { loadLogs, detectUpgrade } from './loadLogs'
 import { Log } from 'sarif'
+import { mockChildProcess } from '../test/mockVscode'
 
 describe('loadLogs', () => {
+	const uris = [
+		`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/Double.sarif`,
+		`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/EmbeddedContent.sarif`,
+		`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/bad-eval-with-code-flow.sarif`,
+		`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/oldLog.sarif`,
+	].map(path => Uri.parse(path))
+
 	it('loads', async () => {
-		const uris = [
-			`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/Double.sarif`,
-			`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/EmbeddedContent.sarif`,
-			`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/bad-eval-with-code-flow.sarif`,
-			`file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/oldLog.sarif`,
-		].map(path => Uri.parse(path))
 		const logs = await loadLogs(uris)
 		assert.strictEqual(logs.every(log => log.version === '2.1.0'), true)
 	})
@@ -75,5 +77,24 @@ describe('loadLogs', () => {
 		} as any, logsNoUpgrade, logsToUpgrade)
 		assert.strictEqual(logsNoUpgrade.length, 2)
 		assert.strictEqual(logsToUpgrade.length, 1)
+	})
+
+	it('honors cancellation - first loop', async () => {
+		const cancel = { isCancellationRequested: true }
+		const logs = await loadLogs(uris, cancel)
+		assert.strictEqual(logs.length, 0)
+		mockChildProcess.onExecFileSync = undefined
+	})
+
+	it('honors cancellation - onExecFile', async () => {
+		const cancel = { isCancellationRequested: false }
+		let logCount = 0
+		mockChildProcess.onExecFileSync = () => {
+			logCount++
+			cancel.isCancellationRequested = logCount >= 1
+		}
+		const logs = await loadLogs(uris, cancel)
+		assert.strictEqual(logs.length, 3)
+		mockChildProcess.onExecFileSync = undefined
 	})
 })
