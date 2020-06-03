@@ -74,7 +74,7 @@ export async function activate(context: ExtensionContext) {
 	}) // Disabled while we evaluate the future of this feature.
 
 	// Diagnostics
-	const diagsAll = languages.createDiagnosticCollection('sarif')
+	const diagsAll = languages.createDiagnosticCollection('SARIF')
 	const setDiags = (doc: TextDocument) => {
 		if (doc.fileName.endsWith('.git')) return
 		const artifactPath = baser.translateLocalToArtifact(doc.uri.path)
