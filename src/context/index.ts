@@ -9,12 +9,7 @@ import '../shared/extension'
 import { Baser } from './Baser'
 import { loadLogs } from './loadLogs'
 import { Panel } from './Panel'
-
-declare module 'vscode' {
-	interface Diagnostic {
-		_result: Result
-	}
-}
+import { ResultDiagnostic } from './ResultDiagnostic'
 
 export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
 	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
@@ -82,7 +77,7 @@ export async function activate(context: ExtensionContext) {
 
 	// Basing
 	const urisNonSarif = await workspace.findFiles('**/*', '.sarif') // Ignore folders?
-	const fileAndUris = urisNonSarif.map(uri => [uri.path.split('/').pop(), uri.path])  as [string, string][]
+	const fileAndUris = urisNonSarif.map(uri => [uri.path.split('/').pop(), uri.path]) as [string, string][]
 	const baser = new Baser(mapDistinct(fileAndUris), store)
 
 	// Panel
@@ -112,12 +107,12 @@ export async function activate(context: ExtensionContext) {
 		} as Record<string, DiagnosticSeverity>
 		const diags = store.results
 			.filter(result => result._uri === artifactPath)
-			.map(result => ({
-				_result: result,
-				message: result._message ?? '—',
-				range: regionToSelection(doc, result._region),
-				severity: severities[result.level ?? ''] ?? DiagnosticSeverity.Information // note, none, undefined.
-			}) )
+			.map(result => new ResultDiagnostic(
+				regionToSelection(doc, result._region),
+				result._message ?? '—',
+				severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
+				result,
+			))
 		diagsAll.set(doc.uri, diags)
 	}
 	workspace.textDocuments.forEach(setDiags)
@@ -151,7 +146,11 @@ export async function activate(context: ExtensionContext) {
 	languages.registerCodeActionsProvider('*', {
 		provideCodeActions: (doc, _range, context) => {
 			if (context.only) return
-			const result = context.diagnostics[0]?._result
+
+			const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined
+			if (!diagnostic) return
+
+			const result = diagnostic?.result
 			panel.select(result)
 
 			const editor = window.visibleTextEditors.find(editor => editor.document === doc)

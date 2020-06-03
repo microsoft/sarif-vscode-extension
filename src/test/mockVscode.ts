@@ -10,6 +10,7 @@ import mock from 'mock-require'
 import { IndexStore } from '../panel/IndexStore'
 import { filtersColumn, filtersRow } from '../shared'
 import { log } from './mockLog'
+import { DiagnosticSeverity } from 'vscode'
 
 global.fetch = async () => ({ json: async () => log }) as unknown as Promise<Response>
 global.vscode = {
@@ -53,6 +54,9 @@ export const mockVscode = {
 	// Extension-facing
 	commands: {
 		registerCommand: () => {},
+	},
+	Diagnostic: class {
+		constructor(readonly range: Range, readonly message: string, readonly severity?: DiagnosticSeverity) {}
 	},
 	languages: {
 		createDiagnosticCollection: () => {},
