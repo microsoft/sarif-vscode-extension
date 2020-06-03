@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { observe } from 'mobx'
+import { IArraySplice, observe } from 'mobx'
+import { Log } from 'sarif'
 import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
 import { mapDistinct, parseRegion } from '../shared'
 import '../shared/extension'
@@ -128,6 +129,14 @@ export async function activate(context: ExtensionContext) {
 			editor.setDecorations(decorationTypeHighlight, ranges)
 			return []
 		}
+	})
+	observe(store.logs, change => {
+		const {removed} = change as unknown as IArraySplice<Log>
+		if (!removed.length) return
+		window.visibleTextEditors.forEach(editor => {
+			editor.setDecorations(decorationTypeCallout, [])
+			editor.setDecorations(decorationTypeHighlight, [])
+		})
 	})
 
 	// Virtual Documents
