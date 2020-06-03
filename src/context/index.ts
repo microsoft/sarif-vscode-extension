@@ -43,11 +43,11 @@ export class Store {
 	static globalState: Memento
 
 	@observable.shallow logs = [] as Log[]
-	@computed public get results() {
+	@computed get results() {
 		const runs = this.logs.map(log => log.runs).flat()
 		return runs.map(run => run.results).filter(run => run).flat() as Result[]
 	}
-	@computed public get distinctArtifactNames() {
+	@computed get distinctArtifactNames() {
 		const fileAndUris = this.logs.map(log => [...log._distinct.entries()]).flat()
 		return mapDistinct(fileAndUris)
 	}
