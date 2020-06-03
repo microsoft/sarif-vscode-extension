@@ -11,7 +11,8 @@ import { log } from '../test/mockLog'
 describe('activate', () => {
 	before(async () => {
 		mockVscode.mockReadFile = JSON.stringify(log)
-		await mockVscode.activateExtension(activate)
+		const api = await mockVscode.activateExtension(activate)
+		api.openLogs([new mockVscode.Uri('/.sarif/test.sarif')])
 	})
 
 	it('can postSelectArtifact', async () => {

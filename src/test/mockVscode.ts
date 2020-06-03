@@ -45,7 +45,7 @@ export const mockVscode = {
 			globalState: new Map(),
 			subscriptions: [],
 		}
-		await activate(context)
+		return await activate(context)
 	},
 
 	// Internal

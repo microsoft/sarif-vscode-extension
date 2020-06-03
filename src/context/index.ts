@@ -22,10 +22,6 @@ export async function activate(context: ExtensionContext) {
 	}))
 	const store = new Store()
 
-	// Boot
-	const uris = await workspace.findFiles('.sarif/**/*.sarif')
-	store.logs.push(...await loadLogs(uris))
-
 	// Basing
 	const urisNonSarif = await workspace.findFiles('**/*', '.sarif') // Ignore folders?
 	const fileAndUris = urisNonSarif.map(uri => [uri.path.split('/').pop(), uri.path]) as [string, string][]
@@ -33,7 +29,6 @@ export async function activate(context: ExtensionContext) {
 
 	// Panel
 	const panel = new Panel(context, baser, store)
-	if (uris.length) await panel.show()
 	disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()))
 
 	// Suggest In-Project Sarif Files
