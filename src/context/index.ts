@@ -13,30 +13,31 @@ import { Store } from './Store'
 
 export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
 	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
-	return Array.isArray(region)
-		? (region.length === 4
-			? new Selection(...region)
-			: (() => {
-				const [byteOffset, byteLength] = region
-				const startColRaw = byteOffset % 16
-				const endColRaw = (byteOffset + byteLength) % 16
-				return new Selection(
-					Math.floor(byteOffset / 16),
-					10 + startColRaw + Math.floor(startColRaw / 2),
-					Math.floor((byteOffset + byteLength) / 16),
-					10 + endColRaw + Math.floor(endColRaw / 2),
-				)
-			})())
-		: (() => {
-			const line = doc.lineAt(region)
-			return new Selection(
-				line.range.start.line,
-				line.firstNonWhitespaceCharacterIndex,
-				line.range.end.line,
-				line.range.end.character,
-			)
-		})()
+
+	if (!Array.isArray(region)) {
+		const line = doc.lineAt(region)
+		return new Selection(
+			line.range.start.line,
+			line.firstNonWhitespaceCharacterIndex,
+			line.range.end.line,
+			line.range.end.character,
+		)
 	}
+
+	if (region.length === 4) {
+		return new Selection(...region)
+	}
+
+	const [byteOffset, byteLength] = region
+	const startColRaw = byteOffset % 16
+	const endColRaw = (byteOffset + byteLength) % 16
+	return new Selection(
+		Math.floor(byteOffset / 16),
+		10 + startColRaw + Math.floor(startColRaw / 2),
+		Math.floor((byteOffset + byteLength) / 16),
+		10 + endColRaw + Math.floor(endColRaw / 2),
+	)
+}
 
 export async function activate(context: ExtensionContext) {
 	const disposables = context.subscriptions
