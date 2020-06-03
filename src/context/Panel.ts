@@ -4,10 +4,10 @@
 import { autorun, IArraySplice, observable, observe } from 'mobx'
 import { Log, Result } from 'sarif'
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode'
-import { regionToSelection } from '.'
 import { filtersColumn, filtersRow, ResultId, _Region } from '../shared'
 import { Baser } from './Baser'
 import { loadLogs } from './loadLogs'
+import { regionToSelection } from './regionToSelection'
 import { Store } from './Store'
 
 export class Panel {

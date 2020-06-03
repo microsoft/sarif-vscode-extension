@@ -2,42 +2,15 @@
 // Licensed under the MIT License.
 
 import { observe } from 'mobx'
-import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
-import { mapDistinct, parseRegion, _Region } from '../shared'
+import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
+import { mapDistinct, parseRegion } from '../shared'
 import '../shared/extension'
 import { Baser } from './Baser'
 import { loadLogs } from './loadLogs'
 import { Panel } from './Panel'
+import { regionToSelection } from './regionToSelection'
 import { ResultDiagnostic } from './ResultDiagnostic'
 import { Store } from './Store'
-
-export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
-	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
-
-	if (!Array.isArray(region)) {
-		const line = doc.lineAt(region)
-		return new Selection(
-			line.range.start.line,
-			line.firstNonWhitespaceCharacterIndex,
-			line.range.end.line,
-			line.range.end.character,
-		)
-	}
-
-	if (region.length === 4) {
-		return new Selection(...region)
-	}
-
-	const [byteOffset, byteLength] = region
-	const startColRaw = byteOffset % 16
-	const endColRaw = (byteOffset + byteLength) % 16
-	return new Selection(
-		Math.floor(byteOffset / 16),
-		10 + startColRaw + Math.floor(startColRaw / 2),
-		Math.floor((byteOffset + byteLength) / 16),
-		10 + endColRaw + Math.floor(endColRaw / 2),
-	)
-}
 
 export async function activate(context: ExtensionContext) {
 	const disposables = context.subscriptions
