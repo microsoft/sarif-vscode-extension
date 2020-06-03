@@ -10,8 +10,8 @@ import { Log } from 'sarif'
 import { eq, gt, lt } from 'semver'
 import { tmpNameSync } from 'tmp'
 import { ProgressLocation, Uri, window } from 'vscode'
-import { Store } from '.'
 import { augmentLog, JsonMap } from '../shared'
+import { Store } from './Store'
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
 	const logs = uris

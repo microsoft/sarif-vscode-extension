@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 import { Uri, window, workspace } from 'vscode'
-import { Store } from '.'
 import '../shared/extension'
+import { Store } from './Store'
 
 export class Baser {
 	constructor(

@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { computed, IArrayWillSplice, intercept, observable, observe } from 'mobx'
-import { Log, Result } from 'sarif'
-import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Memento, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
+import { observe } from 'mobx'
+import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
 import { mapDistinct, parseRegion, _Region } from '../shared'
 import '../shared/extension'
 import { Baser } from './Baser'
 import { loadLogs } from './loadLogs'
 import { Panel } from './Panel'
 import { ResultDiagnostic } from './ResultDiagnostic'
+import { Store } from './Store'
 
 export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
 	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
@@ -37,29 +37,6 @@ export const regionToSelection = (doc: TextDocument, region: _Region | undefined
 			)
 		})()
 	}
-
-export class Store {
-	static extensionPath: string | undefined
-	static globalState: Memento
-
-	@observable.shallow logs = [] as Log[]
-	@computed get results() {
-		const runs = this.logs.map(log => log.runs).flat()
-		return runs.map(run => run.results).filter(run => run).flat() as Result[]
-	}
-	@computed get distinctArtifactNames() {
-		const fileAndUris = this.logs.map(log => [...log._distinct.entries()]).flat()
-		return mapDistinct(fileAndUris)
-	}
-
-	constructor() {
-		intercept(this.logs, objChange => {
-			const change = objChange as unknown as IArrayWillSplice<Log>
-			change.added = change.added.filter(log => this.logs.every(existing => existing._uri !== log._uri))
-			return objChange
-		})
-	}
-}
 
 export async function activate(context: ExtensionContext) {
 	const disposables = context.subscriptions
