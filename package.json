@@ -94,7 +94,7 @@
 		"test": "mocha",
 		"package": "vsce package",
 		"vscode:prepublish": "webpack",
-		"lint": "tslint -c tslint.json 'src/**/*.ts{,x}'"
+		"lint": "eslint .; exit 0"
 	},
 	"devDependencies": {
 		"@actions/core": "1.2.3",
@@ -109,9 +109,13 @@
 		"@types/semver": "7.1.0",
 		"@types/tmp": "0.1.0",
 		"@types/vscode": "1.44.0",
+		"@typescript-eslint/eslint-plugin": "3.1.0",
+		"@typescript-eslint/parser": "3.1.0",
 		"@zeit/ncc": "0.22.1",
 		"copy-webpack-plugin": "5.1.1",
 		"css-loader": "3.4.2",
+		"eslint": "7.1.0",
+		"eslint-plugin-header": "3.0.0",
 		"json-source-map": "0.6.1",
 		"mocha": "7.1.1",
 		"mock-require": "3.0.3",
