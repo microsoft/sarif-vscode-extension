@@ -162,7 +162,7 @@ export async function activate(context: ExtensionContext) {
 
 	// API
 	return {
-		async openLogs(logs: Uri[], cancellationToken?: CancellationToken) {
+		async openLogs(logs: Uri[], _options: any, cancellationToken?: CancellationToken) {
 			store.logs.push(...await loadLogs(logs, cancellationToken))
 			if (cancellationToken?.isCancellationRequested) return
 			if (store.results.length) panel.show()
