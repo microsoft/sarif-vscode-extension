@@ -6,12 +6,12 @@ import { Log } from 'sarif'
 import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode'
 import { mapDistinct, parseRegion } from '../shared'
 import '../shared/extension'
-import { Baser } from './Baser'
+import { Baser } from './baser'
 import { loadLogs } from './loadLogs'
-import { Panel } from './Panel'
+import { Panel } from './panel'
 import { regionToSelection } from './regionToSelection'
-import { ResultDiagnostic } from './ResultDiagnostic'
-import { Store } from './Store'
+import { ResultDiagnostic } from './resultDiagnostic'
+import { Store } from './store'
 
 export async function activate(context: ExtensionContext) {
 	const disposables = context.subscriptions

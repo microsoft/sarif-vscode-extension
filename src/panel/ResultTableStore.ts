@@ -3,7 +3,7 @@
 
 import { computed, IObservableValue } from 'mobx'
 import { Result } from 'sarif'
-import { Column, Row, TableStore } from './TableStore'
+import { Column, Row, TableStore } from './tableStore'
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
 	constructor(

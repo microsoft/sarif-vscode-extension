@@ -3,7 +3,7 @@
 
 import { Uri, window, workspace } from 'vscode'
 import '../shared/extension'
-import { Store } from './Store'
+import { Store } from './store'
 
 export class Baser {
 	constructor(

@@ -9,7 +9,7 @@ import ReactMarkdown from 'react-markdown'
 import { Result, ThreadFlowLocation } from 'sarif'
 import { parseArtifactLocation, parseLocation } from '../shared'
 import './Details.scss'
-import { postSelectArtifact, postSelectLog } from './IndexStore'
+import { postSelectArtifact, postSelectLog } from './indexStore'
 import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
 
 interface DetailsProps { result: Result, height: IObservableValue<number> }

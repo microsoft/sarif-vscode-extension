@@ -3,7 +3,7 @@
 
 import assert from 'assert'
 import { mockVscode } from '../test/mockVscode' // Must come before Baser.
-import { Baser } from './Baser'
+import { Baser } from './baser'
 
 describe('Baser', () => {
 	it('Array.commonLength', () => {

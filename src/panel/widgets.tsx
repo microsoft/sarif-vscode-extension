@@ -6,8 +6,8 @@ import { observer } from 'mobx-react'
 import * as React from 'react'
 import { Component, CSSProperties, PureComponent, ReactNode } from 'react'
 import { Result } from 'sarif'
-import { FilterKeywordContext } from './FilterKeywordContext'
-import { postSelectArtifact } from './IndexStore'
+import { FilterKeywordContext } from './filterKeywordContext'
+import { postSelectArtifact } from './indexStore'
 import './widgets.scss'
 
 export function css(...names: (string | false | undefined)[]) {

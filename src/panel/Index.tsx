@@ -8,17 +8,17 @@ import { Component, Fragment } from 'react'
 import { ReportingDescriptor } from 'sarif'
 import '../shared/extension'
 import './codicon.css'
-import { Details } from './Details'
-import { FilterKeywordContext } from './FilterKeywordContext'
+import { Details } from './details'
+import { FilterKeywordContext } from './filterKeywordContext'
 import './Index.scss'
-import { IndexStore, postSelectArtifact } from './IndexStore'
-import { ResultTable } from './ResultTable'
-import { RowItem } from './TableStore'
+import { IndexStore, postSelectArtifact } from './indexStore'
+import { ResultTable } from './resultTable'
+import { RowItem } from './tableStore'
 import { Checkrow, Icon, Popover, ResizeHandle, TabPanel } from './widgets'
 
 export * as React from 'react'
 export * as ReactDOM from 'react-dom'
-export { IndexStore as Store } from './IndexStore'
+export { IndexStore as Store } from './indexStore'
 
 @observer export class Index extends Component<{ store: IndexStore }> {
 	private showFilterPopup = observable.box(false)

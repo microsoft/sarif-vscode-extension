@@ -7,7 +7,7 @@
 import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'
 import mock from 'mock-require'
-import { IndexStore } from '../panel/IndexStore'
+import { IndexStore } from '../panel/indexStore'
 import { filtersColumn, filtersRow } from '../shared'
 import { log } from './mockLog'
 import { DiagnosticSeverity } from 'vscode'

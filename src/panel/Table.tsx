@@ -7,7 +7,7 @@ import * as React from 'react'
 import { KeyboardEvent, memo, PureComponent, ReactNode } from 'react'
 import { Badge, css, Hi, Icon, ResizeHandle } from './widgets'
 import './Table.scss'
-import { Column, RowGroup, RowItem, TableStore } from './TableStore'
+import { Column, RowGroup, RowItem, TableStore } from './tableStore'
 
 interface TableProps<T, G> {
 	columns: Column<T>[]

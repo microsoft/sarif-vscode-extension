@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-/// <reference path="json-source-map.d.ts" />
+/// <reference path="jsonSourceMap.d.ts" />
 import { execFileSync } from 'child_process'
 import * as fs from 'fs'
 import jsonMap from 'json-source-map'
@@ -11,7 +11,7 @@ import { eq, gt, lt } from 'semver'
 import { tmpNameSync } from 'tmp'
 import { ProgressLocation, Uri, window } from 'vscode'
 import { augmentLog, JsonMap } from '../shared'
-import { Store } from './Store'
+import { Store } from './store'
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
 	const logs = uris

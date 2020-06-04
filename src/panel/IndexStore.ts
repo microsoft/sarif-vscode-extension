@@ -5,8 +5,8 @@ import { action, computed, intercept, observable, observe, toJS, when } from 'mo
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif'
 import { augmentLog, filtersColumn, filtersRow, parseArtifactLocation, parseRegion } from '../shared'
 import '../shared/extension'
-import { ResultTableStore } from './ResultTableStore'
-import { Row, RowItem } from './TableStore'
+import { ResultTableStore } from './resultTableStore'
+import { Row, RowItem } from './tableStore'
 
 export class IndexStore {
 	constructor(state: Record<string, any>, defaultSelection?: boolean) {

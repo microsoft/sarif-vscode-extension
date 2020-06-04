@@ -6,9 +6,9 @@ import * as React from 'react'
 import { PureComponent, ReactNode } from 'react'
 import { Result } from 'sarif'
 import { renderMessageWithEmbeddedLinks } from './widgets'
-import { ResultTableStore } from './ResultTableStore'
-import { Table } from './Table'
-import { Column } from './TableStore'
+import { ResultTableStore } from './resultTableStore'
+import { Table } from './table'
+import { Column } from './tableStore'
 
 const levelToIcon = {
 	error: 'error',

@@ -13,6 +13,7 @@ module.exports = {
 				"prefer-const": WARN,
 
 				"eqeqeq": WARN,
+				"filenames/match-regex": [WARN, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.d|\.spec)?$"],
 				"header/header": [WARN, "line", [
 					" Copyright (c) Microsoft Corporation. All rights reserved.",
 					" Licensed under the MIT License.",
@@ -33,6 +34,7 @@ module.exports = {
 	},
 	plugins: [
 		"@typescript-eslint",
+		"filenames",
 		"header",
 	],
 }
