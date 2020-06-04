@@ -8,7 +8,7 @@
 			"promptOnClose": true,
 			"problemMatcher": {
 				"background": {
-					"beginsPattern": "node install",
+					"beginsPattern": "npm install",
 					"endsPattern": "context.js.+emitted"
 				},
 				"pattern": [

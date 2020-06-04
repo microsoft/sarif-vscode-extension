@@ -88,7 +88,7 @@
 	},
 	"scripts": {
 		"postinstall": "npm install --force --E @microsoft/sarif-multitool-darwin @microsoft/sarif-multitool-win32",
-		"prestart": "node install",
+		"prestart": "npm install",
 		"start": "webpack --watch",
 		"server": "webpack-dev-server -d",
 		"test": "mocha",
