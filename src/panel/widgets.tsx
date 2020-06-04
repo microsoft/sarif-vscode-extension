@@ -220,7 +220,7 @@ export class ResizeHandle extends Component<{ size: IObservableValue<number>, ho
 // Borrowed from: sarif-web-component.
 // 3.11.6 Messages with embedded links. Replace [text](relatedIndex) with <a href />.
 // 3.10.3 sarif URI scheme is not supported.
-export function renderMessageWithEmbeddedLinks(result: Result, postMessage: (_: any) => {}) {
+export function renderMessageWithEmbeddedLinks(result: Result, _postMessage: (_: any) => {}) {
 	const message = result._message
 	const rxLink = /\[([^\]]*)\]\(([^\)]+)\)/ // Matches [text](id). Similar to below, but with an extra grouping around the id part.
 	return message.match(rxLink)
