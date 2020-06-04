@@ -99,10 +99,10 @@ export async function activate(context: ExtensionContext) {
 
 			const result = diagnostic?.result
 			panel.select(result)
+			if (!result) return // Don't clear the decorations until the next result is selected.
 
 			const editor = window.visibleTextEditors.find(editor => editor.document === doc)
 			if (!editor) return // When would editor be undef?
-			if (!result) return // Don't clear the decorations until the next result is selected.
 
 			const locations = result?.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? []
 			const messages = locations.map((tfl, i) => {
