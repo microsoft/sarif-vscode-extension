@@ -5,7 +5,7 @@ import { Selection, TextDocument } from 'vscode'
 import { _Region } from '../shared'
 import '../shared/extension'
 
-export const regionToSelection = (doc: TextDocument, region: _Region | undefined) => {
+export function regionToSelection(doc: TextDocument, region: _Region | undefined) {
 	if (!region) return new Selection(0, 0, 0, 0) // TODO: Decide if empty regions should be pre-filtered.
 
 	if (!Array.isArray(region)) {
