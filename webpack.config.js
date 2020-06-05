@@ -47,7 +47,7 @@ module.exports = [
 	{
 		...common,
 		name: 'Panel', // Ordered 1st for devServer. https://github.com/webpack/webpack/issues/1849
-		entry: { panel: './src/panel/Index.tsx' },
+		entry: { panel: './src/panel/index.tsx' },
 		output: {
 			...common.output,
 			libraryTarget: 'umd',
@@ -67,7 +67,7 @@ module.exports = [
 	{
 		...common,
 		name: 'Context',
-		entry: { context: './src/context/index.ts' },
+		entry: { context: './src/extension/index.ts' },
 		output: {
 			...common.output,
 			libraryTarget: 'commonjs2',
