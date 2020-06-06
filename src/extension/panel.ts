@@ -84,35 +84,43 @@ export class Panel {
 
 		webview.onDidReceiveMessage(async message => {
 			if (!message) return
-			const {command} = message
-			if (command === 'open') {
-				const uris = await window.showOpenDialog({
-					defaultUri: workspace.workspaceFolders?.[0]?.uri,
-					filters: { 'SARIF files': ['sarif', 'json'] },
-				})
-				if (!uris) return
-				store.logs.push(...await loadLogs(uris))
-			}
-			if (command === 'removeLog') {
-				store.logs.removeWhere(log => log._uri === message.uri)
-			}
-			if (command === 'select') {
-				const {logUri, uri, region} = message as { logUri: string, uri: string, region: _Region}
-				const validatedUri = await basing.translateArtifactToLocal(uri)
-				if (!validatedUri) return
-				await this.selectLocal(logUri, validatedUri, region)
-			}
-			if (command === 'selectLog') {
-				const [logUri, runIndex, resultIndex] = message.id as ResultId
-				const log = store.logs.find(log => log._uri === logUri)
-				const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex]
-				if (!log || !result) return
-				await this.selectLocal(logUri, log._uriUpgraded ?? log._uri, result._logRegion)
-			}
-			if (command === 'setState') {
-				const oldState = Store.globalState.get('view', defaultState)
-				const {state} = message
-				await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)))
+			switch (message.command) {
+				case 'open': {
+					const uris = await window.showOpenDialog({
+						defaultUri: workspace.workspaceFolders?.[0]?.uri,
+						filters: { 'SARIF files': ['sarif', 'json'] },
+					})
+					if (!uris) return
+					store.logs.push(...await loadLogs(uris))
+					break
+				}
+				case 'removeLog': {
+					store.logs.removeWhere(log => log._uri === message.uri)
+					break
+				}
+				case 'select': {
+					const {logUri, uri, region} = message as { logUri: string, uri: string, region: _Region}
+					const validatedUri = await basing.translateArtifactToLocal(uri)
+					if (!validatedUri) return
+					await this.selectLocal(logUri, validatedUri, region)
+					break
+				}
+				case 'selectLog': {
+					const [logUri, runIndex, resultIndex] = message.id as ResultId
+					const log = store.logs.find(log => log._uri === logUri)
+					const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex]
+					if (!log || !result) return
+					await this.selectLocal(logUri, log._uriUpgraded ?? log._uri, result._logRegion)
+					break
+				}
+				case 'setState': {
+					const oldState = Store.globalState.get('view', defaultState)
+					const {state} = message
+					await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)))
+					break
+				}
+				default:
+					throw new Error(`Unhandled command: ${message.command}`,)
 			}
 		}, undefined, context.subscriptions)
 

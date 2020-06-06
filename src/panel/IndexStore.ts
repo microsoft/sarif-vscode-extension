@@ -74,7 +74,8 @@ export class IndexStore {
 
 	// Messages
 	@action.bound public async onMessage(event: MessageEvent) {
-		// if (event.origin === 'http://localhost:8000') return
+		// During development while running via webpack-dev-server, we need to filter
+		// out some development specific messages that would not occur in production.
 		if (!event.data) return // Ignore mysterious empty message
 		if (event.data?.source) return // Ignore 'react-devtools-*'
 		if (event.data?.type) return // Ignore 'webpackOk'
