@@ -8,10 +8,12 @@ type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key,
 export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
+type _RegionBytes = [number, number] // byteOffset, byteLength
+type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
 export type _Region
 	= number // single line
-	| [number, number] // byteOffset, byteLength
-	| [number, number, number, number] // start line, start char, end line, end col
+	| _RegionBytes
+	| _RegionStartEndLineCol
 
 // Underscored members are optional in the source files, but required after preprocessing.
 declare module 'sarif' {
@@ -153,7 +155,7 @@ export function parseRegion(region: Region | undefined): _Region | undefined {
 	if (!region) return undefined
 
 	const {byteOffset, byteLength} = region
-	if (byteOffset !== undefined && byteLength !== undefined) return [byteOffset, byteLength] as [number, number]
+	if (byteOffset !== undefined && byteLength !== undefined) return [byteOffset, byteLength] as _RegionBytes
 
 	let {startLine, startColumn, endLine, endColumn} = region
 	if (!startLine) return undefined // Lines are 1-based so no need to check undef.
@@ -169,7 +171,7 @@ export function parseRegion(region: Region | undefined): _Region | undefined {
 		startColumn,
 		endLine ?? startLine,
 		endColumn ?? (startColumn + 1)
-	] as [number, number, number, number]
+	] as _RegionStartEndLineCol
 }
 
 // Improve: `result` purely used for `_run.artifacts`.
