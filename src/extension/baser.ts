@@ -55,10 +55,6 @@ export class Baser {
 
 	// Hacky: We are using `openTextDocument` to test the existence of documents as VS Code does not provide a dedicated existence API.
 	// The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
-	// Note: Uri.parse()
-	// Uri.parse('a/b.c')	 => file:///a/b.c
-	// Uri.parse('/a/b.c')	 => file:///a/b.c
-	// Uri.parse('c:\a\b.c') => c:a%08.c
 	private async pathExists(path: string) {
 		try {
 			await workspace.openTextDocument(Uri.parse(path))
