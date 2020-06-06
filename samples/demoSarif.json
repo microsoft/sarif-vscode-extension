@@ -1,0 +1,24 @@
+{
+	"$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+	"version": "2.1.0",
+	"properties": {
+		"comment": "A demo empty log for development/testing purposes"
+	},
+	"runs": [
+		{
+			"tool": {
+				"driver": {
+					"name": "Demo"
+				}
+			},
+			"results": [
+				{
+					"ruleId": "DEMO01",
+					"message": {
+						"text": "A result"
+					}
+				}
+			]
+		}
+	]
+}

@@ -25,48 +25,6 @@ It mocks the html environment for `panel/Index.tsx`. Local Storage simulates `gl
 			vscode = acquireVsCodeApi()
 		</script>
 		<script src="panel.js"></script>
-		<script>
-			;(async () => {
-				const defaultState = { // Some duplicated from shared/index
-					version: 0,
-					filtersRow: {
-						Level: {
-							'Error': true,
-							'Warning': true,
-							'Note': true,
-							'None': true,
-						},
-						Baseline: {
-							'New': true,
-							'Unchanged': true,
-							'Updated': true,
-							'Absent': false,
-						},
-						Suppression: {
-							'Not Suppressed': true,
-							'Suppressed': false,
-						},
-					},
-					filtersColumn: {
-						Columns: {
-							'Baseline': false,
-							'Suppression': false,
-							'Rule': false,
-						},
-					},
-				}
-				const state = localStorage.getItem('state')
-				const store = new Store(JSON.parse(state) ?? defaultState, true)
-				const file = 'yourSampleSarif.json'
-				const response = await fetch(file)
-				const log = await response.json()
-				log._uri = `file:///Users/username/projects/${file}`
-				store.logs.push(log)
-				ReactDOM.render(
-					React.createElement(Index, { store }),
-					document.getElementById('root'),
-				)
-			})()
-		</script>
+		<script src="index.js"></script>
 	</body>
 </html>
