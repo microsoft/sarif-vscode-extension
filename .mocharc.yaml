@@ -1,5 +1,6 @@
 # https://github.com/mochajs/mocha/blob/master/example/config/.mocharc.yml
 spec: src/**/*.spec.ts
+bail: true
 extension:
 - ts
 reporter: spec

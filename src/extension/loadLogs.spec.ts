@@ -2,13 +2,10 @@
 // Licensed under the MIT License.
 
 import assert from 'assert'
-import mock from 'mock-require'
+import { execFileSync } from 'child_process'
+import { Log } from 'sarif'
+const proxyquire = require('proxyquire').noCallThru()
 
-const progress = {
-	report: (data: any) => {
-		console.warn(data)
-	}
-}
 class Uri {
 	static parse(value: string) { return new Uri(value) }
 	static file(path: any) { return Uri.parse(`file://${path}`) }
@@ -19,19 +16,15 @@ class Uri {
 	toString() { return this.value }
 	scheme = ''; authority = ''; query = ''; fragment = ''; with = undefined as any; toJSON = {} as any // Stubs
 }
-mock('vscode', {
+const vscode = {
 	ProgressLocation: { Notification: 15 },
 	Uri,
 	window: {
 		showWarningMessage: () => {},
-		withProgress: async (_options: any, task: any) => await task(progress),
+		withProgress: async (_options: any, task: any) => await task({ report: () => {} }),
 		showErrorMessage: async (_message: string) => {}
 	}
-})
-
-import { loadLogs, detectUpgrade } from './loadLogs'
-import { Log } from 'sarif'
-import { mockChildProcess } from '../test/mockVscode'
+}
 
 describe('loadLogs', () => {
 	const uris = [
@@ -42,7 +35,8 @@ describe('loadLogs', () => {
 	].map(path => Uri.parse(path))
 
 	it('loads', async () => {
-		const logs = await loadLogs(uris)
+		const { loadLogs } = proxyquire('./loadLogs', { vscode })
+		const logs = await loadLogs(uris) as Log[]
 		assert.strictEqual(logs.every(log => log.version === '2.1.0'), true)
 	})
 
@@ -57,6 +51,7 @@ describe('loadLogs', () => {
 	it('detects upgrades', async () => {
 		const logsNoUpgrade = [] as Log[]
 		const logsToUpgrade = [] as Log[]
+		const { detectUpgrade } = proxyquire('./loadLogs', { vscode })
 
 		detectUpgrade({
 			version: '2.1.0',
@@ -81,20 +76,25 @@ describe('loadLogs', () => {
 
 	it('honors cancellation - first loop', async () => {
 		const cancel = { isCancellationRequested: true }
+		const { loadLogs } = proxyquire('./loadLogs', { vscode })
 		const logs = await loadLogs(uris, cancel)
 		assert.strictEqual(logs.length, 0)
-		mockChildProcess.onExecFileSync = undefined
 	})
 
 	it('honors cancellation - onExecFile', async () => {
 		const cancel = { isCancellationRequested: false }
 		let logCount = 0
-		mockChildProcess.onExecFileSync = () => {
-			logCount++
-			cancel.isCancellationRequested = logCount >= 1
-		}
+		const { loadLogs } = proxyquire('./loadLogs', {
+			'child_process': {
+				execFileSync: (command: string, args?: ReadonlyArray<string>) => {
+					logCount++
+					cancel.isCancellationRequested = logCount >= 1
+					execFileSync(command, args)
+				}
+			},
+			vscode
+		})
 		const logs = await loadLogs(uris, cancel)
 		assert.strictEqual(logs.length, 3)
-		mockChildProcess.onExecFileSync = undefined
 	})
 })

@@ -4,9 +4,6 @@
 /// <reference path="../panel/global.d.ts" />
 /// Why is this also needed here.
 
-import { execFileSync } from 'child_process'
-import { readFileSync } from 'fs'
-import mock from 'mock-require'
 import { IndexStore } from '../panel/indexStore'
 import { filtersColumn, filtersRow } from '../shared'
 import { log } from './mockLog'
@@ -16,7 +13,7 @@ global.fetch = async () => ({ json: async () => log }) as unknown as Promise<Res
 global.vscode = {
 	postMessage: async (message: any) => {
 		// console.log(`wv2ex message: ${JSON.stringify(message)}`)
-		await mockVscode.panel_onDidReceiveMessage?.(message)
+		await mockVscodeTestFacing.panel_onDidReceiveMessage?.(message)
 	}
 }
 
@@ -29,13 +26,7 @@ class Uri {
 	}
 }
 
-export const mockChildProcess = {
-	onExecFileSync: undefined as (() => void) | undefined
-}
-
-export const mockVscode = {
-	// Test-facing
-	mockReadFile: undefined as string | undefined,
+export const mockVscodeTestFacing = {
 	mockFileSystem: undefined as string[] | undefined,
 	events: [] as string[],
 	showOpenDialogResult: undefined as string[] | undefined,
@@ -47,10 +38,11 @@ export const mockVscode = {
 		}
 		return await activate(context)
 	},
-
 	// Internal
 	panel_onDidReceiveMessage: null as Function | null,
+}
 
+export const mockVscode = {
 	// Extension-facing
 	commands: {
 		registerCommand: () => {},
@@ -78,14 +70,14 @@ export const mockVscode = {
 				filtersRow,
 				filtersColumn,
 			}
-			mockVscode.store = new IndexStore(defaultState)
+			mockVscodeTestFacing.store = new IndexStore(defaultState)
 			return {
 				onDidDispose: () => {},
 				webview: {
 					asWebviewUri: () => '',
-					onDidReceiveMessage: (f: Function) => mockVscode.panel_onDidReceiveMessage = f,
+					onDidReceiveMessage: (f: Function) => mockVscodeTestFacing.panel_onDidReceiveMessage = f,
 					postMessage: async (message: any) => {
-						await mockVscode.store!.onMessage({ data: message } as any)
+						await mockVscodeTestFacing.store!.onMessage({ data: message } as any)
 						// console.log(`postMessage: ${JSON.stringify(message)}`)
 					},
 				},
@@ -93,13 +85,13 @@ export const mockVscode = {
 		},
 		showErrorMessage: (message: any) => console.error(`showErrorMessage: '${message}'`),
 		showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
-		showOpenDialog: async () => mockVscode.showOpenDialogResult!.map(path => ({ path })),
+		showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult!.map(path => ({ path })),
 		showTextDocument: (doc: { uri: any }) => {
-			mockVscode.events.push(`showTextDocument ${doc.uri}`)
+			mockVscodeTestFacing.events.push(`showTextDocument ${doc.uri}`)
 			const editor = {
 				revealRange: () => {},
 				set selection(value: any) {
-					mockVscode.events.push(`selection ${Object.values(value).join(' ')}`)
+					mockVscodeTestFacing.events.push(`selection ${Object.values(value).join(' ')}`)
 				},
 			}
 			return editor
@@ -111,9 +103,9 @@ export const mockVscode = {
 		getConfiguration: () => new Map(),
 		onDidOpenTextDocument: () => {},
 		onDidCloseTextDocument: () => {},
-		openTextDocument: (uri: { fsPath: string }) => {
+		openTextDocument: async (uri: { fsPath: string }) => {
 			// console.log(`openTextDocument ${uri}`)
-			if (mockVscode.mockFileSystem && !mockVscode.mockFileSystem.includes(uri.fsPath)) throw new Error()
+			if (mockVscodeTestFacing.mockFileSystem && !mockVscodeTestFacing.mockFileSystem.includes(uri.fsPath)) throw new Error()
 			return {
 				uri,
 				lineAt: () => ({
@@ -137,16 +129,3 @@ export const mockVscode = {
 		textDocuments: [],
 	},
 }
-
-mock('child_process', {
-	execFileSync: (command: string, args?: ReadonlyArray<string>) => {
-		mockChildProcess.onExecFileSync?.()
-		execFileSync(command, args)
-	}
-})
-mock('fs', {
-	readFileSync: (path: string, options: Record<string, any>) => {
-		return mockVscode.mockReadFile ?? readFileSync(path, options)
-	}
-})
-mock('vscode', mockVscode)

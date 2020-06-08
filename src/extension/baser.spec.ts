@@ -2,10 +2,24 @@
 // Licensed under the MIT License.
 
 import assert from 'assert'
-import { mockVscode } from '../test/mockVscode' // Must come before Baser.
-import { Baser } from './baser'
+import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode'
 
-describe('Baser', () => {
+const proxyquire = require('proxyquire').noCallThru()
+const { Baser } = proxyquire('./baser', {
+	'vscode': {
+		window: {
+			showInformationMessage: mockVscode.window.showInformationMessage,
+			showOpenDialog: mockVscode.window.showOpenDialog,
+		},
+		workspace: {
+			openTextDocument: mockVscode.workspace.openTextDocument,
+			textDocuments: [],
+		},
+		Uri: mockVscode.Uri
+	},
+})
+
+describe('baser', () => {
 	it('Array.commonLength', () => {
 		const commonLength = Array.commonLength(
 			['a', 'b', 'c'],
@@ -15,7 +29,7 @@ describe('Baser', () => {
 	})
 
 	it('Distinct 1', async () => {
-		mockVscode.mockFileSystem = ['/projects/project/file1.txt']
+		mockVscodeTestFacing.mockFileSystem = ['/projects/project/file1.txt']
 		const distinctLocalNames = new Map([
 			['file1.txt', '/projects/project/file1.txt']
 		])
@@ -24,43 +38,43 @@ describe('Baser', () => {
 		])
 		const baser = new Baser(distinctLocalNames, { distinctArtifactNames })
 		const localPath = await baser.translateArtifactToLocal('folder/file1.txt')
-		mockVscode.mockFileSystem = undefined
+		mockVscodeTestFacing.mockFileSystem = undefined
 
 		assert.strictEqual(localPath, '/projects/project/file1.txt') // Should also match file1?
 	})
 
 	it('Picker 1', async () => {
 		const artifact = 'a/b.c'
-		mockVscode.mockFileSystem = ['/x/y/a/b.c']
-		mockVscode.showOpenDialogResult = mockVscode.mockFileSystem
+		mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c']
+		mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem
 		const baser = new Baser(new Map(), { distinctArtifactNames: new Map() })
 		const localPath = await baser.translateArtifactToLocal(artifact)
-		mockVscode.mockFileSystem = undefined
-		mockVscode.showOpenDialogResult = []
+		mockVscodeTestFacing.mockFileSystem = undefined
+		mockVscodeTestFacing.showOpenDialogResult = []
 
 		assert.strictEqual(localPath, '/x/y/a/b.c')
 	})
 
 	it('Picker 2', async () => {
 		const artifact = '/a/b.c'
-		mockVscode.mockFileSystem = ['/x/y/a/b.c']
-		mockVscode.showOpenDialogResult = mockVscode.mockFileSystem
+		mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c']
+		mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem
 		const baser = new Baser(new Map(), { distinctArtifactNames: new Map() })
 		const localPath = await baser.translateArtifactToLocal(artifact)
-		mockVscode.mockFileSystem = undefined
-		mockVscode.showOpenDialogResult = []
+		mockVscodeTestFacing.mockFileSystem = undefined
+		mockVscodeTestFacing.showOpenDialogResult = []
 
 		assert.strictEqual(localPath, '/x/y/a/b.c')
 	})
 
 	it('Picker 3', async () => {
 		const artifact = '/d/e/f/x/y/a/b.c'
-		mockVscode.mockFileSystem = ['/x/y/a/b.c']
-		mockVscode.showOpenDialogResult = mockVscode.mockFileSystem
+		mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c']
+		mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem
 		const baser = new Baser(new Map(), { distinctArtifactNames: new Map() })
 		const localRebased = await baser.translateArtifactToLocal(artifact)
-		mockVscode.mockFileSystem = undefined
-		mockVscode.showOpenDialogResult = []
+		mockVscodeTestFacing.mockFileSystem = undefined
+		mockVscodeTestFacing.showOpenDialogResult = []
 
 		assert.strictEqual(localRebased, '/x/y/a/b.c')
 	})
@@ -75,21 +89,21 @@ describe('Baser', () => {
 
 	it('API-injected baseUris - None', async () => {
 		const artifact = '/a/b/c/d.e'
-		mockVscode.mockFileSystem = []
+		mockVscodeTestFacing.mockFileSystem = []
 		const baser = new Baser(new Map(), { distinctArtifactNames: new Map() })
 		const localRebased = await baser.translateArtifactToLocal(artifact)
-		mockVscode.mockFileSystem = undefined
+		mockVscodeTestFacing.mockFileSystem = undefined
 
 		assert.strictEqual(localRebased, undefined)
 	})
 
 	it('API-injected baseUris - Typical', async () => {
 		const artifact = 'a/b/c/d.e'
-		mockVscode.mockFileSystem = ['x/y/b/c/d.e']
+		mockVscodeTestFacing.mockFileSystem = ['x/y/b/c/d.e']
 		const baser = new Baser(new Map(), { distinctArtifactNames: new Map() })
 		baser.uriBases = ['x/y/b/z']
 		const localRebased = await baser.translateArtifactToLocal(artifact)
-		mockVscode.mockFileSystem = undefined
+		mockVscodeTestFacing.mockFileSystem = undefined
 
 		assert.strictEqual(localRebased, 'x/y/b/c/d.e')
 	})
