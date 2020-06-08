@@ -32,17 +32,6 @@ export async function activate(context: ExtensionContext) {
 	const panel = new Panel(context, baser, store)
 	disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()))
 
-	// Suggest In-Project Sarif Files
-	;(async () => {
-		const urisSarifInWorkspace = await workspace.findFiles('**/*.sarif', '.sarif/**/*.sarif')
-		const count = urisSarifInWorkspace.length
-		if (!count) return
-		if (await window.showInformationMessage(`Discovered ${count} SARIF logs in your workspace.`, 'View in SARIF Panel')) {
-			store.logs.push(...await loadLogs(urisSarifInWorkspace))
-			panel.show()
-		}
-	}) // Disabled while we evaluate the future of this feature.
-
 	// Diagnostics
 	const diagsAll = languages.createDiagnosticCollection('SARIF')
 	const setDiags = (doc: TextDocument) => {
