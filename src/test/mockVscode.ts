@@ -100,6 +100,7 @@ export const mockVscode = {
 		withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} })
 	},
 	workspace: {
+		onDidChangeConfiguration: () => {},
 		getConfiguration: () => new Map(),
 		onDidOpenTextDocument: () => {},
 		onDidCloseTextDocument: () => {},

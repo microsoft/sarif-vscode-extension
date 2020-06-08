@@ -12,6 +12,7 @@ const { Baser } = proxyquire('./baser', {
 			showOpenDialog: mockVscode.window.showOpenDialog,
 		},
 		workspace: {
+			onDidChangeConfiguration: () => {},
 			openTextDocument: mockVscode.workspace.openTextDocument,
 			textDocuments: [],
 		},
