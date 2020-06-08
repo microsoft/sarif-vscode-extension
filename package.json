@@ -142,7 +142,8 @@
 		"react": "16.13.1",
 		"react-dom": "16.13.1",
 		"semver": "7.3.2",
-		"tmp": "0.1.0"
+		"tmp": "0.1.0",
+		"vscode-codicons": "0.0.2"
 	},
 	"optionalDependencies": {
 		"@microsoft/sarif-multitool-darwin": "2.2.5",
