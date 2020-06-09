@@ -188,7 +188,7 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 	return [uri, uriContents]
 }
 
-export const filtersRow = {
+export const filtersRow: Record<string, Record<string, boolean>> = {
 	Level: {
 		'Error': true,
 		'Warning': true,
@@ -205,12 +205,12 @@ export const filtersRow = {
 		'Not Suppressed': true,
 		'Suppressed': false,
 	},
-} as Record<string, Record<string, boolean>>
+}
 
-export const filtersColumn = {
+export const filtersColumn: Record<string, Record<string, boolean>> = {
 	Columns: {
 		'Baseline': false,
 		'Suppression': false,
 		'Rule': false,
 	},
-} as Record<string, Record<string, boolean>>
+}
