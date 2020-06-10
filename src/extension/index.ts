@@ -113,7 +113,7 @@ export async function activate(context: ExtensionContext) {
 			const decorCallouts = rangesEnd.map((range, i) => ({
 				range,
 				hoverMessage: messages[i],
-				renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
+				renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
 			}));
 			editor.setDecorations(decorationTypeCallout, decorCallouts);
 			editor.setDecorations(decorationTypeHighlight, ranges);
@@ -141,6 +141,7 @@ export async function activate(context: ExtensionContext) {
 				const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g) ?? [];
 				return lines.reduce((sum, line, i) => {
 					const lineNo = ((i + 128) * 16).toString(16).toUpperCase().padStart(8, '0');
+					// eslint-disable-next-line no-control-regex
 					const preview = Buffer.from(line, 'hex').toString('utf8').replace(/(\x09|\x0A|\x0B|\x0C|\x0D|\x1B)/g, '?');
 					return `${sum}${lineNo}  ${line.toUpperCase().match(/.{1,2}/g)?.join(' ')}  ${preview}\n`;
 				}, '');
@@ -165,7 +166,7 @@ export async function activate(context: ExtensionContext) {
 
 	// API
 	return {
-		async openLogs(logs: Uri[], _options: any, cancellationToken?: CancellationToken) {
+		async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
 			store.logs.push(...await loadLogs(logs, cancellationToken));
 			if (cancellationToken?.isCancellationRequested) return;
 			if (store.results.length) panel.show();

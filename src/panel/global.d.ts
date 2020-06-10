@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */ // Type info not available for some external libs.
+
 export {};
 
 declare global {

@@ -1,13 +1,17 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-/// <reference path="../panel/global.d.ts" />
-/// Why is this also needed here.
+// Exceptions to make mocking easier.
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
+/// <reference path="../panel/global.d.ts" />
+/// Normally 'global.d.ts' auto imports, not sure why it's not working here.
+
+import { DiagnosticSeverity } from 'vscode';
 import { IndexStore } from '../panel/indexStore';
 import { filtersColumn, filtersRow } from '../shared';
 import { log } from './mockLog';
-import { DiagnosticSeverity } from 'vscode';
 
 global.fetch = async () => ({ json: async () => log }) as unknown as Promise<Response>;
 global.vscode = {
@@ -66,7 +70,6 @@ export const mockVscode = {
 		createTextEditorDecorationType: () => {},
 		createWebviewPanel: () => {
 			const defaultState = {
-				version: 0,
 				filtersRow,
 				filtersColumn,
 			};

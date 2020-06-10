@@ -22,15 +22,14 @@ export type _Region
 declare module 'sarif' {
 	interface Log {
 		_uri: string
-		_uriUpgraded?: string
-		_jsonMap?: JsonMap
-		_augmented?: boolean
+		_uriUpgraded?: string // Only present if upgraded.
+		_jsonMap?: JsonMap // Only used by the "extension" side for navigating original SARIF sources. The "panel" side does not need this feature and thus does not use this field.
+		_augmented: boolean
 		_distinct: Map<string, string> // Technically per Run, practically doesn't matter right now.
 	}
 
 	interface Run {
-		_index?: number
-		_implicitBase?: string
+		_index: number
 	}
 
 	interface Result {
@@ -42,9 +41,9 @@ declare module 'sarif' {
 		_uriContents?: string // ArtifactContent. Do not use this uri for display.
 		_relativeUri?: string
 		_region?: _Region
-		_line: number
+		_line: number // -1 if empty.
 		_rule?: ReportingDescriptor
-		_message: string
+		_message: string // '—' if empty.
 		_markdown?: string
 		_suppression?: 'not suppressed' | 'suppressed'
 	}
@@ -80,7 +79,7 @@ export function augmentLog(log: Log) {
 	log.runs.forEach((run, runIndex) => {
 		run._index = runIndex;
 
-		let implicitBase = undefined as string[] | undefined;
+		let implicitBaseParts = undefined as string[] | undefined;
 		run.results?.forEach((result, resultIndex) => {
 			result._log = log;
 			result._run = run;
@@ -98,8 +97,8 @@ export function augmentLog(log: Log) {
 			result._uriContents = uriContents;
 			{
 				const parts = uri?.split('/');
-				implicitBase = // Base calc (inclusive of dash for now)
-					implicitBase?.slice(0, Array.commonLength(implicitBase, parts ?? []))
+				implicitBaseParts = // Base calc (inclusive of dash for now)
+					implicitBaseParts?.slice(0, Array.commonLength(implicitBaseParts, parts ?? []))
 					?? parts;
 				const file = parts?.pop();
 				if (file && uri) {
@@ -121,9 +120,9 @@ export function augmentLog(log: Log) {
 				: 'suppressed';
 		});
 
-		run._implicitBase = implicitBase?.join('/');
+		const implicitBase = implicitBaseParts?.join('/')  ?? '';
 		run.results?.forEach(result => {
-			result._relativeUri = result._uri?.replace(run._implicitBase ?? '' , '') ?? ''; // For grouping, Empty works more predictably than undefined
+			result._relativeUri = result._uri?.replace(implicitBase , '') ?? ''; // For grouping, Empty works more predictably than undefined
 		});
 	});
 	log._distinct = mapDistinct(fileAndUris);

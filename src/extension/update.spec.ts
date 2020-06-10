@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */ // Allowing any for mocks.
+
 import assert from 'assert';
 import { fake } from 'sinon';
 
@@ -56,7 +58,7 @@ const makeStubs = () => ({
 	'follow-redirects': {
 		https: {
 			get: (
-				_options: {},
+				_options: Record<string, unknown>,
 				callback?: (res: any) => void
 			) => {
 				const listeners = {} as Record<string, any>;

@@ -3,13 +3,13 @@
 
 import { action, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, filtersColumn, filtersRow, parseArtifactLocation, parseRegion } from '../shared';
+import { augmentLog, filtersColumn, filtersRow, parseArtifactLocation, parseRegion, Visibility } from '../shared';
 import '../shared/extension';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
 
 export class IndexStore {
-	constructor(state: Record<string, any>, defaultSelection?: boolean) {
+	constructor(state: Record<string, Record<string, Record<string, Visibility>>>, defaultSelection?: boolean) {
 		this.filtersRow = state.filtersRow;
 		this.filtersColumn = state.filtersColumn;
 		const setState = () => {
@@ -24,6 +24,8 @@ export class IndexStore {
 		observe(this.filtersRow.Suppression, setState);
 		observe(this.filtersColumn.Columns, setState);
 
+		// `change` should be `IArrayWillSplice<Log>` but `intercept()` is not being inferred properly.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		intercept(this.logs, (change: any) => {
 			if (change.type !== 'splice') throw new Error(`Unexpected change type. ${change.type}`);
 			change.added.forEach(augmentLog);

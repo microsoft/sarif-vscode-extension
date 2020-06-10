@@ -1,9 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */ // Allowing any for mocks.
+
 import assert from 'assert';
 import { execFileSync } from 'child_process';
 import { Log } from 'sarif';
+
 const proxyquire = require('proxyquire').noCallThru();
 
 class Uri {

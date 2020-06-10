@@ -25,7 +25,7 @@ export async function update() {
 	if (!isUpdateEnabled()) return false;
 
 	const extensionFullName = `MS-SarifVSCode.${extensionName}`;
-	const vsixAssetName: string = `${extensionFullName}.vsix`;
+	const vsixAssetName = `${extensionFullName}.vsix`;
 	const installedVersion = extensions.getExtension(extensionFullName)!.packageJSON.version;
 
 	// 1) Find the right release from the list.

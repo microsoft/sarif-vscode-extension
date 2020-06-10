@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/* eslint-disable no-prototype-builtins */ // Only using prototype on `Array` `Object` which are safe.
+/* eslint-disable @typescript-eslint/no-explicit-any */ // Unable to express certain generic extensions.
+
 export {};
 
 // Causing colorization issues if placed above Array.prototype...
@@ -28,6 +31,7 @@ declare global {
 Object.defineProperty(Array, 'commonLength', {
 	value: function(a: any[], b: any[]): number {
 		let i = 0;
+		// eslint-disable-next-line no-empty
 		for (; a[i] === b[i] && i < a.length && i < b.length; i++) {}
 		return i;
 	}

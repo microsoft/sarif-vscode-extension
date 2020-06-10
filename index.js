@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-;(async () => {
+(async () => {
 	const defaultState = { // Some duplicated from shared/index
 		version: 0,
 		filtersRow: {

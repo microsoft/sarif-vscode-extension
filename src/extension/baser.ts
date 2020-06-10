@@ -144,7 +144,7 @@ export class Baser {
 		return validatedUri;
 	}
 
-	public static *commonIndices(a: any[], b: any[]) { // Add comparator?
+	public static *commonIndices<T>(a: T[], b: T[]) { // Add comparator?
 		for (const [aIndex, aPart] of a.entries()) {
 			for (const [bIndex, bPart] of b.entries()) {
 				if (aPart === bPart) yield [aIndex, bIndex];

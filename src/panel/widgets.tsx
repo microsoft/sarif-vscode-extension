@@ -56,7 +56,7 @@ export class Hi extends React.Component<React.HTMLAttributes<HTMLDivElement>> {
 				return React.cloneElement(children, undefined, hi(children.props.children));
 			if (!['number', 'string'].includes(typeof children))
 				return children;
-			term = term.replace(/[\-\[\]\/\{\}\(\)\+\?\.\\\^\$\|]/g, '\\$&').replace(/\*/g, '.*');
+			term = term.replace(/[-[\]/{}()+?.\\^$|]/g, '\\$&').replace(/\*/g, '.*');
 			return (children + '')
 				.split(new RegExp(`(${term.split(/\s+/).filter(part => part).join('|')})`, 'i'))
 				.map((word, i) => i % 2 === 1 ? <mark key={i}>{word}</mark> : word);
@@ -221,12 +221,12 @@ export class ResizeHandle extends Component<{ size: IObservableValue<number>, ho
 // Borrowed from: sarif-web-component.
 // 3.11.6 Messages with embedded links. Replace [text](relatedIndex) with <a href />.
 // 3.10.3 sarif URI scheme is not supported.
-export function renderMessageWithEmbeddedLinks(result: Result, _postMessage: (_: any) => {}) {
+export function renderMessageWithEmbeddedLinks(result: Result, _postMessage: (_: unknown) => void) {
 	const message = result._message;
-	const rxLink = /\[([^\]]*)\]\(([^\)]+)\)/; // Matches [text](id). Similar to below, but with an extra grouping around the id part.
+	const rxLink = /\[([^\]]*)\]\(([^)]+)\)/; // Matches [text](id). Similar to below, but with an extra grouping around the id part.
 	return message.match(rxLink)
 		? message
-			.split(/(\[[^\]]*\]\([^\)]+\))/g)
+			.split(/(\[[^\]]*\]\([^)]+\))/g)
 			.map((item, i) => {
 				if (i % 2 === 0) return item;
 				const [_, text, id] = item.match(rxLink)!; // Safe since it was split by the same RegExp.

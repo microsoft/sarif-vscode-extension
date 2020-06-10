@@ -49,7 +49,7 @@ export { IndexStore as Store } from './indexStore';
 							<input type="text" placeholder="Filter results" value={store.keywords}
 								onChange={e => store.keywords = e.target.value}
 								onKeyDown={e => { if (e.key === 'Escape') { store.keywords = ''; } } }/>
-							<Icon name="filter" title="Filter Options" onMouseDown={e => e.stopPropagation()} onClick={e => showFilterPopup.set(!showFilterPopup.get())} />
+							<Icon name="filter" title="Filter Options" onMouseDown={e => e.stopPropagation()} onClick={() => showFilterPopup.set(!showFilterPopup.get())} />
 						</div>
 						<Icon name={allCollapsed ? 'expand-all' : 'collapse-all'}
 							title={allCollapsed ? 'Expand All' : 'Collapse All'}

@@ -62,6 +62,8 @@ export class TableStore<T, G> {
 		return [...map.values()].sortBy(g => g.items.length, true); // High to low.
 	}
 
+	// Unable to express "columns of any varying types" otherwise.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	get columns(): Column<any>[] { return []; }
 	protected get filter() { return (_item: T) => true; }
 	@observable public sortColumn = undefined as string | undefined
