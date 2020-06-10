@@ -15,7 +15,10 @@ export type _Region
 	| _RegionBytes
 	| _RegionStartEndLineCol
 
-// Underscored members are optional in the source files, but required after preprocessing.
+// The extended members we're adding here are prefixed with an underscore.
+// Using this marker to easily get a sense of how much we're depending on these extended members.
+// Once this design stabilities, these underscores will likely be removed as
+// I don't see a need for them in the long term (after the design phase).
 declare module 'sarif' {
 	interface Log {
 		_uri: string
