@@ -6,6 +6,7 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { Component, CSSProperties, PureComponent, ReactNode } from 'react';
 import { Result } from 'sarif';
+import { Visibility } from '../shared';
 import { FilterKeywordContext } from './filterKeywordContext';
 import { postSelectArtifact } from './indexStore';
 import './widgets.scss';
@@ -20,10 +21,10 @@ export class Badge extends PureComponent<{ text: { toString: () => string } }> {
 	}
 }
 
-@observer export class Checkrow extends PureComponent<{ label: string, state: Record<string, boolean>}> {
+@observer export class Checkrow extends PureComponent<{ label: string, state: Record<string, Visibility>}> {
 	render() {
 		const {label, state} = this.props;
-		return <div className="svCheckrow" onClick={() => state[label] = !state[label]}>
+		return <div className="svCheckrow" onClick={() => state[label] = state[label] === 'visible' ? undefined : 'visible'}>
 			<div className={css('svCheckbox', state[label] && 'svChecked')} tabIndex={0}
 				role="checkbox" aria-checked="false" aria-label="" title="">
 				<Icon name="check" />
