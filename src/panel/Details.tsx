@@ -8,7 +8,7 @@ import { Component } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Result, ThreadFlowLocation } from 'sarif';
 import { parseArtifactLocation, parseLocation } from '../shared';
-import './Details.scss';
+import './details.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets';
 

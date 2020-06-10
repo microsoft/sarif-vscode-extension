@@ -6,7 +6,7 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { KeyboardEvent, memo, PureComponent, ReactNode } from 'react';
 import { Badge, css, Hi, Icon, ResizeHandle } from './widgets';
-import './Table.scss';
+import './table.scss';
 import { Column, RowGroup, RowItem, TableStore } from './tableStore';
 
 interface TableProps<T, G> {

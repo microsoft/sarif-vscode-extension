@@ -10,7 +10,7 @@ import '../shared/extension';
 import 'vscode-codicons/dist/codicon.css';
 import { Details } from './details';
 import { FilterKeywordContext } from './filterKeywordContext';
-import './Index.scss';
+import './index.scss';
 import { IndexStore, postSelectArtifact } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
