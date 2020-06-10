@@ -61,7 +61,7 @@ const makeStubs = () => ({
 			) => {
 				const listeners = {} as Record<string, any>
 				callback?.({
-					pipe: (stream: any) => undefined,
+					pipe: () => undefined,
 					on: (event: string, listener: any) => listeners[event] = listener
 				})
 				listeners['end']?.()
