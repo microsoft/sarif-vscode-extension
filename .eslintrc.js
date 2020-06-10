@@ -1,31 +1,30 @@
-// ERROR = 2
-const OFF = 0, WARN = 1
+const OFF = 0, ERROR = 2
 
 module.exports = {
 	overrides: [
 		{
-			files: ["src/**/*.ts{,x}"], // 'index.js', 'webpack.config.js'
+			files: ["src/**/*.ts{,x}"],
 			extends: [
 				"eslint:recommended",
 				"plugin:@typescript-eslint/eslint-recommended",
 				"plugin:@typescript-eslint/recommended"
 			],
 			rules: {
-				"new-cap": WARN,
-				"no-console": [WARN, {allow: ["error", "warn"]}],
-				"no-throw-literal": WARN,
-				"no-var": WARN,
-				"prefer-const": WARN,
+				"new-cap": ERROR,
+				"no-console": [ERROR, {allow: ["error", "warn"]}],
+				"no-throw-literal": ERROR,
+				"no-var": ERROR,
+				"prefer-const": ERROR,
 
-				"eqeqeq": WARN,
-				"filenames/match-regex": [WARN, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|spec))?$"],
-				"header/header": [WARN, "line", [
+				"eqeqeq": ERROR,
+				"filenames/match-regex": [ERROR, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|spec))?$"],
+				"header/header": [ERROR, "line", [
 					" Copyright (c) Microsoft Corporation. All rights reserved.",
 					" Licensed under the MIT License.",
 				]],
-				"no-trailing-spaces": WARN,
-				"quotes": [WARN, "single", {"allowTemplateLiterals": true}],
-				"semi": WARN,
+				"no-trailing-spaces": ERROR,
+				"quotes": [ERROR, "single", {"allowTemplateLiterals": true}],
+				"semi": ERROR,
 
 				// Exceptions with Justifications.
 				"no-undef": OFF, // Requires too many exception account for Mocha, Node.js and browser globals. Typescript also already checks for this.
