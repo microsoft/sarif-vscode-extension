@@ -59,7 +59,7 @@ export class IndexStore {
 		this.keywords = '';
 		for (const column in this.filtersRow) {
 			for (const value in this.filtersRow[column]) {
-				this.filtersRow[column][value] = true;
+				this.filtersRow[column][value] = 'visible';
 			}
 		}
 	}

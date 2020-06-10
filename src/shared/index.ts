@@ -188,29 +188,31 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 	return [uri, uriContents];
 }
 
-export const filtersRow: Record<string, Record<string, boolean>> = {
+export type Visibility = 'visible' | undefined;
+
+export const filtersRow: Record<string, Record<string, Visibility>> = {
 	Level: {
-		'Error': true,
-		'Warning': true,
-		'Note': true,
-		'None': true,
+		'Error': 'visible',
+		'Warning': 'visible',
+		'Note': 'visible',
+		'None': 'visible',
 	},
 	Baseline: {
-		'New': true,
-		'Unchanged': true,
-		'Updated': true,
-		'Absent': false,
+		'New': 'visible',
+		'Unchanged': 'visible',
+		'Updated': 'visible',
+		'Absent': undefined,
 	},
 	Suppression: {
-		'Not Suppressed': true,
-		'Suppressed': false,
+		'Not Suppressed': 'visible',
+		'Suppressed': undefined,
 	},
 };
 
-export const filtersColumn: Record<string, Record<string, boolean>> = {
+export const filtersColumn: Record<string, Record<string, Visibility>> = {
 	Columns: {
-		'Baseline': false,
-		'Suppression': false,
-		'Rule': false,
+		'Baseline': undefined,
+		'Suppression': undefined,
+		'Rule': undefined,
 	},
 };

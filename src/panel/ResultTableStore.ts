@@ -3,6 +3,7 @@
 
 import { computed, IObservableValue } from 'mobx';
 import { Result } from 'sarif';
+import { Visibility } from '../shared';
 import { Column, Row, TableStore } from './tableStore';
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
@@ -12,8 +13,8 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 		resultsSource: { results: ReadonlyArray<Result> },
 		readonly filtersSource: {
 			keywords: string,
-			filtersRow: Record<string, Record<string, boolean>>,
-			filtersColumn: Record<string, Record<string, boolean>>
+			filtersRow: Record<string, Record<string, Visibility>>,
+			filtersColumn: Record<string, Record<string, Visibility>>
 		},
 		readonly selection: IObservableValue<Row | undefined>) {
 		super(
@@ -52,7 +53,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 	protected get filter() {
 		const {keywords, filtersRow} = this.filtersSource;
 		const {columns} = this;
-		const mapToList = (record: Record<string, boolean>) => Object.entries(record)
+		const mapToList = (record: Record<string, Visibility>) => Object.entries(record)
 			.filter(([, value]) => value)
 			.map(([label,]) => label.toLowerCase());
 
