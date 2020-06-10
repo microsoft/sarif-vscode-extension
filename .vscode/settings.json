@@ -11,13 +11,16 @@
 		"abcdefghijklmnopqrstuvwxyz",
 		"autorun",
 		"codicon",
+		"codicons",
 		"devtools",
 		"eqeqeq",
 		"mobx",
 		"multitool",
 		"ploc",
 		"rebased",
+		"redirectable",
 		"rloc",
-		"tfloc"
+		"tfloc",
+		"vsix"
 	]
 }
