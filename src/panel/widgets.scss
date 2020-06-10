@@ -15,94 +15,94 @@
     text-align: center;
     display: inline-block;
     box-sizing: border-box;
-	background-color: var(--vscode-badge-background);
-	color: var(--vscode-badge-foreground);
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
 }
 
 .svCheckrow {
-	cursor: pointer;
-	padding: 3px 0;
-	display: flex;
-	align-items: center;
+    cursor: pointer;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
 
-	.svCheckbox {
-		box-sizing: border-box;
-		height: 18px;
-		width: 18px;
-		border: 1px solid transparent;
-		border-radius: 3px;
-		margin-left: 0;
-		margin-right: 9px; // Matches VS Code settings page.
-		background-color: var(--vscode-input-background);
+    .svCheckbox {
+        box-sizing: border-box;
+        height: 18px;
+        width: 18px;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        margin-left: 0;
+        margin-right: 9px; // Matches VS Code settings page.
+        background-color: var(--vscode-input-background);
 
-		.codicon {
-			width: unset !important;
-			line-height: unset !important;
-			opacity: 0;
-		}
+        .codicon {
+            width: unset !important;
+            line-height: unset !important;
+            opacity: 0;
+        }
 
-		&.svChecked { 
-			.codicon { opacity: 1; }
-		}
-	}
+        &.svChecked { 
+            .codicon { opacity: 1; }
+        }
+    }
 }
 
 .svList {
-	&.svListZero {
-		display: grid;
-		align-items: center;
-		justify-items: center;
-	}
+    &.svListZero {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+    }
 }
 
 .svPopover {
-	position: absolute;
-	z-index: 1;
+    position: absolute;
+    z-index: 1;
     background: var(--vscode-menu-background);
     box-shadow: var(--vscode-widget-shadow) 0px 0px 8px;
-	padding: 10px 28px 14px 16px;
-	user-select: none;
-	display: flex;
-	flex-direction: column;
-	color: var(--vscode-foreground); // VS Code has alpha=0.9, but couldn't find the function.
+    padding: 10px 28px 14px 16px;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    color: var(--vscode-foreground); // VS Code has alpha=0.9, but couldn't find the function.
 
-	& > div.svPopoverTitle {
-		&:not(:first-child) {
-			margin-top: 12px;
-		}
-		color: var(--vscode-settings-headerForeground);
-		font-weight: 600;
-		margin-bottom: 2px;
-	}
+    & > div.svPopoverTitle {
+        &:not(:first-child) {
+            margin-top: 12px;
+        }
+        color: var(--vscode-settings-headerForeground);
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
 
-	& > .svPopoverDivider {
-		height: 1px;
-		margin: 12px -28px 0 -16px;
-		background: var(--vscode-editorGroup-border);
-	}
+    & > .svPopoverDivider {
+        height: 1px;
+        margin: 12px -28px 0 -16px;
+        background: var(--vscode-editorGroup-border);
+    }
 }
 
 .svTabs {
-	display: flex;
-	padding: 0 12px;
-	user-select: none;
+    display: flex;
+    padding: 0 12px;
+    user-select: none;
 
-	& > .svListItem {
-		cursor: pointer;
-		padding: 4px 10px 3px;
+    & > .svListItem {
+        cursor: pointer;
+        padding: 4px 10px 3px;
 
-		& > div {
-			border-bottom: 1px solid transparent;
-			text-transform: uppercase;
-			font-size: 11px;
-			line-height: 27px;
-			color: var(--vscode-panelTitle-activeForeground);
-			color: rgb(139, 139, 139); // svSecondary
-		}
+        & > div {
+            border-bottom: 1px solid transparent;
+            text-transform: uppercase;
+            font-size: 11px;
+            line-height: 27px;
+            color: var(--vscode-panelTitle-activeForeground);
+            color: rgb(139, 139, 139); // svSecondary
+        }
 
-		&.svItemSelected > div {
-			color: var(--vscode-panelTitle-activeForeground);
-			border-bottom-color: var(--vscode-panelTitle-activeForeground);
-		}
-	}
+        &.svItemSelected > div {
+            color: var(--vscode-panelTitle-activeForeground);
+            border-bottom-color: var(--vscode-panelTitle-activeForeground);
+        }
+    }
 }

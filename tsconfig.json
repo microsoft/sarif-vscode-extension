@@ -1,23 +1,23 @@
 {
-	"compilerOptions": {
-		"module": "commonjs",
-		"target": "es2019",
-		"sourceMap": true,
-		
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2019",
+        "sourceMap": true,
+        
 
-		"experimentalDecorators": true,
-		"esModuleInterop": true,
-		"jsx": "react",
-		"resolveJsonModule": true,
+        "experimentalDecorators": true,
+        "esModuleInterop": true,
+        "jsx": "react",
+        "resolveJsonModule": true,
 
-		"noFallthroughCasesInSwitch": true,
-		"noImplicitReturns": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"strict": true
-	},
-	"exclude": [
-		"node_modules",
-		".vscode-test"
-	]
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "strict": true
+    },
+    "exclude": [
+        "node_modules",
+        ".vscode-test"
+    ]
 }

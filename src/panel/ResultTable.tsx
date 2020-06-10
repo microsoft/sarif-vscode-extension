@@ -11,47 +11,47 @@ import { Table } from './table';
 import { Column } from './tableStore';
 
 const levelToIcon = {
-	error: 'error',
-	warning: 'warning',
-	note: 'info',
-	none: 'issues',
-	undefined: 'question',
+    error: 'error',
+    warning: 'warning',
+    note: 'info',
+    none: 'issues',
+    undefined: 'question',
 };
 
 interface ResultTableProps<G> {
-	store: ResultTableStore<G>
-	onClearFilters: () => void
-	renderGroup: (group: G) => ReactNode
+    store: ResultTableStore<G>
+    onClearFilters: () => void
+    renderGroup: (group: G) => ReactNode
 }
 @observer export class ResultTable<G> extends PureComponent<ResultTableProps<G>> {
-	private renderCell = (column: Column<Result>, result: Result) => {
-		const customRenderers = {
-			'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
-			'Line':     result => <span>{result._line < 0 ? '—' : result._line}</span>,
-			'Message':  result => <span>{renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</span>,
-			'Rule':     result => <>
-				<span>{result._rule?.name ?? '—'}</span>
-				<span className="svSecondary">{result.ruleId}</span>
-			</>,
-		} as Record<string, (result: Result) => ReactNode>;
-		const defaultRenderer = (result: Result) => {
-			const capitalize = (str: string) => `${str[0].toUpperCase()}${str.slice(1)}`;
-			return <span>{capitalize(column.toString(result))}</span>;
-		};
-		const renderer = customRenderers[column.name] ?? defaultRenderer;
-		return renderer(result);
-	}
+    private renderCell = (column: Column<Result>, result: Result) => {
+        const customRenderers = {
+            'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
+            'Line':     result => <span>{result._line < 0 ? '—' : result._line}</span>,
+            'Message':  result => <span>{renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</span>,
+            'Rule':     result => <>
+                <span>{result._rule?.name ?? '—'}</span>
+                <span className="svSecondary">{result.ruleId}</span>
+            </>,
+        } as Record<string, (result: Result) => ReactNode>;
+        const defaultRenderer = (result: Result) => {
+            const capitalize = (str: string) => `${str[0].toUpperCase()}${str.slice(1)}`;
+            return <span>{capitalize(column.toString(result))}</span>;
+        };
+        const renderer = customRenderers[column.name] ?? defaultRenderer;
+        return renderer(result);
+    }
 
-	render() {
-		const { store, onClearFilters, renderGroup } = this.props;
-		const { renderCell } = this;
-		return <Table columns={store.visibleColumns} store={store}
-			renderIconName={result => levelToIcon[result.level ?? 'undefined']}
-			renderGroup={renderGroup} renderCell={renderCell}>
-			<div className="svZeroData">
-				<span>No results found with provided filter criteria.</span>
-				<div onClick={onClearFilters}>Clear Filters</div>
-			</div>
-		</Table>;
-	}
+    render() {
+        const { store, onClearFilters, renderGroup } = this.props;
+        const { renderCell } = this;
+        return <Table columns={store.visibleColumns} store={store}
+            renderIconName={result => levelToIcon[result.level ?? 'undefined']}
+            renderGroup={renderGroup} renderCell={renderCell}>
+            <div className="svZeroData">
+                <span>No results found with provided filter criteria.</span>
+                <div onClick={onClearFilters}>Clear Filters</div>
+            </div>
+        </Table>;
+    }
 }

@@ -1,28 +1,28 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "start",
-			"isBackground": true,
-			"promptOnClose": true,
-			"problemMatcher": {
-				"background": {
-					"beginsPattern": "npm install",
-					"endsPattern": "context.js.+emitted"
-				},
-				"pattern": [
-					{
-						"regexp": "ERROR in (.+)$",
-						"kind": "file",
-						"file": 1
-					},
-					{
-						"regexp": "(.+)$",
-						"message": 1
-					}
-				]
-			}
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "start",
+            "isBackground": true,
+            "promptOnClose": true,
+            "problemMatcher": {
+                "background": {
+                    "beginsPattern": "npm install",
+                    "endsPattern": "context.js.+emitted"
+                },
+                "pattern": [
+                    {
+                        "regexp": "ERROR in (.+)$",
+                        "kind": "file",
+                        "file": 1
+                    },
+                    {
+                        "regexp": "(.+)$",
+                        "message": 1
+                    }
+                ]
+            }
+        }
+    ]
 }

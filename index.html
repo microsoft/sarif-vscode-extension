@@ -4,27 +4,27 @@ It mocks the html environment for `panel/Index.tsx`. Local Storage simulates `gl
 -->
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<link rel="stylesheet" href="index.css">
-		<style>
-			code { font-family: SF Mono, Menlo, Monaco, 'Courier New', monospace; }
-		</style>
-	</head>
-	<body class="vscode-dark">
-		<div id="root" style="margin: 50px 300px; position: relative;"></div><!-- relative for Popover -->
-		<script>
-			acquireVsCodeApi = (() => ({ postMessage: message => {
-				const {command, ...rest} = message;
-				if (command === 'setState') {
-					const {state} = message;
-					localStorage.setItem('state', state);
-					return;
-				}
-				console.log(command, JSON.stringify(rest));
-			} }))
-			vscode = acquireVsCodeApi();
-		</script>
-		<script src="panel.js"></script>
-		<script src="index.js"></script>
-	</body>
+    <head>
+        <link rel="stylesheet" href="index.css">
+        <style>
+            code { font-family: SF Mono, Menlo, Monaco, 'Courier New', monospace; }
+        </style>
+    </head>
+    <body class="vscode-dark">
+        <div id="root" style="margin: 50px 300px; position: relative;"></div><!-- relative for Popover -->
+        <script>
+            acquireVsCodeApi = (() => ({ postMessage: message => {
+                const {command, ...rest} = message;
+                if (command === 'setState') {
+                    const {state} = message;
+                    localStorage.setItem('state', state);
+                    return;
+                }
+                console.log(command, JSON.stringify(rest));
+            } }))
+            vscode = acquireVsCodeApi();
+        </script>
+        <script src="panel.js"></script>
+        <script src="index.js"></script>
+    </body>
 </html>

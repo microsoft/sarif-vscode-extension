@@ -2,5 +2,5 @@
 // Licensed under the MIT License.
 
 declare module 'json-source-map' {
-	function parse(json: string): unknown
+    function parse(json: string): unknown
 }
