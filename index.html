@@ -14,15 +14,15 @@ It mocks the html environment for `panel/Index.tsx`. Local Storage simulates `gl
 		<div id="root" style="margin: 50px 300px; position: relative;"></div><!-- relative for Popover -->
 		<script>
 			acquireVsCodeApi = (() => ({ postMessage: message => {
-				const {command, ...rest} = message
+				const {command, ...rest} = message;
 				if (command === 'setState') {
-					const {state} = message
-					localStorage.setItem('state', state)
-					return
+					const {state} = message;
+					localStorage.setItem('state', state);
+					return;
 				}
-				console.log(command, JSON.stringify(rest))
+				console.log(command, JSON.stringify(rest));
 			} }))
-			vscode = acquireVsCodeApi()
+			vscode = acquireVsCodeApi();
 		</script>
 		<script src="panel.js"></script>
 		<script src="index.js"></script>

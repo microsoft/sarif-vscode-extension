@@ -1,5 +1,8 @@
-const CopyPlugin = require('copy-webpack-plugin')
-const outputPath = require('path').join(__dirname, 'out')
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+const CopyPlugin = require('copy-webpack-plugin');
+const outputPath = require('path').join(__dirname, 'out');
 
 const common = {
 	resolve: {
@@ -41,7 +44,7 @@ const common = {
 		performance: true,
 		timings: true,
 	},
-}
+};
 
 module.exports = [
 	{
@@ -84,4 +87,4 @@ module.exports = [
 			]),
 		],
 	},
-]
+];

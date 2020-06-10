@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-export {}
+export {};
 
 declare global {
 	// Disagree with Typescript built-in typing `indexOf()`. It does not allow `searchElement` undefined.
@@ -12,8 +12,8 @@ declare global {
 		indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number
 	}
 
-	const acquireVsCodeApi: any // VS Code does not provide type info.
-	const vscode: any // VS Code does not provide type info.
+	const acquireVsCodeApi: any; // VS Code does not provide type info.
+	const vscode: any; // VS Code does not provide type info.
 
 	namespace NodeJS {
 		interface Global {

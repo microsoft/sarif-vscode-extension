@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { computed, IObservableValue } from 'mobx'
-import { Result } from 'sarif'
-import { Column, Row, TableStore } from './tableStore'
+import { computed, IObservableValue } from 'mobx';
+import { Result } from 'sarif';
+import { Column, Row, TableStore } from './tableStore';
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
 	constructor(
@@ -20,8 +20,8 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 			groupBy,
 			resultsSource,
 			selection,
-		)
-		this.sortColumn = this.columnsPermanent[0].name
+		);
+		this.sortColumn = this.columnsPermanent[0].name;
 	}
 
 	// Columns
@@ -36,41 +36,41 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 		new Column<Result>('Rule', 220, result => `${result._rule?.name ?? '—'} ${result.ruleId ?? '—'}`),
 	]
 	get columns() {
-		return [...this.columnsPermanent, ...this.columnsOptional]
+		return [...this.columnsPermanent, ...this.columnsOptional];
 	}
 	@computed get visibleColumns() {
-		const {filtersColumn} = this.filtersSource
+		const {filtersColumn} = this.filtersSource;
 		const optionalColumnNames = Object.entries(filtersColumn.Columns)
 			.filter(([_, state]) => state)
-			.map(([name, ]) => name)
+			.map(([name, ]) => name);
 		return [
 			...this.columnsPermanent.filter(col => col.name !== this.groupName),
 			...this.columnsOptional.filter(col => optionalColumnNames.includes(col.name))
-		]
+		];
 	}
 
 	protected get filter() {
-		const {keywords, filtersRow} = this.filtersSource
-		const {columns} = this
+		const {keywords, filtersRow} = this.filtersSource;
+		const {columns} = this;
 		const mapToList = (record: Record<string, boolean>) => Object.entries(record)
 			.filter(([, value]) => value)
-			.map(([label,]) => label.toLowerCase())
+			.map(([label,]) => label.toLowerCase());
 
-		const levels = mapToList(filtersRow.Level)
-		const baselines = mapToList(filtersRow.Baseline)
-		const suppressions = mapToList(filtersRow.Suppression)
-		const filterKeywords = keywords.toLowerCase().split(/\s+/).filter(part => part)
+		const levels = mapToList(filtersRow.Level);
+		const baselines = mapToList(filtersRow.Baseline);
+		const suppressions = mapToList(filtersRow.Suppression);
+		const filterKeywords = keywords.toLowerCase().split(/\s+/).filter(part => part);
 
 		return (result: Result) => {
-			if (!levels.includes(result.level ?? '')) return false
-			if (!baselines.includes(result.baselineState ?? '')) return false
-			if (!suppressions.includes(result._suppression ?? '')) return false
+			if (!levels.includes(result.level ?? '')) return false;
+			if (!baselines.includes(result.baselineState ?? '')) return false;
+			if (!suppressions.includes(result._suppression ?? '')) return false;
 			return columns.some(col => {
-				const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword))
-				const {toString} = col
-				const field = toString(result).toLowerCase()
-				return isMatch(field, filterKeywords)
-			})
-		}
+				const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword));
+				const {toString} = col;
+				const field = toString(result).toLowerCase();
+				return isMatch(field, filterKeywords);
+			});
+		};
 	}
 }

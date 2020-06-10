@@ -4,7 +4,7 @@ const WARN = 1
 module.exports = {
 	overrides: [
 		{
-			files: ["src/**/*.ts{,x}"],
+			files: ["src/**/*.ts{,x}", 'index.js', 'webpack.config.js'],
 			rules: {
 				"new-cap": WARN,
 				"no-console": [WARN, {allow: ["error", "warn"]}],
@@ -14,14 +14,14 @@ module.exports = {
 				"prefer-const": WARN,
 
 				"eqeqeq": WARN,
-				"filenames/match-regex": [WARN, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.d|\.spec)?$"],
+				"filenames/match-regex": [WARN, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|spec))?$"],
 				"header/header": [WARN, "line", [
 					" Copyright (c) Microsoft Corporation. All rights reserved.",
 					" Licensed under the MIT License.",
 				]],
 				"no-trailing-spaces": WARN,
 				"quotes": [WARN, "single", {"allowTemplateLiterals": true}],
-				"semi": [WARN, "never"],
+				"semi": WARN,
 			},
 		}
 	],

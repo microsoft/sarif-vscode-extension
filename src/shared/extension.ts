@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-export {}
+export {};
 
 // Causing colorization issues if placed above Array.prototype...
 // Ideally: ((_) => number) | ((_) => string)
@@ -27,49 +27,49 @@ declare global {
 !Array.hasOwnProperty('commonLength') &&
 Object.defineProperty(Array, 'commonLength', {
 	value: function(a: any[], b: any[]): number {
-		let i = 0
+		let i = 0;
 		for (; a[i] === b[i] && i < a.length && i < b.length; i++) {}
-		return i
+		return i;
 	}
-})
+});
 
 !Array.prototype.hasOwnProperty('last') &&
 Object.defineProperty(Array.prototype, 'last', {
 	get: function() {
-		return this[this.length - 1]
+		return this[this.length - 1];
 	}
-})
+});
 
 !Array.prototype.hasOwnProperty('removeWhere') &&
 Object.defineProperty(Array.prototype, 'removeWhere', {
 	value: function(predicate: (item: any) => boolean) { // Unable to express (item: T) so using (item: any).
-		const i = this.findIndex(predicate)
-		return i >= 0 && this.splice(i, 1).pop()
+		const i = this.findIndex(predicate);
+		return i >= 0 && this.splice(i, 1).pop();
 	}
-})
+});
 
 Array.prototype.sortBy = function<T>(selector: Selector<T>, descending = false) {
 	this.sort((a, b) => {
-		const aa = selector(a)
-		const bb = selector(b)
-		const invert = descending ? -1 : 1
-		if (typeof aa === 'string' && typeof bb === 'string') return invert * aa.localeCompare(bb)
-		if (typeof aa === 'number' && typeof bb === 'number') return invert * (aa - bb)
-		return 0
-	})
-	return this
-}
+		const aa = selector(a);
+		const bb = selector(b);
+		const invert = descending ? -1 : 1;
+		if (typeof aa === 'string' && typeof bb === 'string') return invert * aa.localeCompare(bb);
+		if (typeof aa === 'number' && typeof bb === 'number') return invert * (aa - bb);
+		return 0;
+	});
+	return this;
+};
 
 !String.prototype.hasOwnProperty('file') &&
 Object.defineProperty(String.prototype, 'file', {
 	get: function() {
-		return this.substring(this.lastIndexOf('/') + 1, this.length)
+		return this.substring(this.lastIndexOf('/') + 1, this.length);
 	}
-})
+});
 
 !String.prototype.hasOwnProperty('path') &&
 Object.defineProperty(String.prototype, 'path', {
 	get: function() {
-		return this.substring(0, this.lastIndexOf('/')).replace(/^\//g, '')
+		return this.substring(0, this.lastIndexOf('/')).replace(/^\//g, '');
 	}
-})
+});

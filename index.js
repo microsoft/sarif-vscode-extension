@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 ;(async () => {
 	const defaultState = { // Some duplicated from shared/index
 		version: 0,
@@ -26,16 +29,16 @@
 				'Rule': false,
 			},
 		},
-	}
-	const state = localStorage.getItem('state')
-	const store = new Store(JSON.parse(state) ?? defaultState, true)
-	const file = 'samples/demoSarif.json'
-	const response = await fetch(file)
-	const log = await response.json()
-	log._uri = `file:///Users/username/projects/${file}`
-	store.logs.push(log)
+	};
+	const state = localStorage.getItem('state');
+	const store = new Store(JSON.parse(state) ?? defaultState, true);
+	const file = 'samples/demoSarif.json';
+	const response = await fetch(file);
+	const log = await response.json();
+	log._uri = `file:///Users/username/projects/${file}`;
+	store.logs.push(log);
 	ReactDOM.render(
 		React.createElement(Index, { store }),
 		document.getElementById('root'),
-	)
-})()
+	);
+})();

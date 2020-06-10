@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { action, computed, IObservableValue, observable } from 'mobx'
+import { action, computed, IObservableValue, observable } from 'mobx';
 
 export class Column<T> {
 	width: IObservableValue<number>
@@ -10,7 +10,7 @@ export class Column<T> {
 		width: number,
 		readonly toString: (item: T) => string,
 		readonly toNumber?: (item: T) => number /* For sorting */) {
-		this.width = observable.box(width)
+		this.width = observable.box(width);
 	}
 }
 
@@ -24,14 +24,14 @@ export class RowGroup<T, G> extends Row {
 	public items = [] as RowItem<T>[]
 	public itemsFiltered = [] as RowItem<T>[]
 	constructor(readonly title: G) {
-		super()
+		super();
 	}
 }
 
 export class RowItem<T> extends Row {
 	public group?: { expanded: boolean }
 	constructor(readonly item: T) {
-		super()
+		super();
 	}
 }
 
@@ -48,61 +48,61 @@ export class TableStore<T, G> {
 	}
 
 	@computed({ keepAlive: true }) public get rowItems() {
-		return this.itemsSource.results.map(result => new RowItem(result))
+		return this.itemsSource.results.map(result => new RowItem(result));
 	}
 	@computed private get groups() {
-		const map = new Map<G | undefined, RowGroup<T, G | undefined>>()
+		const map = new Map<G | undefined, RowGroup<T, G | undefined>>();
 		this.rowItems.forEach(item => {
-			const key = this.groupBy(item.item)
-			if (!map.has(key)) map.set(key, new RowGroup(key))
-			const group = map.get(key)!
-			group.items.push(item)
-			item.group = group
-		})
-		return [...map.values()].sortBy(g => g.items.length, true) // High to low.
+			const key = this.groupBy(item.item);
+			if (!map.has(key)) map.set(key, new RowGroup(key));
+			const group = map.get(key)!;
+			group.items.push(item);
+			item.group = group;
+		});
+		return [...map.values()].sortBy(g => g.items.length, true); // High to low.
 	}
 
-	get columns(): Column<any>[] { return [] }
-	protected get filter() { return (_item: T) => true }
+	get columns(): Column<any>[] { return []; }
+	protected get filter() { return (_item: T) => true; }
 	@observable public sortColumn = undefined as string | undefined
 	@observable public sortDir = SortDir.Asc
 	@action toggleSort(newCol: string) {
 		if (this.sortColumn === newCol) {
-			this.sortDir = this.sortDir === SortDir.Asc ? SortDir.Dsc : SortDir.Asc
+			this.sortDir = this.sortDir === SortDir.Asc ? SortDir.Dsc : SortDir.Asc;
 		} else {
-			this.sortColumn = newCol
-			this.sortDir = SortDir.Asc
+			this.sortColumn = newCol;
+			this.sortDir = SortDir.Asc;
 		}
 	}
 	sort(items: RowItem<T>[]) {
-		const {columns, sortColumn, sortDir} = this
-		const column = columns.find(col => col.name === sortColumn)
-		if (!column) return
-		const {toNumber, toString} = column
-		const toSortable = toNumber ?? toString
-		items.sortBy(item => toSortable(item.item), sortDir === SortDir.Dsc)
+		const {columns, sortColumn, sortDir} = this;
+		const column = columns.find(col => col.name === sortColumn);
+		if (!column) return;
+		const {toNumber, toString} = column;
+		const toSortable = toNumber ?? toString;
+		items.sortBy(item => toSortable(item.item), sortDir === SortDir.Dsc);
 	}
 
 	@computed public get groupsFilteredSorted() {
-		const {groups, filter} = this
+		const {groups, filter} = this;
 		for (const group of groups) {
-			group.itemsFiltered = group.items.filter(item => filter?.(item.item) ?? true)
-			this.sort(group.itemsFiltered)
+			group.itemsFiltered = group.items.filter(item => filter?.(item.item) ?? true);
+			this.sort(group.itemsFiltered);
 		}
-		return this.groups.filter(group => group.itemsFiltered.length)
+		return this.groups.filter(group => group.itemsFiltered.length);
 	}
 	@computed public get rows() {
-		const rows = [] as Row[]
+		const rows = [] as Row[];
 		for (const group of this.groupsFilteredSorted) {
-			rows.push(group)
-			if (group.expanded) rows.push(...group.itemsFiltered)
+			rows.push(group);
+			if (group.expanded) rows.push(...group.itemsFiltered);
 		}
-		return rows
+		return rows;
 	}
 
 	select(item: T) {
-		const row = this.rowItems.find(row => row.item === item)
-		this.selection.set(row)
-		if (row?.group) row.group.expanded = true
+		const row = this.rowItems.find(row => row.item === item);
+		this.selection.set(row);
+		if (row?.group) row.group.expanded = true;
 	}
 }

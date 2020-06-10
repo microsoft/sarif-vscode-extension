@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Log } from 'sarif'
+import { Log } from 'sarif';
 
 export const log = {
 	version: '2.1.0',
@@ -25,4 +25,4 @@ export const log = {
 			}]
 		}]
 	}]
-} as Log
+} as Log;

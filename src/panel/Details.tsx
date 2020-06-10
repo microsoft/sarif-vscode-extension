@@ -1,41 +1,41 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { autorun, computed, IObservableValue, observable } from 'mobx'
-import { observer } from 'mobx-react'
-import * as React from 'react'
-import { Component } from 'react'
-import ReactMarkdown from 'react-markdown'
-import { Result, ThreadFlowLocation } from 'sarif'
-import { parseArtifactLocation, parseLocation } from '../shared'
-import './Details.scss'
-import { postSelectArtifact, postSelectLog } from './indexStore'
-import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets'
+import { autorun, computed, IObservableValue, observable } from 'mobx';
+import { observer } from 'mobx-react';
+import * as React from 'react';
+import { Component } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Result, ThreadFlowLocation } from 'sarif';
+import { parseArtifactLocation, parseLocation } from '../shared';
+import './Details.scss';
+import { postSelectArtifact, postSelectLog } from './indexStore';
+import { List, renderMessageWithEmbeddedLinks, TabPanel } from './widgets';
 
 interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
 	private selectedTab = observable.box('Info')
 	@computed private get threadFlowLocations() {
 		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
-			.filter(tfLocation => tfLocation.location)
+			.filter(tfLocation => tfLocation.location);
 	}
 	constructor(props: DetailsProps) {
-		super(props)
+		super(props);
 		autorun(() => {
-			const hasThreadFlows = !!this.threadFlowLocations?.length
-			this.selectedTab.set(hasThreadFlows ? 'Code Flows' : 'Info')
-		})
+			const hasThreadFlows = !!this.threadFlowLocations?.length;
+			this.selectedTab.set(hasThreadFlows ? 'Code Flows' : 'Info');
+		});
 	}
 	render() {
 		const renderRuleDesc = (desc?: { text: string, markdown?: string }) => {
-			if (!desc) return '—'
+			if (!desc) return '—';
 			return desc.markdown
 				? <ReactMarkdown className="svMarkDown" source={desc.markdown} />
-				: desc.text
-		}
+				: desc.text;
+		};
 
-		const {result, height} = this.props
-		const helpUri = result?._rule?.helpUri
+		const {result, height} = this.props;
+		const helpUri = result?._rule?.helpUri;
 		return <div className="svDetailsPane" style={{ height: height.get() }}>
 			{result && <TabPanel tabs={['Info', 'Code Flows']} selection={this.selectedTab}>
 				<div className="svDetailsBody svDetailsInfo">
@@ -53,21 +53,21 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 						<span>Baseline State</span>		<span>{result.baselineState}</span>
 						<span>Locations</span>			<span>
 															{result.locations?.map((loc, i) => {
-																const ploc = loc.physicalLocation
-																const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation)
+																const ploc = loc.physicalLocation;
+																const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation);
 																return <a key={i} href="#" className="ellipsis" title={uri}
 																	onClick={e => {
-																		e.preventDefault() // Cancel # nav.
-																		postSelectArtifact(result, ploc)
+																		e.preventDefault(); // Cancel # nav.
+																		postSelectArtifact(result, ploc);
 																	}}>
 																	{uri?.file ?? '-'}
-																</a>
+																</a>;
 															}) ?? <span>—</span>}
 														</span>
 						<span>Log</span>				<a href="#" title={result._log._uri}
 															onClick={e => {
-																e.preventDefault() // Cancel # nav.
-																postSelectLog(result)
+																e.preventDefault(); // Cancel # nav.
+																postSelectLog(result);
 															}}>
 															{result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
 														</a>
@@ -76,29 +76,29 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 				</div>
 				<div className="svDetailsBody svDetailsCodeflow">
 					{(() => {
-						const items = this.threadFlowLocations
+						const items = this.threadFlowLocations;
 
-						const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false })
+						const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false });
 						selection.observe(change => {
-							const tfloc = change.newValue
-							postSelectArtifact(result, tfloc?.location?.physicalLocation)
-						})
+							const tfloc = change.newValue;
+							postSelectArtifact(result, tfloc?.location?.physicalLocation);
+						});
 
 						const renderItem = (tfLocation: ThreadFlowLocation) => {
-							const { message, uri, region } = parseLocation(result, tfLocation.location)
+							const { message, uri, region } = parseLocation(result, tfLocation.location);
 							return <>
 								<div className="ellipsis">{message ?? '—'}</div>
 								<div className="svSecondary">{uri?.file ?? '—'}</div>
 								<div className="svLineNum">{region?.startLine ?? '—'}:1</div>
-							</>
-						}
+							</>;
+						};
 
 						return <List items={items} renderItem={renderItem} selection={selection} allowClear>
 							<span className="svSecondary">No code flows in selected result.</span>
-						</List>
+						</List>;
 					})()}
 				</div>
 			</TabPanel>}
-		</div>
+		</div>;
 	}
 }
