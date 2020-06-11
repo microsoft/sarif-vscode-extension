@@ -136,6 +136,8 @@ export async function activate(context: ExtensionContext) {
             const logUri = decodeURIComponent(logUriEncoded);
             const artifact = store.logs.find(log => log._uri === logUri)?.runs[+runIndex]?.artifacts?.[+artifactIndex];
             const contents = artifact?.contents;
+            if (contents?.rendered?.markdown) return contents?.rendered?.markdown;
+            if (contents?.rendered?.text) return contents?.rendered?.text;
             if (contents?.text) return contents?.text;
             if (contents?.binary) {
                 const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g) ?? [];
