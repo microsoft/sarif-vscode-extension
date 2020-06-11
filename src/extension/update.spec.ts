@@ -63,6 +63,7 @@ const makeStubs = () => ({
             ) => {
                 const listeners = {} as Record<string, any>;
                 callback?.({
+                    statusCode: 200,
                     pipe: () => undefined,
                     on: (event: string, listener: any) => listeners[event] = listener
                 });
@@ -72,9 +73,9 @@ const makeStubs = () => ({
     },
     'node-fetch': async (url: string) => {
         if (url.endsWith('releases'))
-            return { json: async () => releases };
+            return { status: 200, json: async () => releases };
         if (url.endsWith('assets'))
-            return { json: async () => assets };
+            return { status: 200, json: async () => assets };
         return undefined;
     },
     'vscode': {
@@ -131,6 +132,47 @@ describe('update', () => {
         assert.strictEqual(await update(), true);
     });
 
-    // TODO: it('gracefully handles network failure', async () => {})
+    it('gracefully handles network failure', async () => {
+        const stubs = makeStubs();
+        stubs['node-fetch'] = async () => { throw Error(); };
+        const { update } = proxyquire('./update', stubs);
+        assert.strictEqual(await update(), false);
+
+        // Make sure updateInProgress isn't stuck on true after failure.
+        const { update: updateAgain } = proxyquire('./update', makeStubs());
+        assert.strictEqual(await updateAgain(), true);
+    });
+
+    it('gracefully handles GitHub rate limit exceeded', async () => {
+        const stubs = makeStubs();
+        stubs['node-fetch'] = async () => ({
+            status: 403,
+            statusText: 'rate limit exceeded'
+        } as any);
+        const { update } = proxyquire('./update', stubs);
+        assert.strictEqual(await update(), false);
+    });
+
+    it('gracefully handles download forbidden', async () => {
+        const stubs = makeStubs();
+        stubs['follow-redirects'].https.get = (
+            _options: Record<string, unknown>,
+            callback?: (res: any) => void
+        ) => {
+            callback?.({ statusCode: 403 });
+        };
+        const { update } = proxyquire('./update', stubs);
+        assert.strictEqual(await update(), false);
+    });
+
+    it('gracefully handles download failure', async () => {
+        const stubs = makeStubs();
+        stubs['follow-redirects'].https.get = () => ({
+            on: (_event: 'error', listener: any) => listener()
+        });
+        const { update } = proxyquire('./update', stubs);
+        assert.strictEqual(await update(), false);
+    });
+
     // TODO: it('respects proxy settings', async () => {})
 });
