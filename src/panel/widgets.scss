@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 .codicon-error    { color: var(--vscode-problemsErrorIcon-foreground); }
 .codicon-warning  { color: var(--vscode-problemsWarningIcon-foreground); }
 .codicon-info     { color: var(--vscode-problemsInfoIcon-foreground); }
@@ -43,6 +46,19 @@
 
         &.svChecked { 
             .codicon { opacity: 1; }
+        }
+    }
+
+    &.svWithDescription {
+        align-items: flex-start;
+
+        .svWithDescription {
+            div + div {
+                margin-top: 4px;
+            }
+            div:nth-child(2) {
+                color: rgb(139, 139, 139); // svSecondary
+            }
         }
     }
 }

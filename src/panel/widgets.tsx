@@ -21,15 +21,20 @@ export class Badge extends PureComponent<{ text: { toString: () => string } }> {
     }
 }
 
-@observer export class Checkrow extends PureComponent<{ label: string, state: Record<string, Visibility>}> {
+@observer export class Checkrow extends PureComponent<{ label: string, description?: string, state: Record<string, Visibility>}> {
     render() {
-        const {label, state} = this.props;
-        return <div className="svCheckrow" onClick={() => state[label] = state[label] === 'visible' ? undefined : 'visible'}>
+        const {label, description, state} = this.props;
+        return <div className={css('svCheckrow', description && 'svWithDescription')} onClick={() => state[label] = state[label] === 'visible' ? undefined : 'visible'}>
             <div className={css('svCheckbox', state[label] && 'svChecked')} tabIndex={0}
                 role="checkbox" aria-checked="false" aria-label="" title="">
                 <Icon name="check" />
             </div>
-            {label}
+            {description
+                ? <div className="svWithDescription">
+                    <div>{label}</div>
+                    <div>{description}</div>
+                </div>
+                : label}
         </div>;
     }
 }
