@@ -28,7 +28,9 @@
         "vscode": "^1.44.0"
     },
     "activationEvents": [
-        "*"
+        "onLanguage:json",
+        "onCommand:sarif.showPanel",
+        "onCommand:sarif.clearState"
     ],
     "main": "./out/context.js",
     "contributes": {
