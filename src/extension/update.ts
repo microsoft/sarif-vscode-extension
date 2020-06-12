@@ -3,10 +3,44 @@
 
 import { https as redirectableHttps } from 'follow-redirects';
 import fs from 'fs';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
 import { gt, prerelease } from 'semver';
 import { tmpNameSync } from 'tmp';
+import { parse as urlParse } from 'url';
 import { commands, extensions, Uri, window, workspace } from 'vscode';
+
+/**
+ * Retrieves @see HttpsProxyAgent information that may be setup in VSCode or in the process environment
+ * to use for HTTP(s) requests.
+ */
+function getHttpsProxyAgent() {
+    // See if we have an HTTP proxy set up in VSCode's proxy settings or
+    // if it has been set up in the process environment.
+    // NOTE: The upper and lower case versions are best attempt effort as enumerating through
+    // all the environment key\value pairs to perform case insensitive compares for "http(s)_proxy"
+    // would be a bit too much.
+    const proxy = workspace.getConfiguration().get<string | undefined>('http.proxy', undefined) ||
+        process.env.HTTPS_PROXY ||
+        process.env.https_proxy ||
+        process.env.HTTP_PROXY ||
+        process.env.http_proxy;
+    if (!proxy) { // If no proxy is defined, we're done
+        return undefined;
+    }
+
+    const { protocol, port, host, auth } = urlParse(proxy); // TODO: Consider migrating to to URL?
+    if (!protocol || (protocol !== 'https:' && protocol !== 'http:')) {
+        return undefined;
+    }
+
+    return new HttpsProxyAgent({
+        port: port && +port,
+        host: host,
+        auth: auth,
+        secureProxy: vscode.workspace.getConfiguration().get('http.proxyStrictSSL', true)
+    });
+}
 
 export const updateChannelConfigSection = 'updateChannel';
 const extensionName = 'sarif-viewer';
@@ -27,11 +61,12 @@ export async function update() {
     const extensionFullName = `MS-SarifVSCode.${extensionName}`;
     const vsixAssetName = `${extensionFullName}.vsix`;
     const installedVersion = extensions.getExtension(extensionFullName)!.packageJSON.version;
+    const agent = getHttpsProxyAgent();
 
     const success = await (async () => {
         try {
             // 1) Find the right release from the list.
-            const releasesResponse = await fetch('https://api.github.com/repos/Microsoft/sarif-vscode-extension/releases');
+            const releasesResponse = await fetch('https://api.github.com/repos/Microsoft/sarif-vscode-extension/releases', { agent });
             if (releasesResponse.status !== 200) return false;
             const releases = await releasesResponse.json() as { tag_name: string, assets_url: string }[];
             const release = releases.find(release =>
@@ -41,7 +76,7 @@ export async function update() {
             if (!release) return false;
 
             // 2) Find the right asset from the release assets.
-            const assetsResponse = await fetch(release.assets_url);
+            const assetsResponse = await fetch(release.assets_url, { agent });
             if (assetsResponse.status !== 200) return false;
             const assets = await assetsResponse.json() as { browser_download_url: string, content_type: string, name: string }[];
             const asset = assets.find(asset => asset.content_type === 'application/octet-stream'
@@ -56,7 +91,8 @@ export async function update() {
                 const request = redirectableHttps.get({ // Only browser_download_url seems to have redirects. Otherwise would use fetch.
                     hostname: url.hostname,
                     path: url.pathname,
-                    headers: { 'User-Agent': `microsoft.${extensionName}` }
+                    headers: { 'User-Agent': `microsoft.${extensionName}` },
+                    agent,
                 }, response => {
                     if (response.statusCode !== 200) reject();
                     response.pipe(stream);
