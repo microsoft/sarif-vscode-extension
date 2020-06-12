@@ -80,11 +80,6 @@
                 "command": "sarif.clearState",
                 "category": "SARIF",
                 "title": "Clear State"
-            },
-            {
-                "command": "sarif.updateExtension",
-                "category": "SARIF",
-                "title": "Update Extension"
             }
         ]
     },
