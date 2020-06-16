@@ -6,15 +6,15 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { Component, Fragment } from 'react';
 import { ReportingDescriptor } from 'sarif';
-import '../shared/extension';
 import 'vscode-codicons/dist/codicon.css';
+import '../shared/extension';
 import { Details } from './details';
 import { FilterKeywordContext } from './filterKeywordContext';
 import './index.scss';
 import { IndexStore, postSelectArtifact } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
-import { Checkrow, Icon, Popover, ResizeHandle, TabPanel } from './widgets';
+import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
 
 export * as React from 'react';
 export * as ReactDOM from 'react-dom';
@@ -42,7 +42,7 @@ export { IndexStore as Store } from './indexStore';
         const selected = selectedRow instanceof RowItem && selectedRow.item;
         return <FilterKeywordContext.Provider value={keywords ?? ''}>
             <div className="svListPane">
-                <TabPanel tabs={store.tabs} selection={store.selectedTab}
+                <TabPanel selection={store.selectedTab}
                     extras={<>
                         <div className="flexFill"></div>
                         <div className="svFilterCombo">
@@ -56,32 +56,38 @@ export { IndexStore as Store } from './indexStore';
                             onClick={() => activeTableStore?.groupsFilteredSorted.forEach(group => group.expanded = allCollapsed) } />
                         <Icon name="folder-opened" title="Open Log" onClick={() => vscode.postMessage({ command: 'open' })} />
                     </>}>
-                    <ResultTable store={store.resultTableStoreByLocation} onClearFilters={() => store.clearFilters()}
-                        renderGroup={(title: string) => {
-                            const {pathname} = new URL(title, 'file:');
-                            return <>
-                                <span>{pathname.file || 'No Location'}</span>
-                                <span className="ellipsis svSecondary">{pathname.path}</span>
-                            </>;
-                        }} />
-                    <ResultTable store={store.resultTableStoreByRule} onClearFilters={() => store.clearFilters()}
-                        renderGroup={(rule: ReportingDescriptor | undefined) => {
-                            return <>
-                                <span>{rule?.name ?? '—'}</span>
-                                <span className="ellipsis svSecondary">{rule?.id ?? '—'}</span>
-                            </>;
-                        }} />
-                    <div className="svLogsPane">
-                        {logs.map((log, i) => {
-                            const {pathname} = new URL(log._uri);
-                            return <div key={i} className="svListItem">
-                                <div>{pathname.file}</div>
-                                <div className="ellipsis svSecondary">{pathname.path}</div>
-                                <Icon name="close" title="Remove Log"
-                                    onClick={() => vscode.postMessage({ command: 'removeLog', uri: log._uri })} />
-                            </div>;
-                        })}
-                    </div>
+                    <Tab name={store.tabs[0]}>
+                        <ResultTable store={store.resultTableStoreByLocation} onClearFilters={() => store.clearFilters()}
+                            renderGroup={(title: string) => {
+                                const {pathname} = new URL(title, 'file:');
+                                return <>
+                                    <span>{pathname.file || 'No Location'}</span>
+                                    <span className="ellipsis svSecondary">{pathname.path}</span>
+                                </>;
+                            }} />
+                    </Tab>
+                    <Tab name={store.tabs[1]}>
+                        <ResultTable store={store.resultTableStoreByRule} onClearFilters={() => store.clearFilters()}
+                            renderGroup={(rule: ReportingDescriptor | undefined) => {
+                                return <>
+                                    <span>{rule?.name ?? '—'}</span>
+                                    <span className="ellipsis svSecondary">{rule?.id ?? '—'}</span>
+                                </>;
+                            }} />
+                    </Tab>
+                    <Tab name={store.tabs[2]}>
+                        <div className="svLogsPane">
+                            {logs.map((log, i) => {
+                                const {pathname} = new URL(log._uri);
+                                return <div key={i} className="svListItem">
+                                    <div>{pathname.file}</div>
+                                    <div className="ellipsis svSecondary">{pathname.path}</div>
+                                    <Icon name="close" title="Remove Log"
+                                        onClick={() => vscode.postMessage({ command: 'removeLog', uri: log._uri })} />
+                                </div>;
+                            })}
+                        </div>
+                    </Tab>
                 </TabPanel>
             </div>
             <div className="svResizer">

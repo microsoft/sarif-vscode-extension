@@ -158,18 +158,35 @@ class OptionalDiv extends Component<React.HTMLAttributes<HTMLDivElement>> {
     }
 }
 
-@observer export class TabPanel<T> extends PureComponent<{ tabs: T[], selection: IObservableValue<T>, extras?: ReactNode }> {
+@observer export class TabPanel<T> extends PureComponent<{ selection: IObservableValue<T>, extras?: ReactNode }> {
     render() {
-        const {tabs, selection, extras, children} = this.props;
-        const array = React.Children.toArray(children);
+        const {selection, extras, children} = this.props;
+        const array = React.Children.toArray(children)
+            // No reasonable way to type guard here.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map(child => child as unknown as any);
+
+        const tabNames = array.map((child, i) => {
+            // Child is commonly expected to be `TabItem`. Fallback to something reasonable just in case it's not.
+            return child?.type?.name === Tab.name && child.props.name
+                || `Tab ${i}`;
+        });
         const renderItem = (tab: T) => <div>{tab + ''}</div>;
         return <>
             <OptionalDiv className="svListHeader">{/* Abstraction break: svListHeader */}
-                <List className="svTabs" horizontal items={tabs} renderItem={renderItem} selection={selection} />
+                <List className="svTabs" horizontal items={tabNames} renderItem={renderItem} selection={selection} />
                 {extras}
             </OptionalDiv>
-            {array[tabs.indexOf(selection.get())]}
+            {array[tabNames.indexOf(selection.get())]}
         </>;
+    }
+}
+
+// `name` is commonly a string. However it can also be an object, in which case`toString()` will
+// called to obtain the name.
+export class Tab<T> extends PureComponent<{ name: T }> {
+    render() {
+        return this.props.children;
     }
 }
 
