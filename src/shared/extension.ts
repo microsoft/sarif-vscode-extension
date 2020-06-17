@@ -18,7 +18,7 @@ declare global {
         last: T
         replace(items: T[]): void // From Mobx, but not showing up.
         remove(item: T): boolean // From Mobx, but not showing up.
-        removeWhere(predicate: (item: T) => boolean): T | false
+        removeFirst(predicate: (item: T) => boolean): T | false
         sortBy<T>(this: T[], selector: Selector<T>, descending?: boolean): Array<T> // Not a copy
     }
     interface String {
@@ -44,8 +44,8 @@ Object.defineProperty(Array.prototype, 'last', {
     }
 });
 
-!Array.prototype.hasOwnProperty('removeWhere') &&
-Object.defineProperty(Array.prototype, 'removeWhere', {
+!Array.prototype.hasOwnProperty('removeFirst') &&
+Object.defineProperty(Array.prototype, 'removeFirst', {
     value: function(predicate: (item: any) => boolean) { // Unable to express (item: T) so using (item: any).
         const i = this.findIndex(predicate);
         return i >= 0 && this.splice(i, 1).pop();

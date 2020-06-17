@@ -14,9 +14,11 @@ import './details.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, renderMessageWithEmbeddedLinks, Tab, TabPanel } from './widgets';
 
+type TabName = 'Info' | 'Code Flows';
+
 interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
-    private selectedTab = observable.box('Info')
+    private selectedTab = observable.box<TabName>('Info')
     @computed private get threadFlowLocations() {
         return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
             .filter(tfLocation => tfLocation.location);

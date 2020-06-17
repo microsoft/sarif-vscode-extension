@@ -19,7 +19,13 @@ interface TableProps<T, G> {
 @observer export class Table<T, G> extends PureComponent<TableProps<T, G>> {
     @computed get gridTemplateColumns() {
         const {columns} = this.props;
-        return `34px ${columns.map((col, i) => `${(i === 0 ? 22 : 0) + col.width.get()}px`).join(' ')} 1fr`;
+        return [
+            '34px', // Left margin. Aligns with tabs left margin (22px) + group chevron (12px).
+            // Variable number of columns set to user-desired width.
+            // First column has an extra 22px allowance for the `level` icon.
+            ...columns.map((col, i) => `${(i === 0 ? 22 : 0) + col.width.get()}px`),
+            '1fr', // Fill remaining space so the the selection/hover highlight doesn't look funny.
+        ].join(' ');
     }
 
     private TableItem = memo<{ isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string }>(props => {

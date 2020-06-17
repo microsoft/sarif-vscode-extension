@@ -4,7 +4,7 @@
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
-import { filtersColumn, filtersRow, ResultId, _Region } from '../shared';
+import { CommandPanelToExtension, filtersColumn, filtersRow, ResultId, _Region } from '../shared';
 import { Baser } from './baser';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
@@ -84,7 +84,7 @@ export class Panel {
 
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
-            switch (message.command) {
+            switch (message.command as CommandPanelToExtension) {
             case 'open': {
                 const uris = await window.showOpenDialog({
                     defaultUri: workspace.workspaceFolders?.[0]?.uri,
@@ -95,7 +95,7 @@ export class Panel {
                 break;
             }
             case 'removeLog': {
-                store.logs.removeWhere(log => log._uri === message.uri);
+                store.logs.removeFirst(log => log._uri === message.uri);
                 break;
             }
             case 'select': {

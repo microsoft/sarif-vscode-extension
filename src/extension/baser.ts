@@ -11,7 +11,7 @@ export class Baser {
         private readonly store: Pick<Store, 'distinctArtifactNames'>) {
     }
 
-    private basesArtifactToLocal = new Map<string, string>([]) // <artifactPath, localPath>
+    private basesArtifactToLocal = new Map<string, string>() // <artifactPath, localPath>
     private updateBases(artifact: string[], local: string[]) {
         const i = Array.commonLength(artifact.slice().reverse(), local.slice().reverse());
         this.basesArtifactToLocal.set(
@@ -121,7 +121,7 @@ export class Baser {
             this.activeInfoMessages.add(artifactPath);
             const choice = await window.showInformationMessage(`Unable to find '${artifactPath.split('/').pop()}'`, 'Locate...');
             this.activeInfoMessages.delete(artifactPath);
-            if (choice === 'Locate...') {
+            if (choice) {
                 const extension = artifactPath.match(/\.([\w]+)$/)?.[1] ?? '';
                 const files = await window.showOpenDialog({
                     defaultUri: workspace.workspaceFolders?.[0]?.uri,

@@ -3,7 +3,7 @@
 
 import { action, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, filtersColumn, filtersRow, parseArtifactLocation, parseRegion, Visibility } from '../shared';
+import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, parseRegion, Visibility } from '../shared';
 import '../shared/extension';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
@@ -82,7 +82,7 @@ export class IndexStore {
         if (event.data?.source) return; // Ignore 'react-devtools-*'
         if (event.data?.type) return; // Ignore 'webpackOk'
 
-        const command = event.data?.command;
+        const command = event.data?.command as CommandExtensionToPanel;
 
         if (command === 'select') {
             const {id} = event.data; // id undefined means deselect.

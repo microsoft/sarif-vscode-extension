@@ -218,3 +218,6 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
         'Rule': undefined,
     },
 };
+
+export type CommandPanelToExtension = 'open' | 'removeLog' | 'select' | 'selectLog' | 'setState';
+export type CommandExtensionToPanel = 'select' | 'spliceLogs';

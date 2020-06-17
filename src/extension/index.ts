@@ -61,7 +61,7 @@ export async function activate(context: ExtensionContext) {
         },
         async closeLogs(logs: Uri[]) {
             for (const uri of logs) {
-                store.logs.removeWhere(log => log._uri === uri.toString());
+                store.logs.removeFirst(log => log._uri === uri.toString());
             }
         },
         async closeAllLogs() {
@@ -113,7 +113,7 @@ function activateWatchDocuments(store: Store, panel: Panel) {
     workspace.onDidOpenTextDocument(syncActiveLog);
     workspace.onDidCloseTextDocument(doc => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
-        store.logs.removeWhere(log => log._uri === doc.uri.toString());
+        store.logs.removeFirst(log => log._uri === doc.uri.toString());
     });
 }
 
