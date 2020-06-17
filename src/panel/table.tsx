@@ -25,7 +25,7 @@ interface TableProps<T, G> {
     private TableItem = memo<{ isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string }>(props => {
         const { columns, store, renderIconName, renderCell } = this.props;
         const { isSelected, item, gridTemplateColumns } = props;
-        return <div className={css('svTableRow', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
+        return <div className={css('svTableRow', 'svTableRowItem', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
             ref={ele => { // TODO: ForwardRef for Group
                 if (!isSelected || !ele) return;
                 setTimeout(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' })); // requestAnimationFrame not working.
@@ -63,14 +63,13 @@ interface TableProps<T, G> {
                     {rows.map(row => {
                         const isSelected = selection.get() === row;
                         if (row instanceof RowGroup) {
-                            return <Hi key={row.key} className={css('svTableRow', 'svTableCell', isSelected && 'svItemSelected')}
-                                style={{ gridTemplateColumns: '6px auto auto auto auto 1fr' /* Temp */ }}
+                            return <Hi key={row.key} className={css('svTableRow', 'svTableRowGroup', 'svTableCell', isSelected && 'svItemSelected')}
                                 onClick={e => {
                                     e.stopPropagation();
                                     selection.set(row);
                                     row.expanded = !row.expanded;
                                 }}>
-                                <div></div>
+                                <div style={{ width: 6 }}></div>
                                 <Icon name={row.expanded ? 'chevron-down' : 'chevron-right'} />
                                 {renderGroup(row.title)}
                                 <Badge text={row.itemsFiltered.length} />
@@ -79,6 +78,7 @@ interface TableProps<T, G> {
                         if (row instanceof RowItem) {
                             return <TableItem key={row.key} isSelected={isSelected} item={row} gridTemplateColumns={this.gridTemplateColumns} />;
                         }
+                        return undefined; // Closed system: No other types expected.
                     })}
                 </div>
             </div>;
