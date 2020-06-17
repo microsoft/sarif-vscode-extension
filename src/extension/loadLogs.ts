@@ -44,7 +44,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                         message: `Upgrading ${i + 1} of ${upgrades} log${upgrades === 1 ? '' : 's'}...`,
                         increment: 1 / upgrades * 100
                     });
-                    await new Promise(r => setTimeout(r, 0)); // Await needed for progress to update
+                    await new Promise(r => setTimeout(r, 0)); // Await otherwise progress does not update. Assumption: await allows the rendering thread to kick in.
                     const {fsPath} = Uri.parse(oldLog._uri);
                     try {
                         const tempPath = upgradeLog(fsPath);
