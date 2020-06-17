@@ -33,7 +33,50 @@ export async function activate(context: ExtensionContext) {
     const panel = new Panel(context, baser, store);
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
-    // Diagnostics
+    // General Activation
+    activateDiagnostics(store, baser);
+    activateWatchDocuments(store, panel);
+    activateDecorations(store, panel);
+    activateVirtualDocuments(store);
+
+    // Check for Updates
+    // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
+    const isDebugOrTestMode =
+        process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
+        && process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
+    if (!isDebugOrTestMode) {
+        disposables.push(workspace.onDidChangeConfiguration(event => {
+            if (!event.affectsConfiguration(updateChannelConfigSection)) return;
+            update();
+        }));
+        update();
+    }
+
+    // API
+    return {
+        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+            store.logs.push(...await loadLogs(logs, cancellationToken));
+            if (cancellationToken?.isCancellationRequested) return;
+            if (store.results.length) panel.show();
+        },
+        async closeLogs(logs: Uri[]) {
+            for (const uri of logs) {
+                store.logs.removeWhere(log => log._uri === uri.toString());
+            }
+        },
+        async closeAllLogs() {
+            store.logs.splice(0);
+        },
+        get uriBases() {
+            return baser.uriBases.map(path => Uri.file(path)) as ReadonlyArray<Uri>;
+        },
+        set uriBases(values) {
+            baser.uriBases = values.map(uri => uri.path);
+        },
+    };
+}
+
+function activateDiagnostics(store: Store, baser: Baser) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     const setDiags = (doc: TextDocument) => {
         if (doc.fileName.endsWith('.git')) return;
@@ -56,8 +99,10 @@ export async function activate(context: ExtensionContext) {
     workspace.onDidOpenTextDocument(setDiags);
     workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri)); // Spurious *.git deletes don't hurt.
     observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
+}
 
-    // Open Documents <-sync-> Store.logs
+// Open Documents <-sync-> Store.logs
+function activateWatchDocuments(store: Store, panel: Panel) {
     const syncActiveLog = async (doc: TextDocument) => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
         if (store.logs.some(log => log._uri === doc.uri.toString())) return;
@@ -70,8 +115,10 @@ export async function activate(context: ExtensionContext) {
         if (!doc.fileName.match(/\.sarif$/i)) return;
         store.logs.removeWhere(log => log._uri === doc.uri.toString());
     });
+}
 
-    // Actions/Decorations for Call Trees
+// Decorations are for Call Trees. This also handles panel selection sync.
+function activateDecorations(store: Store, panel: Panel) {
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
@@ -128,8 +175,9 @@ export async function activate(context: ExtensionContext) {
             editor.setDecorations(decorationTypeHighlight, []);
         });
     });
+}
 
-    // Virtual Documents
+function activateVirtualDocuments(store: Store) {
     workspace.registerTextDocumentContentProvider('sarif', {
         provideTextDocumentContent: (uri, token) => {
             const [logUriEncoded, runIndex, artifactIndex] = uri.path.split('/');
@@ -152,42 +200,6 @@ export async function activate(context: ExtensionContext) {
             return '';
         }
     });
-
-    // Check for Updates
-    // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
-    const isDebugOrTestMode =
-        process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
-        && process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
-    if (!isDebugOrTestMode) {
-        disposables.push(workspace.onDidChangeConfiguration(event => {
-            if (!event.affectsConfiguration(updateChannelConfigSection)) return;
-            update();
-        }));
-        update();
-    }
-
-    // API
-    return {
-        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
-            store.logs.push(...await loadLogs(logs, cancellationToken));
-            if (cancellationToken?.isCancellationRequested) return;
-            if (store.results.length) panel.show();
-        },
-        async closeLogs(logs: Uri[]) {
-            for (const uri of logs) {
-                store.logs.removeWhere(log => log._uri === uri.toString());
-            }
-        },
-        async closeAllLogs() {
-            store.logs.splice(0);
-        },
-        get uriBases() {
-            return baser.uriBases.map(path => Uri.file(path)) as ReadonlyArray<Uri>;
-        },
-        set uriBases(values) {
-            baser.uriBases = values.map(uri => uri.path);
-        },
-    };
 }
 
 export function deactivate() {}
