@@ -94,7 +94,7 @@ export async function activate(context: ExtensionContext) {
             const editor = window.visibleTextEditors.find(editor => editor.document === doc);
             if (!editor) return; // When would editor be undef?
 
-            const locations = result?.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
+            const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
             const messages = locations.map((tfl, i) => {
                 const text = tfl.location?.message?.text;
                 return `Step ${i + 1}${text ? `: ${text}` : ''}`;
