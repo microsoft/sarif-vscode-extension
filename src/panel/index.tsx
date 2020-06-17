@@ -56,7 +56,7 @@ export { IndexStore as Store } from './indexStore';
                             onClick={() => activeTableStore?.groupsFilteredSorted.forEach(group => group.expanded = allCollapsed) } />
                         <Icon name="folder-opened" title="Open Log" onClick={() => vscode.postMessage({ command: 'open' })} />
                     </>}>
-                    <Tab name={store.tabs[0]}>
+                    <Tab name={store.tabs[0]} count={store.resultTableStoreByLocation.groupsFilteredSorted.length}>
                         <ResultTable store={store.resultTableStoreByLocation} onClearFilters={() => store.clearFilters()}
                             renderGroup={(title: string) => {
                                 const {pathname} = new URL(title, 'file:');
@@ -66,7 +66,7 @@ export { IndexStore as Store } from './indexStore';
                                 </>;
                             }} />
                     </Tab>
-                    <Tab name={store.tabs[1]}>
+                    <Tab name={store.tabs[1]} count={store.resultTableStoreByRule.groupsFilteredSorted.length}>
                         <ResultTable store={store.resultTableStoreByRule} onClearFilters={() => store.clearFilters()}
                             renderGroup={(rule: ReportingDescriptor | undefined) => {
                                 return <>
@@ -75,7 +75,7 @@ export { IndexStore as Store } from './indexStore';
                                 </>;
                             }} />
                     </Tab>
-                    <Tab name={store.tabs[2]}>
+                    <Tab name={store.tabs[2]} count={logs.length}>
                         <div className="svLogsPane">
                             {logs.map((log, i) => {
                                 const {pathname} = new URL(log._uri);

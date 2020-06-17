@@ -114,6 +114,10 @@
             line-height: 27px;
             color: var(--vscode-panelTitle-activeForeground);
             color: rgb(139, 139, 139); // svSecondary
+
+            .svBadge {
+                margin-left: 6px;
+            }
         }
 
         &.svItemSelected > div {

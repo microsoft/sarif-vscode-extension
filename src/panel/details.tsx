@@ -78,7 +78,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         </div>
                     </div>
                 </Tab>
-                <Tab name="Code Flows">
+                <Tab name="Code Flows" count={this.threadFlowLocations?.length || 0}>
                     <div className="svDetailsBody svDetailsCodeflow">
                         {(() => {
                             const items = this.threadFlowLocations;
