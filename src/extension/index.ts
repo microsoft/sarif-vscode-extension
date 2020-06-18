@@ -80,7 +80,9 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Bas
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
     const setDiags = (doc: TextDocument) => {
+        // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
+
         const artifactPath = baser.translateLocalToArtifact(doc.uri.path);
         const severities = {
             error: DiagnosticSeverity.Error,
