@@ -107,14 +107,14 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Bas
 
 // Open Documents <-sync-> Store.logs
 function activateWatchDocuments(disposables: Disposable[], store: Store, panel: Panel) {
-    const syncActiveLog = async (doc: TextDocument) => {
+    const addLog = async (doc: TextDocument) => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
-        if (store.logs.some(log => log._uri === doc.uri.toString())) return;
+        if (store.logs.some(log => log._uri === doc.uri.toString())) return; // TODO: Potentially redundant, need to verify.
         store.logs.push(...await loadLogs([doc.uri]));
         panel.show();
     };
-    workspace.textDocuments.forEach(syncActiveLog);
-    disposables.push(workspace.onDidOpenTextDocument(syncActiveLog));
+    workspace.textDocuments.forEach(addLog);
+    disposables.push(workspace.onDidOpenTextDocument(addLog));
     disposables.push(workspace.onDidCloseTextDocument(doc => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
         store.logs.removeFirst(log => log._uri === doc.uri.toString());
