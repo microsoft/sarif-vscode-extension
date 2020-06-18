@@ -3,7 +3,7 @@
 
 import { IArraySplice, observe } from 'mobx';
 import { Log } from 'sarif';
-import { CancellationToken, commands, DiagnosticSeverity, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct, parseRegion } from '../shared';
 import '../shared/extension';
 import { Baser } from './baser';
@@ -34,10 +34,10 @@ export async function activate(context: ExtensionContext) {
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // General Activation
-    activateDiagnostics(store, baser);
-    activateWatchDocuments(store, panel);
-    activateDecorations(store, panel);
-    activateVirtualDocuments(store);
+    activateDiagnostics(disposables, store, baser);
+    activateWatchDocuments(disposables, store, panel);
+    activateDecorations(disposables, store, panel);
+    activateVirtualDocuments(disposables, store);
 
     // Check for Updates
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -76,8 +76,9 @@ export async function activate(context: ExtensionContext) {
     };
 }
 
-function activateDiagnostics(store: Store, baser: Baser) {
+function activateDiagnostics(disposables: Disposable[], store: Store, baser: Baser) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
+    disposables.push(diagsAll);
     const setDiags = (doc: TextDocument) => {
         if (doc.fileName.endsWith('.git')) return;
         const artifactPath = baser.translateLocalToArtifact(doc.uri.path);
@@ -96,13 +97,14 @@ function activateDiagnostics(store: Store, baser: Baser) {
         diagsAll.set(doc.uri, diags);
     };
     workspace.textDocuments.forEach(setDiags);
-    workspace.onDidOpenTextDocument(setDiags);
-    workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri)); // Spurious *.git deletes don't hurt.
-    observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
+    disposables.push(workspace.onDidOpenTextDocument(setDiags));
+    disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
+    const disposer = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
+    disposables.push({ dispose: disposer });
 }
 
 // Open Documents <-sync-> Store.logs
-function activateWatchDocuments(store: Store, panel: Panel) {
+function activateWatchDocuments(disposables: Disposable[], store: Store, panel: Panel) {
     const syncActiveLog = async (doc: TextDocument) => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
         if (store.logs.some(log => log._uri === doc.uri.toString())) return;
@@ -110,15 +112,15 @@ function activateWatchDocuments(store: Store, panel: Panel) {
         panel.show();
     };
     workspace.textDocuments.forEach(syncActiveLog);
-    workspace.onDidOpenTextDocument(syncActiveLog);
-    workspace.onDidCloseTextDocument(doc => {
+    disposables.push(workspace.onDidOpenTextDocument(syncActiveLog));
+    disposables.push(workspace.onDidCloseTextDocument(doc => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
         store.logs.removeFirst(log => log._uri === doc.uri.toString());
-    });
+    }));
 }
 
 // Decorations are for Call Trees. This also handles panel selection sync.
-function activateDecorations(store: Store, panel: Panel) {
+function activateDecorations(disposables: Disposable[], store: Store, panel: Panel) {
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
@@ -127,7 +129,7 @@ function activateDecorations(store: Store, panel: Panel) {
         borderStyle: 'solid',
         borderColor: new ThemeColor('problemsWarningIcon.foreground'),
     });
-    languages.registerCodeActionsProvider('*', {
+    disposables.push(languages.registerCodeActionsProvider('*', {
         provideCodeActions: (doc, _range, context) => {
             if (context.only) return;
 
@@ -166,8 +168,8 @@ function activateDecorations(store: Store, panel: Panel) {
             editor.setDecorations(decorationTypeHighlight, ranges);
             return [];
         }
-    });
-    observe(store.logs, change => {
+    }));
+    const disposer = observe(store.logs, change => {
         const {removed} = change as unknown as IArraySplice<Log>;
         if (!removed.length) return;
         window.visibleTextEditors.forEach(editor => {
@@ -175,10 +177,11 @@ function activateDecorations(store: Store, panel: Panel) {
             editor.setDecorations(decorationTypeHighlight, []);
         });
     });
+    disposables.push({ dispose: disposer });
 }
 
-function activateVirtualDocuments(store: Store) {
-    workspace.registerTextDocumentContentProvider('sarif', {
+function activateVirtualDocuments(disposables: Disposable[], store: Store) {
+    disposables.push(workspace.registerTextDocumentContentProvider('sarif', {
         provideTextDocumentContent: (uri, token) => {
             const [logUriEncoded, runIndex, artifactIndex] = uri.path.split('/');
             const logUri = decodeURIComponent(logUriEncoded);
@@ -199,7 +202,7 @@ function activateVirtualDocuments(store: Store) {
             token.isCancellationRequested = true;
             return '';
         }
-    });
+    }));
 }
 
 export function deactivate() {}
