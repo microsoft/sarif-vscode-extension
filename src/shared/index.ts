@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 import { ArtifactLocation, Log, Location, Region, Result } from 'sarif';
+import urlJoin from 'url-join';
 
 type JsonLocation = { line: number, column: number } // Unused: pos
 type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key, keyEnd
@@ -185,7 +186,12 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     const runArtLoc = runArt?.location;
     const runArtCon = runArt?.contents;
 
-    const uri = anyArtLoc.uri ?? runArtLoc?.uri; // If index (§3.4.5) is absent, uri SHALL be present.
+    // Currently not supported: recursive resolution of uriBaseId.
+    const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
+    const uriBase = result._run.originalUriBaseIds?.[uriBaseId ?? '']?.uri ?? '';
+    const relativeUri = anyArtLoc.uri ?? runArtLoc?.uri; // If index (§3.4.5) is absent, uri SHALL be present.
+    const uri = relativeUri && urlJoin(uriBase, relativeUri);
+
     const uriContents = runArtCon?.text || runArtCon?.binary
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
         : undefined;

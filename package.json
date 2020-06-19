@@ -108,6 +108,7 @@
         "@types/semver": "7.1.0",
         "@types/sinon": "9.0.4",
         "@types/tmp": "0.1.0",
+        "@types/url-join": "4.0.0",
         "@types/vscode": "1.44.0",
         "@typescript-eslint/eslint-plugin": "3.1.0",
         "@typescript-eslint/parser": "3.1.0",
@@ -145,6 +146,7 @@
         "react-dom": "16.13.1",
         "semver": "7.3.2",
         "tmp": "0.1.0",
+        "url-join": "4.0.1",
         "vscode-codicons": "0.0.2"
     },
     "optionalDependencies": {
