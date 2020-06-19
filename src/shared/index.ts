@@ -108,7 +108,9 @@ export function augmentLog(log: Log) {
             result._region = parseRegion(ploc?.region);
             result._line = (Array.isArray(result._region) ? result._region?.[0] : result._region) ?? -1; // _line is sugar for _region
 
-            result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1]; // If result.ruleIndex is undefined, that's okay.
+            result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
+                ?? (result.ruleId ? { id: result.ruleId! } : undefined); // TODO: Intern for comparability.
+
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
             result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
