@@ -193,7 +193,8 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     const relativeUri = anyArtLoc.uri ?? runArtLoc?.uri; // If index (§3.4.5) is absent, uri SHALL be present.
 
     // Convert possible relative URIs to absolute. Also serves to normalize leading slashes.
-    const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString();
+    // skipEncoding=true because otherwise 'file:///c:' incorrectly round-trips as 'file:///c%3A'.
+    const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString(true /* skipEncoding */);
     const uri = relativeUri && normalizeUri(urlJoin(uriBase, relativeUri));
 
     const uriContents = runArtCon?.text || runArtCon?.binary
