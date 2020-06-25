@@ -4,6 +4,7 @@
 import { Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import { Store } from './store';
+import uriExists from './uriExists';
 
 /**
  * Splits a URI into path segments. Scheme+authority considered a "segment" for practical purposes.
@@ -64,17 +65,6 @@ export class UriRebaser {
         return this.validatedUrisLocalToArtifact.get(localUri) ?? localUri;
     }
 
-    // Hacky: We are using `openTextDocument` to test the existence of documents as VS Code does not provide a dedicated existence API.
-    // The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
-    private async uriExists(absoluteUri: string) {
-        try {
-            await workspace.openTextDocument(Uri.parse(absoluteUri, true));
-        } catch (error) {
-            return false;
-        }
-        return true;
-    }
-
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
     public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
         // Temp.
@@ -85,14 +75,14 @@ export class UriRebaser {
                 return this.validatedUrisArtifactToLocal.get(artifactUri);
 
             // File System Exist
-            if (await this.uriExists(artifactUri))
+            if (await uriExists(artifactUri))
                 return artifactUri;
 
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                 if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
                 const localUri = artifactUri.replace(artifactBase, localBase);
-                if (await this.uriExists(localUri)) {
+                if (await uriExists(localUri)) {
                     this.updateValidatedUris(artifactUri, localUri);
                     return localUri;
                 }
@@ -166,7 +156,7 @@ export class UriRebaser {
             const localParts = splitUri(localUriBase);
             for (const [artifactIndex, localIndex] of UriRebaser.commonIndices(artifactParts, localParts)) {
                 const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
-                if (await this.uriExists(rebased)) {
+                if (await uriExists(rebased)) {
                     this.updateValidatedUris(artifactUri, localUriBase);
                     this.updateBases(artifactParts, localParts);
                     return rebased;

@@ -25,14 +25,11 @@ describe('baser', () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
-                    openTextDocument: async (uri: URI) => {
-                        if (uri.toString() === localUri) return;
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const distinctLocalNames = new Map([
             ['file1.txt', localUri]
@@ -57,14 +54,11 @@ describe('baser', () => {
                     showOpenDialog: async () => [URI.parse(localUri)],
                 },
                 workspace: {
-                    openTextDocument: async (uri: URI) => {
-                        if (uri.toString() === localUri) return;
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
@@ -83,14 +77,11 @@ describe('baser', () => {
                     showOpenDialog: async () => [URI.parse(localUri)],
                 },
                 workspace: {
-                    openTextDocument: async (uri: URI) => {
-                        if (uri.toString() === localUri) return;
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifact);
@@ -100,6 +91,7 @@ describe('baser', () => {
     it('commonIndices', async () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {},
+            './uriExists': (_uri: string) => false,
         });
         const pairs = [...UriRebaser.commonIndices(
             ['a', 'b', 'c'],
@@ -117,13 +109,11 @@ describe('baser', () => {
                     showInformationMessage: async (_message: string) => undefined,
                 },
                 workspace: {
-                    openTextDocument: async (_uri: URI) => {
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (_uri: string) => false,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
@@ -139,14 +129,11 @@ describe('baser', () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
-                    openTextDocument: async (uri: URI) => {
-                        if (uri.toString() === localUri) return;
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
         rebaser.uriBases = [uriBase];
@@ -163,14 +150,11 @@ describe('baser', () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
-                    openTextDocument: async (uri: URI) => {
-                        if (uri.toString() === localUri) return;
-                        throw 'Mock file not found';
-                    },
                     textDocuments: [],
                 },
                 Uri: URI
             },
+            './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
         rebaser.uriBases = [uriBase];
