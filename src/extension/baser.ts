@@ -16,13 +16,13 @@ function splitUri(uri: string | undefined) {
     return [`${scheme}://${authority}`, ...path.slice(1).split('/')]; // By spec first '/' always exists, thus safe to slice(1).
 }
 
-export class Baser {
+export class UriRebaser {
     constructor(
         private readonly distinctLocalNames: Map<string, string>,
         private readonly store: Pick<Store, 'distinctArtifactNames'>) {
     }
 
-    private basesArtifactToLocal = new Map<string, string>() // <artifactPath, localPath>
+    private basesArtifactToLocal = new Map<string, string>() // <artifactUri, localUri>
     private updateBases(artifact: string[], local: string[]) {
         const i = Array.commonLength(artifact.slice().reverse(), local.slice().reverse());
         this.basesArtifactToLocal.set(
@@ -30,45 +30,45 @@ export class Baser {
             local.slice(0, -i).join('/'));
     }
 
-    private validatedPathsArtifactToLocal = new Map<string, string>()
-    private validatedPathsLocalToArtifact = new Map<string, string>()
-    private updateValidatedPaths(artifact: string, local: string) {
-        this.validatedPathsArtifactToLocal.set(artifact, local);
-        this.validatedPathsLocalToArtifact.set(local, artifact);
+    private validatedUrisArtifactToLocal = new Map<string, string>()
+    private validatedUrisLocalToArtifact = new Map<string, string>()
+    private updateValidatedUris(artifact: string, local: string) {
+        this.validatedUrisArtifactToLocal.set(artifact, local);
+        this.validatedUrisLocalToArtifact.set(local, artifact);
     }
 
     // Other possibilities:
-    // * 1 local -> 2 artifacts (localPath still possible exact match of artPath)
+    // * 1 local -> 2 artifacts (localUri still possible exact match of artUri)
     // * Actual 0 artifact match
     // Future:
     // 2:2 matching
     // Notes:
-    // If 2 logs have the same path, then likely the same (unless the path is super short)
-    // If 2 logs don't have the same path, they can still potentially be the same match
-    public translateLocalToArtifact(localPath: string): string { // Future: Ret undefined when certain.
-        // Need to refresh on PathMap update.
-        if (!this.validatedPathsLocalToArtifact.has(localPath)) {
-            const {file} = localPath;
+    // If 2 logs have the same uri, then likely the same (unless the uri is super short)
+    // If 2 logs don't have the same uri, they can still potentially be the same match
+    public translateLocalToArtifact(localUri: string): string { // Future: Ret undefined when certain.
+        // Need to refresh on uri map update.
+        if (!this.validatedUrisLocalToArtifact.has(localUri)) {
+            const {file} = localUri;
             if ((	// If no workspace, then the open docs (at this moment) become the workspace.
-            // Over-assuming the localPath.name is distinct. There could be 2+ open docs with the same name.
+            // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
                 !workspace.workspaceFolders?.length ||
                     this.distinctLocalNames.has(file)
             ) &&
                 this.store.distinctArtifactNames.has(file)) {
 
-                const artifactPath = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
-                this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(splitUri(artifactPath), splitUri(localPath));
+                const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
+                this.updateValidatedUris(artifactUri, localUri);
+                this.updateBases(splitUri(artifactUri), splitUri(localUri));
             }
         }
-        return this.validatedPathsLocalToArtifact.get(localPath) ?? localPath;
+        return this.validatedUrisLocalToArtifact.get(localUri) ?? localUri;
     }
 
     // Hacky: We are using `openTextDocument` to test the existence of documents as VS Code does not provide a dedicated existence API.
     // The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
-    private async pathExists(path: string) {
+    private async uriExists(absoluteUri: string) {
         try {
-            await workspace.openTextDocument(Uri.parse(path, true));
+            await workspace.openTextDocument(Uri.parse(absoluteUri, true));
         } catch (error) {
             return false;
         }
@@ -76,61 +76,61 @@ export class Baser {
     }
 
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
-    public async translateArtifactToLocal(artifactPath: string) { // Retval is validated.
+    public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
         // Temp.
-        if (artifactPath.startsWith('sarif:')) return artifactPath;
+        if (artifactUri.startsWith('sarif:')) return artifactUri;
         const validateUri = async () => {
             // Cache
-            if (this.validatedPathsArtifactToLocal.has(artifactPath))
-                return this.validatedPathsArtifactToLocal.get(artifactPath);
+            if (this.validatedUrisArtifactToLocal.has(artifactUri))
+                return this.validatedUrisArtifactToLocal.get(artifactUri);
 
             // File System Exist
-            if (await this.pathExists(artifactPath))
-                return artifactPath;
+            if (await this.uriExists(artifactUri))
+                return artifactUri;
 
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
-                if (!artifactPath.startsWith(artifactBase)) continue; // Just let it fall through?
-                const localPath = artifactPath.replace(artifactBase, localBase);
-                if (await this.pathExists(localPath)) {
-                    this.updateValidatedPaths(artifactPath, localPath);
-                    return localPath;
+                if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
+                const localUri = artifactUri.replace(artifactBase, localBase);
+                if (await this.uriExists(localUri)) {
+                    this.updateValidatedUris(artifactUri, localUri);
+                    return localUri;
                 }
             }
 
             { // API-injected baseUris
-                const localPath = await this.tryUriBases(artifactPath);
-                if (localPath) return localPath;
+                const localUri = await this.tryUriBases(artifactUri);
+                if (localUri) return localUri;
             }
 
             // Distinct Project Items
-            const {file} = artifactPath;
+            const {file} = artifactUri;
             if (this.distinctLocalNames.has(file) && this.store.distinctArtifactNames.has(file)) {
-                const localPath = this.distinctLocalNames.get(file)!; // Not undefined due to surrounding if.
-                this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(splitUri(artifactPath), splitUri(localPath));
-                return localPath;
+                const localUri = this.distinctLocalNames.get(file)!; // Not undefined due to surrounding if.
+                this.updateValidatedUris(artifactUri, localUri);
+                this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                return localUri;
             }
 
             // Open Docs
             for (const doc of workspace.textDocuments) {
-                const localPath = doc.uri.toString();
-                if (localPath.file !== artifactPath.file) continue;
-                this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(splitUri(artifactPath), splitUri(localPath));
-                return localPath;
+                const localUri = doc.uri.toString();
+                if (localUri.file !== artifactUri.file) continue;
+                this.updateValidatedUris(artifactUri, localUri);
+                this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                return localUri;
             }
 
             return ''; // Can't find uri.
         };
 
         let validatedUri = await validateUri();
-        if (!validatedUri && !this.activeInfoMessages.has(artifactPath)) {
-            this.activeInfoMessages.add(artifactPath);
-            const choice = await window.showInformationMessage(`Unable to find '${artifactPath.file}'`, 'Locate...');
-            this.activeInfoMessages.delete(artifactPath);
+        if (!validatedUri && !this.activeInfoMessages.has(artifactUri)) {
+            this.activeInfoMessages.add(artifactUri);
+            const choice = await window.showInformationMessage(`Unable to find '${artifactUri.file}'`, 'Locate...');
+            this.activeInfoMessages.delete(artifactUri);
             if (choice) {
-                const extension = artifactPath.match(/\.([\w]+)$/)?.[1] ?? '';
+                const extension = artifactUri.match(/\.([\w]+)$/)?.[1] ?? '';
                 const files = await window.showOpenDialog({
                     defaultUri: workspace.workspaceFolders?.[0]?.uri,
                     filters: { 'Matching file' : [extension] },
@@ -138,7 +138,7 @@ export class Baser {
                 });
                 if (!files?.length) return; // User cancelled.
 
-                const partsOld = splitUri(artifactPath);
+                const partsOld = splitUri(artifactUri);
                 const partsNew = splitUri(files[0].toString());
                 if (partsOld.last !== partsNew.last) {
                     void window.showErrorMessage(`File names must match: "${partsOld.last}" and "${partsNew.last}"`);
@@ -160,14 +160,14 @@ export class Baser {
     }
 
     public uriBases = [] as string[]
-    private async tryUriBases(artifactPath: string) {
-        const artifactParts = splitUri(artifactPath);
-        for (const localPath of this.uriBases) {
-            const localParts = splitUri(localPath);
-            for (const [artifactIndex, localIndex] of Baser.commonIndices(artifactParts, localParts)) {
+    private async tryUriBases(artifactUri: string) {
+        const artifactParts = splitUri(artifactUri);
+        for (const localUriBase of this.uriBases) {
+            const localParts = splitUri(localUriBase);
+            for (const [artifactIndex, localIndex] of UriRebaser.commonIndices(artifactParts, localParts)) {
                 const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
-                if (await this.pathExists(rebased)) {
-                    this.updateValidatedPaths(artifactPath, localPath);
+                if (await this.uriExists(rebased)) {
+                    this.updateValidatedUris(artifactUri, localUriBase);
                     this.updateBases(artifactParts, localParts);
                     return rebased;
                 }

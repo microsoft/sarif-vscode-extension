@@ -6,7 +6,7 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct, parseRegion } from '../shared';
 import '../shared/extension';
-import { Baser } from './baser';
+import { UriRebaser } from './baser';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import { regionToSelection } from './regionToSelection';
@@ -27,7 +27,7 @@ export async function activate(context: ExtensionContext) {
     // Basing
     const urisNonSarif = await workspace.findFiles('**/*', '.sarif'); // Ignore folders?
     const fileAndUris = urisNonSarif.map(uri => [uri.path.file, uri.toString()]) as [string, string][];
-    const baser = new Baser(mapDistinct(fileAndUris), store);
+    const baser = new UriRebaser(mapDistinct(fileAndUris), store);
 
     // Panel
     const panel = new Panel(context, baser, store);
@@ -68,7 +68,7 @@ export async function activate(context: ExtensionContext) {
             store.logs.splice(0);
         },
         get uriBases() {
-            return baser.uriBases.map(path => Uri.file(path)) as ReadonlyArray<Uri>;
+            return baser.uriBases.map(uri => Uri.file(uri)) as ReadonlyArray<Uri>;
         },
         set uriBases(values) {
             baser.uriBases = values.map(uri => uri.toString());
@@ -76,20 +76,20 @@ export async function activate(context: ExtensionContext) {
     };
 }
 
-function activateDiagnostics(disposables: Disposable[], store: Store, baser: Baser) {
+function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
     const setDiags = (doc: TextDocument) => {
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
 
-        const artifactPath = baser.translateLocalToArtifact(doc.uri.toString());
+        const artifactUri = baser.translateLocalToArtifact(doc.uri.toString());
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
         } as Record<string, DiagnosticSeverity>;
         const diags = store.results
-            .filter(result => result._uri === artifactPath)
+            .filter(result => result._uri === artifactUri)
             .map(result => new ResultDiagnostic(
                 regionToSelection(doc, result._region),
                 result._message ?? '—',

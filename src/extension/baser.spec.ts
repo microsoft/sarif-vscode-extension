@@ -22,7 +22,7 @@ describe('baser', () => {
         // Spaces inserted to emphasize common segments.
         const artifactUri = 'file:///folder            /file1.txt'.replace(/ /g, '');
         const localUri    = 'file:///projects/project  /file1.txt'.replace(/ /g, '');
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
@@ -40,8 +40,8 @@ describe('baser', () => {
         const distinctArtifactNames = new Map([
             ['file1.txt', artifactUri]
         ]);
-        const baser = new Baser(distinctLocalNames, { distinctArtifactNames });
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        const rebaser = new UriRebaser(distinctLocalNames, { distinctArtifactNames });
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri); // Should also match file1?
     });
 
@@ -50,7 +50,7 @@ describe('baser', () => {
         const artifactUri = 'file://    /a/b.c'.replace(/ /g, '');
         const localUri    = 'file:///x/y/a/b.c'.replace(/ /g, '');
 
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
@@ -66,8 +66,8 @@ describe('baser', () => {
                 Uri: URI
             },
         });
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
 
@@ -76,7 +76,7 @@ describe('baser', () => {
         const artifact = 'file:///d/e/f/x/y/a/b.c'.replace(/ /g, '');
         const localUri = 'file://      /x/y/a/b.c'.replace(/ /g, '');
 
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
@@ -92,16 +92,16 @@ describe('baser', () => {
                 Uri: URI
             },
         });
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifact);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifact);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
 
     it('commonIndices', async () => {
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {},
         });
-        const pairs = [...Baser.commonIndices(
+        const pairs = [...UriRebaser.commonIndices(
             ['a', 'b', 'c'],
             ['x', 'b', 'y', 'c', 'z', 'b']
         )];
@@ -111,7 +111,7 @@ describe('baser', () => {
     it('API-injected baseUris - None, No Match', async () => {
         const artifactUri = 'http:///a/b/c/d.e'.replace(/ /g, '');
 
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string) => undefined,
@@ -125,8 +125,8 @@ describe('baser', () => {
                 Uri: URI
             },
         });
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, '');
     });
 
@@ -136,7 +136,7 @@ describe('baser', () => {
         const uriBase     = 'file:///x/y  /b  /z    '.replace(/ /g, '');
         const localUri    = 'file:///x/y  /b  /c/d.e'.replace(/ /g, '');
 
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
@@ -148,9 +148,9 @@ describe('baser', () => {
                 Uri: URI
             },
         });
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        baser.uriBases = [uriBase];
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        rebaser.uriBases = [uriBase];
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
 
@@ -160,7 +160,7 @@ describe('baser', () => {
         const uriBase     = 'file://  /a  '.replace(/ /g, '');
         const localUri    = 'file://  /a/b'.replace(/ /g, '');
 
-        const { Baser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./baser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
@@ -172,9 +172,9 @@ describe('baser', () => {
                 Uri: URI
             },
         });
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        baser.uriBases = [uriBase];
-        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        rebaser.uriBases = [uriBase];
+        const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
 });

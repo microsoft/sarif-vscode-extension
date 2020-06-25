@@ -88,10 +88,10 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
     return false;
 }
 
-export function upgradeLog(path: string) {
+export function upgradeLog(fsPath: string) {
     const name = tmpNameSync({ postfix: '.sarif' });
     const multitoolExe = `Sarif.Multitool${process.platform === 'win32' ? '.exe' : ''}`;
     const multitoolExePath = join(Store.extensionPath || process.cwd(), 'out', multitoolExe);
-    execFileSync(multitoolExePath, ['transform', path, '--force', '--pretty-print', '--output', name]);
+    execFileSync(multitoolExePath, ['transform', fsPath, '--force', '--pretty-print', '--output', name]);
     return name;
 }

@@ -5,7 +5,7 @@ import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
 import { CommandPanelToExtension, filtersColumn, filtersRow, ResultId, _Region } from '../shared';
-import { Baser } from './baser';
+import { UriRebaser } from './baser';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
 import { Store } from './store';
@@ -16,7 +16,7 @@ export class Panel {
 
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
-        readonly basing: Baser,
+        readonly basing: UriRebaser,
         readonly store: Pick<Store, 'logs' | 'results'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
