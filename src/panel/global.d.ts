@@ -8,10 +8,10 @@ export {};
 declare global {
     // Disagree with Typescript built-in typing `indexOf()`. It does not allow `searchElement` undefined.
     interface Array<T> {
-        indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number
+        indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number;
     }
     interface ReadonlyArray<T> {
-        indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number
+        indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number;
     }
 
     const acquireVsCodeApi: any; // VS Code does not provide type info.
@@ -19,8 +19,8 @@ declare global {
 
     namespace NodeJS {
         interface Global {
-            vscode: any // VS Code does not provide type info.
-            fetch(input: RequestInfo, init?: RequestInit): Promise<Response> // Only used in mock.
+            vscode: any; // VS Code does not provide type info.
+            fetch(input: RequestInfo, init?: RequestInit): Promise<Response>; // Only used in mock.
         }
     }
 }

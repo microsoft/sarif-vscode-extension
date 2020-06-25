@@ -10,11 +10,11 @@ import './table.scss';
 import { Column, RowGroup, RowItem, TableStore } from './tableStore';
 
 interface TableProps<T, G> {
-    columns: Column<T>[]
-    renderIconName?: (item: T) => string
-    renderGroup: (group: G) => ReactNode
-    renderCell: (column: Column<T>, itemData: T) => ReactNode
-    store: TableStore<T, G>
+    columns: Column<T>[];
+    renderIconName?: (item: T) => string;
+    renderGroup: (group: G) => ReactNode;
+    renderCell: (column: Column<T>, itemData: T) => ReactNode;
+    store: TableStore<T, G>;
 }
 @observer export class Table<T, G> extends PureComponent<TableProps<T, G>> {
     @computed get gridTemplateColumns() {

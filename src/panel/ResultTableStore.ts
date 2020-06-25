@@ -12,9 +12,9 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
         readonly groupBy: (item: Result) => G | undefined,
         resultsSource: { results: ReadonlyArray<Result> },
         readonly filtersSource: {
-            keywords: string,
-            filtersRow: Record<string, Record<string, Visibility>>,
-            filtersColumn: Record<string, Record<string, Visibility>>
+            keywords: string;
+            filtersRow: Record<string, Record<string, Visibility>>;
+            filtersColumn: Record<string, Record<string, Visibility>>;
         },
         readonly selection: IObservableValue<Row | undefined>) {
         super(

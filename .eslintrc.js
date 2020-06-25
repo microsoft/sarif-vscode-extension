@@ -26,6 +26,11 @@ module.exports = {
                 "no-trailing-spaces": ERROR,
                 "quotes": [ERROR, "single", {"allowTemplateLiterals": true}],
                 "semi": ERROR,
+                "@typescript-eslint/member-delimiter-style": [ERROR, {
+                    "singleline": {
+                        "delimiter": "comma",
+                    }
+                }],
 
                 // Exceptions with Justifications.
                 "no-undef": OFF, // Requires too many exception account for Mocha, Node.js and browser globals. Typescript also already checks for this.

@@ -19,9 +19,9 @@ const levelToIcon = {
 };
 
 interface ResultTableProps<G> {
-    store: ResultTableStore<G>
-    onClearFilters: () => void
-    renderGroup: (group: G) => ReactNode
+    store: ResultTableStore<G>;
+    onClearFilters: () => void;
+    renderGroup: (group: G) => ReactNode;
 }
 @observer export class ResultTable<G> extends PureComponent<ResultTableProps<G>> {
     private renderCell = (column: Column<Result>, result: Result) => {

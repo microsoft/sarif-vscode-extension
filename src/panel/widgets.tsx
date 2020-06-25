@@ -73,12 +73,12 @@ export class Hi extends React.Component<React.HTMLAttributes<HTMLDivElement>> {
 }
 
 export interface ListProps<T> {
-    allowClear?: boolean
-    className?: string
-    horizontal?: boolean
-    items?: ReadonlyArray<T>
-    renderItem: (item: T, i: number) => React.ReactNode
-    selection: IObservableValue<T | undefined>
+    allowClear?: boolean;
+    className?: string;
+    horizontal?: boolean;
+    items?: ReadonlyArray<T>;
+    renderItem: (item: T, i: number) => React.ReactNode;
+    selection: IObservableValue<T | undefined>;
 }
 @observer export class List<T> extends PureComponent<ListProps<T>> {
     render() {

@@ -23,31 +23,31 @@ export type _Region
 // I don't see a need for them in the long term (after the design phase).
 declare module 'sarif' {
     interface Log {
-        _uri: string
-        _uriUpgraded?: string // Only present if upgraded.
-        _jsonMap?: JsonMap // Only used by the "extension" side for navigating original SARIF sources. The "panel" side does not need this feature and thus does not use this field.
-        _augmented: boolean
-        _distinct: Map<string, string> // Technically per Run, practically doesn't matter right now.
+        _uri: string;
+        _uriUpgraded?: string; // Only present if upgraded.
+        _jsonMap?: JsonMap; // Only used by the "extension" side for navigating original SARIF sources. The "panel" side does not need this feature and thus does not use this field.
+        _augmented: boolean;
+        _distinct: Map<string, string>; // Technically per Run, practically doesn't matter right now.
     }
 
     interface Run {
-        _index: number
+        _index: number;
     }
 
     interface Result {
-        _log: Log
-        _run: Run
-        _id: ResultId
-        _logRegion?: _Region
-        _uri?: string
-        _uriContents?: string // ArtifactContent. Do not use this uri for display.
-        _relativeUri?: string
-        _region?: _Region
-        _line: number // -1 if empty.
-        _rule?: ReportingDescriptor
-        _message: string // '—' if empty.
-        _markdown?: string
-        _suppression?: 'not suppressed' | 'suppressed'
+        _log: Log;
+        _run: Run;
+        _id: ResultId;
+        _logRegion?: _Region;
+        _uri?: string;
+        _uriContents?: string; // ArtifactContent. Do not use this uri for display.
+        _relativeUri?: string;
+        _region?: _Region;
+        _line: number; // -1 if empty.
+        _rule?: ReportingDescriptor;
+        _message: string; // '—' if empty.
+        _markdown?: string;
+        _suppression?: 'not suppressed' | 'suppressed';
     }
 }
 
