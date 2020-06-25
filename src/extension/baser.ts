@@ -5,6 +5,17 @@ import { Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import { Store } from './store';
 
+/**
+ * Splits a URI into path segments. Scheme+authority considered a "segment" for practical purposes.
+ * Query and fragment are current ignored until we have a concrete use case.
+ * @param uri - An absolute URI.
+ */
+function splitUri(uri: string | undefined) {
+    if (uri === undefined) return [];
+    const { scheme, authority, path } = Uri.parse(uri, true);
+    return [`${scheme}://${authority}`, ...path.slice(1).split('/')]; // By spec first '/' always exists, thus safe to slice(1).
+}
+
 export class Baser {
     constructor(
         private readonly distinctLocalNames: Map<string, string>,
@@ -47,7 +58,7 @@ export class Baser {
 
                 const artifactPath = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
                 this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(artifactPath.split('/'), localPath.split('/'));
+                this.updateBases(splitUri(artifactPath), splitUri(localPath));
             }
         }
         return this.validatedPathsLocalToArtifact.get(localPath) ?? localPath;
@@ -57,7 +68,7 @@ export class Baser {
     // The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
     private async pathExists(path: string) {
         try {
-            await workspace.openTextDocument(Uri.parse(path));
+            await workspace.openTextDocument(Uri.parse(path, true));
         } catch (error) {
             return false;
         }
@@ -80,10 +91,7 @@ export class Baser {
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                 if (!artifactPath.startsWith(artifactBase)) continue; // Just let it fall through?
-
-                const normalizedArtifactPath = `${artifactPath.startsWith('/') ? '' : '/'}${artifactPath}`;
-                const localPath = normalizedArtifactPath.replace(artifactBase, localBase);
-
+                const localPath = artifactPath.replace(artifactBase, localBase);
                 if (await this.pathExists(localPath)) {
                     this.updateValidatedPaths(artifactPath, localPath);
                     return localPath;
@@ -100,16 +108,16 @@ export class Baser {
             if (this.distinctLocalNames.has(file) && this.store.distinctArtifactNames.has(file)) {
                 const localPath = this.distinctLocalNames.get(file)!; // Not undefined due to surrounding if.
                 this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(artifactPath.split('/'), localPath.split('/'));
+                this.updateBases(splitUri(artifactPath), splitUri(localPath));
                 return localPath;
             }
 
             // Open Docs
             for (const doc of workspace.textDocuments) {
-                const localPath = doc.uri.path;
+                const localPath = doc.uri.toString();
                 if (localPath.file !== artifactPath.file) continue;
                 this.updateValidatedPaths(artifactPath, localPath);
-                this.updateBases(artifactPath.split('/'), localPath.split('/'));
+                this.updateBases(splitUri(artifactPath), splitUri(localPath));
                 return localPath;
             }
 
@@ -119,7 +127,7 @@ export class Baser {
         let validatedUri = await validateUri();
         if (!validatedUri && !this.activeInfoMessages.has(artifactPath)) {
             this.activeInfoMessages.add(artifactPath);
-            const choice = await window.showInformationMessage(`Unable to find '${artifactPath.split('/').pop()}'`, 'Locate...');
+            const choice = await window.showInformationMessage(`Unable to find '${artifactPath.file}'`, 'Locate...');
             this.activeInfoMessages.delete(artifactPath);
             if (choice) {
                 const extension = artifactPath.match(/\.([\w]+)$/)?.[1] ?? '';
@@ -130,15 +138,14 @@ export class Baser {
                 });
                 if (!files?.length) return; // User cancelled.
 
-                const partsOld = artifactPath.split('/');
-                const partsNew = files[0]?.path.split('/');
+                const partsOld = splitUri(artifactPath);
+                const partsNew = splitUri(files[0].toString());
                 if (partsOld.last !== partsNew.last) {
                     void window.showErrorMessage(`File names must match: "${partsOld.last}" and "${partsNew.last}"`);
                     return;
                 }
                 this.updateBases(partsOld, partsNew);
             }
-
             validatedUri = await validateUri(); // Try again
         }
         return validatedUri;
@@ -154,9 +161,9 @@ export class Baser {
 
     public uriBases = [] as string[]
     private async tryUriBases(artifactPath: string) {
-        const artifactParts = artifactPath.split('/');
+        const artifactParts = splitUri(artifactPath);
         for (const localPath of this.uriBases) {
-            const localParts = localPath.split('/');
+            const localParts = splitUri(localPath);
             for (const [artifactIndex, localIndex] of Baser.commonIndices(artifactParts, localParts)) {
                 const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
                 if (await this.pathExists(rebased)) {

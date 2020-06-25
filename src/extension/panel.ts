@@ -135,7 +135,7 @@ export class Panel {
             await commands.executeCommand('workbench.action.keepEditor');
         }
 
-        const doc = await workspace.openTextDocument(Uri.parse(localUri));
+        const doc = await workspace.openTextDocument(Uri.parse(localUri, true));
         const editor = await window.showTextDocument(doc, ViewColumn.One, true);
 
         if (region === undefined) return;
@@ -155,7 +155,7 @@ export class Panel {
             added: added.map(log => ({
                 uri: log._uri,
                 uriUpgraded: log._uriUpgraded,
-                webviewUri: this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri)).toString(),
+                webviewUri: this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
             })),
         });
     }

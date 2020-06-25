@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { ArtifactLocation, Log, Location, Region, Result } from 'sarif';
+import { ArtifactLocation, Location, Log, Region, Result } from 'sarif';
 import urlJoin from 'url-join';
+import { URI } from 'vscode-uri';
 
 type JsonLocation = { line: number, column: number } // Unused: pos
 type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key, keyEnd
@@ -190,7 +191,10 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
     const uriBase = result._run.originalUriBaseIds?.[uriBaseId ?? '']?.uri ?? '';
     const relativeUri = anyArtLoc.uri ?? runArtLoc?.uri; // If index (§3.4.5) is absent, uri SHALL be present.
-    const uri = relativeUri && urlJoin(uriBase, relativeUri);
+
+    // Convert possible relative URIs to absolute. Also serves to normalize leading slashes.
+    const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString();
+    const uri = relativeUri && normalizeUri(urlJoin(uriBase, relativeUri));
 
     const uriContents = runArtCon?.text || runArtCon?.binary
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)

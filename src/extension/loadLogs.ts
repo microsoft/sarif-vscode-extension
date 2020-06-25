@@ -45,7 +45,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                         increment: 1 / upgrades * 100
                     });
                     await new Promise(r => setTimeout(r, 0)); // Await otherwise progress does not update. Assumption: await allows the rendering thread to kick in.
-                    const {fsPath} = Uri.parse(oldLog._uri);
+                    const {fsPath} = Uri.parse(oldLog._uri, true);
                     try {
                         const tempPath = upgradeLog(fsPath);
                         const file = fs.readFileSync(tempPath, 'utf8'); // Assume scheme file.

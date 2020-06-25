@@ -31,7 +31,7 @@ describe('augmentLog', () => {
 
     it('add augmented fields', () => {
         augmentLog(log);
-        assert.strictEqual(result._uri, '/folder/file.txt');
+        assert.strictEqual(result._uri, 'file:///folder/file.txt');
         assert.strictEqual(result._line, -1);
         assert.strictEqual(result._message, 'Message 1');
     });

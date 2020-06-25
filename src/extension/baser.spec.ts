@@ -1,24 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+/* eslint-disable no-throw-literal */ // Can be removed when we move to vscode.workspace.fs.
+
 import assert from 'assert';
-import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
+import { URI } from 'vscode-uri';
+import '../shared/extension';
 
 const proxyquire = require('proxyquire').noCallThru();
-const { Baser } = proxyquire('./baser', {
-    'vscode': {
-        window: {
-            showInformationMessage: mockVscode.window.showInformationMessage,
-            showOpenDialog: mockVscode.window.showOpenDialog,
-        },
-        workspace: {
-            onDidChangeConfiguration: () => {},
-            openTextDocument: mockVscode.workspace.openTextDocument,
-            textDocuments: [],
-        },
-        Uri: mockVscode.Uri
-    },
-});
 
 describe('baser', () => {
     it('Array.commonLength', () => {
@@ -30,57 +19,88 @@ describe('baser', () => {
     });
 
     it('Distinct 1', async () => {
-        mockVscodeTestFacing.mockFileSystem = ['/projects/project/file1.txt'];
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'file:///folder            /file1.txt'.replace(/ /g, '');
+        const localUri    = 'file:///projects/project  /file1.txt'.replace(/ /g, '');
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                workspace: {
+                    openTextDocument: async (uri: URI) => {
+                        if (uri.toString() === localUri) return;
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
         const distinctLocalNames = new Map([
-            ['file1.txt', '/projects/project/file1.txt']
+            ['file1.txt', localUri]
         ]);
         const distinctArtifactNames = new Map([
-            ['file1.txt', 'folder/file1.txt']
+            ['file1.txt', artifactUri]
         ]);
         const baser = new Baser(distinctLocalNames, { distinctArtifactNames });
-        const localPath = await baser.translateArtifactToLocal('folder/file1.txt');
-        mockVscodeTestFacing.mockFileSystem = undefined;
-
-        assert.strictEqual(localPath, '/projects/project/file1.txt'); // Should also match file1?
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        assert.strictEqual(rebasedArtifactUri, localUri); // Should also match file1?
     });
 
     it('Picker 1', async () => {
-        const artifact = 'a/b.c';
-        mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c'];
-        mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem;
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const localPath = await baser.translateArtifactToLocal(artifact);
-        mockVscodeTestFacing.mockFileSystem = undefined;
-        mockVscodeTestFacing.showOpenDialogResult = [];
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'file://    /a/b.c'.replace(/ /g, '');
+        const localUri    = 'file:///x/y/a/b.c'.replace(/ /g, '');
 
-        assert.strictEqual(localPath, '/x/y/a/b.c');
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                window: {
+                    showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
+                    showOpenDialog: async () => [URI.parse(localUri)],
+                },
+                workspace: {
+                    openTextDocument: async (uri: URI) => {
+                        if (uri.toString() === localUri) return;
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
+        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        assert.strictEqual(rebasedArtifactUri, localUri);
     });
 
     it('Picker 2', async () => {
-        const artifact = '/a/b.c';
-        mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c'];
-        mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem;
+        // Spaces inserted to emphasize common segments.
+        const artifact = 'file:///d/e/f/x/y/a/b.c'.replace(/ /g, '');
+        const localUri = 'file://      /x/y/a/b.c'.replace(/ /g, '');
+
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                window: {
+                    showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
+                    showOpenDialog: async () => [URI.parse(localUri)],
+                },
+                workspace: {
+                    openTextDocument: async (uri: URI) => {
+                        if (uri.toString() === localUri) return;
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
         const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const localPath = await baser.translateArtifactToLocal(artifact);
-        mockVscodeTestFacing.mockFileSystem = undefined;
-        mockVscodeTestFacing.showOpenDialogResult = [];
-
-        assert.strictEqual(localPath, '/x/y/a/b.c');
-    });
-
-    it('Picker 3', async () => {
-        const artifact = '/d/e/f/x/y/a/b.c';
-        mockVscodeTestFacing.mockFileSystem = ['/x/y/a/b.c'];
-        mockVscodeTestFacing.showOpenDialogResult = mockVscodeTestFacing.mockFileSystem;
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const localRebased = await baser.translateArtifactToLocal(artifact);
-        mockVscodeTestFacing.mockFileSystem = undefined;
-        mockVscodeTestFacing.showOpenDialogResult = [];
-
-        assert.strictEqual(localRebased, '/x/y/a/b.c');
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifact);
+        assert.strictEqual(rebasedArtifactUri, localUri);
     });
 
     it('commonIndices', async () => {
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {},
+        });
         const pairs = [...Baser.commonIndices(
             ['a', 'b', 'c'],
             ['x', 'b', 'y', 'c', 'z', 'b']
@@ -88,24 +108,73 @@ describe('baser', () => {
         assert.deepStrictEqual(pairs, [[ 1, 1 ], [ 1, 5 ], [ 2, 3 ]]);
     });
 
-    it('API-injected baseUris - None', async () => {
-        const artifact = '/a/b/c/d.e';
-        mockVscodeTestFacing.mockFileSystem = [];
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        const localRebased = await baser.translateArtifactToLocal(artifact);
-        mockVscodeTestFacing.mockFileSystem = undefined;
+    it('API-injected baseUris - None, No Match', async () => {
+        const artifactUri = 'http:///a/b/c/d.e'.replace(/ /g, '');
 
-        assert.strictEqual(localRebased, undefined);
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                window: {
+                    showInformationMessage: async (_message: string) => undefined,
+                },
+                workspace: {
+                    openTextDocument: async (_uri: URI) => {
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
+        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        assert.strictEqual(rebasedArtifactUri, '');
     });
 
     it('API-injected baseUris - Typical', async () => {
-        const artifact = 'a/b/c/d.e';
-        mockVscodeTestFacing.mockFileSystem = ['x/y/b/c/d.e'];
-        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
-        baser.uriBases = ['x/y/b/z'];
-        const localRebased = await baser.translateArtifactToLocal(artifact);
-        mockVscodeTestFacing.mockFileSystem = undefined;
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'http:///a    /b  /c/d.e'.replace(/ /g, '');
+        const uriBase     = 'file:///x/y  /b  /z    '.replace(/ /g, '');
+        const localUri    = 'file:///x/y  /b  /c/d.e'.replace(/ /g, '');
 
-        assert.strictEqual(localRebased, 'x/y/b/c/d.e');
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                workspace: {
+                    openTextDocument: async (uri: URI) => {
+                        if (uri.toString() === localUri) return;
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
+        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
+        baser.uriBases = [uriBase];
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        assert.strictEqual(rebasedArtifactUri, localUri);
+    });
+
+    it('API-injected baseUris - Short', async () => {
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'http://  /a/b'.replace(/ /g, '');
+        const uriBase     = 'file://  /a  '.replace(/ /g, '');
+        const localUri    = 'file://  /a/b'.replace(/ /g, '');
+
+        const { Baser } = proxyquire('./baser', {
+            'vscode': {
+                workspace: {
+                    openTextDocument: async (uri: URI) => {
+                        if (uri.toString() === localUri) return;
+                        throw 'Mock file not found';
+                    },
+                    textDocuments: [],
+                },
+                Uri: URI
+            },
+        });
+        const baser = new Baser(new Map(), { distinctArtifactNames: new Map() });
+        baser.uriBases = [uriBase];
+        const rebasedArtifactUri = await baser.translateArtifactToLocal(artifactUri);
+        assert.strictEqual(rebasedArtifactUri, localUri);
     });
 });
