@@ -6,19 +6,10 @@
 import assert from 'assert';
 import { execFileSync } from 'child_process';
 import { Log } from 'sarif';
+import { URI as Uri } from 'vscode-uri';
 
 const proxyquire = require('proxyquire').noCallThru();
 
-class Uri {
-    static parse(value: string) { return new Uri(value); }
-    static file(path: any) { return Uri.parse(`file://${path}`); }
-
-    constructor(readonly value: string) {}
-    get path() { return this.value.replace('file://', ''); }
-    get fsPath() { return this.path; } // Assume Unix.
-    toString() { return this.value; }
-    scheme = ''; authority = ''; query = ''; fragment = ''; with = undefined as any; toJSON = {} as any // Stubs
-}
 const vscode = {
     ProgressLocation: { Notification: 15 },
     Uri,

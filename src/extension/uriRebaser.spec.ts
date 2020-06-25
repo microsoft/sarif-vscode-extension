@@ -4,7 +4,7 @@
 /* eslint-disable no-throw-literal */ // Can be removed when we move to vscode.workspace.fs.
 
 import assert from 'assert';
-import { URI } from 'vscode-uri';
+import { URI as Uri } from 'vscode-uri';
 import '../shared/extension';
 
 const proxyquire = require('proxyquire').noCallThru();
@@ -27,7 +27,7 @@ describe('baser', () => {
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
@@ -51,12 +51,12 @@ describe('baser', () => {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
-                    showOpenDialog: async () => [URI.parse(localUri)],
+                    showOpenDialog: async () => [Uri.parse(localUri)],
                 },
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
@@ -74,12 +74,12 @@ describe('baser', () => {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
-                    showOpenDialog: async () => [URI.parse(localUri)],
+                    showOpenDialog: async () => [Uri.parse(localUri)],
                 },
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
@@ -111,7 +111,7 @@ describe('baser', () => {
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (_uri: string) => false,
         });
@@ -131,7 +131,7 @@ describe('baser', () => {
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
@@ -152,7 +152,7 @@ describe('baser', () => {
                 workspace: {
                     textDocuments: [],
                 },
-                Uri: URI
+                Uri,
             },
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
