@@ -71,7 +71,7 @@ export class UriRebaser {
         const validateUri = async () => {
             // Cache
             if (this.validatedUrisArtifactToLocal.has(artifactUri))
-                return this.validatedUrisArtifactToLocal.get(artifactUri);
+                return this.validatedUrisArtifactToLocal.get(artifactUri)!;
 
             // File System Exist
             if (await uriExists(artifactUri))
@@ -110,7 +110,7 @@ export class UriRebaser {
                 return localUri;
             }
 
-            return ''; // Can't find uri.
+            return ''; // Signals inability to rebase.
         };
 
         let validatedUri = await validateUri();
@@ -125,13 +125,13 @@ export class UriRebaser {
                     filters: { 'Matching file' : [extension] },
                     // Consider allowing folders.
                 });
-                if (!files?.length) return; // User cancelled.
+                if (!files?.length) return ''; // User cancelled.
 
                 const partsOld = splitUri(artifactUri);
                 const partsNew = splitUri(files[0].toString());
                 if (partsOld.last !== partsNew.last) {
                     void window.showErrorMessage(`File names must match: "${partsOld.last}" and "${partsNew.last}"`);
-                    return;
+                    return '';
                 }
                 this.updateBases(partsOld, partsNew);
             }
