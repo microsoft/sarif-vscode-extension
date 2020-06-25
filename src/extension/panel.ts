@@ -12,7 +12,7 @@ import { UriRebaser } from './uriRebaser';
 
 export class Panel {
     private title = 'SARIF Result'
-    @observable private panel = null as WebviewPanel | null
+    @observable private panel: WebviewPanel | null = null
 
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
