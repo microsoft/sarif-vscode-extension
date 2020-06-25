@@ -6,6 +6,7 @@
 /// Todo: Migrate to tsconfig.files
 
 import assert from 'assert';
+import { URI as Uri } from 'vscode-uri';
 import { postSelectArtifact, postSelectLog } from '../panel/indexStore';
 import { log } from '../test/mockLog';
 import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
@@ -27,7 +28,7 @@ describe('activate', () => {
             },
         });
         const api = await mockVscodeTestFacing.activateExtension(activate);
-        api.openLogs([new mockVscode.Uri('/.sarif/test.sarif')]);
+        api.openLogs([Uri.parse('file:///.sarif/test.sarif')]);
     });
 
     it('can postSelectArtifact', async () => {

@@ -9,6 +9,7 @@
 /// Normally 'global.d.ts' auto imports, not sure why it's not working here.
 
 import { DiagnosticSeverity } from 'vscode';
+import { URI as Uri } from 'vscode-uri';
 import { IndexStore } from '../panel/indexStore';
 import { filtersColumn, filtersRow } from '../shared';
 import { log } from './mockLog';
@@ -20,15 +21,6 @@ global.vscode = {
         await mockVscodeTestFacing.panel_onDidReceiveMessage?.(message);
     }
 };
-
-class Uri {
-    constructor(readonly fsPath: string) {}
-    toString() { return `file://${this.fsPath}`; }
-    static file(path: string) { return new Uri(path); }
-    static parse(uri: string) {
-        return new Uri(uri.replace('file://', ''));
-    }
-}
 
 export const mockVscodeTestFacing = {
     mockFileSystem: undefined as string[] | undefined,
@@ -124,7 +116,7 @@ export const mockVscode = {
         findFiles: (include: string, _exclude?: string) => {
             if (include === '.sarif/**/*.sarif') {
                 return [
-                    new Uri('/.sarif/test.sarif')
+                    Uri.parse('file:///.sarif/test.sarif')
                 ];
             }
             return [];
