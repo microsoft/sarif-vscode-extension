@@ -6,13 +6,13 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct, parseRegion } from '../shared';
 import '../shared/extension';
-import { UriRebaser } from './baser';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import { update, updateChannelConfigSection } from './update';
+import { UriRebaser } from './uriRebaser';
 
 export async function activate(context: ExtensionContext) {
     const disposables = context.subscriptions;

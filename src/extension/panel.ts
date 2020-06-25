@@ -5,10 +5,10 @@ import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
 import { CommandPanelToExtension, filtersColumn, filtersRow, ResultId, _Region } from '../shared';
-import { UriRebaser } from './baser';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
 import { Store } from './store';
+import { UriRebaser } from './uriRebaser';
 
 export class Panel {
     private title = 'SARIF Result'

@@ -22,7 +22,7 @@ describe('baser', () => {
         // Spaces inserted to emphasize common segments.
         const artifactUri = 'file:///folder            /file1.txt'.replace(/ /g, '');
         const localUri    = 'file:///projects/project  /file1.txt'.replace(/ /g, '');
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
@@ -50,7 +50,7 @@ describe('baser', () => {
         const artifactUri = 'file://    /a/b.c'.replace(/ /g, '');
         const localUri    = 'file:///x/y/a/b.c'.replace(/ /g, '');
 
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
@@ -76,7 +76,7 @@ describe('baser', () => {
         const artifact = 'file:///d/e/f/x/y/a/b.c'.replace(/ /g, '');
         const localUri = 'file://      /x/y/a/b.c'.replace(/ /g, '');
 
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
@@ -98,7 +98,7 @@ describe('baser', () => {
     });
 
     it('commonIndices', async () => {
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {},
         });
         const pairs = [...UriRebaser.commonIndices(
@@ -111,7 +111,7 @@ describe('baser', () => {
     it('API-injected baseUris - None, No Match', async () => {
         const artifactUri = 'http:///a/b/c/d.e'.replace(/ /g, '');
 
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 window: {
                     showInformationMessage: async (_message: string) => undefined,
@@ -136,7 +136,7 @@ describe('baser', () => {
         const uriBase     = 'file:///x/y  /b  /z    '.replace(/ /g, '');
         const localUri    = 'file:///x/y  /b  /c/d.e'.replace(/ /g, '');
 
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
@@ -160,7 +160,7 @@ describe('baser', () => {
         const uriBase     = 'file://  /a  '.replace(/ /g, '');
         const localUri    = 'file://  /a/b'.replace(/ /g, '');
 
-        const { UriRebaser } = proxyquire('./baser', {
+        const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
                     openTextDocument: async (uri: URI) => {
