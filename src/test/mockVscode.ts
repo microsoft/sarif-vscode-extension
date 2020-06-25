@@ -99,8 +99,12 @@ export const mockVscode = {
         getConfiguration: () => new Map(),
         onDidOpenTextDocument: () => {},
         onDidCloseTextDocument: () => {},
-        openTextDocument: async (uri: { fsPath: string }) => {
-            // console.log(`openTextDocument ${uri}`)
+        fs: {
+            stat: async (uri: Uri) => {
+                if (mockVscodeTestFacing.mockFileSystem && !mockVscodeTestFacing.mockFileSystem.includes(uri.fsPath)) throw new Error();
+            },
+        },
+        openTextDocument: async (uri: Uri) => {
             if (mockVscodeTestFacing.mockFileSystem && !mockVscodeTestFacing.mockFileSystem.includes(uri.fsPath)) throw new Error();
             return {
                 uri,

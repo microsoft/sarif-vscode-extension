@@ -3,11 +3,11 @@
 
 import { Uri, workspace } from 'vscode';
 
-// Hacky: We are using `fs.sync` to test the existence of documents as VS Code does not provide a dedicated existence API.
+// Hacky: We are using `fs.stat` to test the existence of documents as VS Code does not provide a dedicated existence API.
 // The similar Node `fs` API does not resolve custom URI schemes in the same way that VS Code does otherwise we would use that.
 export default async function uriExists(absoluteUri: string) {
     try {
-        await workspace.openTextDocument(Uri.parse(absoluteUri, true));
+        await workspace.fs.stat(Uri.parse(absoluteUri, true));
     } catch (error) {
         return false;
     }
