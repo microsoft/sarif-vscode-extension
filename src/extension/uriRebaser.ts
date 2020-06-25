@@ -67,8 +67,7 @@ export class UriRebaser {
 
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
     public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
-        // Temp.
-        if (artifactUri.startsWith('sarif:')) return artifactUri;
+        if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
         const validateUri = async () => {
             // Cache
             if (this.validatedUrisArtifactToLocal.has(artifactUri))
