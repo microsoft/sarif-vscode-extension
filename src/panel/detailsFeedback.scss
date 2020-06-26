@@ -1,0 +1,49 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+.svDetailsFeedback {
+    padding: 12px 22px; // Same as svDetailsInfo
+    overflow-x: overlay;
+
+    .svFeedbackColumns {
+        columns: 2 260px;	
+    }
+
+    .svDetailsSection {
+        margin-bottom: 12px;
+        break-inside: avoid;
+    }
+
+    .svDetailsTitle { // Similar to svPopoverTitle
+        color: var(--vscode-settings-headerForeground);
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    textarea { // Similar to svFilterCombo input
+        width: 100%;
+        min-height: 80px;
+        background-color: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: none;
+        padding: 4px 5px;
+        font-size: 12px;
+        overflow: hidden;
+        resize: vertical;
+        margin: 3px 0;
+    }
+
+    input[type=button] { // Similar to svZeroData
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+        width: 180px;
+        padding: 4px;
+        line-height: 1.4em;
+        text-align: center;
+        cursor: pointer;
+
+        border: none;
+        font-size: inherit;
+        margin-top: 12px;
+    }
+}
