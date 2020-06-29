@@ -197,6 +197,10 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString(true /* skipEncoding */);
     const uri = relativeUri && normalizeUri(urlJoin(uriBase, relativeUri));
 
+    // A shorter more transparent URI format would be:
+    // `sarif://${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`
+    // However between workspace.openTextDocument() and registerTextDocumentContentProvider/provideTextDocumentContent()
+    // VS Code fails to maintain the authority value (possibiliy due to an encoding bug).
     const uriContents = runArtCon?.text || runArtCon?.binary
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
         : undefined;
