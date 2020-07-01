@@ -45,7 +45,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
-        const renderItem = (location: Location) => {
+        const renderLocation = (location: Location) => {
 			const { message, uri, region } = parseLocation(result, location)
 			return <>
 				<div className="ellipsis">{message ?? '—'}</div>
@@ -115,7 +115,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                 postSelectArtifact(result, location?.physicalLocation)
                             })
 
-                            return <List items={items} renderItem={renderItem} selection={selection} allowClear>
+                            return <List items={items} renderItem={renderLocation} selection={selection} allowClear>
                                 <span className="svSecondary">No code flows in selected result.</span>
                             </List>
                         })()}
