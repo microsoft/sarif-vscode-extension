@@ -6,7 +6,8 @@
     
     .svDetailsBody {
         overflow-y: overlay;
-    
+        display: grid;
+
         &.svDetailsInfo {
             padding: 12px 22px;
 
@@ -30,7 +31,7 @@
             }
         }
 
-        &.svDetailsCodeflow {
+        &.svDetailsCodeflowAndStacks {
             display: grid;
 
             & > .svList {
@@ -69,5 +70,14 @@
                 }
             }
         }
+
+        .svStack {
+			margin-top: 10px;
+		}
+
+		.svStacksMessage {
+			padding-left: 22px;
+			margin-bottom: -10px;
+		}
     }
 }
