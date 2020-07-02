@@ -7,13 +7,13 @@ import { _Region } from '../shared';
 import assert from 'assert';
 
 describe('TableStore', () => {
+    const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
+    const selection = observable.box(); 
+
     it('Get rows based on different values of expanded property', () => {
-        // Create instance of tableStore
-        const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
         const itemSource = { results: [1,2,3,4,5] }
-        const selection = observable.box(); 
         const tableStore = new TableStore(groupBy, itemSource, selection);
- 
+
         // Verify rows based on default value for expanded property
         // TODO: compare 2 lists and their types?
         assert.strictEqual(tableStore.rows.length, 7);
@@ -44,9 +44,7 @@ describe('TableStore', () => {
     });
     it ('Row groups are sorted according to descending order of # of row items in them', () => {
         // tableStore - when # of odd elements more than # of even elements
-        const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
         const itemSource = { results: [1,2,3,4,5] }
-        const selection = observable.box(); 
         const tableStore = new TableStore(groupBy, itemSource, selection);
 
         // "odd" row group would be sorted high in the list
@@ -60,9 +58,7 @@ describe('TableStore', () => {
         assert.strictEqual((tableStore2.rows[0] as RowGroup<number,string>).title, 'even');
     })
     it ('Row groups maintain the same sequence of row items as it is in itemSource', () => {
-        const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
         const itemSource = { results: [1,2,3,4,5] }
-        const selection = observable.box(); 
         const tableStore = new TableStore(groupBy, itemSource, selection);
         const oddRowGroup = tableStore.rows[0] as RowGroup<number, string>;
         assert.deepEqual(oddRowGroup.items.map((item) => item.item), [1,3,5]);
@@ -77,15 +73,4 @@ describe('TableStore', () => {
         const oddRowGroup3 = tableStore3.rows[0] as RowGroup<number, string>;
         assert.deepEqual(oddRowGroup3.items.map((item) => item.item), [21,19,13,1,5]);
     });
-    it('Effect of toggling sort', () => {
-        const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
-        const itemSource = { results: [1,2,3,4,5] }
-        const selection = observable.box(); 
-        const tableStore = new TableStore(groupBy, itemSource, selection);
-
-        // toggle sort
-        tableStore.toggleSort('test_column_name');
-        assert.strictEqual((tableStore.rows[0] as RowGroup<number, string>).title, 'odd');
-        assert.strictEqual((tableStore.rows[4] as RowGroup<number, string>).title, 'even');
-    })
 });
