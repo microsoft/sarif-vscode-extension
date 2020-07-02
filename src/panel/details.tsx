@@ -8,9 +8,10 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { Component } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Result, ThreadFlowLocation } from 'sarif';
+import { Location, Result, StackFrame } from 'sarif';
 import { parseArtifactLocation, parseLocation } from '../shared';
 import './details.scss';
+import './index.scss'
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, renderMessageWithEmbeddedLinks, Tab, TabPanel } from './widgets';
 
@@ -20,8 +21,12 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
     private selectedTab = observable.box<TabName>('Info')
     @computed private get threadFlowLocations() {
-        return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
-            .filter(tfLocation => tfLocation.location);
+		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
+			.map(threadFlowLocation => threadFlowLocation.location)
+			.filter(locations => locations)
+	}
+    @computed private get stacks() {
+        return this.props.result?.stacks
     }
     constructor(props: DetailsProps) {
         super(props);
@@ -40,6 +45,25 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
+        const renderLocation = (location: Location) => {
+			const { message, uri, region } = parseLocation(result, location)
+			return <>
+				<div className="ellipsis">{message ?? '—'}</div>
+				<div className="svSecondary">{uri?.file ?? '—'}</div>
+				<div className="svLineNum">{region?.startLine}:1</div>
+			</>
+		}
+		const renderStack = (stackFrame: StackFrame) => {
+			const location = stackFrame.location
+			const logicalLocation = stackFrame.location?.logicalLocations[0]
+			const { message, uri, region } = parseLocation(result, location)
+			const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`
+			return <>
+				<div className="ellipsis">{text ?? '—'}</div>
+				<div className="svSecondary">{uri?.file ?? '—'}</div>
+				<div className="svLineNum">{region?.startLine}:1</div>
+			</>
+		}
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -81,28 +105,49 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                     </div>
                 </Tab>
                 <Tab name="Code Flows" count={this.threadFlowLocations?.length || 0}>
-                    <div className="svDetailsBody svDetailsCodeflow">
+                    <div className="svDetailsBody svDetailsCodeflowAndStacks">
                         {(() => {
                             const items = this.threadFlowLocations;
 
-                            const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false });
+                            const selection = observable.box(undefined as Location, { deep: false })
                             selection.observe(change => {
-                                const tfloc = change.newValue;
-                                postSelectArtifact(result, tfloc?.location?.physicalLocation);
-                            });
+                                const location = change.newValue
+                                postSelectArtifact(result, location?.physicalLocation)
+                            })
 
-                            const renderItem = (tfLocation: ThreadFlowLocation) => {
-                                const { message, uri, region } = parseLocation(result, tfLocation.location);
-                                return <>
-                                    <div className="ellipsis">{message ?? '—'}</div>
-                                    <div className="svSecondary">{uri?.file ?? '—'}</div>
-                                    <div className="svLineNum">{region?.startLine ?? '—'}:1</div>
-                                </>;
-                            };
-
-                            return <List items={items} renderItem={renderItem} selection={selection} allowClear>
+                            return <List items={items} renderItem={renderLocation} selection={selection} allowClear>
                                 <span className="svSecondary">No code flows in selected result.</span>
-                            </List>;
+                            </List>
+                        })()}
+                    </div>
+                </Tab>
+                <Tab name="Stacks" count={this.stacks?.length || 0}>
+                    <div className="svDetailsBody">
+                        {(() => {
+                            if (!this.stacks?.length) 
+                                return <div className="svZeroData">
+                                    <span className="svSecondary">No stacks in selected result.</span>
+                                </div>
+
+                            return this.stacks.map(stack => {
+                                const stackFrames = stack.frames
+
+                                const selection = observable.box(undefined as Location, { deep: false })
+                                selection.observe(change => {
+                                    const location = change.newValue
+                                    postSelectArtifact(result, location?.physicalLocation)
+                                })
+                                if (stack.message?.text) {
+                                    return <div className="svStack">
+                                        <div className="svStacksMessage">
+                                            {stack?.message?.text}
+                                        </div>
+                                        <div className="svDetailsBody svDetailsCodeflowAndStacks">
+                                            <List items={stackFrames} renderItem={renderStack} selection={selection} allowClear />
+                                        </div>
+                                    </div>
+                                }
+                            })
                         })()}
                     </div>
                 </Tab>
