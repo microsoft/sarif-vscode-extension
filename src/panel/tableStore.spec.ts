@@ -57,20 +57,4 @@ describe('TableStore', () => {
         // "even" row group would be sorted high in the list
         assert.strictEqual((tableStore2.rows[0] as RowGroup<number,string>).title, 'even');
     })
-    it ('Row groups maintain the same sequence of row items as it is in itemSource', () => {
-        const itemSource = { results: [1,2,3,4,5] }
-        const tableStore = new TableStore(groupBy, itemSource, selection);
-        const oddRowGroup = tableStore.rows[0] as RowGroup<number, string>;
-        assert.deepEqual(oddRowGroup.items.map((item) => item.item), [1,3,5]);
-
-        const itemSource2 = { results: [5,4,3,2,1] }
-        const tableStore2 = new TableStore(groupBy, itemSource2, selection);
-        const oddRowGroup2 = tableStore2.rows[0] as RowGroup<number, string>;
-        assert.deepEqual(oddRowGroup2.items.map((item) => item.item), [5,3,1]);
-
-        const itemSource3 = { results: [21,4,19,2,13,1,5] }
-        const tableStore3 = new TableStore(groupBy, itemSource3, selection);
-        const oddRowGroup3 = tableStore3.rows[0] as RowGroup<number, string>;
-        assert.deepEqual(oddRowGroup3.items.map((item) => item.item), [21,19,13,1,5]);
-    });
 });
