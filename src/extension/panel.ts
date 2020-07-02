@@ -87,6 +87,7 @@ export class Panel {
             switch (message.command as CommandPanelToExtension) {
             case 'open': {
                 const uris = await window.showOpenDialog({
+                    canSelectMany: true,
                     defaultUri: workspace.workspaceFolders?.[0]?.uri,
                     filters: { 'SARIF files': ['sarif', 'json'] },
                 });

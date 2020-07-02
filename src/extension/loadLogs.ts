@@ -89,6 +89,7 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
 }
 
 export function upgradeLog(fsPath: string) {
+    // Example of a MacOS temp folder: /private/var/folders/9b/hn5353ks051gn79f4b8rn2tm0000gn/T
     const name = tmpNameSync({ postfix: '.sarif' });
     const multitoolExe = `Sarif.Multitool${process.platform === 'win32' ? '.exe' : ''}`;
     const multitoolExePath = join(Store.extensionPath || process.cwd(), 'out', multitoolExe);
