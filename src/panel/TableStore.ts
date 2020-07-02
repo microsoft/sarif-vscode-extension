@@ -50,7 +50,7 @@ export class TableStore<T, G> {
     @computed({ keepAlive: true }) public get rowItems() {
         return this.itemsSource.results.map(result => new RowItem(result));
     }
-    @computed private get groups() {
+    @computed({ keepAlive: true }) private get groups() {
         const map = new Map<G | undefined, RowGroup<T, G | undefined>>();
         this.rowItems.forEach(item => {
             const key = this.groupBy(item.item);

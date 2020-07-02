@@ -88,7 +88,7 @@
         "prestart": "npm install",
         "start": "webpack --watch",
         "server": "webpack-dev-server -d",
-        "test": "mocha",
+        "test": "nyc --reporter=text mocha",
         "package": "vsce package",
         "vscode:prepublish": "webpack",
         "lint": "eslint .; exit 0"
@@ -153,5 +153,8 @@
     "optionalDependencies": {
         "@microsoft/sarif-multitool-darwin": "2.2.5",
         "@microsoft/sarif-multitool-win32": "2.2.5"
-    }
+    },
+    "nyc": {
+		"exclude": "src/**/*.spec.ts src/test/*" 
+	}
 }
