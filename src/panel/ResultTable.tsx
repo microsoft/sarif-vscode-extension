@@ -28,7 +28,7 @@ interface ResultTableProps<G> {
         const customRenderers = {
             'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
             'Line':     result => <span>{result._line < 0 ? '—' : result._line}</span>,
-            'Message':  result => <span>{renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</span>,
+            'Message':  result => <span>{renderMessageWithEmbeddedLinks(result, vscode.postMessage, result._message)}</span>,
             'Rule':     result => <>
                 <span>{result._rule?.name ?? '—'}</span>
                 <span className="svSecondary">{result.ruleId}</span>
