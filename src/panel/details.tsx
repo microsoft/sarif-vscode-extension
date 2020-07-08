@@ -36,7 +36,8 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         });
     }
     render() {
-        const renderRuleDesc = (result: Result, desc?: { text: string, markdown?: string }) => {
+        const renderRuleDesc = (result: Result) => {
+            const desc = result?._rule?.fullDescription ?? result?._rule?.shortDescription;
             if (!desc) return '—';
             return desc.markdown
                 ? <ReactMarkdown className="svMarkDown" source={desc.markdown} escapeHtml={false} />
@@ -75,8 +76,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         <div className="svDetailsGrid">
                             <span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}
                             <span>Rule Name</span>			<span>{result._rule?.name ?? '—'}</span>
-                            <span>Rule Desc Short</span>	<span><div>{renderRuleDesc(result, result._rule?.shortDescription)}</div></span>
-                            <span>Rule Desc Full</span>		<span><div>{renderRuleDesc(result, result._rule?.fullDescription)}</div></span>
+                            <span>Rule Description</span>	<span><div>{renderRuleDesc(result)}</div></span>
                             <span>Level</span>				<span>{result.level}</span>
                             <span>Kind</span>				<span>{result.kind ?? '—'}</span>
                             <span>Baseline State</span>		<span>{result.baselineState}</span>
