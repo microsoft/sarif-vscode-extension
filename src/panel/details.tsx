@@ -11,9 +11,9 @@ import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame } from 'sarif';
 import { parseArtifactLocation, parseLocation } from '../shared';
 import './details.scss';
-import './index.scss'
+import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
-import { List, renderMessageWithEmbeddedLinks, Tab, TabPanel } from './widgets';
+import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
 type TabName = 'Info' | 'Code Flows';
 
@@ -23,10 +23,10 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
     @computed private get threadFlowLocations() {
 		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
 			.map(threadFlowLocation => threadFlowLocation.location)
-			.filter(locations => locations)
+			.filter(locations => locations);
 	}
     @computed private get stacks() {
-        return this.props.result?.stacks
+        return this.props.result?.stacks;
     }
     constructor(props: DetailsProps) {
         super(props);
@@ -36,34 +36,35 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         });
     }
     render() {
-        const renderRuleDesc = (desc?: { text: string, markdown?: string }) => {
+        const renderRuleDesc = (result: Result) => {
+            const desc = result?._rule?.fullDescription ?? result?._rule?.shortDescription;
             if (!desc) return '—';
             return desc.markdown
-                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} />
-                : desc.text;
+                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} escapeHtml={false} />
+                : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
         const renderLocation = (location: Location) => {
-			const { message, uri, region } = parseLocation(result, location)
+			const { message, uri, region } = parseLocation(result, location);
 			return <>
 				<div className="ellipsis">{message ?? '—'}</div>
 				<div className="svSecondary">{uri?.file ?? '—'}</div>
 				<div className="svLineNum">{region?.startLine}:1</div>
-			</>
-		}
+			</>;
+		};
 		const renderStack = (stackFrame: StackFrame) => {
-			const location = stackFrame.location
-			const logicalLocation = stackFrame.location?.logicalLocations[0]
-			const { message, uri, region } = parseLocation(result, location)
-			const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`
+			const location = stackFrame.location;
+			const logicalLocation = stackFrame.location?.logicalLocations[0];
+			const { message, uri, region } = parseLocation(result, location);
+			const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
 			return <>
 				<div className="ellipsis">{text ?? '—'}</div>
 				<div className="svSecondary">{uri?.file ?? '—'}</div>
 				<div className="svLineNum">{region?.startLine}:1</div>
-			</>
-		}
+			</>;
+		};
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -71,12 +72,11 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         <div className="svDetailsMessage">
                             {result._markdown
                                 ? <ReactMarkdown className="svMarkDown" source={result._markdown} escapeHtml={false} />
-                                : renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</div>
+                                : renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</div>
                         <div className="svDetailsGrid">
                             <span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}
                             <span>Rule Name</span>			<span>{result._rule?.name ?? '—'}</span>
-                            <span>Rule Desc Short</span>	<span>{renderRuleDesc(result._rule?.shortDescription)}</span>
-                            <span>Rule Desc Full</span>		<span>{renderRuleDesc(result._rule?.fullDescription)}</span>
+                            <span>Rule Description</span>	<span>{renderRuleDesc(result)}</span>
                             <span>Level</span>				<span>{result.level}</span>
                             <span>Kind</span>				<span>{result.kind ?? '—'}</span>
                             <span>Baseline State</span>		<span>{result.baselineState}</span>
@@ -109,34 +109,34 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         {(() => {
                             const items = this.threadFlowLocations;
 
-                            const selection = observable.box(undefined as Location, { deep: false })
+                            const selection = observable.box<Location | undefined>(undefined, { deep: false });
                             selection.observe(change => {
-                                const location = change.newValue
-                                postSelectArtifact(result, location?.physicalLocation)
-                            })
+                                const location = change.newValue;
+                                postSelectArtifact(result, location?.physicalLocation);
+                            });
 
-                            return <List items={items} renderItem={renderLocation} selection={selection} allowClear>
+                            return <List items={items as ReadonlyArray<Location>} renderItem={renderLocation} selection={selection} allowClear>
                                 <span className="svSecondary">No code flows in selected result.</span>
-                            </List>
+                            </List>;
                         })()}
                     </div>
                 </Tab>
                 <Tab name="Stacks" count={this.stacks?.length || 0}>
                     <div className="svDetailsBody">
                         {(() => {
-                            if (!this.stacks?.length) 
+                            if (!this.stacks?.length)
                                 return <div className="svZeroData">
                                     <span className="svSecondary">No stacks in selected result.</span>
-                                </div>
+                                </div>;
 
                             return this.stacks.map(stack => {
-                                const stackFrames = stack.frames
+                                const stackFrames = stack.frames;
 
-                                const selection = observable.box(undefined as Location, { deep: false })
+                                const selection = observable.box<Location | undefined>(undefined, { deep: false });
                                 selection.observe(change => {
-                                    const location = change.newValue
-                                    postSelectArtifact(result, location?.physicalLocation)
-                                })
+                                    const location = change.newValue;
+                                    postSelectArtifact(result, location?.physicalLocation);
+                                });
                                 if (stack.message?.text) {
                                     return <div className="svStack">
                                         <div className="svStacksMessage">
@@ -145,9 +145,9 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                         <div className="svDetailsBody svDetailsCodeflowAndStacks">
                                             <List items={stackFrames} renderItem={renderStack} selection={selection} allowClear />
                                         </div>
-                                    </div>
+                                    </div>;
                                 }
-                            })
+                            });
                         })()}
                     </div>
                 </Tab>

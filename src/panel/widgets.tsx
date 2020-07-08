@@ -252,22 +252,23 @@ export class ResizeHandle extends Component<{ size: IObservableValue<number>, ho
 // Borrowed from: sarif-web-component.
 // 3.11.6 Messages with embedded links. Replace [text](relatedIndex) with <a href />.
 // 3.10.3 sarif URI scheme is not supported.
-export function renderMessageWithEmbeddedLinks(result: Result, _postMessage: (_: unknown) => void) {
-    const message = result._message;
-    const rxLink = /\[([^\]]*)\]\(([^)]+)\)/; // Matches [text](id). Similar to below, but with an extra grouping around the id part.
-    return message.match(rxLink)
-        ? message
-            .split(/(\[[^\]]*\]\([^)]+\))/g)
-            .map((item, i) => {
-                if (i % 2 === 0) return item;
-                const [_, text, id] = item.match(rxLink)!; // Safe since it was split by the same RegExp.
-                return isNaN(+id)
-                    ? <a key={i} tabIndex={-1} href={id}>{text}</a>
-                    : <a key={i} tabIndex={-1} href="#" onClick={e => {
-                        e.preventDefault(); // Don't leave a # in the url.
-                        e.stopPropagation();
-                        postSelectArtifact(result, result?.relatedLocations?.find(rloc => rloc.id === +id)?.physicalLocation);
-                    }}>{text}</a>;
-            })
-        : message;
+export function renderMessageTextWithEmbeddedLinks(text: string, result: Result, _postMessage: (_: unknown) => void ) {
+    if (text) {
+        const rxLink = /\[([^\]]*)\]\(([^)]+)\)/; // Matches [text](id). Similar to below, but with an extra grouping around the id part.
+        return text.match(rxLink)
+            ? text
+                .split(/(\[[^\]]*\]\([^)]+\))/g)
+                .map((item, i) => {
+                    if (i % 2 === 0) return item;
+                    const [_, text, id] = item.match(rxLink)!; // Safe since it was split by the same RegExp.
+                    return isNaN(+id)
+                        ? <a key={i} tabIndex={-1} href={id}>{text}</a>
+                        : <a key={i} tabIndex={-1} href="#" onClick={e => {
+                            e.preventDefault(); // Don't leave a # in the url.
+                            e.stopPropagation();
+                            postSelectArtifact(result, result?.relatedLocations?.find(rloc => rloc.id === +id)?.physicalLocation);
+                        }}>{text}</a>;
+                })
+            : text;
+    }
 }
