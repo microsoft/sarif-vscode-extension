@@ -89,7 +89,10 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             warning: DiagnosticSeverity.Warning,
         } as Record<string, DiagnosticSeverity>;
         const diags = store.results
-            .filter(result => result._uri === artifactUri)
+            .filter(result => {
+                const uri = result._uriContents ?? result._uri;
+                return uri === artifactUri;
+            })
             .map(result => new ResultDiagnostic(
                 regionToSelection(doc, result._region),
                 result._message ?? '—',

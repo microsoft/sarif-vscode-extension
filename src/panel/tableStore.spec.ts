@@ -7,11 +7,11 @@ import { _Region } from '../shared';
 import assert from 'assert';
 
 describe('TableStore', () => {
-    const groupBy = (item: number) => item % 2 == 0 ? 'even' : 'odd';
-    const selection = observable.box(); 
+    const groupBy = (item: number) => item % 2 === 0 ? 'even' : 'odd';
+    const selection = observable.box();
 
-    it('Get rows based on different values of expanded property', () => {
-        const itemSource = { results: [1,2,3,4,5] }
+    it('should collapse and expand row groups', () => {
+        const itemSource = { results: [1,2,3,4,5] };
         const tableStore = new TableStore(groupBy, itemSource, selection);
 
         // Verify rows based on default value for expanded property
@@ -42,19 +42,20 @@ describe('TableStore', () => {
         (tableStore.rows[1] as RowGroup<number,string>).expanded = false;
         assert.strictEqual(tableStore.rows.length, 2);
     });
-    it ('Row groups are sorted according to descending order of # of row items in them', () => {
+
+    it ('should verify the default sorting for the row groups', () => {
         // tableStore - when # of odd elements more than # of even elements
-        const itemSource = { results: [1,2,3,4,5] }
+        const itemSource = { results: [1,2,3,4,5] };
         const tableStore = new TableStore(groupBy, itemSource, selection);
 
         // "odd" row group would be sorted high in the list
         assert.strictEqual((tableStore.rows[0] as RowGroup<number,string>).title, 'odd');
 
         // tableStore - when # of even elements are more than # of odd elements
-        const itemSource2 = { results: [1,2,3,4,5,6,8,10] }
+        const itemSource2 = { results: [1,2,3,4,5,6,8,10] };
         const tableStore2 = new TableStore(groupBy, itemSource2, selection);
 
         // "even" row group would be sorted high in the list
         assert.strictEqual((tableStore2.rows[0] as RowGroup<number,string>).title, 'even');
-    })
+    });
 });

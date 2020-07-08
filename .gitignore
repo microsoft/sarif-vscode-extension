@@ -4,3 +4,5 @@ node_modules
 out
 devServer/index.js
 *.vsix
+coverage
+.nyc_output

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 import { action, computed, IObservableValue, observable } from 'mobx';
+import '../shared/extension';
 
 export class Column<T> {
     width: IObservableValue<number>
