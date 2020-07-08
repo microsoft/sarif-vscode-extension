@@ -89,7 +89,7 @@
         "start": "webpack --watch",
         "server": "webpack-dev-server -d",
         "test": "mocha",
-        "testcoverage": "nyc mocha --watch=false",
+        "testcoverage": "nyc --reporter=text --reporter=text-summary --reporter=html mocha --watch=false",
         "package": "vsce package",
         "vscode:prepublish": "webpack",
         "lint": "eslint .; exit 0"
