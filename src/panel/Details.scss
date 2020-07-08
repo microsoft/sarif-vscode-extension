@@ -25,7 +25,6 @@
                 white-space: pre-line;
 
                 & > * {
-                    display: grid;
                     &:nth-child(odd) {
                         color: rgb(139, 139, 139); // svSecondary.
                     }

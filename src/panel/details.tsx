@@ -13,7 +13,7 @@ import { parseArtifactLocation, parseLocation } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
-import { List, renderMessageWithEmbeddedLinks, Tab, TabPanel } from './widgets';
+import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
 type TabName = 'Info' | 'Code Flows';
 
@@ -41,7 +41,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
             if (!desc) return '—';
             return desc.markdown
                 ? <ReactMarkdown className="svMarkDown" source={desc.markdown} escapeHtml={false} />
-                : renderMessageWithEmbeddedLinks(result, vscode.postMessage, desc.text);
+                : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
         const {result, height} = this.props;
@@ -72,11 +72,11 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         <div className="svDetailsMessage">
                             {result._markdown
                                 ? <ReactMarkdown className="svMarkDown" source={result._markdown} escapeHtml={false} />
-                                : renderMessageWithEmbeddedLinks(result, vscode.postMessage, result._message)}</div>
+                                : renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</div>
                         <div className="svDetailsGrid">
                             <span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}
                             <span>Rule Name</span>			<span>{result._rule?.name ?? '—'}</span>
-                            <span>Rule Description</span>	<span><div>{renderRuleDesc(result)}</div></span>
+                            <span>Rule Description</span>	<span>{renderRuleDesc(result)}</span>
                             <span>Level</span>				<span>{result.level}</span>
                             <span>Kind</span>				<span>{result.kind ?? '—'}</span>
                             <span>Baseline State</span>		<span>{result.baselineState}</span>
@@ -109,7 +109,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         {(() => {
                             const items = this.threadFlowLocations;
 
-                            const selection = observable.box(undefined as unknown as Location, { deep: false });
+                            const selection = observable.box<Location | undefined>(undefined, { deep: false });
                             selection.observe(change => {
                                 const location = change.newValue;
                                 postSelectArtifact(result, location?.physicalLocation);
@@ -132,7 +132,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                             return this.stacks.map(stack => {
                                 const stackFrames = stack.frames;
 
-                                const selection = observable.box(undefined as unknown as Location, { deep: false });
+                                const selection = observable.box<Location | undefined>(undefined, { deep: false });
                                 selection.observe(change => {
                                     const location = change.newValue;
                                     postSelectArtifact(result, location?.physicalLocation);
