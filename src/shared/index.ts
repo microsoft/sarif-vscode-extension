@@ -43,7 +43,13 @@ declare module 'sarif' {
         _uriContents?: string; // ArtifactContent. Do not use this uri for display.
         _relativeUri?: string;
         _region?: _Region;
-        _line: number; // -1 if empty.
+
+        /**
+         * Caching the line number as derived from _region. Primarily user-facing and thus is 1-based. 0 if empty.
+         * Note VS Code shows lines as 1-based to the user, but internally VS Code `Range`s are 0-based.
+         * */
+        _line: number;
+
         _rule?: ReportingDescriptor;
         _message: string; // '—' if empty.
         _markdown?: string;
@@ -108,7 +114,8 @@ export function augmentLog(log: Log) {
                 }
             }
             result._region = parseRegion(ploc?.region);
-            result._line = (Array.isArray(result._region) ? result._region?.[0] : result._region) ?? -1; // _line is sugar for _region
+            const zeroBasedLineNumber = (Array.isArray(result._region) ? result._region?.[0] : result._region) ?? -1;
+            result._line = zeroBasedLineNumber + 1; // Convert 0-based to 1-based. See `_line` for reason.
 
             result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
                 ?? (result.ruleId ? { id: result.ruleId! } : undefined); // TODO: Intern for comparability.
