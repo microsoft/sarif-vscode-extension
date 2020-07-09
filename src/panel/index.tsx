@@ -19,6 +19,7 @@ import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets'
 export * as React from 'react';
 export * as ReactDOM from 'react-dom';
 export { IndexStore as Store } from './indexStore';
+export { DetailsLayouts } from './details.layouts';
 
 @observer export class Index extends Component<{ store: IndexStore }> {
     private showFilterPopup = observable.box(false)

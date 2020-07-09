@@ -37,8 +37,9 @@
     const log = await response.json();
     log._uri = `file:///Users/username/projects/${file}`;
     store.logs.push(log);
+    document.body.classList.add('pageIndex') // Alternatively 'pageDetailsLayouts'.
     ReactDOM.render(
-        React.createElement(Index, { store }),
+        React.createElement(Index, {store}), // Alternatively 'DetailsLayouts'.
         document.getElementById('root'),
     );
 })();
