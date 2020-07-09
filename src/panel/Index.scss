@@ -7,7 +7,6 @@ html {
 body {
     height: 100%;
     padding: 0; /* Override */
-    background-color: var(--vscode-menu-background); // Borrowed from Explorer background
     display: flex;
     flex-direction: column;
     margin-left: 1px; // VS Code Webview splitter eats an extra pixel on the left.
@@ -38,7 +37,6 @@ mark {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    background-color: var(--vscode-editor-background); // Restore from pre-body
     overflow: hidden;
 }
 
