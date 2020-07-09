@@ -1,0 +1,3 @@
+extension: ['.ts']
+exclude: ['src/**/*.spec.ts', 'src/test/*']
+reporter: ['text', 'text-summary', 'html']

@@ -5,7 +5,7 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { PureComponent, ReactNode } from 'react';
 import { Result } from 'sarif';
-import { renderMessageWithEmbeddedLinks } from './widgets';
+import { renderMessageTextWithEmbeddedLinks } from './widgets';
 import { ResultTableStore } from './resultTableStore';
 import { Table } from './table';
 import { Column } from './tableStore';
@@ -28,7 +28,7 @@ interface ResultTableProps<G> {
         const customRenderers = {
             'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
             'Line':     result => <span>{result._line < 0 ? '—' : result._line}</span>,
-            'Message':  result => <span>{renderMessageWithEmbeddedLinks(result, vscode.postMessage)}</span>,
+            'Message':  result => <span>{renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</span>,
             'Rule':     result => <>
                 <span>{result._rule?.name ?? '—'}</span>
                 <span className="svSecondary">{result.ruleId}</span>
