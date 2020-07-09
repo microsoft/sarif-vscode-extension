@@ -418,3 +418,27 @@ kbd {
 ::-webkit-scrollbar-thumb:active {
     background-color: var(--vscode-scrollbarSlider-activeBackground);
 }
+
+/* Background overrides */
+body {
+    background-color: var(--vscode-menu-background);
+}
+
+body.pageIndex #root {
+    background-color: var(--vscode-editor-background);
+    margin: 50px 300px;
+    position: relative; /* relative for Popover */
+}
+
+body.pageDetailsLayouts .svDetailsLayouts {
+    margin: 50px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-Gap: 50px;
+    grid-template-columns: 450px 450px auto;
+    grid-template-rows: auto auto;
+}
+
+body.pageDetailsLayouts .svDetailsPane {
+    background-color: var(--vscode-editor-background);
+}
