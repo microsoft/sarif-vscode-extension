@@ -63,11 +63,11 @@ Supports Sarif version '2.1.0'
 ### API
 An [extension-to-extension public API](https://code.visualstudio.com/api/references/vscode-api#extensions) is offered. This API is defined at `src/extension/index.d.ts`. An example of another extension calling this extension:
 ```javascript
-const sarifExt = extensions.getExtension('MS-SarifVSCode.sarif-viewer')
-if (!sarifExt.isActive) await sarifExt.activate()
+const sarifExt = extensions.getExtension('MS-SarifVSCode.sarif-viewer');
+if (!sarifExt.isActive) await sarifExt.activate();
 await sarifExt.exports.openLogs([
    Uri.file('c:/samples/demo.sarif'),
-])
+]);
 ```
 Note: TypeScript typings for `Extension<T>` are forthcoming.
 
