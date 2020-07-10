@@ -39,23 +39,23 @@
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
-                    "description": "%configuration.sarif-viewer.rootpaths.description%"
+                    "description": "Add root paths for default mapping of locations in the sarif file that can't be found (ex. the local root directory of your repo)."
                 },
                 "sarif-viewer.explorer.openWhenNoResults": {
-                    "description": "%sarif-viewer.explorer.openWhenNoResults.description%",
+                    "description": "Indicates whether to open the explorer when there are no results in the log.",
                     "type": "boolean",
                     "default": true
                 },
                 "sarif-viewer.updateChannel": {
-                    "description": "%sarif-viewer.updateChannel.description%",
+                    "description": "Specifies the type of updates the extension receives.",
                     "type": "string",
                     "enum": [
                         "Default",
                         "Insiders"
                     ],
                     "enumDescriptions": [
-                        "%sarif-viewer.updateChannel.default.description%",
-                        "%sarif-viewer.updateChannel.insiders.description%"
+                        "Default channel.",
+                        "Insiders channel. Receives upcoming features and bug fixes at a faster rate."
                     ],
                     "default": "Default",
                     "scope": "application"
