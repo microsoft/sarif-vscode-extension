@@ -64,7 +64,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 				<div className="svSecondary">{uri?.file ?? '—'}</div>
 				<div className="svLineNum">{region?.startLine}:1</div>
 			</>;
-		};
+        };
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -93,7 +93,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                     </a>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
-                            <span>Log</span>				<a href="#" title={result._log._uri}
+                            <span>Log</span>				<a href="#" title={decodeURIComponent(result._log._uri)}
                                                                 onClick={e => {
                                                                     e.preventDefault(); // Cancel # nav.
                                                                     postSelectLog(result);
