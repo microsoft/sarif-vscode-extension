@@ -64,7 +64,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 				<div className="svSecondary">{uri?.file ?? '—'}</div>
 				<div className="svLineNum">{region?.startLine}:1</div>
 			</>;
-        };
+		};
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
