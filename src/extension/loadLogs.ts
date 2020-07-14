@@ -21,7 +21,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                 const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
                 const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
-                log._uri = decodeURIComponent(uri.toString());
+                log._uri = uri.scheme === 'file' ? uri.fsPath : uri.toString();
                 log._jsonMap = pointers;
                 return log;
             } catch (error) {

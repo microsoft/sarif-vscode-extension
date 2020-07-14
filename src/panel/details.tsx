@@ -14,6 +14,7 @@ import './details.scss';
 import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
+import { URI } from 'vscode-uri';
 
 type TabName = 'Info' | 'Code Flows';
 
@@ -63,8 +64,10 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 				<div className="ellipsis">{text ?? '—'}</div>
 				<div className="svSecondary">{uri?.file ?? '—'}</div>
 				<div className="svLineNum">{region?.startLine}:1</div>
-			</>;
-		};
+            </>;
+        };
+        const logUri = URI.parse(result._log._uri, false);
+        const logTitle = logUri.scheme === 'file' ? logUri.fsPath : result._log._uri;
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -93,7 +96,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                     </a>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
-                            <span>Log</span>				<a href="#" title={decodeURIComponent(result._log._uri)}
+                            <span>Log</span>				<a href="#" title={logTitle}
                                                                 onClick={e => {
                                                                     e.preventDefault(); // Cancel # nav.
                                                                     postSelectLog(result);
