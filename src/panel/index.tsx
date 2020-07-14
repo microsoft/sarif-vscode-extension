@@ -15,6 +15,7 @@ import { IndexStore, postSelectArtifact } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
+import { URI } from 'vscode-uri';
 
 export * as React from 'react';
 export * as ReactDOM from 'react-dom';
@@ -80,9 +81,11 @@ export { DetailsLayouts } from './details.layouts';
                         <div className="svLogsPane">
                             {logs.map((log, i) => {
                                 const {pathname} = new URL(log._uri);
+                                const logUri = URI.parse(log?._uri, false);
+                                const logTitle = logUri.scheme === 'file' ? logUri.fsPath : pathname.path;
                                 return <div key={i} className="svListItem">
                                     <div>{pathname.file}</div>
-                                    <div className="ellipsis svSecondary">{pathname.path}</div>
+                                    <div className="ellipsis svSecondary">{logTitle}</div>
                                     <Icon name="close" title="Remove Log"
                                         onClick={() => vscode.postMessage({ command: 'removeLog', uri: log._uri })} />
                                 </div>;

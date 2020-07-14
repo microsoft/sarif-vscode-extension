@@ -66,7 +66,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 				<div className="svLineNum">{region?.startLine}:1</div>
             </>;
         };
-        const logUri = URI.parse(result._log._uri, false);
+        const logUri = URI.parse(result._log?._uri, false);
         const logTitle = logUri.scheme === 'file' ? logUri.fsPath : result._log._uri;
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
