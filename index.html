@@ -11,7 +11,7 @@ It mocks the html environment for `panel/Index.tsx`. Local Storage simulates `gl
         </style>
     </head>
     <body class="vscode-dark">
-        <div id="root" style="margin: 50px 300px; position: relative;"></div><!-- relative for Popover -->
+        <div id="root"></div>
         <script>
             acquireVsCodeApi = (() => ({ postMessage: message => {
                 const {command, ...rest} = message;

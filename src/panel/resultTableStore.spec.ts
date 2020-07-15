@@ -32,4 +32,3 @@ describe('ResultTableStore', () => {
         assert.strictEqual(resultTableStore.columns[5].name, 'Rule')
     });
 });
-r

@@ -16,7 +16,16 @@
                     "ruleId": "DEMO01",
                     "message": {
                         "text": "A result"
-                    }
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///foo/baz/bar.txt"
+                                }
+                            }
+                        }
+                    ]
                 }
             ]
         }

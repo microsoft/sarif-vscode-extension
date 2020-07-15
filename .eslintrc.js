@@ -17,7 +17,7 @@ module.exports = {
                 "prefer-const": ERROR,
 
                 "eqeqeq": ERROR,
-                "filenames/match-regex": [ERROR, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|spec))?$"],
+                "filenames/match-regex": [ERROR, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|layouts|spec))?$"],
                 "header/header": [ERROR, "line", [
                     " Copyright (c) Microsoft Corporation. All rights reserved.",
                     " Licensed under the MIT License.",
