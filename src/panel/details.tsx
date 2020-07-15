@@ -48,22 +48,22 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
         const renderLocation = (location: Location) => {
-			const { message, uri, region } = parseLocation(result, location);
-			return <>
-				<div className="ellipsis">{message ?? '—'}</div>
-				<div className="svSecondary">{uri?.file ?? '—'}</div>
-				<div className="svLineNum">{region?.startLine}:1</div>
-			</>;
-		};
-		const renderStack = (stackFrame: StackFrame) => {
-			const location = stackFrame.location;
-			const logicalLocation = stackFrame.location?.logicalLocations[0];
-			const { message, uri, region } = parseLocation(result, location);
-			const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
-			return <>
-				<div className="ellipsis">{text ?? '—'}</div>
-				<div className="svSecondary">{uri?.file ?? '—'}</div>
-				<div className="svLineNum">{region?.startLine}:1</div>
+            const { message, uri, region } = parseLocation(result, location);
+            return <>
+                <div className="ellipsis">{message ?? '—'}</div>
+                <div className="svSecondary">{uri?.file ?? '—'}</div>
+                <div className="svLineNum">{region?.startLine}:1</div>
+            </>;
+        };
+        const renderStack = (stackFrame: StackFrame) => {
+            const location = stackFrame.location;
+            const logicalLocation = stackFrame.location?.logicalLocations[0];
+            const { message, uri, region } = parseLocation(result, location);
+            const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
+            return <>
+                <div className="ellipsis">{text ?? '—'}</div>
+                <div className="svSecondary">{uri?.file ?? '—'}</div>
+                <div className="svLineNum">{region?.startLine}:1</div>
             </>;
         };
         const logUri = URI.parse(result._log?._uri, false);
