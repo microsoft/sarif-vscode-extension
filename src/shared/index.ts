@@ -214,6 +214,11 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     return [uri, uriContents];
 }
 
+export function decodeFileUri(uriString: string) {
+    const uri = URI.parse(uriString, false);
+    return uri.scheme === 'file' ? uri.fsPath : uriString;
+}
+
 export type Visibility = 'visible' | undefined;
 
 export const filtersRow: Record<string, Record<string, Visibility>> = {

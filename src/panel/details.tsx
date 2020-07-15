@@ -9,12 +9,11 @@ import * as React from 'react';
 import { Component } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame } from 'sarif';
-import { parseArtifactLocation, parseLocation } from '../shared';
+import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
-import { URI } from 'vscode-uri';
 
 type TabName = 'Info' | 'Code Flows';
 
@@ -66,8 +65,6 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                 <div className="svLineNum">{region?.startLine}:1</div>
             </>;
         };
-        const logUri = URI.parse(result._log?._uri, false);
-        const logTitle = logUri.scheme === 'file' ? logUri.fsPath : result._log._uri;
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -96,7 +93,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                     </a>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
-                            <span>Log</span>				<a href="#" title={logTitle}
+                            <span>Log</span>				<a href="#" title={decodeFileUri(result._log._uri)}
                                                                 onClick={e => {
                                                                     e.preventDefault(); // Cancel # nav.
                                                                     postSelectLog(result);
