@@ -118,6 +118,7 @@ export function augmentLog(log: Log) {
             result._line = zeroBasedLineNumber + 1; // Convert 0-based to 1-based. See `_line` for reason.
 
             result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
+                ?? run.tool.driver.rules?.find(rule => rule.id === result.ruleId)
                 ?? (result.ruleId ? { id: result.ruleId! } : undefined); // TODO: Intern for comparability.
 
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
