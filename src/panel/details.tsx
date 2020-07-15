@@ -9,7 +9,7 @@ import * as React from 'react';
 import { Component } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame } from 'sarif';
-import { parseArtifactLocation, parseLocation } from '../shared';
+import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
@@ -47,24 +47,24 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
         const renderLocation = (location: Location) => {
-			const { message, uri, region } = parseLocation(result, location);
-			return <>
-				<div className="ellipsis">{message ?? '—'}</div>
-				<div className="svSecondary">{uri?.file ?? '—'}</div>
-				<div className="svLineNum">{region?.startLine}:1</div>
-			</>;
-		};
-		const renderStack = (stackFrame: StackFrame) => {
-			const location = stackFrame.location;
-			const logicalLocation = stackFrame.location?.logicalLocations[0];
-			const { message, uri, region } = parseLocation(result, location);
-			const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
-			return <>
-				<div className="ellipsis">{text ?? '—'}</div>
-				<div className="svSecondary">{uri?.file ?? '—'}</div>
-				<div className="svLineNum">{region?.startLine}:1</div>
-			</>;
-		};
+            const { message, uri, region } = parseLocation(result, location);
+            return <>
+                <div className="ellipsis">{message ?? '—'}</div>
+                <div className="svSecondary">{uri?.file ?? '—'}</div>
+                <div className="svLineNum">{region?.startLine}:1</div>
+            </>;
+        };
+        const renderStack = (stackFrame: StackFrame) => {
+            const location = stackFrame.location;
+            const logicalLocation = stackFrame.location?.logicalLocations[0];
+            const { message, uri, region } = parseLocation(result, location);
+            const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
+            return <>
+                <div className="ellipsis">{text ?? '—'}</div>
+                <div className="svSecondary">{uri?.file ?? '—'}</div>
+                <div className="svLineNum">{region?.startLine}:1</div>
+            </>;
+        };
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -93,7 +93,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                     </a>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
-                            <span>Log</span>				<a href="#" title={result._log._uri}
+                            <span>Log</span>				<a href="#" title={decodeFileUri(result._log._uri)}
                                                                 onClick={e => {
                                                                     e.preventDefault(); // Cancel # nav.
                                                                     postSelectLog(result);
