@@ -155,8 +155,5 @@
     "optionalDependencies": {
         "@microsoft/sarif-multitool-darwin": "2.2.5",
         "@microsoft/sarif-multitool-win32": "2.2.5"
-    },
-    "nyc": {
-        "exclude": "src/**/*.spec.ts src/test/*"
     }
 }
