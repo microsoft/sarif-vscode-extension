@@ -21,26 +21,21 @@ describe('ResultTableStore', () => {
     it('should verify the default columns', () => {
         const resultTableStore = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
         assert.strictEqual(resultTableStore.columns.length, 6);
-        assert.strictEqual(resultTableStore.columns[0].name, 'Line');
-        assert.strictEqual(resultTableStore.columns[1].name, 'File');
-        assert.strictEqual(resultTableStore.columns[2].name, 'Message');
-        assert.strictEqual(resultTableStore.columns[3].name, 'Baseline');
-        assert.strictEqual(resultTableStore.columns[4].name, 'Suppression');
-        assert.strictEqual(resultTableStore.columns[5].name, 'Rule');
+        resultTableStore.columns.map((col) => assert.strictEqual(['Line', 'File', 'Message', 'Baseline', 'Suppression', 'Rule'].includes(col.name), true));
     });
 
     it('should verify the visible columns', () => {
         const resultTableStore1 = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
         assert.strictEqual(resultTableStore1.visibleColumns.length, 2);
-        assert.strictEqual(resultTableStore1.visibleColumns.filter((col) => col.name === 'Line' || 'Message').length, 2);
+        resultTableStore1.visibleColumns.map((col) => assert.strictEqual(['Line', 'Message'].includes(col.name), true));
 
         const resultTableStore2 = new ResultTableStore('Line', result => result._line, resultsSource, filtersSource, selection);
         assert.strictEqual(resultTableStore2.visibleColumns.length, 2);
-        assert.strictEqual(resultTableStore2.visibleColumns.filter((col) => col.name === 'File' || 'Message').length, 2);
+        resultTableStore2.visibleColumns.map((col) => assert.strictEqual(['File', 'Message'].includes(col.name), true));
 
         const resultTableStore3 = new ResultTableStore('Message', result => result._message, resultsSource, filtersSource, selection);
         assert.strictEqual(resultTableStore3.visibleColumns.length, 2);
-        assert.strictEqual(resultTableStore3.visibleColumns.filter((col) => col.name === 'File' || 'Line').length, 2);
+        resultTableStore3.visibleColumns.map((col) => assert.strictEqual(['File', 'Line'].includes(col.name), true));
     });
 
     it ('should verify the grouping of row items based on default filter', () => {
@@ -53,8 +48,6 @@ describe('ResultTableStore', () => {
         assert.strictEqual(resultTableStore.rowItems.length, 6);
         assert.strictEqual((resultTableStore.rowItems[0].group as RowGroup<string, string>).title, 'file_1');
         const nonFile1GroupRowItems = resultTableStore.rowItems.slice(1, resultTableStore.rowItems.length - 1);
-        nonFile1GroupRowItems.map((rowItem) => {
-            assert.strictEqual((rowItem.group as RowGroup<string, string>).title, 'non file_1');
-        });
+        nonFile1GroupRowItems.map((rowItem) => assert.strictEqual((rowItem.group as RowGroup<string, string>).title, 'non file_1'));
     });
 });
