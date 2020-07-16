@@ -33,7 +33,7 @@ export const log = {
             }]
         }, {
             message: {
-                text: 'Message 2'
+                text: 'Message 3'
             },
             locations: [{
                 physicalLocation: {
@@ -44,7 +44,7 @@ export const log = {
             }]
         },{
             message: {
-                text: 'Message 3'
+                text: 'Message 4'
             },
             locations: [{
                 physicalLocation: {
@@ -55,7 +55,7 @@ export const log = {
             }]
         }, {
             message: {
-                text: 'Message 3'
+                text: 'Message 5'
             },
             locations: [{
                 physicalLocation: {
@@ -66,8 +66,11 @@ export const log = {
             }]
         }, {
             message: {
-                text: 'Message 3'
+                text: 'Message 6'
             },
+            level: 'none',
+            baselineState: 'new',
+            _suppression: 'not suppressed',
             locations: [{
                 physicalLocation: {
                     artifactLocation: {
@@ -96,7 +99,7 @@ export const filtersRow = {
         'Not Suppressed': true,
         'Suppressed': false,
     }
-}
+};
 
 export const filtersColumn = {
     Columns: {
@@ -104,4 +107,4 @@ export const filtersColumn = {
         'Suppression': false,
         'Rule': false,
     }
-}
+};
