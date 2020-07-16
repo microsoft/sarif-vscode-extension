@@ -81,30 +81,3 @@ export const log = {
         }]
     }]
 } as Log;
-
-export const filtersRow = {
-    Level: {
-        'Error': true,
-        'Warning': true,
-        'Note': true,
-        'None': true,
-    },
-    Baseline: {
-        'New': true,
-        'Unchanged': true,
-        'Updated': true,
-        'Absent': false,
-    },
-    Suppression: {
-        'Not Suppressed': true,
-        'Suppressed': false,
-    }
-};
-
-export const filtersColumn = {
-    Columns: {
-        'Baseline': false,
-        'Suppression': false,
-        'Rule': false,
-    }
-};
