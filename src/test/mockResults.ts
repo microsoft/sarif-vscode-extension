@@ -3,46 +3,26 @@
 
 import { Result } from 'sarif';
 
-const result1 = {
-    message: {
-        text: 'Message 1'
-    },
-    locations: [{
-        physicalLocation: {
-            artifactLocation: {
-                uri: '/folder/file_1.txt',
+const generateMockResult = (message: string, uri: string, level?: string, baselineState?: string, _suppression?: string) : Result => {
+    return {
+        message: {
+            text: message
+        },
+        level: level,
+        baselineState: baselineState,
+        _suppression: _suppression,
+        locations: [{
+            physicalLocation: {
+                artifactLocation: {
+                    uri: uri,
+                }
             }
-        }
-    }]
-} as Result;
+        }]
+    } as Result;
+};
 
-const result2 = {
-    message: {
-        text: 'Message 2'
-    },
-    locations: [{
-        physicalLocation: {
-            artifactLocation: {
-                uri: '/folder/file_2.txt',
-            }
-        }
-    }]
-} as Result;
-
-const result3 = {
-    message: {
-        text: 'Message 3'
-    },
-    level: 'none',
-    baselineState: 'new',
-    _suppression: 'not suppressed',
-    locations: [{
-        physicalLocation: {
-            artifactLocation: {
-                uri: '/folder/file_3.txt',
-            }
-        }
-    }]
-} as Result;
-
-export const results = [result1, result2, result3];
+export const results = [
+    generateMockResult('Message 1', '/folder/file_1.txt'),
+    generateMockResult('Message 2', '/folder/file_2.txt'),
+    generateMockResult('Message 3', '/folder/file_3.txt', 'none', 'new', 'not suppressed')
+];

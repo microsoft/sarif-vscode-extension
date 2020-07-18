@@ -3,26 +3,31 @@
 
 import { Log } from 'sarif';
 
-export const log = {
-    version: '2.1.0',
-    runs: [{
-        tool: {
-            driver: { name: 'Driver' }
-        },
-        results: [{
-            message: {
-                text: 'Message 1'
+const generateMockLog = (version: string, driver: string, message: string, uri: string, startLine: number) : Log => {
+    return {
+        version: version,
+        runs: [{
+            tool: {
+                driver: { name: driver }
             },
-            locations: [{
-                physicalLocation: {
-                    artifactLocation: {
-                        uri: '/folder/file.txt',
-                    },
-                    region: {
-                        startLine: 1,
-                    },
-                }
+            results: [{
+                message: {
+                    text: message
+                },
+                locations: [{
+                    physicalLocation: {
+                        artifactLocation: {
+                            uri: uri,
+                        },
+                        region: {
+                            startLine: startLine,
+                        },
+                    }
+                }]
             }]
         }]
-    }]
-} as Log;
+    } as Log;
+};
+
+export const log = generateMockLog('2.1.0', 'Driver', 'Message 1', '/folder/file.txt', 1);
+export const log2 = generateMockLog('2.1.0', 'Driver', 'Message 2', '/folder/file_2.txt', 18);
