@@ -54,11 +54,11 @@ describe('augmentLog', () => {
 });
 
 describe('decodeFileUri', () => {
-    it(`decodes the 'file' uri schemes`, () => {
+    it('decodes the "file" uri schemes', () => {
         const originalUriString = 'file:///c%3A/Users/muraina/sarif-tutorials/samples/3-Beyond-basics/Results_2.sarif';
         assert.strictEqual(decodeFileUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
     });
-    it(`does not affect 'non-file' uri schemes`, () => {
+    it('does not affect "non-file" uri schemes', () => {
         assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com'), 'https://programmers.stackexchange.com');
     });
 });

@@ -5,12 +5,12 @@ import { Row, RowGroup, RowItem } from './tableStore';
 import { observable } from 'mobx';
 import { _Region, filtersRow, filtersColumn } from '../shared';
 import { ResultTableStore } from './resultTableStore';
-import { log } from '../test/mockResultTableStore';
+import { results } from '../test/mockResults';
 import assert from 'assert';
 import { Result } from 'sarif';
 
 describe('ResultTableStore', () => {
-    const resultsSource = { results: log.runs![0].results! };
+    const resultsSource = { results: results };
     const selection = observable.box<Row | undefined>(undefined);
     const filtersSource = {
         keywords: '',
@@ -37,10 +37,10 @@ describe('ResultTableStore', () => {
         const resultTableStore = new ResultTableStore('File', groupBy, resultsSource, filtersSource, selection);
         assert.strictEqual(resultTableStore.rows.length, 2);
         assert.strictEqual((resultTableStore.rows[0] as RowGroup<string,string>).title, 'non file_1');
-        assert.strictEqual((resultTableStore.rows[1] as RowItem<Record<string, Record<string, string>>>).item.message.text, 'Message 6');
-        assert.strictEqual(resultTableStore.rowItems.length, 6);
+        assert.strictEqual((resultTableStore.rows[1] as RowItem<Record<string, Record<string, string>>>).item.message.text, 'Message 3');
+        assert.strictEqual(resultTableStore.rowItems.length, 3);
         assert.strictEqual((resultTableStore.rowItems[0].group as RowGroup<string, string>).title, 'file_1');
         const nonFile1GroupRowItems = resultTableStore.rowItems.slice(1, resultTableStore.rowItems.length);
-        assert.deepStrictEqual(nonFile1GroupRowItems.map((rowItem) => (rowItem.group as RowGroup<string,string>).title), ['non file_1', 'non file_1', 'non file_1', 'non file_1', 'non file_1']);
+        assert.deepStrictEqual(nonFile1GroupRowItems.map((rowItem) => (rowItem.group as RowGroup<string,string>).title), ['non file_1', 'non file_1']);
     });
 });
