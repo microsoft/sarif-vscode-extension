@@ -24,10 +24,10 @@ Supports Sarif version '2.1.0'
  * Gutter icons to help identify the location of the result
  * Codeflow step regions are highlighted and labeled inline
  * Icons visualizing codeflow step level changes
-    * ![Icons](/resources/readmeImages/CallReturnIcon.png?raw=true) Call with a Return
-    * ![Icons](/resources/readmeImages/ReturnCallIcon.png?raw=true) Return from a Call
-    * ![Icons](/resources/readmeImages/CallNoReturnIcon.png?raw=true) Call with no Return
-    * ![Icons](/resources/readmeImages/ReturnNoCallIcon.png?raw=true) Return with no Call
+    * ![Icons](/README/CallReturnIcon.png?raw=true) Call with a Return
+    * ![Icons](/README/ReturnCallIcon.png?raw=true) Return from a Call
+    * ![Icons](/README/CallNoReturnIcon.png?raw=true) Call with no Return
+    * ![Icons](/README/ReturnNoCallIcon.png?raw=true) Return with no Call
 
 ### Convert Non-Sarif File
  * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog update 2.5.0 for list of supported tools
@@ -48,7 +48,7 @@ Supports Sarif version '2.1.0'
  * Manually open it by typing "Sarif: Launch the Sarif Explorer" in the Command Palette(F1) or using the hotkey (Ctrl+L then Ctrl+E)
 
 #### Results List
-![Demo](/resources/readmeImages/ResultsList.gif?raw=true)
+![Demo](/README/ResultsList.gif?raw=true)
  * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool, Automation Category, Automation Id, *new*Logical Location
  * Group By: Results can be grouped by a column
     * Groups are sorted by number of results in each group
