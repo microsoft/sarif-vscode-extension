@@ -62,6 +62,37 @@ describe('Extension', () => {
         });
     });
     describe('String.prototype.sortBy', () => {
+        it('sorts strings', () => {
+            const sortedArrayAsc = ['c','f', 'a', 'd', 'b', 'e'].sortBy(item => String(item));
+            assert.deepStrictEqual(sortedArrayAsc.map(i => i), ['a', 'b', 'c', 'd', 'e', 'f']);
+            const sortedArrayDesc = ['c','f', 'a', 'd', 'b', 'e'].sortBy(item => String(item), true);
+            assert.deepStrictEqual(sortedArrayDesc.map(i => i), ['f', 'e', 'd', 'c', 'b', 'a']);
+        });
+        it('sorts numbers', () => {
+            const sortedArray = [1,4,5,2,3,6].sortBy(item => Number(item));
+            assert.deepStrictEqual(sortedArray.map(i => i), [1,2,3,4,5,6]);
+            const sortedArrayDesc = [1,4,5,2,3,6].sortBy(item => Number(item), true);
+            assert.deepStrictEqual(sortedArrayDesc.map(i => i), [6,5,4,3,2,1]);
+        });
+        it('sorts in-place', () => {
+            const originalArrayStrings = ['c','f', 'a', 'd', 'b', 'e'];
+            originalArrayStrings.sortBy(item => String(item));
+            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['a', 'b', 'c', 'd', 'e', 'f']);
+            originalArrayStrings.sortBy(item => String(item), true);
+            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['f', 'e', 'd', 'c', 'b', 'a']);
+            const originalArrayNumbers = [1,4,5,2,3,6];
+            originalArrayNumbers.sortBy(item => Number(item));
+            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [1,2,3,4,5,6]);
+            originalArrayNumbers.sortBy(item => Number(item), true);
+            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [6,5,4,3,2,1]);
+        });
+        it('sorts strings mixed with numbers', () => {
+            const originalArray = ['c', '1', 'f', '4', 'a', '5', 'd', '2', 'b', '3', 'e', '6'];
+            const toSortable = (item: any) => {
+                return typeof item === 'number' ? Number(item) : String(item);
+            };
+            assert.deepStrictEqual(originalArray.sortBy(toSortable).map(item=> item), ['1','2','3','4','5','6','a','b','c', 'd', 'e', 'f']);
+        });
 
     });
     describe('String.prototype.file', () => {
