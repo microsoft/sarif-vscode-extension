@@ -35,26 +35,20 @@ describe('Extension', () => {
         const logs = [
             { '_uri': 'uri1' },
             { '_uri': 'uri2' },
-            { '_uri': 'uri2' },
-            { '_uri': 'uri3' },
-            { '_uri': 'uri4' }
+            { '_uri': 'uri2' }
         ];
         it('removes the first occurrence of matching', () => {
             assert.deepStrictEqual(logs.removeFirst(log => log._uri === 'uri2'), {'_uri': 'uri2'});
             assert.deepStrictEqual(logs.map(log => log),[
                 {'_uri': 'uri1'},
-                {'_uri': 'uri2'},
-                {'_uri': 'uri3'},
-                {'_uri': 'uri4'}
+                {'_uri': 'uri2'}
             ]);
         });
         it('returns false no element match', () => {
             assert.strictEqual(logs.removeFirst(log => log._uri === 'uri5'), false);
             assert.deepStrictEqual(logs.map(log => log), [
                 {'_uri': 'uri1'},
-                {'_uri': 'uri2'},
-                {'_uri': 'uri3'},
-                {'_uri': 'uri4'}
+                {'_uri': 'uri2'}
             ]);
         });
         it('returns false when tries to remove from empty array', () => {
@@ -63,40 +57,36 @@ describe('Extension', () => {
     });
     describe('String.prototype.sortBy', () => {
         it('sorts strings', () => {
-            const sortedArrayAsc = ['c','f', 'a', 'd', 'b', 'e'].sortBy(item => String(item));
-            assert.deepStrictEqual(sortedArrayAsc.map(i => i), ['a', 'b', 'c', 'd', 'e', 'f']);
-            const sortedArrayDesc = ['c','f', 'a', 'd', 'b', 'e'].sortBy(item => String(item), true);
-            assert.deepStrictEqual(sortedArrayDesc.map(i => i), ['f', 'e', 'd', 'c', 'b', 'a']);
+            const sortedArrayAsc = ['c','b', 'a', 'd'].sortBy(item => String(item));
+            assert.deepStrictEqual(sortedArrayAsc.map(i => i), ['a', 'b', 'c', 'd']);
+            const sortedArrayDesc = ['c','b', 'a', 'd'].sortBy(item => String(item), true);
+            assert.deepStrictEqual(sortedArrayDesc.map(i => i), ['d', 'c', 'b', 'a']);
         });
         it('sorts numbers', () => {
-            const sortedArray = [1,4,5,2,3,6].sortBy(item => Number(item));
-            assert.deepStrictEqual(sortedArray.map(i => i), [1,2,3,4,5,6]);
-            const sortedArrayDesc = [1,4,5,2,3,6].sortBy(item => Number(item), true);
-            assert.deepStrictEqual(sortedArrayDesc.map(i => i), [6,5,4,3,2,1]);
+            const sortedArray = [1,3,2,4].sortBy(item => Number(item));
+            assert.deepStrictEqual(sortedArray.map(i => i), [1,2,3,4]);
+            const sortedArrayDesc = [1,3,2,4].sortBy(item => Number(item), true);
+            assert.deepStrictEqual(sortedArrayDesc.map(i => i), [4,3,2,1]);
         });
         it('sorts in-place', () => {
-            const originalArrayStrings = ['c','f', 'a', 'd', 'b', 'e'];
+            const originalArrayStrings = ['c','b', 'a', 'd'];
             originalArrayStrings.sortBy(item => String(item));
-            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['a', 'b', 'c', 'd', 'e', 'f']);
+            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['a', 'b', 'c', 'd']);
             originalArrayStrings.sortBy(item => String(item), true);
-            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['f', 'e', 'd', 'c', 'b', 'a']);
-            const originalArrayNumbers = [1,4,5,2,3,6];
+            assert.deepStrictEqual(originalArrayStrings.map(i => i), ['d', 'c', 'b', 'a']);
+            const originalArrayNumbers = [1,4,2,3];
             originalArrayNumbers.sortBy(item => Number(item));
-            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [1,2,3,4,5,6]);
+            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [1,2,3,4]);
             originalArrayNumbers.sortBy(item => Number(item), true);
-            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [6,5,4,3,2,1]);
+            assert.deepStrictEqual(originalArrayNumbers.map(i => i), [4,3,2,1]);
         });
     });
     describe('String.prototype.file', () => {
-        it('returns the file name from an absolute path', () => {
-            assert.strictEqual('/C:/Users/muraina/sarif-vscode-extension/samples/user.cs'.file, 'user.cs');
-        });
-        it('returns the file name from a relative path', () => {
-            assert.strictEqual('muraina/sarif-vscode-extension/samples/user.cs'.file, 'user.cs');
+        it('returns the file name from a path', () => {
+            assert.strictEqual('/C:/Users/user.cs'.file, 'user.cs');
         });
         it('does not fail when there is no file type', () => {
-            assert.doesNotThrow(() => '/C:/Users/muraina/sarif-vscode-extension/samples/user'.file);
-            assert.doesNotThrow(() => 'muraina/sarif-vscode-extension/samples/user'.file);
+            assert.doesNotThrow(() => '/C:/Users/user'.file);
         });
         it('does not fail when there is no hierarchical directory path as part of input', () => {
             assert.doesNotThrow(() => 'user.cs'.file);
@@ -107,7 +97,7 @@ describe('Extension', () => {
     });
     describe('String.prototype.path', () => {
         it('returns the hierarchical directory from the file path', () => {
-            assert.strictEqual('/C:/Users/muraina/sarif-vscode-extension/samples/user.cs'.path, 'C:/Users/muraina/sarif-vscode-extension/samples');
+            assert.strictEqual('/C:/Users/user.cs'.path, 'C:/Users');
         });
         it('does not fail when when no hierarchical directory is in the input', () => {
             assert.doesNotThrow(() => 'user.cs'.path);
