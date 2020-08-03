@@ -184,7 +184,7 @@ export function parseRegion(region: Region | undefined): _Region | undefined {
         startLine,
         startColumn,
         endLine ?? startLine,
-        endColumn ?? (startColumn + 1)
+        endColumn ?? Number.MAX_SAFE_INTEGER // Arbitrarily large number representing the rest of the line.
     ] as _RegionStartEndLineCol;
 }
 
