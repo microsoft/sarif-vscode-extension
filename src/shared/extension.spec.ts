@@ -86,14 +86,6 @@ describe('Extension', () => {
             originalArrayNumbers.sortBy(item => Number(item), true);
             assert.deepStrictEqual(originalArrayNumbers.map(i => i), [6,5,4,3,2,1]);
         });
-        it('sorts strings mixed with numbers', () => {
-            const originalArray = ['c', '1', 'f', '4', 'a', '5', 'd', '2', 'b', '3', 'e', '6'];
-            const toSortable = (item: any) => {
-                return typeof item === 'number' ? Number(item) : String(item);
-            };
-            assert.deepStrictEqual(originalArray.sortBy(toSortable).map(item=> item), ['1','2','3','4','5','6','a','b','c', 'd', 'e', 'f']);
-        });
-
     });
     describe('String.prototype.file', () => {
         it('returns the file name from an absolute path', () => {
