@@ -125,7 +125,7 @@ export function augmentLog(log: Log) {
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
             result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
 
-            result.level = result.level ?? 'warning';
+            result.level = result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
             result.baselineState = result.baselineState ?? 'new';
             result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
                 ? 'not suppressed'
@@ -184,7 +184,7 @@ export function parseRegion(region: Region | undefined): _Region | undefined {
         startLine,
         startColumn,
         endLine ?? startLine,
-        endColumn ?? (startColumn + 1)
+        endColumn ?? Number.MAX_SAFE_INTEGER // Arbitrarily large number representing the rest of the line.
     ] as _RegionStartEndLineCol;
 }
 
