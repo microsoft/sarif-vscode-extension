@@ -150,10 +150,11 @@
         "tmp": "0.1.0",
         "url-join": "4.0.1",
         "vscode-codicons": "0.0.2",
+        "vscode-extension-telemetry": "0.1.6",
         "vscode-uri": "2.1.2"
     },
     "optionalDependencies": {
-        "@microsoft/sarif-multitool-darwin": "2.2.5",
-        "@microsoft/sarif-multitool-win32": "2.2.5"
+        "@microsoft/sarif-multitool-darwin": "2.3.3",
+        "@microsoft/sarif-multitool-win32": "2.3.3"
     }
 }

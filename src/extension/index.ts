@@ -11,10 +11,13 @@ import { Panel } from './panel';
 import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
+import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
 
 export async function activate(context: ExtensionContext) {
+    Telemetry.activate();
+
     const disposables = context.subscriptions;
     Store.extensionPath = context.extensionPath;
     Store.globalState = context.globalState;
@@ -210,4 +213,6 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
     }));
 }
 
-export function deactivate() {}
+export function deactivate() {
+    Telemetry.deactivate();
+}
