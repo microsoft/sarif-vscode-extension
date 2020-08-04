@@ -154,7 +154,7 @@
         "vscode-uri": "2.1.2"
     },
     "optionalDependencies": {
-        "@microsoft/sarif-multitool-darwin": "2.2.5",
-        "@microsoft/sarif-multitool-win32": "2.2.5"
+        "@microsoft/sarif-multitool-darwin": "2.3.3",
+        "@microsoft/sarif-multitool-win32": "2.3.3"
     }
 }
