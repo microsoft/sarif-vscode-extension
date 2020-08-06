@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { ArtifactLocation, Location, Log, Region, Result } from 'sarif';
+import { ArtifactLocation, Location, Log, Region, ReportingDescriptor, Result } from 'sarif';
 import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
 
@@ -91,8 +91,8 @@ export function augmentLog(log: Log) {
         // We intern these objects so they can be conveniently instance comparable elsewhere in the code.
         // If we don't do this, then the same ruleId may generate multiple `Rule` objects.
         // When instance comparing those `Rule` objects, they would appear to be different rules. We don't want that.
-        const driverlessRules = new Map<string, { id: string }>();
-        function getDriverlessRule(id: string | undefined): { id: string } | undefined {
+        const driverlessRules = new Map<string, ReportingDescriptor>();
+        function getDriverlessRule(id: string | undefined): ReportingDescriptor | undefined {
             if (!id) return undefined;
             if (!driverlessRules.has(id)) {
                 driverlessRules.set(id, { id });
