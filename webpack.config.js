@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const CopyPlugin = require('copy-webpack-plugin');
 const outputPath = require('path').join(__dirname, 'out');
 
 const common = {
@@ -80,11 +79,5 @@ module.exports = [
         externals: {
             vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded.
         },
-        plugins: [
-            new CopyPlugin([
-                { from: require('@microsoft/sarif-multitool-darwin') },
-                { from: require('@microsoft/sarif-multitool-win32') },
-            ]),
-        ],
     },
 ];

@@ -8,7 +8,6 @@ import { mapDistinct } from '../shared';
 import '../shared/extension';
 
 export class Store {
-    static extensionPath: string | undefined
     static globalState: Memento
 
     @observable.shallow logs = [] as Log[]

@@ -5,13 +5,11 @@
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import jsonMap from 'json-source-map';
-import { join } from 'path';
 import { Log } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
 import { augmentLog, JsonMap } from '../shared';
-import { Store } from './store';
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
     const logs = uris
@@ -55,6 +53,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                         log._jsonMap = pointers;
                         logsNoUpgrade.push(log);
                     } catch (error) {
+                        console.error(error);
                         window.showErrorMessage(`Failed to upgrade '${fsPath}'`);
                     }
                 }
@@ -91,8 +90,6 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
 export function upgradeLog(fsPath: string) {
     // Example of a MacOS temp folder: /private/var/folders/9b/hn5353ks051gn79f4b8rn2tm0000gn/T
     const name = tmpNameSync({ postfix: '.sarif' });
-    const multitoolExe = `Sarif.Multitool${process.platform === 'win32' ? '.exe' : ''}`;
-    const multitoolExePath = join(Store.extensionPath || process.cwd(), 'out', multitoolExe);
-    execFileSync(multitoolExePath, ['transform', fsPath, '--force', '--pretty-print', '--output', name]);
+    execFileSync('npx', ['@microsoft/sarif-multitool', 'transform', fsPath, '--force', '--pretty-print', '--output', name]);
     return name;
 }
