@@ -19,7 +19,6 @@ export async function activate(context: ExtensionContext) {
     Telemetry.activate();
 
     const disposables = context.subscriptions;
-    Store.extensionPath = context.extensionPath;
     Store.globalState = context.globalState;
     disposables.push(commands.registerCommand('sarif.clearState', () => {
         context.globalState.update('view', undefined);
