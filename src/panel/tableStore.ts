@@ -21,7 +21,7 @@ export abstract class Row {
 }
 
 export class RowGroup<T, G> extends Row {
-    @observable expanded = true
+    @observable expanded = false
     public items = [] as RowItem<T>[]
     public itemsFiltered = [] as RowItem<T>[]
     constructor(readonly title: G) {
