@@ -87,6 +87,19 @@ export function augmentLog(log: Log) {
     log.runs.forEach((run, runIndex) => {
         run._index = runIndex;
 
+        // For `Run`s that lack `tool.driver.rules` we generate a `Rule` object on demand.
+        // We intern these objects so they can be conveniently instance comparable elsewhere in the code.
+        // If we don't do this, then the same ruleId may generate multiple `Rule` objects.
+        // When instance comparing those `Rule` objects, they would appear to be different rules. We don't want that.
+        const driverlessRules = new Map<string, { id: string }>();
+        function getDriverlessRule(id: string | undefined): { id: string } | undefined {
+            if (!id) return undefined;
+            if (!driverlessRules.has(id)) {
+                driverlessRules.set(id, { id });
+            }
+            return driverlessRules.get(id)!;
+        }
+
         let implicitBaseParts = undefined as string[] | undefined;
         run.results?.forEach((result, resultIndex) => {
             result._log = log;
@@ -119,7 +132,7 @@ export function augmentLog(log: Log) {
 
             result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
                 ?? run.tool.driver.rules?.find(rule => rule.id === result.ruleId)
-                ?? (result.ruleId ? { id: result.ruleId! } : undefined); // TODO: Intern for comparability.
+                ?? getDriverlessRule(result.ruleId);
 
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
