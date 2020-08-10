@@ -56,7 +56,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         };
         const renderStack = (stackFrame: StackFrame) => {
             const location = stackFrame.location;
-            const logicalLocation = stackFrame.location?.logicalLocations[0];
+            const logicalLocation = stackFrame.location?.logicalLocations?.[0];
             const { message, uri, region } = parseLocation(result, location);
             const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
             return <>
