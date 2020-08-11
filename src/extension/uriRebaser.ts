@@ -52,9 +52,11 @@ export class UriRebaser {
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
             const { file } = platformUriNormalize(localUri);
 
-            // If no workspace, then the open docs (at this moment) become the workspace.
+            // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
+            // but obviously can't always be true.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
-            if ((!workspace.workspaceFolders?.length || this.distinctLocalNames.has(file))
+            const noWorkspace = !workspace.workspaceFolders?.length;
+            if ((noWorkspace || this.distinctLocalNames.has(file))
                 && this.store.distinctArtifactNames.has(file)) {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
