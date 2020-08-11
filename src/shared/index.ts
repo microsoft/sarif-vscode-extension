@@ -4,6 +4,7 @@
 import { ArtifactLocation, Location, Log, Region, ReportingDescriptor, Result } from 'sarif';
 import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
+import fs from 'fs';
 
 type JsonLocation = { line: number, column: number } // Unused: pos
 type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key, keyEnd
@@ -140,7 +141,7 @@ export function augmentLog(log: Log) {
 
             result.level = result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
             result.baselineState = result.baselineState ?? 'new';
-            result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
+            result._suppression = !result.suppressions || result.suppressions.every(sup => sup.state === 'rejected')
                 ? 'not suppressed'
                 : 'suppressed';
         });
@@ -215,7 +216,7 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 
     // Convert possible relative URIs to absolute. Also serves to normalize leading slashes.
     // skipEncoding=true because otherwise 'file:///c:' incorrectly round-trips as 'file:///c%3A'.
-    const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString(true /* skipEncoding */);
+    const normalizeUri = (uri: string) => fixUriCasingForWindows(URI.parse(uri, false /* allow relative URI */)).toString(true /* skipEncoding */);
     const uri = relativeUri && normalizeUri(urlJoin(uriBase, relativeUri));
 
     // A shorter more transparent URI format would be:
@@ -226,6 +227,52 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
         : undefined;
     return [uri, uriContents];
+}
+
+function fixUriCasingForWindows(uri: URI) {
+    // This function is only necessary for Windows and only for  file-system scheme files.
+    if (process.platform !== 'win32' || uri.scheme.toLowerCase() !== 'file') {
+        return uri;
+    }
+
+    if (!fs.existsSync(uri.fsPath)) {
+        return uri;
+    }
+
+    let pathPartIndex: number = 0;
+    const pathParts: string[] = uri.fsPath.split('/');
+    if (pathParts.length < 1) {
+        return uri;
+    }
+
+    // We assume that the "root" drive is lower-cased which is "usually" the case.
+    // There is an windows API
+    // [GetLogicalDriveStringsW]
+    // (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getlogicaldrivestringsw)
+    // that we often use in native/C# code to get the proper casing of the driver letter.
+    // As far as I know, this doesn't exist in node\javascript land.
+    // It is a very rare rare case that the drive letter is uppercased however.
+    let fixedPath: string = pathParts[0].toLowerCase() + '/';
+
+    while (pathPartIndex + 1 < pathParts.length) {
+        const directoryToRead: string = fixedPath;
+        const directoryEntries: string[] = fs.readdirSync(directoryToRead);
+        const fixedPathPart: string | undefined =
+            directoryEntries.find((directoryEntry) =>
+                // Use "undefined" as the locale which means "default for environment" (which
+                // in our case is whatever VSCode is running in).
+                // We use this compare because file names can be typed in any language.
+                directoryEntry.localeCompare(pathParts[pathPartIndex + 1], undefined, {sensitivity: "base"}) === 0);
+        if (!fixedPathPart) {
+            throw new Error(`Cannot find path part ${pathParts[pathPartIndex + 1]} of path ${uri.fsPath}`);
+        }
+
+        fixedPath = `${fixedPath}/${fixedPathPart}`;
+
+        pathPartIndex++;
+    }
+
+    return URI.file(fixedPath);
 }
 
 export function decodeFileUri(uriString: string) {
