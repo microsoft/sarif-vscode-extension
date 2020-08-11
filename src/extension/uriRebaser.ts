@@ -3,6 +3,7 @@
 
 import { Uri, window, workspace } from 'vscode';
 import '../shared/extension';
+import platformUriNormalize from './platformUriNormalize';
 import { Store } from './store';
 import uriExists from './uriExists';
 
@@ -49,7 +50,7 @@ export class UriRebaser {
     public translateLocalToArtifact(localUri: string): string { // Future: Ret undefined when certain.
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
-            const {file} = localUri;
+            const { file } = platformUriNormalize(localUri);
 
             // If no workspace, then the open docs (at this moment) become the workspace.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
