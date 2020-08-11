@@ -50,12 +50,11 @@ export class UriRebaser {
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
             const {file} = localUri;
-            if ((	// If no workspace, then the open docs (at this moment) become the workspace.
+
+            // If no workspace, then the open docs (at this moment) become the workspace.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
-                !workspace.workspaceFolders?.length ||
-                    this.distinctLocalNames.has(file)
-            ) &&
-                this.store.distinctArtifactNames.has(file)) {
+            if ((!workspace.workspaceFolders?.length || this.distinctLocalNames.has(file))
+                && this.store.distinctArtifactNames.has(file)) {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
                 this.updateValidatedUris(artifactUri, localUri);
