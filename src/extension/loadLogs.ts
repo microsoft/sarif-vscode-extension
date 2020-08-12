@@ -5,11 +5,13 @@
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import jsonMap from 'json-source-map';
-import { Log } from 'sarif';
+import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
 import { augmentLog, JsonMap } from '../shared';
+
+const driverlessRules = new Map<string, ReportingDescriptor>();
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
     const logs = uris
@@ -60,7 +62,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             }
         );
     }
-    logsNoUpgrade.forEach(augmentLog);
+    logsNoUpgrade.forEach(log => augmentLog(log, driverlessRules));
     if (warnUpgradeExtension) {
         window.showWarningMessage('Some log versions are newer than this extension.');
     }

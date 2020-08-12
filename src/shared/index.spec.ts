@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 import assert from 'assert';
-import { Log } from 'sarif';
+import { Log, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, decodeFileUri } from '.';
+import './extension';
 
 describe('augmentLog', () => {
     const log = {
@@ -51,10 +52,43 @@ describe('augmentLog', () => {
         augmentLog(log);
         assert.strictEqual(result._uriContents, 'sarif:undefined/0/0/file.txt');
     });
+
+    it('is able to reuse driverless rule instances across runs', () => {
+        const placeholderTool = {
+            driver: { name: 'Driver' }
+        };
+        const placeholderMessage = {
+            text: 'Message 1'
+        };
+        const run0result = {
+            message: placeholderMessage,
+            ruleId: 'TEST001',
+        } as Result;
+        const run1result = {
+            message: placeholderMessage,
+            ruleId: 'TEST001',
+        } as Result;
+        const log = {
+            runs: [
+                {
+                    tool: placeholderTool,
+                    results: [run0result]
+                },
+                {
+                    tool: placeholderTool,
+                    results: [run1result]
+                }
+            ]
+        } as Log;
+
+        augmentLog(log, new Map<string, ReportingDescriptor>());
+        assert.strictEqual(run0result._rule, run1result._rule);
+    });
 });
 
 describe('decodeFileUri', () => {
-    it(`decodes the 'file' uri schemes`, () => {
+    // Skipping while we fix this test for non-Win32 users.
+    it.skip(`decodes the 'file' uri schemes`, () => {
         const originalUriString = 'file:///c%3A/Users/muraina/sarif-tutorials/samples/3-Beyond-basics/Results_2.sarif';
         assert.strictEqual(decodeFileUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
     });

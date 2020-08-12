@@ -80,7 +80,7 @@ export function mapDistinct(pairs: [string, string][]): Map<string, string> {
     return distinct as Map<string, string>;
 }
 
-export function augmentLog(log: Log) {
+export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
     if (log._augmented) return;
     log._augmented = true;
     const fileAndUris = [] as [string, string][];
@@ -91,7 +91,7 @@ export function augmentLog(log: Log) {
         // We intern these objects so they can be conveniently instance comparable elsewhere in the code.
         // If we don't do this, then the same ruleId may generate multiple `Rule` objects.
         // When instance comparing those `Rule` objects, they would appear to be different rules. We don't want that.
-        const driverlessRules = new Map<string, ReportingDescriptor>();
+        const driverlessRules = rules ?? new Map<string, ReportingDescriptor>();
         function getDriverlessRule(id: string | undefined): ReportingDescriptor | undefined {
             if (!id) return undefined;
             if (!driverlessRules.has(id)) {
