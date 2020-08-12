@@ -32,6 +32,11 @@ export class IndexStore {
             return change;
         });
 
+        observe(this.logs, () => {
+            if (this.logs.length) return;
+            this.selection.set(undefined);
+        });
+
         if (defaultSelection) {
             const store = this.resultTableStoreByLocation;
             when(() => !!store.rows.length, () => {
