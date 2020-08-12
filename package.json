@@ -85,12 +85,12 @@
     },
     "scripts": {
         "prestart": "npm install",
-        "start": "webpack --watch",
+        "start": "webpack --watch --mode production",
         "server": "webpack-dev-server -d",
         "test": "mocha",
         "testcoverage": "nyc mocha --watch=false",
         "package": "vsce package",
-        "vscode:prepublish": "webpack",
+        "vscode:prepublish": "webpack --mode production",
         "lint": "eslint .; exit 0"
     },
     "devDependencies": {
