@@ -1,39 +1,82 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { filtersColumn, filtersRow } from '../shared';
+// Exceptions to make mocking easier.
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
+
+/// <reference path="../panel/global.d.ts" />
+
 import { IndexStore } from './indexStore';
-import { log, log2, log3 } from '../test/mockLog';
+import { filtersColumn, filtersRow } from '../shared';
+import { Log } from 'sarif';
 import assert from 'assert';
 
 describe('IndexStore', () => {
-    it('Keeps track of Log[] data and extract and flattens Result[] from it ', () => {
-        const indexStore = new IndexStore({ filtersRow, filtersColumn });
-        indexStore.logs.push(log);
+    before('before all', () => {
+        const log = {
+            version: '2.1.0',
+            runs: [{
+                tool: {
+                    driver: { name: 'Driver' }
+                },
+                results: [{
+                    message: {
+                        text: 'Message 1'
+                    },
+                    locations: [{
+                        physicalLocation: {
+                            artifactLocation: {
+                                uri: 'file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif',
+                            },
+                            region: {
+                                startLine: 28,
+                            },
+                        }
+                    }]
+                }]
+            }]
+        } as Log;
+        global.fetch = async () => ({ json: async () => log }) as unknown as Promise<Response>;
+        global.vscode = {
+            postMessage: async () => {}
+        };
+    });
+    it('keep logs in sync', async () => {
+        // Adds a new log
+        const indexStore = new IndexStore({filtersRow, filtersColumn});
+        await indexStore.onMessage({ data: {
+            'command': 'spliceLogs',
+            'removed': [],
+            'added': [{
+                'uri':'file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif',
+                'webviewUri':'vscode-webview-resource://bd904178-42ae-4a87-aa8f-a4f14965f103/file///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif'
+            }]
+        }} as any);
         assert.strictEqual(indexStore.results.length, 1);
-        assert.deepStrictEqual(indexStore.results.map((result) => result.message.text), ['Message 1']);
-        indexStore.logs.push(log2);
-        assert.strictEqual(indexStore.results.length, 2);
-        assert.deepStrictEqual(indexStore.results.map((result) => result.message.text), ['Message 1', 'Message 2']);
+        assert.strictEqual(indexStore.results[0]._uri, 'file:///c:/Users/muraina/sarif-tutorials/samples/results.sarif');
+
+        // Removes an existing log
+        await indexStore.onMessage({ data: {
+            'command': 'spliceLogs',
+            'removed': ['file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif'],
+            'added': []
+        }} as any);
+        assert.strictEqual(indexStore.results.length, 0);
+
+        // Does not fail if log does not exist
+        assert.doesNotThrow(() => indexStore.onMessage({ data: {
+            'command': 'spliceLogs',
+            'removed': ['file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif'],
+            'added': []
+        }} as any));
     });
-    it('Consists of 2 ResultTableStores grouped by artifact location and rule', () => {
-        const indexStore = new IndexStore({ filtersRow, filtersColumn });
-        indexStore.logs.push(log);
-        assert.strictEqual(indexStore.resultTableStoreByLocation.rows.length, 2);
-        assert.strictEqual(indexStore.resultTableStoreByRule.rows.length, 2);
-        indexStore.logs.push(log2);
-        assert.strictEqual(indexStore.resultTableStoreByLocation.rows.length, 4);
-        assert.strictEqual(indexStore.resultTableStoreByRule.rows.length, 3);
+    it('updates the current selection', () => {
+        // Case 1: Selects a result
+        // Case 2: De-selects a result
     });
-    it('can filter results based on keywords', () => {
-        const indexStore = new IndexStore({ filtersRow, filtersColumn });
-        indexStore.logs.push(log, log2, log3);
-        assert.strictEqual(indexStore.resultTableStoreByLocation.groupsFilteredSorted.length, 3);
-        assert.deepStrictEqual(indexStore.resultTableStoreByLocation.groupsFilteredSorted.map((rowGroup) => rowGroup.title), ['/file.txt', '/file_2.txt', '/file_3.txt']);
-        indexStore.keywords = 'file_3';
-        assert.strictEqual(indexStore.resultTableStoreByLocation.groupsFilteredSorted.length, 1);
-        assert.deepStrictEqual(indexStore.resultTableStoreByLocation.groupsFilteredSorted.map((rowGroup) => rowGroup.title), ['/file_3.txt']);
-        indexStore.clearFilters();
-        assert.strictEqual(indexStore.resultTableStoreByLocation.groupsFilteredSorted.length, 3);
+    after('after all', () => {
+        delete global.vscode;
     });
 });
