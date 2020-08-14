@@ -10,12 +10,65 @@ import '../shared/extension';
 const proxyquire = require('proxyquire').noCallThru();
 
 describe('baser', () => {
+    const platformUriNormalize = proxyquire('./platformUriNormalize', {
+        'vscode': { Uri },
+        './platform': 'darwin',
+    });
+
     it('Array.commonLength', () => {
         const commonLength = Array.commonLength(
             ['a', 'b', 'c'],
             ['a', 'b', 'd']
         );
         assert.strictEqual(commonLength, 2);
+    });
+
+    it('translates uris - local -> artifact - case-insensitive file system', async () => {
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'file://  /a/b'.replace(/ /g, '');
+        const localUri    = 'file://  /a/B'.replace(/ /g, '');
+        const platformUriNormalize = proxyquire('./platformUriNormalize', {
+            'vscode': { Uri },
+            './platform': 'win32',
+        });
+        const { UriRebaser } = proxyquire('./uriRebaser', {
+            'vscode': {
+                workspace: {
+                    textDocuments: [],
+                },
+                Uri,
+            },
+            './platformUriNormalize': platformUriNormalize,
+            './uriExists': () => { throw new Error(); },
+        });
+        const distinctArtifactNames = new Map([
+            [artifactUri.file, artifactUri]
+        ]);
+
+        // Need to restructure product+test to better simulate the calculation distinctLocalNames.
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames });
+        assert.strictEqual(rebaser.translateLocalToArtifact(localUri), artifactUri);
+    });
+
+    it('translates uris - local -> artifact - case-sensitive file system', async () => {
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'file://  /a/b'.replace(/ /g, '');
+        const localUri    = 'file://  /a/B'.replace(/ /g, '');
+        const { UriRebaser } = proxyquire('./uriRebaser', {
+            'vscode': {
+                workspace: {
+                    textDocuments: [],
+                },
+                Uri,
+            },
+            './platformUriNormalize': platformUriNormalize,
+            './uriExists': () => { throw new Error(); },
+        });
+        const distinctArtifactNames = new Map([
+            [artifactUri.file, artifactUri]
+        ]);
+        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames });
+        assert.strictEqual(rebaser.translateLocalToArtifact(localUri), localUri);
     });
 
     it('Distinct 1', async () => {
@@ -29,6 +82,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const distinctLocalNames = new Map([
@@ -58,6 +112,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
@@ -81,6 +136,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
@@ -91,6 +147,7 @@ describe('baser', () => {
     it('commonIndices', async () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {},
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (_uri: string) => false,
         });
         const pairs = [...UriRebaser.commonIndices(
@@ -113,6 +170,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (_uri: string) => false,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
@@ -133,6 +191,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
@@ -154,6 +213,7 @@ describe('baser', () => {
                 },
                 Uri,
             },
+            './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
