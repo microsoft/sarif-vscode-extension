@@ -113,7 +113,6 @@
         "@typescript-eslint/eslint-plugin": "3.1.0",
         "@typescript-eslint/parser": "3.1.0",
         "@zeit/ncc": "0.22.1",
-        "copy-webpack-plugin": "5.1.1",
         "css-loader": "3.4.2",
         "eslint": "7.1.0",
         "eslint-plugin-filenames": "1.3.2",
