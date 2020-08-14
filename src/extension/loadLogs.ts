@@ -13,14 +13,23 @@ import { augmentLog, JsonMap } from '../shared';
 
 const driverlessRules = new Map<string, ReportingDescriptor>();
 
-export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
+function jsonParse(text: string, skipPointers?: 'skipPointers'): { data: Log, pointers: JsonMap | undefined } {
+    return skipPointers
+        ? {
+            data: JSON.parse(text),
+            pointers: undefined,
+        }
+        : jsonMap.parse(text) as { data: Log, pointers: JsonMap };
+}
+
+export async function loadLogs(uris: Uri[], skipPointers?: 'skipPointers', token?: { isCancellationRequested: boolean }) {
     const logs = uris
         .map(uri => {
             if (token?.isCancellationRequested) return undefined;
             try {
                 const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
-                const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                const { data: log, pointers } = jsonParse(file, skipPointers);
                 log._uri = uri.toString();
                 log._jsonMap = pointers;
                 return log;
@@ -49,7 +58,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                     try {
                         const tempPath = upgradeLog(fsPath);
                         const file = fs.readFileSync(tempPath, 'utf8'); // Assume scheme file.
-                        const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                        const { data: log, pointers } = jsonParse(file, skipPointers);
                         log._uri = oldLog._uri;
                         log._uriUpgraded = Uri.file(tempPath).toString();
                         log._jsonMap = pointers;
