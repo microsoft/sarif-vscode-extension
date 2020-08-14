@@ -85,7 +85,7 @@
     },
     "scripts": {
         "prestart": "npm install",
-        "start": "webpack --watch --mode production",
+        "start": "webpack --watch --mode development",
         "server": "webpack-dev-server -d",
         "test": "mocha",
         "testcoverage": "nyc mocha --watch=false",
