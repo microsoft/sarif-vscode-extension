@@ -17,7 +17,7 @@ import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
 import { decodeFileUri } from '../shared';
 
-export * as React from 'react';
+export { React };
 export * as ReactDOM from 'react-dom';
 export { IndexStore as Store } from './indexStore';
 export { DetailsLayouts } from './details.layouts';
