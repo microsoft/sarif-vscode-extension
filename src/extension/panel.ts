@@ -121,7 +121,7 @@ export class Panel {
                     log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
                 }
 
-                const { value, valueEnd } = log._jsonMap?.[`/runs/${runIndex}/results/${resultIndex}`];
+                const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
                 const resultRegion = [value.line, value.column, valueEnd.line, valueEnd.column] as _RegionStartEndLineCol;
                 await this.selectLocal(logUri, logUriUpgraded, resultRegion);
                 break;
