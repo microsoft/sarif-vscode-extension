@@ -11,7 +11,7 @@ export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
 type _RegionBytes = [number, number] // byteOffset, byteLength
-type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
+export type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
 export type _Region
     = number // single line
     | _RegionBytes
@@ -38,7 +38,6 @@ declare module 'sarif' {
         _log: Log;
         _run: Run;
         _id: ResultId;
-        _logRegion?: _Region;
         _uri?: string;
         _uriContents?: string; // ArtifactContent. Do not use this uri for display.
         _relativeUri?: string;
@@ -105,12 +104,6 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             result._log = log;
             result._run = run;
             result._id = [log._uri, runIndex, resultIndex];
-            result._logRegion = (() => {
-                const region = log._jsonMap?.[`/runs/${runIndex}/results/${resultIndex}`];
-                if (!region) return; // Panel will not have a jsonMap
-                const {value, valueEnd} = region;
-                return [ value.line, value.column, valueEnd.line, valueEnd.column ] as _Region;
-            })();
 
             const ploc = result.locations?.[0]?.physicalLocation;
             const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation);
@@ -151,7 +144,6 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
         });
     });
     log._distinct = mapDistinct(fileAndUris);
-    log._jsonMap = undefined; // Free-up memory.
 }
 
 /*
