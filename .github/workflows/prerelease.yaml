@@ -18,7 +18,6 @@ jobs:
             ${{ runner.os }}-node-
       - run: |
           npm install
-          npm install --force @microsoft/sarif-multitool-darwin @microsoft/sarif-multitool-win32
           npx json -I -f package.json -e 'this.version = `${this.version}-${{ github.run_number }}`'
           npm run package
       - id: package_version
