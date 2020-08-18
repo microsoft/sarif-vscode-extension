@@ -10,6 +10,7 @@ import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
 import { augmentLog, JsonMap } from '../shared';
+import * as Telemetry from './telemetry';
 
 const driverlessRules = new Map<string, ReportingDescriptor>();
 
@@ -31,6 +32,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
         })
         .filter(log => log) as Log[];
 
+    logs.forEach(log => Telemetry.sendLogVersion(log.version, log.$schema ?? ''));
     logs.forEach(tryFastUpgradeLog);
 
     const logsNoUpgrade = [] as Log[];
