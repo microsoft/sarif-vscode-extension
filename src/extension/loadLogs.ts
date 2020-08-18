@@ -4,12 +4,11 @@
 /// <reference path="jsonSourceMap.d.ts" />
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
-import jsonMap from 'json-source-map';
 import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
-import { augmentLog, JsonMap } from '../shared';
+import { augmentLog } from '../shared';
 import * as Telemetry from './telemetry';
 
 const driverlessRules = new Map<string, ReportingDescriptor>();
@@ -21,9 +20,8 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             try {
                 const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
-                const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                const log = JSON.parse(file) as Log;
                 log._uri = uri.toString();
-                log._jsonMap = pointers;
                 return log;
             } catch (error) {
                 window.showErrorMessage(`Failed to parse '${uri.fsPath}'`);
@@ -54,10 +52,9 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                     try {
                         const tempPath = upgradeLog(fsPath);
                         const file = fs.readFileSync(tempPath, 'utf8'); // Assume scheme file.
-                        const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                        const log = JSON.parse(file) as Log;
                         log._uri = oldLog._uri;
                         log._uriUpgraded = Uri.file(tempPath).toString();
-                        log._jsonMap = pointers;
                         logsNoUpgrade.push(log);
                     } catch (error) {
                         console.error(error);
