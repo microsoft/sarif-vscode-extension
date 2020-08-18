@@ -8,7 +8,7 @@
             "promptOnClose": true,
             "problemMatcher": {
                 "background": {
-                    "beginsPattern": "npm install",
+                    "beginsPattern": "webpack --watch --mode development",
                     "endsPattern": "context.js.+emitted"
                 },
                 "pattern": [
