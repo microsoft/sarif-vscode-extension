@@ -11,6 +11,9 @@ import { postSelectArtifact, postSelectLog } from '../panel/indexStore';
 import { log } from '../test/mockLog';
 import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
 
+// Log object may be modified during testing, thus we need to keep a clean string copy.
+const mockLogString = JSON.stringify(log);
+
 const proxyquire = require('proxyquire').noCallThru();
 
 describe('activate', () => {
@@ -19,12 +22,15 @@ describe('activate', () => {
             'fs': {
                 '@global': true,
                 readFileSync: () => {
-                    return JSON.stringify(log);
+                    return mockLogString;
                 }
             },
             'vscode': {
                 '@global': true,
                 ...mockVscode,
+            },
+            './telemetry': {
+                activate: () => { },
             },
         });
         const api = await mockVscodeTestFacing.activateExtension(activate);
