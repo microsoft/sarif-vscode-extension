@@ -4,9 +4,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */ // Allowing any for mocks.
 
 import assert from 'assert';
-import { execFileSync } from 'child_process';
+import { copyFileSync } from 'fs';
 import { Log } from 'sarif';
 import { URI as Uri } from 'vscode-uri';
+import '../shared/extension';
 
 const proxyquire = require('proxyquire').noCallThru();
 
@@ -83,12 +84,40 @@ describe('loadLogs', () => {
                 execFileSync: (command: string, args?: ReadonlyArray<string>) => {
                     logCount++;
                     cancel.isCancellationRequested = logCount >= 1;
-                    execFileSync(command, args);
+                    copyFileSync(args![2], args![6]); // Simulate upgrade by copying the file.
                 }
             },
             vscode
         });
         const logs = await loadLogs(uris, cancel);
-        assert.strictEqual(logs.length, 3);
+        assert.strictEqual(logs.length, 4);
+    });
+
+    it('can quick upgrade if appropriate', async () => {
+        const { tryFastUpgradeLog } = proxyquire('./loadLogs', { vscode });
+
+        const runs = [{
+            results: [{
+                suppressions: [{
+                    state: 'accepted'
+                }],
+            }],
+        }];
+
+        const rtm5 = {
+            version: '2.1.0',
+            $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json',
+            runs,
+        } as any;
+        assert.strictEqual(await tryFastUpgradeLog(rtm5), false);
+
+        const rtm4 = {
+            version: '2.1.0',
+            $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json',
+            runs,
+        } as any;
+        assert.strictEqual(await tryFastUpgradeLog(rtm4), true);
+        assert.strictEqual(rtm4.runs[0].results[0].suppressions[0].status, 'accepted');
+        assert.strictEqual(rtm4.runs[0].results[0].suppressions[0].state, undefined);
     });
 });

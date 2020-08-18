@@ -9,6 +9,7 @@ import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
 import { augmentLog } from '../shared';
+import * as Telemetry from './telemetry';
 
 const driverlessRules = new Map<string, ReportingDescriptor>();
 
@@ -28,6 +29,10 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             }
         })
         .filter(log => log) as Log[];
+
+    logs.forEach(log => Telemetry.sendLogVersion(log.version, log.$schema ?? ''));
+    logs.forEach(tryFastUpgradeLog);
+
     const logsNoUpgrade = [] as Log[];
     const logsToUpgrade = [] as Log[];
     const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsNoUpgrade, logsToUpgrade));
@@ -92,4 +97,44 @@ export function upgradeLog(fsPath: string) {
     const npx = `npx${process.platform === 'win32' ? '.cmd' : ''}`;
     execFileSync(npx, ['@microsoft/sarif-multitool', 'transform', fsPath, '--force', '--pretty-print', '--output', name]);
     return name;
+}
+
+/**
+ * Attempts to in-memory upgrade SARIF log. Only some versions (those with simple upgrades) supported.
+ * @returns Success of the upgrade.
+ */
+export function tryFastUpgradeLog(log: Log): boolean {
+    const { version } = log;
+    if (!eq(version, '2.1.0')) return false;
+
+    const schema = log.$schema
+        ?.replace('http://json.schemastore.org/sarif-', '')
+        ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
+        ?.replace(/\.json$/, '');
+    switch (schema) {
+    case '2.1.0-rtm.1':
+    case '2.1.0-rtm.2':
+    case '2.1.0-rtm.3':
+    case '2.1.0-rtm.4':
+        applyRtm5(log);
+        return true;
+    default:
+        return false;
+    }
+}
+
+function applyRtm5(log: Log) {
+    // Skipping upgrading inlineExternalProperties as the viewer does not use it.
+    log.$schema = 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json';
+    log.runs?.forEach(run => {
+        run.results?.forEach(result => {
+            // Pre-rtm5 suppression type is different, thus casting as `any`.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            result.suppressions?.forEach((suppression: any) => {
+                if (!suppression.state) return;
+                suppression.status = suppression.state;
+                delete suppression.state;
+            });
+        });
+    });
 }

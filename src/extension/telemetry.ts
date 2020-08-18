@@ -14,3 +14,7 @@ export function activate() {
 export function deactivate() {
     reporter.dispose();
 }
+
+export function sendLogVersion(version: string, $schema: string) {
+    reporter.sendTelemetryEvent('logVersion', { version, $schema });
+}
