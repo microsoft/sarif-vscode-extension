@@ -12,6 +12,7 @@ import { IndexStore } from './indexStore';
 import { filtersColumn, filtersRow } from '../shared';
 import { Log } from 'sarif';
 import assert from 'assert';
+import { RowItem } from './tableStore';
 
 describe('IndexStore', () => {
     before('before all', () => {
@@ -44,8 +45,8 @@ describe('IndexStore', () => {
         };
     });
     it('keep logs in sync', async () => {
-        // Adds a new log
         const indexStore = new IndexStore({filtersRow, filtersColumn});
+        // Adds a new log
         await indexStore.onMessage({ data: {
             'command': 'spliceLogs',
             'removed': [],
@@ -72,9 +73,32 @@ describe('IndexStore', () => {
             'added': []
         }} as any));
     });
-    it('updates the current selection', () => {
+    it('updates the current selection', async () => {
+        const indexStore = new IndexStore({filtersRow, filtersColumn});
         // Case 1: Selects a result
+        await indexStore.onMessage({ data: {
+            'command': 'spliceLogs',
+            'removed': [],
+            'added': [{
+                'uri':'file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif',
+                'webviewUri':'vscode-webview-resource://bd904178-42ae-4a87-aa8f-a4f14965f103/file///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif'
+            }]
+        }} as any);
+        await indexStore.onMessage({
+            data: {
+                'command':'select',
+                'id':['file:///c%3A/Users/muraina/sarif-tutorials/samples/results.sarif',0,0]
+            }
+        } as any);
+        assert.strictEqual((indexStore.selection.get() as RowItem<any>).item._uri, 'file:///c:/Users/muraina/sarif-tutorials/samples/results.sarif');
         // Case 2: De-selects a result
+        await indexStore.onMessage({
+            data: {
+                'command':'select',
+                'id': undefined
+            }
+        } as any);
+        assert.strictEqual(indexStore.selection.get() as RowItem<any>, undefined);
     });
     after('after all', () => {
         delete global.vscode;
