@@ -225,7 +225,7 @@ export function decodeFileUri(uriString: string) {
     return uri.scheme === 'file' ? uri.fsPath : uriString;
 }
 
-export type Visibility = 'visible' | undefined;
+export type Visibility = 'visible' | false; // Undefined will not round-trip.
 
 export const filtersRow: Record<string, Record<string, Visibility>> = {
     Level: {
@@ -238,19 +238,19 @@ export const filtersRow: Record<string, Record<string, Visibility>> = {
         'New': 'visible',
         'Unchanged': 'visible',
         'Updated': 'visible',
-        'Absent': undefined,
+        'Absent': false,
     },
     Suppression: {
         'Not Suppressed': 'visible',
-        'Suppressed': undefined,
+        'Suppressed': false,
     },
 };
 
 export const filtersColumn: Record<string, Record<string, Visibility>> = {
     Columns: {
-        'Baseline': undefined,
-        'Suppression': undefined,
-        'Rule': undefined,
+        'Baseline': false,
+        'Suppression': false,
+        'Rule': false,
     },
 };
 

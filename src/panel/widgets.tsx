@@ -24,7 +24,7 @@ export class Badge extends PureComponent<{ text: { toString: () => string } }> {
 @observer export class Checkrow extends PureComponent<{ label: string, description?: string, state: Record<string, Visibility>}> {
     render() {
         const {label, description, state} = this.props;
-        return <div className={css('svCheckrow', description && 'svWithDescription')} onClick={() => state[label] = state[label] === 'visible' ? undefined : 'visible'}>
+        return <div className={css('svCheckrow', description && 'svWithDescription')} onClick={() => state[label] = state[label] === 'visible' ? false : 'visible'}>
             <div className={css('svCheckbox', state[label] && 'svChecked')} tabIndex={0}
                 role="checkbox" aria-checked="false" aria-label="" title="">
                 <Icon name="check" />

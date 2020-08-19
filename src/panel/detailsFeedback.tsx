@@ -11,14 +11,14 @@ import { Checkrow } from './widgets';
 
 @observer export class DetailsFeedback extends Component {
     @observable feedbackTags: Record<string, Visibility> = {
-        'Useful (#useful)': undefined,
-        'False (#falsepositive)': undefined,
-        'Not Actionable (#notactionable)': undefined,
-        'Low Value (#lowvalue)': undefined,
-        'Code Does Not Ship (#doesnotship)': undefined,
-        '3rd Party/OSS Code (#3rdpartycode)': undefined,
-        'Feature Request (#featurerequest)': undefined,
-        'Other (#other)': undefined,
+        'Useful (#useful)': false,
+        'False (#falsepositive)': false,
+        'Not Actionable (#notactionable)': false,
+        'Low Value (#lowvalue)': false,
+        'Code Does Not Ship (#doesnotship)': false,
+        '3rd Party/OSS Code (#3rdpartycode)': false,
+        'Feature Request (#featurerequest)': false,
+        'Other (#other)': false,
     }
     render() {
         const {feedbackTags} = this;
@@ -36,13 +36,13 @@ import { Checkrow } from './widgets';
                     </textarea>
                     <Checkrow label={'I need help NOW'}
                         description={'I need urgent support from the checker owner.'}
-                        state={{ 'I need help NOW': undefined }} />
+                        state={{ 'I need help NOW': false }} />
                     <Checkrow label={'Tented Code'}
                         description={'Do not upload my source file to the static analysis team.'}
-                        state={{ 'Tented Code': undefined }} />
+                        state={{ 'Tented Code': false }} />
                     <Checkrow label={'Send Full Dataset'}
                         description={'Uncheck if you don\'t want to upload extra diagnostic data to the checker owner.'}
-                        state={{ 'Tented Code': undefined }} />
+                        state={{ 'Tented Code': false }} />
                     <input type="button" value={'Submit Feedback'}></input>
                 </div>
             </div>
