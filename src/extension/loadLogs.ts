@@ -82,7 +82,9 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
             ?.replace('http://json.schemastore.org/sarif-', '')
             ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
             ?.replace(/\.json$/, '');
-        if (schema === undefined || schema === '2.1.0-rtm.5') {
+        if (schema === undefined || schema === '2.1.0-rtm.5'
+            || schema === 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0') {
+            // https://github.com/microsoft/sarif-vscode-extension/issues/330
             logsNoUpgrade.push(log);
         } else {
             logsToUpgrade.push(log);
