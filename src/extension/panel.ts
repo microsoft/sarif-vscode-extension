@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as fs from 'fs';
+import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
-import { CommandPanelToExtension, filtersColumn, filtersRow, ResultId, _Region } from '../shared';
+import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId, _Region, _RegionStartEndLineCol } from '../shared';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
 import { Store } from './store';
@@ -111,7 +113,17 @@ export class Panel {
                 const log = store.logs.find(log => log._uri === logUri);
                 const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
                 if (!log || !result) return;
-                await this.selectLocal(logUri, log._uriUpgraded ?? log._uri, result._logRegion);
+
+                const logUriUpgraded = log._uriUpgraded ?? log._uri;
+                if (!log._jsonMap) {
+                    const file = fs.readFileSync(Uri.parse(logUriUpgraded).fsPath, 'utf8')  // Assume scheme file.
+                        .replace(/^\uFEFF/, ''); // Trim BOM.
+                    log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
+                }
+
+                const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
+                const resultRegion = [value.line, value.column, valueEnd.line, valueEnd.column] as _RegionStartEndLineCol;
+                await this.selectLocal(logUri, logUriUpgraded, resultRegion);
                 break;
             }
             case 'setState': {

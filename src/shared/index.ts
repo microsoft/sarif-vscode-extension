@@ -11,7 +11,7 @@ export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
 type _RegionBytes = [number, number] // byteOffset, byteLength
-type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
+export type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
 export type _Region
     = number // single line
     | _RegionBytes
@@ -38,7 +38,6 @@ declare module 'sarif' {
         _log: Log;
         _run: Run;
         _id: ResultId;
-        _logRegion?: _Region;
         _uri?: string;
         _uriContents?: string; // ArtifactContent. Do not use this uri for display.
         _relativeUri?: string;
@@ -80,7 +79,7 @@ export function mapDistinct(pairs: [string, string][]): Map<string, string> {
     return distinct as Map<string, string>;
 }
 
-export function augmentLog(log: Log) {
+export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
     if (log._augmented) return;
     log._augmented = true;
     const fileAndUris = [] as [string, string][];
@@ -91,7 +90,7 @@ export function augmentLog(log: Log) {
         // We intern these objects so they can be conveniently instance comparable elsewhere in the code.
         // If we don't do this, then the same ruleId may generate multiple `Rule` objects.
         // When instance comparing those `Rule` objects, they would appear to be different rules. We don't want that.
-        const driverlessRules = new Map<string, ReportingDescriptor>();
+        const driverlessRules = rules ?? new Map<string, ReportingDescriptor>();
         function getDriverlessRule(id: string | undefined): ReportingDescriptor | undefined {
             if (!id) return undefined;
             if (!driverlessRules.has(id)) {
@@ -105,12 +104,6 @@ export function augmentLog(log: Log) {
             result._log = log;
             result._run = run;
             result._id = [log._uri, runIndex, resultIndex];
-            result._logRegion = (() => {
-                const region = log._jsonMap?.[`/runs/${runIndex}/results/${resultIndex}`];
-                if (!region) return; // Panel will not have a jsonMap
-                const {value, valueEnd} = region;
-                return [ value.line, value.column, valueEnd.line, valueEnd.column ] as _Region;
-            })();
 
             const ploc = result.locations?.[0]?.physicalLocation;
             const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation);
@@ -151,7 +144,6 @@ export function augmentLog(log: Log) {
         });
     });
     log._distinct = mapDistinct(fileAndUris);
-    log._jsonMap = undefined; // Free-up memory.
 }
 
 /*
@@ -221,7 +213,7 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
     // A shorter more transparent URI format would be:
     // `sarif://${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`
     // However between workspace.openTextDocument() and registerTextDocumentContentProvider/provideTextDocumentContent()
-    // VS Code fails to maintain the authority value (possibiliy due to an encoding bug).
+    // VS Code fails to maintain the authority value (possibly due to an encoding bug).
     const uriContents = runArtCon?.text || runArtCon?.binary
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
         : undefined;

@@ -15,7 +15,7 @@ import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
-type TabName = 'Info' | 'Code Flows';
+type TabName = 'Info' | 'Analysis Steps';
 
 interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
@@ -32,7 +32,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         super(props);
         autorun(() => {
             const hasThreadFlows = !!this.threadFlowLocations?.length;
-            this.selectedTab.set(hasThreadFlows ? 'Code Flows' : 'Info');
+            this.selectedTab.set(hasThreadFlows ? 'Analysis Steps' : 'Info');
         });
     }
     render() {
@@ -56,7 +56,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
         };
         const renderStack = (stackFrame: StackFrame) => {
             const location = stackFrame.location;
-            const logicalLocation = stackFrame.location?.logicalLocations[0];
+            const logicalLocation = stackFrame.location?.logicalLocations?.[0];
             const { message, uri, region } = parseLocation(result, location);
             const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
             return <>
@@ -104,7 +104,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         </div>
                     </div>
                 </Tab>
-                <Tab name="Code Flows" count={this.threadFlowLocations?.length || 0}>
+                <Tab name="Analysis Steps" count={this.threadFlowLocations?.length || 0}>
                     <div className="svDetailsBody svDetailsCodeflowAndStacks">
                         {(() => {
                             const items = this.threadFlowLocations;
@@ -116,7 +116,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                             });
 
                             return <List items={items as ReadonlyArray<Location>} renderItem={renderLocation} selection={selection} allowClear>
-                                <span className="svSecondary">No code flows in selected result.</span>
+                                <span className="svSecondary">No analysis steps in selected result.</span>
                             </List>;
                         })()}
                     </div>

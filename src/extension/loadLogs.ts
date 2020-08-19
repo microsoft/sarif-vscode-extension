@@ -4,12 +4,14 @@
 /// <reference path="jsonSourceMap.d.ts" />
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
-import jsonMap from 'json-source-map';
-import { Log } from 'sarif';
+import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { ProgressLocation, Uri, window } from 'vscode';
-import { augmentLog, JsonMap } from '../shared';
+import { augmentLog } from '../shared';
+import * as Telemetry from './telemetry';
+
+const driverlessRules = new Map<string, ReportingDescriptor>();
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
     const logs = uris
@@ -18,9 +20,8 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             try {
                 const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
-                const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                const log = JSON.parse(file) as Log;
                 log._uri = uri.toString();
-                log._jsonMap = pointers;
                 return log;
             } catch (error) {
                 window.showErrorMessage(`Failed to parse '${uri.fsPath}'`);
@@ -28,6 +29,10 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             }
         })
         .filter(log => log) as Log[];
+
+    logs.forEach(log => Telemetry.sendLogVersion(log.version, log.$schema ?? ''));
+    logs.forEach(tryFastUpgradeLog);
+
     const logsNoUpgrade = [] as Log[];
     const logsToUpgrade = [] as Log[];
     const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsNoUpgrade, logsToUpgrade));
@@ -47,10 +52,9 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                     try {
                         const tempPath = upgradeLog(fsPath);
                         const file = fs.readFileSync(tempPath, 'utf8'); // Assume scheme file.
-                        const {data: log, pointers} = jsonMap.parse(file) as { data: Log, pointers: JsonMap};
+                        const log = JSON.parse(file) as Log;
                         log._uri = oldLog._uri;
                         log._uriUpgraded = Uri.file(tempPath).toString();
-                        log._jsonMap = pointers;
                         logsNoUpgrade.push(log);
                     } catch (error) {
                         console.error(error);
@@ -60,7 +64,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
             }
         );
     }
-    logsNoUpgrade.forEach(augmentLog);
+    logsNoUpgrade.forEach(log => augmentLog(log, driverlessRules));
     if (warnUpgradeExtension) {
         window.showWarningMessage('Some log versions are newer than this extension.');
     }
@@ -78,7 +82,9 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
             ?.replace('http://json.schemastore.org/sarif-', '')
             ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
             ?.replace(/\.json$/, '');
-        if (schema === undefined || schema === '2.1.0-rtm.5') {
+        if (schema === undefined || schema === '2.1.0-rtm.5'
+            || schema === 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0') {
+            // https://github.com/microsoft/sarif-vscode-extension/issues/330
             logsNoUpgrade.push(log);
         } else {
             logsToUpgrade.push(log);
@@ -90,6 +96,47 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
 export function upgradeLog(fsPath: string) {
     // Example of a MacOS temp folder: /private/var/folders/9b/hn5353ks051gn79f4b8rn2tm0000gn/T
     const name = tmpNameSync({ postfix: '.sarif' });
-    execFileSync('npx', ['@microsoft/sarif-multitool', 'transform', fsPath, '--force', '--pretty-print', '--output', name]);
+    const npx = `npx${process.platform === 'win32' ? '.cmd' : ''}`;
+    execFileSync(npx, ['@microsoft/sarif-multitool', 'transform', fsPath, '--force', '--pretty-print', '--output', name]);
     return name;
+}
+
+/**
+ * Attempts to in-memory upgrade SARIF log. Only some versions (those with simple upgrades) supported.
+ * @returns Success of the upgrade.
+ */
+export function tryFastUpgradeLog(log: Log): boolean {
+    const { version } = log;
+    if (!eq(version, '2.1.0')) return false;
+
+    const schema = log.$schema
+        ?.replace('http://json.schemastore.org/sarif-', '')
+        ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
+        ?.replace(/\.json$/, '');
+    switch (schema) {
+    case '2.1.0-rtm.1':
+    case '2.1.0-rtm.2':
+    case '2.1.0-rtm.3':
+    case '2.1.0-rtm.4':
+        applyRtm5(log);
+        return true;
+    default:
+        return false;
+    }
+}
+
+function applyRtm5(log: Log) {
+    // Skipping upgrading inlineExternalProperties as the viewer does not use it.
+    log.$schema = 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json';
+    log.runs?.forEach(run => {
+        run.results?.forEach(result => {
+            // Pre-rtm5 suppression type is different, thus casting as `any`.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            result.suppressions?.forEach((suppression: any) => {
+                if (!suppression.state) return;
+                suppression.status = suppression.state;
+                delete suppression.state;
+            });
+        });
+    });
 }

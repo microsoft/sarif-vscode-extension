@@ -8,6 +8,7 @@ import { mapDistinct, parseRegion } from '../shared';
 import '../shared/extension';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
+import platformUriNormalize from './platformUriNormalize';
 import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
@@ -28,7 +29,7 @@ export async function activate(context: ExtensionContext) {
 
     // Basing
     const urisNonSarif = await workspace.findFiles('**/*', '.sarif'); // Ignore folders?
-    const fileAndUris = urisNonSarif.map(uri => [uri.path.file, uri.toString()]) as [string, string][];
+    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true /* skipEncoding */)]) as [string, string][];
     const baser = new UriRebaser(mapDistinct(fileAndUris), store);
 
     // Panel
@@ -85,7 +86,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
 
-        const artifactUri = baser.translateLocalToArtifact(doc.uri.toString());
+        const artifactUri = baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
