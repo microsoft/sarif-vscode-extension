@@ -3,7 +3,6 @@
 
 import { TableStore, RowGroup } from './tableStore';
 import { observable } from 'mobx';
-import { _Region } from '../shared';
 import assert from 'assert';
 
 describe('TableStore', () => {

@@ -12,7 +12,7 @@ import { log } from '../test/mockLog';
 import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
 
 // Log object may be modified during testing, thus we need to keep a clean string copy.
-const mockLogString = JSON.stringify(log);
+const mockLogString = JSON.stringify(log, null, 2);
 
 const proxyquire = require('proxyquire').noCallThru();
 
@@ -42,7 +42,7 @@ describe('activate', () => {
         await postSelectArtifact(result, result.locations![0].physicalLocation);
         assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
             'showTextDocument file:///folder/file.txt',
-            'selection 0 0 0 0',
+            `selection 0 1 0 ${Number.MAX_SAFE_INTEGER}`, // 1 = mock firstNonWhitespaceCharacterIndex.
         ]);
     });
 
@@ -51,7 +51,7 @@ describe('activate', () => {
         await postSelectLog(result);
         assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
             'showTextDocument file:///.sarif/test.sarif',
-            'selection 0 75 0 215',
+            'selection 9 7 25 8', // Location in mockLogString.
         ]);
     });
 });

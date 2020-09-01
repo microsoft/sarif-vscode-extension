@@ -156,7 +156,7 @@ function activateDecorations(disposables: Disposable[], store: Store, panel: Pan
                 const text = tfl.location?.message?.text;
                 return `Step ${i + 1}${text ? `: ${text}` : ''}`;
             });
-            const ranges = locations.map(tfl => regionToSelection(doc, parseRegion(tfl.location?.physicalLocation?.region)));
+            const ranges = locations.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
             const rangesEnd = ranges.map(range => {
                 const endPos = doc.lineAt(range.end.line).range.end;
                 return new Range(endPos, endPos);

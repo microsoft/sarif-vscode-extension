@@ -3,7 +3,7 @@
 
 import { action, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, parseRegion, Visibility } from '../shared';
+import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
@@ -124,7 +124,7 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
     const log = result._log;
     const logUri = log._uri;
     const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation);
-    const region = parseRegion(ploc?.region);
+    const region = ploc?.region;
     await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, region });
 }
 

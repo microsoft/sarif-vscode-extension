@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { ArtifactLocation, Location, Log, Region, ReportingDescriptor, Result } from 'sarif';
+import { ArtifactLocation, Location, Log, ReportingDescriptor, Result } from 'sarif';
 import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
 
@@ -10,12 +10,6 @@ type JsonRange = { value: JsonLocation, valueEnd: JsonLocation } // Unused: key,
 export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
-type _RegionBytes = [number, number] // byteOffset, byteLength
-export type _RegionStartEndLineCol = [number, number, number, number] // start line, start col, end line, end col
-export type _Region
-    = number // single line
-    | _RegionBytes
-    | _RegionStartEndLineCol
 
 // The extended members we're adding here are prefixed with an underscore.
 // Using this marker to easily get a sense of how much we're depending on these extended members.
@@ -41,7 +35,7 @@ declare module 'sarif' {
         _uri?: string;
         _uriContents?: string; // ArtifactContent. Do not use this uri for display.
         _relativeUri?: string;
-        _region?: _Region;
+        _region?: Region;
 
         /**
          * Caching the line number as derived from _region. Primarily user-facing and thus is 1-based. 0 if empty.
@@ -119,8 +113,8 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
                     fileAndUris.push([file, uri.replace(/^\//, '')]); // Normalize leading slashes.
                 }
             }
-            result._region = parseRegion(ploc?.region);
-            const zeroBasedLineNumber = (Array.isArray(result._region) ? result._region?.[0] : result._region) ?? -1;
+            result._region = ploc?.region;
+            const zeroBasedLineNumber = result._region?.startLine ?? -1;
             result._line = zeroBasedLineNumber + 1; // Convert 0-based to 1-based. See `_line` for reason.
 
             result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
@@ -168,29 +162,6 @@ export function parseLocation(result: Result, loc?: Location) {
     const [uri, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };
-}
-
-export function parseRegion(region: Region | undefined): _Region | undefined {
-    if (!region) return undefined;
-
-    const {byteOffset, byteLength} = region;
-    if (byteOffset !== undefined && byteLength !== undefined) return [byteOffset, byteLength] as _RegionBytes;
-
-    let {startLine, startColumn, endLine, endColumn} = region;
-    if (!startLine) return undefined; // Lines are 1-based so no need to check undef.
-
-    startLine--;
-    if (!startColumn) return startLine;
-
-    startColumn--;
-    if (endColumn) endColumn--;
-    if (endLine) endLine--;
-    return [
-        startLine,
-        startColumn,
-        endLine ?? startLine,
-        endColumn ?? Number.MAX_SAFE_INTEGER // Arbitrarily large number representing the rest of the line.
-    ] as _RegionStartEndLineCol;
 }
 
 // Improve: `result` purely used for `_run.artifacts`.

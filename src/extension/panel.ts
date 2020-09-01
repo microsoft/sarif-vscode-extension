@@ -4,9 +4,9 @@
 import * as fs from 'fs';
 import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
-import { Log, Result } from 'sarif';
+import { Log, Region, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
-import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId, _Region, _RegionStartEndLineCol } from '../shared';
+import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId } from '../shared';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
 import { Store } from './store';
@@ -102,7 +102,7 @@ export class Panel {
                 break;
             }
             case 'select': {
-                const {logUri, uri, region} = message as { logUri: string, uri: string, region: _Region};
+                const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
                 const validatedUri = await basing.translateArtifactToLocal(uri);
                 if (!validatedUri) return;
                 await this.selectLocal(logUri, validatedUri, region);
@@ -122,7 +122,12 @@ export class Panel {
                 }
 
                 const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
-                const resultRegion = [value.line, value.column, valueEnd.line, valueEnd.column] as _RegionStartEndLineCol;
+                const resultRegion = {
+                    startLine: value.line,
+                    startColumn: value.column,
+                    endLine: valueEnd.line,
+                    endColumn: valueEnd.column,
+                } as Region;
                 await this.selectLocal(logUri, logUriUpgraded, resultRegion);
                 break;
             }
@@ -140,7 +145,7 @@ export class Panel {
         await this.spliceLogs([], store.logs);
     }
 
-    public async selectLocal(logUri: string, localUri: string, region: _Region | undefined) {
+    public async selectLocal(logUri: string, localUri: string, region: Region | undefined) {
         // Keep/pin active Log as needed
         for (const editor of window.visibleTextEditors.slice()) {
             if (editor.document.uri.toString() !== logUri) continue;
