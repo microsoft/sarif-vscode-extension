@@ -12,9 +12,9 @@ export function activate() {
 }
 
 export function deactivate() {
-    reporter.dispose();
+    reporter?.dispose();
 }
 
 export function sendLogVersion(version: string, $schema: string) {
-    reporter.sendTelemetryEvent('logVersion', { version, $schema });
+    reporter?.sendTelemetryEvent('logVersion', { version, $schema });
 }
