@@ -47,7 +47,7 @@ export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
     const isDebugOrTestMode =
         process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
-        && process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
+        || process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
     if (!isDebugOrTestMode) {
         disposables.push(workspace.onDidChangeConfiguration(event => {
             if (!event.affectsConfiguration(updateChannelConfigSection)) return;
