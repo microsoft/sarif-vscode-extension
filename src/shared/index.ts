@@ -47,6 +47,7 @@ declare module 'sarif' {
         _message: string; // '—' if empty.
         _markdown?: string;
         _suppression?: 'not suppressed' | 'suppressed';
+        _fixed: true | undefined; // Used exclusively with CodeActions.
     }
 }
 
