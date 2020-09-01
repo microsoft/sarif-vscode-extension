@@ -81,7 +81,7 @@ describe('loadLogs', () => {
         let logCount = 0;
         const { loadLogs } = proxyquire('./loadLogs', {
             'child_process': {
-                execFileSync: (command: string, args?: ReadonlyArray<string>) => {
+                execFileSync: (_command: string, args?: ReadonlyArray<string>) => {
                     logCount++;
                     cancel.isCancellationRequested = logCount >= 1;
                     copyFileSync(args![2], args![6]); // Simulate upgrade by copying the file.

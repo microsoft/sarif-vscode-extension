@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 import { IArraySplice, observe } from 'mobx';
-import { Log } from 'sarif';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
-import { mapDistinct, parseRegion } from '../shared';
+import { Fix, Log, Result } from 'sarif';
+import { CancellationToken, CodeAction, CodeActionContext, CodeActionKind, CodeActionProvider, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace, WorkspaceEdit } from 'vscode';
+import { mapDistinct, parseArtifactLocation } from '../shared';
 import '../shared/extension';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
@@ -17,7 +17,12 @@ import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
 
 export async function activate(context: ExtensionContext) {
-    Telemetry.activate();
+    // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
+    const isDebugOrTestMode =
+        process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
+        || process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
+
+    if (!isDebugOrTestMode) Telemetry.activate();
 
     const disposables = context.subscriptions;
     Store.globalState = context.globalState;
@@ -37,16 +42,13 @@ export async function activate(context: ExtensionContext) {
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // General Activation
-    activateDiagnostics(disposables, store, baser);
+    const refreshDiagnostics = activateDiagnostics(disposables, store, baser);
+    activateCodeActions(disposables, baser, refreshDiagnostics);
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store, panel);
     activateVirtualDocuments(disposables, store);
 
     // Check for Updates
-    // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
-    const isDebugOrTestMode =
-        process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
-        && process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
     if (!isDebugOrTestMode) {
         disposables.push(workspace.onDidChangeConfiguration(event => {
             if (!event.affectsConfiguration(updateChannelConfigSection)) return;
@@ -79,7 +81,7 @@ export async function activate(context: ExtensionContext) {
     };
 }
 
-function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
+function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser): (document: TextDocument) => void {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
     const setDiags = (doc: TextDocument) => {
@@ -94,7 +96,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         const diags = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
-                return uri === artifactUri;
+                return uri === artifactUri && !result._fixed;
             })
             .map(result => new ResultDiagnostic(
                 regionToSelection(doc, result._region),
@@ -109,6 +111,52 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
     const disposer = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
     disposables.push({ dispose: disposer });
+    return setDiags;
+}
+
+function activateCodeActions(disposables: Disposable[], baser: UriRebaser, refreshDiagnostics: (document: TextDocument) => void) {
+    const commandId = 'sarif.fix';
+    disposables.push(commands.registerCommand(commandId, async (document: TextDocument, result: Result, fix: Fix) => {
+        const edit = new WorkspaceEdit();
+        for (const change of fix.artifactChanges) {
+            const { artifactLocation, replacements } = change;
+            const [artifactUri] = parseArtifactLocation(result, artifactLocation);
+            if (!artifactUri) continue;
+
+            const localUri = await baser.translateArtifactToLocal(artifactUri);
+            for (const replacement of replacements) {
+                edit.replace(
+                    Uri.parse(localUri),
+                    regionToSelection(document, replacement.deletedRegion),
+                    replacement.insertedContent?.text ?? ''
+                );
+            }
+        }
+        workspace.applyEdit(edit);
+        result._fixed = true;
+        refreshDiagnostics(document);
+    }));
+
+    const provider = new class implements CodeActionProvider {
+        provideCodeActions(document: TextDocument, _range: Range | Selection, context: CodeActionContext): CodeAction[] {
+            const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
+            if (!diagnostic) return [];
+
+            const result = diagnostic.result;
+            if (!result) return []; // `diagnostic` is not a ResultDiagnostic (it's just a plain Diagnostic).
+
+            if (!result.fixes?.length) return [];
+            return result.fixes!.map(fix => {
+                return {
+                    kind: CodeActionKind.QuickFix,
+                    title: fix.description?.text ?? 'Fix',
+                    command: { title: 'Fix', command: commandId, arguments: [document, result, fix] },
+                    diagnostics: [diagnostic],
+                };
+            });
+        }
+    }();
+    disposables.push(languages.registerCodeActionsProvider('*', provider));
 }
 
 // Open Documents <-sync-> Store.logs
@@ -156,7 +204,7 @@ function activateDecorations(disposables: Disposable[], store: Store, panel: Pan
                 const text = tfl.location?.message?.text;
                 return `Step ${i + 1}${text ? `: ${text}` : ''}`;
             });
-            const ranges = locations.map(tfl => regionToSelection(doc, parseRegion(tfl.location?.physicalLocation?.region)));
+            const ranges = locations.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
             const rangesEnd = ranges.map(range => {
                 const endPos = doc.lineAt(range.end.line).range.end;
                 return new Range(endPos, endPos);

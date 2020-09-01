@@ -3,7 +3,7 @@
 
 import { Row, RowGroup, RowItem } from './tableStore';
 import { observable } from 'mobx';
-import { _Region, filtersRow, filtersColumn } from '../shared';
+import { filtersRow, filtersColumn } from '../shared';
 import { ResultTableStore } from './resultTableStore';
 import { log } from '../test/mockResultTableStore';
 import assert from 'assert';
