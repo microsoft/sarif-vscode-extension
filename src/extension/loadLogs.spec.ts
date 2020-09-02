@@ -4,49 +4,57 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */ // Allowing any for mocks.
 
 import assert from 'assert';
-import { copyFileSync } from 'fs';
 import { Log } from 'sarif';
 import { URI as Uri } from 'vscode-uri';
 import '../shared/extension';
 
 const proxyquire = require('proxyquire').noCallThru();
 
-const vscode = {
-    ProgressLocation: { Notification: 15 },
-    Uri,
-    window: {
-        showWarningMessage: () => {},
-        withProgress: async (_options: any, task: any) => await task({ report: () => {} }),
-        showErrorMessage: async (_message: string) => {}
-    }
-};
-
 describe('loadLogs', () => {
-    const uris = [
-        `file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/Double.sarif`,
-        `file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/EmbeddedContent.sarif`,
-        `file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/bad-eval-with-code-flow.sarif`,
-        `file:///Users/jeff/projects/sarif-vscode/samplesDemo/.sarif/oldLog.sarif`,
-    ].map(path => Uri.parse(path));
+    const files: Record<string, any> = {
+        '/Double.sarif': {
+            $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json',
+            version: '2.1.0',
+        },
+        '/EmbeddedContent.sarif': {
+            $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json',
+            version: '2.1.0',
+        },
+        '/bad-eval-with-code-flow.sarif': {
+            version: '2.1.0',
+        },
+        '/oldLog.sarif': {
+            $schema: 'http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2019-01-24',
+            version: '2.0.0-csd.2.beta.2019-01-24',
+        },
+    };
+    const uris = Object.keys(files).map(path => Uri.file(path));
+    const stubs = {
+        'fs': {
+            readFileSync: (fsPath: string) => JSON.stringify(files[fsPath]),
+        },
+        'vscode': {
+            Uri,
+            window: {
+                showWarningMessage: () => { },
+            }
+        },
+        './telemetry': {
+            activate: () => { },
+            sendLogVersion: () => { },
+        },
+    };
 
     it('loads', async () => {
-        const { loadLogs } = proxyquire('./loadLogs', { vscode });
+        const { loadLogs } = proxyquire('./loadLogs', stubs);
         const logs = await loadLogs(uris) as Log[];
         assert.strictEqual(logs.every(log => log.version === '2.1.0'), true);
     });
 
-    // Known schemas:
-    // sarif-1.0.0.json
-    // sarif-2.0.0.json
-    // 2.0.0-csd.2.beta.2018-10-10
-    // sarif-2.1.0-rtm.2
-    // sarif-2.1.0-rtm.3
-    // sarif-2.1.0-rtm.4
-    // sarif-2.1.0-rtm.5
     it('detects upgrades', async () => {
         const logsNoUpgrade = [] as Log[];
         const logsToUpgrade = [] as Log[];
-        const { detectUpgrade } = proxyquire('./loadLogs', { vscode });
+        const { detectUpgrade } = proxyquire('./loadLogs', stubs);
 
         detectUpgrade({
             version: '2.1.0',
@@ -69,32 +77,15 @@ describe('loadLogs', () => {
         assert.strictEqual(logsToUpgrade.length, 1);
     });
 
-    it('honors cancellation - first loop', async () => {
+    it('honors cancellation', async () => {
         const cancel = { isCancellationRequested: true };
-        const { loadLogs } = proxyquire('./loadLogs', { vscode });
+        const { loadLogs } = proxyquire('./loadLogs', stubs);
         const logs = await loadLogs(uris, cancel);
         assert.strictEqual(logs.length, 0);
     });
 
-    it('honors cancellation - onExecFile', async () => {
-        const cancel = { isCancellationRequested: false };
-        let logCount = 0;
-        const { loadLogs } = proxyquire('./loadLogs', {
-            'child_process': {
-                execFileSync: (_command: string, args?: ReadonlyArray<string>) => {
-                    logCount++;
-                    cancel.isCancellationRequested = logCount >= 1;
-                    copyFileSync(args![2], args![6]); // Simulate upgrade by copying the file.
-                }
-            },
-            vscode
-        });
-        const logs = await loadLogs(uris, cancel);
-        assert.strictEqual(logs.length, 4);
-    });
-
     it('can quick upgrade if appropriate', async () => {
-        const { tryFastUpgradeLog } = proxyquire('./loadLogs', { vscode });
+        const { tryFastUpgradeLog } = proxyquire('./loadLogs', stubs);
 
         const runs = [{
             results: [{
