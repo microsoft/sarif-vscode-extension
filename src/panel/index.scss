@@ -129,6 +129,8 @@ mark {
 }
 
 .svLogsPane {
+    overflow-y: auto;
+    
     .svListItem {
         padding: 0 22px;
         display: flex;
