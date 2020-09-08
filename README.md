@@ -16,7 +16,7 @@ Version 3 incorporates many feedback-based improvements:
 * Automatic reconciliation of URIs between the SARIF log and your local workspace in most cases.
 
 To focus our efforts, we have dropped some less-used and less-reliable features:
-* Support for old SARIF versions - We now strictly support the current version (2.1.0 rtm.5) and version back (2.1.0 rtm.4). Older versions can be upgraded with the standalone SARIF Multitool (via [nuget](https://www.nuget.org/packages/Sarif.Multitool/) and [npm](https://www.npmjs.com/package/@microsoft/sarif-multitool)).
+* Support for old SARIF versions - We now strictly support the public standard version 2.1.0. Older versions can be upgraded with the standalone SARIF Multitool (via [nuget](https://www.nuget.org/packages/Sarif.Multitool/) and [npm](https://www.npmjs.com/package/@microsoft/sarif-multitool)).
 * Conversion of external formats to SARIF - We recommend the standalone SARIF Multitool (via [nuget](https://www.nuget.org/packages/Sarif.Multitool/) and [npm](https://www.npmjs.com/package/@microsoft/sarif-multitool)) for conversion.
 * **SARIF Results Panel** (previously "SARIF Explorer") view state is no longer exposed as settings.
 * The `rootpaths` setting as been removed.
