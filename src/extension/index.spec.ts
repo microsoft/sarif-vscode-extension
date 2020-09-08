@@ -54,12 +54,4 @@ describe('activate', () => {
             'selection 9 7 25 8', // Location in mockLogString.
         ]);
     });
-
-    // Planned Test:
-    it.skip('applies fix', async () => {
-        // Navigate to region with fix.
-        // Verify Code Action is offered.
-        // Execute Code Action.
-        // Verify source is modified.
-    });
 });

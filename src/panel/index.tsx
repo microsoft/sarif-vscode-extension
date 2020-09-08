@@ -31,7 +31,7 @@ export { DetailsLayouts } from './details.layouts';
         if (!store.logs.length) {
             return <div className="svZeroData">
                 <div onClick={() => vscode.postMessage({ command: 'open' })}>
-                    Open SARIF file
+                    Open SARIF log
                 </div>
             </div>;
         }

@@ -1,66 +1,40 @@
-# Sarif Viewer
+[![](https://vsmarketplacebadge.apphb.com/version-short/MS-SarifVSCode.sarif-viewer.svg)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
+[![](https://vsmarketplacebadge.apphb.com/downloads-short/MS-SarifVSCode.sarif-viewer.svg)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
 
-Visualizes the results contained in a 'Static Analysis Results Interchange Format' (SARIF) file. The viewer integrates with VS Code, displaying a list of analysis results and details in the Sarif Explorer, as well as in the source code.
+# SARIF Viewer for Visual Studio Code
 
-Supports Sarif version '2.1.0'
+A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/VSCode) that adds support for viewing [SARIF](http://sarifweb.azurewebsites.net/) logs. SARIF log results can be viewed as squiggles in your source, in the Problems list, or in a dedicated **SARIF Results Panel**. The **SARIF Results Panel** offers richer grouping, filtering, column, and details options over the standard Problems list.
 
-## **Features**
- * Lists the results of open SARIF files in the Sarif Explorer (also shows up in Problems Panel)
- * Navigation to the source location of the result
- * Sarif Explorer shows details about the result:
-    * Result info
-    * Run info
-    * Code flow steps
-    * Attachments
-    * Fixes
-    * *new* Stacks
- * Supports embedded target files
- * Allows you to remap (in memory) source locations, if they can't be found using the location in the log file
- * Can set rootpaths in the settings for the extension to try when looking for files, ex. the rootpath of your local enlistment
+![overview](.github/README.hero.png)
 
-### Code integration
- * Highlighting of the result location
- * Tooltips showing the message
- * Gutter icons to help identify the location of the result
- * Codeflow step regions are highlighted and labeled inline
- * Icons visualizing codeflow step level changes
-    * ![Icons](/README/CallReturnIcon.png?raw=true) Call with a Return
-    * ![Icons](/README/ReturnCallIcon.png?raw=true) Return from a Call
-    * ![Icons](/README/CallNoReturnIcon.png?raw=true) Call with no Return
-    * ![Icons](/README/ReturnNoCallIcon.png?raw=true) Return with no Call
+## What's New?
 
-### Convert Non-Sarif File
- * Can open and convert a non-sarif static analysis file to sarif for analysis - see ChangeLog update 2.5.0 for list of supported tools
-    * To execute the convert command via the Command window(F1 key):
-        1. Type in "Sarif: Convert and open a non-sarif file"
-        2. Select the tool that generated the file
-        3. In the file picker that opens up select the file
+Version 3 incorporates many feedback-based improvements:
+* Improved keyboard accessibility within the **SARIF Results Panel**. Arrow key through the list of results.
+* Resizable details section within the **SARIF Results Panel**.
+* Generally improved performance and responsiveness.
+* Automatic reconciliation of URIs between the SARIF log and your local workspace in most cases.
 
-### Update Sarif Version
- * Can update older Sarif Versions to the latest version, on opening an older version a dialog lets you choose to:
-    * Update to a temp file location
-    * Update to a location via the save as dialog
-    * Not update, you can view the original file but the results will not be loaded
+To focus our efforts, we have dropped some less-used and less-reliable features:
+* Support for old SARIF versions - We now strictly support the public standard version 2.1.0. Older versions can be upgraded with the standalone SARIF Multitool (via [nuget](https://www.nuget.org/packages/Sarif.Multitool/) and [npm](https://www.npmjs.com/package/@microsoft/sarif-multitool)).
+* Conversion of external formats to SARIF - We recommend the standalone SARIF Multitool (via [nuget](https://www.nuget.org/packages/Sarif.Multitool/) and [npm](https://www.npmjs.com/package/@microsoft/sarif-multitool)) for conversion.
+* **SARIF Results Panel** (previously "SARIF Explorer") view state is no longer exposed as settings.
+* The `rootpaths` setting as been removed.
 
-### Sarif Explorer
- * Automatically launches when the first Sarif file is opened
- * Updates the Result Details Panel with the currently selected result in the Results List, Problems Panel, or in source code
- * Manually open it by typing "Sarif: Launch the Sarif Explorer" in the Command Palette(F1) or using the hotkey (Ctrl+L then Ctrl+E)
+If these changes adversely affect your project, please [let us know](https://github.com/microsoft/sarif-vscode-extension/issues).
 
-#### Results List
-![Demo](/README/ResultsList.gif?raw=true)
- * Available columns: Baseline State, Message, Result File, Position, Rule Id, Rule Name, Run Id, Sarif File, Severity, Kind, Rank, Tool, Automation Category, Automation Id, *new*Logical Location
- * Group By: Results can be grouped by a column
-    * Groups are sorted by number of results in each group
- * Sort By: Results are sortable by clicking the column header
- * Filter: Show/Hide the Filter input area by clicking the Filter icon
-    * Toggle button for toggling Match Case
-    * No wildcard support yet
- * Hide/Show columns: Visibility of each column can be toggled by clicking the Eye icon
- * Clicking a result in the list will navigate to the source and display the details in the Sarif Explorer
- * Persistence: Group By, Sort By, and Hidden columns are persisted in settings
+## Usage
 
-### API
+Install this extension from the [Extension Marketplace](https://code.visualstudio.com/docs/editor/extension-gallery) within Visual Studio Code.
+
+SARIF logs (`*.sarif`) can be opened several ways:
+* Open as a document. The **SARIF Results Panel** will automatically be shown.
+* Manually show the **SARIF Results Panel** with command `sarif.showPanel`. Then click "Open SARIF log". If logs are already open, open additional logs via the folder icon at the top of the **SARIF Results Panel**.
+* Call from another extension. See the "API" section below.
+
+We welcome feedback via [issues](https://github.com/microsoft/sarif-vscode-extension/issues).
+
+## API
 An [extension-to-extension public API](https://code.visualstudio.com/api/references/vscode-api#extensions) is offered. This API is defined at `src/extension/index.d.ts`. An example of another extension calling this extension:
 ```javascript
 const sarifExt = extensions.getExtension('MS-SarifVSCode.sarif-viewer');
@@ -71,21 +45,18 @@ await sarifExt.exports.openLogs([
 ```
 Note: TypeScript typings for `Extension<T>` are forthcoming.
 
-# Using
-## Install
-1. Install [Visual Studio Code](https://code.visualstudio.com/)
-2. Install the Sarif Viewer Extension
-3. Reload VS Code
+## Telemetry
+We collect basic anonymous information such as activation and the versions/schemas of any logs opened. Opt-in or out via the general Visual Studio Code setting `telemetry.enableTelemetry`.
 
-## Use
-1. Open a .sarif file
-2. Results will show up the Problems Panel
-3. Click the result you're investigating:
-    * The editor will navigate to the location
-    * The Sarif Explorer will open with the result details
+## Development
 
-## Known Issues
- * Check here for known [issues](https://github.com/Microsoft/sarif-vscode-extension/issues)
+`F5` launches this extension. Subsequent changes are watched and rebuilt. Use command `workbench.action.reloadWindow` to see the changes.
 
-## Feedback
-Please post any feedback, suggestions or issues you have on the github repo issues page: https://github.com/Microsoft/sarif-vscode-extension/issues
+Other common tasks:
+| Command | Comments |
+| --- | --- |
+| `npm run server` | Run the `Panel` standalone at `http://localhost:8000`. Auto-refreshes. |
+| `npm test` | Run and watch unit tests.
+| `npx webpack` | Build manually. |
+| `npx vsce package` | Produce a VSIX. |
+
