@@ -2,12 +2,10 @@
 // Licensed under the MIT License.
 
 /// <reference path="jsonSourceMap.d.ts" />
-import { execFileSync } from 'child_process';
-import * as fs from 'fs';
+import { readFileSync } from 'fs';
 import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
-import { tmpNameSync } from 'tmp';
-import { ProgressLocation, Uri, window } from 'vscode';
+import { Uri, window } from 'vscode';
 import { augmentLog } from '../shared';
 import * as Telemetry from './telemetry';
 
@@ -18,7 +16,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
         .map(uri => {
             if (token?.isCancellationRequested) return undefined;
             try {
-                const file = fs.readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
+                const file = readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
                 const log = JSON.parse(file) as Log;
                 log._uri = uri.toString();
@@ -33,42 +31,19 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
     logs.forEach(log => Telemetry.sendLogVersion(log.version, log.$schema ?? ''));
     logs.forEach(tryFastUpgradeLog);
 
-    const logsNoUpgrade = [] as Log[];
-    const logsToUpgrade = [] as Log[];
-    const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsNoUpgrade, logsToUpgrade));
-    const upgrades = logsToUpgrade.length;
-    if (upgrades) {
-        await window.withProgress(
-            { location: ProgressLocation.Notification },
-            async progress => {
-                for (const [i, oldLog] of logsToUpgrade.entries()) {
-                    if (token?.isCancellationRequested) break;
-                    progress.report({
-                        message: `Upgrading ${i + 1} of ${upgrades} log${upgrades === 1 ? '' : 's'}...`,
-                        increment: 1 / upgrades * 100
-                    });
-                    await new Promise(r => setTimeout(r, 0)); // Await otherwise progress does not update. Assumption: await allows the rendering thread to kick in.
-                    const {fsPath} = Uri.parse(oldLog._uri, true);
-                    try {
-                        const tempPath = upgradeLog(fsPath);
-                        const file = fs.readFileSync(tempPath, 'utf8'); // Assume scheme file.
-                        const log = JSON.parse(file) as Log;
-                        log._uri = oldLog._uri;
-                        log._uriUpgraded = Uri.file(tempPath).toString();
-                        logsNoUpgrade.push(log);
-                    } catch (error) {
-                        console.error(error);
-                        window.showErrorMessage(`Failed to upgrade '${fsPath}'`);
-                    }
-                }
-            }
-        );
+    const logsSupported = [] as Log[];
+    const logsNotSupported = [] as Log[];
+    const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsSupported, logsNotSupported));
+    for (const log of logsNotSupported) {
+        if (token?.isCancellationRequested) break;
+        const {fsPath} = Uri.parse(log._uri, true);
+        window.showWarningMessage(`'${fsPath}' was not loaded. Version '${log.version}' and schema '${log.$schema ?? ''}' is not supported.`);
     }
-    logsNoUpgrade.forEach(log => augmentLog(log, driverlessRules));
+    logsSupported.forEach(log => augmentLog(log, driverlessRules));
     if (warnUpgradeExtension) {
         window.showWarningMessage('Some log versions are newer than this extension.');
     }
-    return logsNoUpgrade;
+    return logsSupported;
 }
 
 export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log[]) {
@@ -91,14 +66,6 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
         }
     }
     return false;
-}
-
-export function upgradeLog(fsPath: string) {
-    // Example of a MacOS temp folder: /private/var/folders/9b/hn5353ks051gn79f4b8rn2tm0000gn/T
-    const name = tmpNameSync({ postfix: '.sarif' });
-    const npx = `npx${process.platform === 'win32' ? '.cmd' : ''}`;
-    execFileSync(npx, ['@microsoft/sarif-multitool', 'transform', fsPath, '--force', '--pretty-print', '--output', name]);
-    return name;
 }
 
 /**

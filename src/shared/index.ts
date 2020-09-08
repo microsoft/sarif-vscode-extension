@@ -78,7 +78,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
     if (log._augmented) return;
     log._augmented = true;
     const fileAndUris = [] as [string, string][];
-    log.runs.forEach((run, runIndex) => {
+    log.runs?.forEach((run, runIndex) => { // types.d.ts is wrong, per spec `runs` is allowed to be null.
         run._index = runIndex;
 
         // For `Run`s that lack `tool.driver.rules` we generate a `Rule` object on demand.
