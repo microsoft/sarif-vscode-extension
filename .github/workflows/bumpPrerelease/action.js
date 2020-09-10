@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 // Run `ncc build action.js --out .` to produce `index.js`
-const { readFileSync, writeFileSync } = require('fs');
 const { execFileSync } = require('child_process');
+const { readFileSync, writeFileSync } = require('fs');
 const { parse } = require('semver');
 
 const package = JSON.parse(readFileSync('./package.json', 'utf8'));
