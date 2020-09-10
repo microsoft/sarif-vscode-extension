@@ -12,11 +12,11 @@ const packageVer = parse(package.version);
 let prerelease = 0; // Main was changed, or no prev version, restart prerelease from 0.
 try {
 	console.log('-----');
-	execFileSync('git', ['log', '--oneline']);
-	console.log('-----');
 	execFileSync('git', ['fetch', '--depth=10']);
 	console.log('-----');
 	execFileSync('git', ['fetch', '--tags']);
+	console.log('-----');
+	console.log(execFileSync('git', ['log', '--oneline'], { encoding: 'utf8' }));
 	console.log('-----');
 	// `abbrev=0` finds the closest tagname without any suffix.
 	// HEAD~1 assuming the latest commit hasn't been tagged by this Action yet.
