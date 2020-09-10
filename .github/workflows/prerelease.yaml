@@ -16,9 +16,9 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+      - uses: ./.github/workflows/bumpPrerelease
       - run: |
           npm install
-          npx json -I -f package.json -e 'this.version = `${this.version}-${{ github.run_number }}`'
           npm run package
       - id: package_version
         uses: Saionaro/extract-package-version@v1.1.1

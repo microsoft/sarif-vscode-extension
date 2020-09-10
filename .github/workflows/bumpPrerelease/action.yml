@@ -1,0 +1,4 @@
+name: 'Bump Prerelease'
+runs:
+  using: 'node12'
+  main: 'index.js'
