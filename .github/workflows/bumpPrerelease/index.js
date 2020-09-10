@@ -1103,8 +1103,8 @@ module.exports = toComparators
 // Licensed under the MIT License.
 
 // Run `ncc build action.js --out .` to produce `index.js`
-const { readFileSync, writeFileSync } = __webpack_require__(747);
 const { execFileSync } = __webpack_require__(129);
+const { readFileSync, writeFileSync } = __webpack_require__(747);
 const { parse } = __webpack_require__(30);
 
 const package = JSON.parse(readFileSync('./package.json', 'utf8'));
@@ -1112,11 +1112,15 @@ const packageVer = parse(package.version);
 
 let prerelease = 0; // Main was changed, or no prev version, restart prerelease from 0.
 try {
+	console.log('-----');
 	execFileSync('git', ['log', '--oneline']);
+	console.log('-----');
 	execFileSync('git', ['fetch', '--depth=10']);
+	console.log('-----');
 	execFileSync('git', ['fetch', '--tags']);
+	console.log('-----');
 	// `abbrev=0` finds the closest tagname without any suffix.
-	// HEAD~1 assuming the lastest commit hasn't been tagged by this Action yet.
+	// HEAD~1 assuming the latest commit hasn't been tagged by this Action yet.
 	const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0', 'HEAD~1'], { encoding: 'utf8' }).trim();
 	const lastReleaseVer = parse(tag);
 	if (packageVer.compareMain(lastReleaseVer) === 0) {
