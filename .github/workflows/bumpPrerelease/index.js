@@ -34,7 +34,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(160);
+/******/ 		return __webpack_require__(667);
 /******/ 	};
 /******/
 /******/ 	// run startup
@@ -43,550 +43,7 @@ module.exports =
 /************************************************************************/
 /******/ ({
 
-/***/ 11:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const parse = __webpack_require__(250)
-const prerelease = (version, options) => {
-  const parsed = parse(version, options)
-  return (parsed && parsed.prerelease.length) ? parsed.prerelease : null
-}
-module.exports = prerelease
-
-
-/***/ }),
-
-/***/ 68:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const compareBuild = (a, b, loose) => {
-  const versionA = new SemVer(a, loose)
-  const versionB = new SemVer(b, loose)
-  return versionA.compare(versionB) || versionA.compareBuild(versionB)
-}
-module.exports = compareBuild
-
-
-/***/ }),
-
-/***/ 82:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const parse = __webpack_require__(250)
-const eq = __webpack_require__(758)
-
-const diff = (version1, version2) => {
-  if (eq(version1, version2)) {
-    return null
-  } else {
-    const v1 = parse(version1)
-    const v2 = parse(version2)
-    const hasPre = v1.prerelease.length || v2.prerelease.length
-    const prefix = hasPre ? 'pre' : ''
-    const defaultResult = hasPre ? 'prerelease' : ''
-    for (const key in v1) {
-      if (key === 'major' || key === 'minor' || key === 'patch') {
-        if (v1[key] !== v2[key]) {
-          return prefix + key
-        }
-      }
-    }
-    return defaultResult // may be undefined
-  }
-}
-module.exports = diff
-
-
-/***/ }),
-
-/***/ 86:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const Comparator = __webpack_require__(179)
-const {ANY} = Comparator
-const Range = __webpack_require__(404)
-const satisfies = __webpack_require__(854)
-const gt = __webpack_require__(412)
-const lt = __webpack_require__(603)
-const lte = __webpack_require__(907)
-const gte = __webpack_require__(265)
-
-const outside = (version, range, hilo, options) => {
-  version = new SemVer(version, options)
-  range = new Range(range, options)
-
-  let gtfn, ltefn, ltfn, comp, ecomp
-  switch (hilo) {
-    case '>':
-      gtfn = gt
-      ltefn = lte
-      ltfn = lt
-      comp = '>'
-      ecomp = '>='
-      break
-    case '<':
-      gtfn = lt
-      ltefn = gte
-      ltfn = gt
-      comp = '<'
-      ecomp = '<='
-      break
-    default:
-      throw new TypeError('Must provide a hilo val of "<" or ">"')
-  }
-
-  // If it satisifes the range it is not outside
-  if (satisfies(version, range, options)) {
-    return false
-  }
-
-  // From now on, variable terms are as if we're in "gtr" mode.
-  // but note that everything is flipped for the "ltr" function.
-
-  for (let i = 0; i < range.set.length; ++i) {
-    const comparators = range.set[i]
-
-    let high = null
-    let low = null
-
-    comparators.forEach((comparator) => {
-      if (comparator.semver === ANY) {
-        comparator = new Comparator('>=0.0.0')
-      }
-      high = high || comparator
-      low = low || comparator
-      if (gtfn(comparator.semver, high.semver, options)) {
-        high = comparator
-      } else if (ltfn(comparator.semver, low.semver, options)) {
-        low = comparator
-      }
-    })
-
-    // If the edge version comparator has a operator then our version
-    // isn't outside it
-    if (high.operator === comp || high.operator === ecomp) {
-      return false
-    }
-
-    // If the lowest version comparator has an operator and our version
-    // is less than it then it isn't higher than the range
-    if ((!low.operator || low.operator === comp) &&
-        ltefn(version, low.semver)) {
-      return false
-    } else if (low.operator === ecomp && ltfn(version, low.semver)) {
-      return false
-    }
-  }
-  return true
-}
-
-module.exports = outside
-
-
-/***/ }),
-
-/***/ 129:
-/***/ (function(module) {
-
-module.exports = require("child_process");
-
-/***/ }),
-
-/***/ 144:
-/***/ (function(module, exports, __webpack_require__) {
-
-const { MAX_SAFE_COMPONENT_LENGTH } = __webpack_require__(862)
-const debug = __webpack_require__(775)
-exports = module.exports = {}
-
-// The actual regexps go on exports.re
-const re = exports.re = []
-const src = exports.src = []
-const t = exports.t = {}
-let R = 0
-
-const createToken = (name, value, isGlobal) => {
-  const index = R++
-  debug(index, value)
-  t[name] = index
-  src[index] = value
-  re[index] = new RegExp(value, isGlobal ? 'g' : undefined)
-}
-
-// The following Regular Expressions can be used for tokenizing,
-// validating, and parsing SemVer version strings.
-
-// ## Numeric Identifier
-// A single `0`, or a non-zero digit followed by zero or more digits.
-
-createToken('NUMERICIDENTIFIER', '0|[1-9]\\d*')
-createToken('NUMERICIDENTIFIERLOOSE', '[0-9]+')
-
-// ## Non-numeric Identifier
-// Zero or more digits, followed by a letter or hyphen, and then zero or
-// more letters, digits, or hyphens.
-
-createToken('NONNUMERICIDENTIFIER', '\\d*[a-zA-Z-][a-zA-Z0-9-]*')
-
-// ## Main Version
-// Three dot-separated numeric identifiers.
-
-createToken('MAINVERSION', `(${src[t.NUMERICIDENTIFIER]})\\.` +
-                   `(${src[t.NUMERICIDENTIFIER]})\\.` +
-                   `(${src[t.NUMERICIDENTIFIER]})`)
-
-createToken('MAINVERSIONLOOSE', `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
-                        `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
-                        `(${src[t.NUMERICIDENTIFIERLOOSE]})`)
-
-// ## Pre-release Version Identifier
-// A numeric identifier, or a non-numeric identifier.
-
-createToken('PRERELEASEIDENTIFIER', `(?:${src[t.NUMERICIDENTIFIER]
-}|${src[t.NONNUMERICIDENTIFIER]})`)
-
-createToken('PRERELEASEIDENTIFIERLOOSE', `(?:${src[t.NUMERICIDENTIFIERLOOSE]
-}|${src[t.NONNUMERICIDENTIFIER]})`)
-
-// ## Pre-release Version
-// Hyphen, followed by one or more dot-separated pre-release version
-// identifiers.
-
-createToken('PRERELEASE', `(?:-(${src[t.PRERELEASEIDENTIFIER]
-}(?:\\.${src[t.PRERELEASEIDENTIFIER]})*))`)
-
-createToken('PRERELEASELOOSE', `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]
-}(?:\\.${src[t.PRERELEASEIDENTIFIERLOOSE]})*))`)
-
-// ## Build Metadata Identifier
-// Any combination of digits, letters, or hyphens.
-
-createToken('BUILDIDENTIFIER', '[0-9A-Za-z-]+')
-
-// ## Build Metadata
-// Plus sign, followed by one or more period-separated build metadata
-// identifiers.
-
-createToken('BUILD', `(?:\\+(${src[t.BUILDIDENTIFIER]
-}(?:\\.${src[t.BUILDIDENTIFIER]})*))`)
-
-// ## Full Version String
-// A main version, followed optionally by a pre-release version and
-// build metadata.
-
-// Note that the only major, minor, patch, and pre-release sections of
-// the version string are capturing groups.  The build metadata is not a
-// capturing group, because it should not ever be used in version
-// comparison.
-
-createToken('FULLPLAIN', `v?${src[t.MAINVERSION]
-}${src[t.PRERELEASE]}?${
-  src[t.BUILD]}?`)
-
-createToken('FULL', `^${src[t.FULLPLAIN]}$`)
-
-// like full, but allows v1.2.3 and =1.2.3, which people do sometimes.
-// also, 1.0.0alpha1 (prerelease without the hyphen) which is pretty
-// common in the npm registry.
-createToken('LOOSEPLAIN', `[v=\\s]*${src[t.MAINVERSIONLOOSE]
-}${src[t.PRERELEASELOOSE]}?${
-  src[t.BUILD]}?`)
-
-createToken('LOOSE', `^${src[t.LOOSEPLAIN]}$`)
-
-createToken('GTLT', '((?:<|>)?=?)')
-
-// Something like "2.*" or "1.2.x".
-// Note that "x.x" is a valid xRange identifer, meaning "any version"
-// Only the first item is strictly required.
-createToken('XRANGEIDENTIFIERLOOSE', `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`)
-createToken('XRANGEIDENTIFIER', `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`)
-
-createToken('XRANGEPLAIN', `[v=\\s]*(${src[t.XRANGEIDENTIFIER]})` +
-                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
-                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
-                   `(?:${src[t.PRERELEASE]})?${
-                     src[t.BUILD]}?` +
-                   `)?)?`)
-
-createToken('XRANGEPLAINLOOSE', `[v=\\s]*(${src[t.XRANGEIDENTIFIERLOOSE]})` +
-                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
-                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
-                        `(?:${src[t.PRERELEASELOOSE]})?${
-                          src[t.BUILD]}?` +
-                        `)?)?`)
-
-createToken('XRANGE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAIN]}$`)
-createToken('XRANGELOOSE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`)
-
-// Coercion.
-// Extract anything that could conceivably be a part of a valid semver
-createToken('COERCE', `${'(^|[^\\d])' +
-              '(\\d{1,'}${MAX_SAFE_COMPONENT_LENGTH}})` +
-              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
-              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
-              `(?:$|[^\\d])`)
-createToken('COERCERTL', src[t.COERCE], true)
-
-// Tilde ranges.
-// Meaning is "reasonably at or greater than"
-createToken('LONETILDE', '(?:~>?)')
-
-createToken('TILDETRIM', `(\\s*)${src[t.LONETILDE]}\\s+`, true)
-exports.tildeTrimReplace = '$1~'
-
-createToken('TILDE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`)
-createToken('TILDELOOSE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`)
-
-// Caret ranges.
-// Meaning is "at least and backwards compatible with"
-createToken('LONECARET', '(?:\\^)')
-
-createToken('CARETTRIM', `(\\s*)${src[t.LONECARET]}\\s+`, true)
-exports.caretTrimReplace = '$1^'
-
-createToken('CARET', `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`)
-createToken('CARETLOOSE', `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`)
-
-// A simple gt/lt/eq thing, or just "" to indicate "any version"
-createToken('COMPARATORLOOSE', `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`)
-createToken('COMPARATOR', `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`)
-
-// An expression to strip any whitespace between the gtlt and the thing
-// it modifies, so that `> 1.2.3` ==> `>1.2.3`
-createToken('COMPARATORTRIM', `(\\s*)${src[t.GTLT]
-}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true)
-exports.comparatorTrimReplace = '$1$2$3'
-
-// Something like `1.2.3 - 1.2.4`
-// Note that these all use the loose form, because they'll be
-// checked against either the strict or loose comparator form
-// later.
-createToken('HYPHENRANGE', `^\\s*(${src[t.XRANGEPLAIN]})` +
-                   `\\s+-\\s+` +
-                   `(${src[t.XRANGEPLAIN]})` +
-                   `\\s*$`)
-
-createToken('HYPHENRANGELOOSE', `^\\s*(${src[t.XRANGEPLAINLOOSE]})` +
-                        `\\s+-\\s+` +
-                        `(${src[t.XRANGEPLAINLOOSE]})` +
-                        `\\s*$`)
-
-// Star ranges basically just allow anything at all.
-createToken('STAR', '(<|>)?=?\\s*\\*')
-// >=0.0.0 is like a star
-createToken('GTE0', '^\\s*>=\\s*0\.0\.0\\s*$')
-createToken('GTE0PRE', '^\\s*>=\\s*0\.0\.0-0\\s*$')
-
-
-/***/ }),
-
-/***/ 147:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const Range = __webpack_require__(404)
-const { ANY } = __webpack_require__(179)
-const satisfies = __webpack_require__(854)
-const compare = __webpack_require__(807)
-
-// Complex range `r1 || r2 || ...` is a subset of `R1 || R2 || ...` iff:
-// - Every simple range `r1, r2, ...` is a subset of some `R1, R2, ...`
-//
-// Simple range `c1 c2 ...` is a subset of simple range `C1 C2 ...` iff:
-// - If c is only the ANY comparator
-//   - If C is only the ANY comparator, return true
-//   - Else return false
-// - Let EQ be the set of = comparators in c
-// - If EQ is more than one, return true (null set)
-// - Let GT be the highest > or >= comparator in c
-// - Let LT be the lowest < or <= comparator in c
-// - If GT and LT, and GT.semver > LT.semver, return true (null set)
-// - If EQ
-//   - If GT, and EQ does not satisfy GT, return true (null set)
-//   - If LT, and EQ does not satisfy LT, return true (null set)
-//   - If EQ satisfies every C, return true
-//   - Else return false
-// - If GT
-//   - If GT is lower than any > or >= comp in C, return false
-//   - If GT is >=, and GT.semver does not satisfy every C, return false
-// - If LT
-//   - If LT.semver is greater than that of any > comp in C, return false
-//   - If LT is <=, and LT.semver does not satisfy every C, return false
-// - If any C is a = range, and GT or LT are set, return false
-// - Else return true
-
-const subset = (sub, dom, options) => {
-  sub = new Range(sub, options)
-  dom = new Range(dom, options)
-  let sawNonNull = false
-
-  OUTER: for (const simpleSub of sub.set) {
-    for (const simpleDom of dom.set) {
-      const isSub = simpleSubset(simpleSub, simpleDom, options)
-      sawNonNull = sawNonNull || isSub !== null
-      if (isSub)
-        continue OUTER
-    }
-    // the null set is a subset of everything, but null simple ranges in
-    // a complex range should be ignored.  so if we saw a non-null range,
-    // then we know this isn't a subset, but if EVERY simple range was null,
-    // then it is a subset.
-    if (sawNonNull)
-      return false
-  }
-  return true
-}
-
-const simpleSubset = (sub, dom, options) => {
-  if (sub.length === 1 && sub[0].semver === ANY)
-    return dom.length === 1 && dom[0].semver === ANY
-
-  const eqSet = new Set()
-  let gt, lt
-  for (const c of sub) {
-    if (c.operator === '>' || c.operator === '>=')
-      gt = higherGT(gt, c, options)
-    else if (c.operator === '<' || c.operator === '<=')
-      lt = lowerLT(lt, c, options)
-    else
-      eqSet.add(c.semver)
-  }
-
-  if (eqSet.size > 1)
-    return null
-
-  let gtltComp
-  if (gt && lt) {
-    gtltComp = compare(gt.semver, lt.semver, options)
-    if (gtltComp > 0)
-      return null
-    else if (gtltComp === 0 && (gt.operator !== '>=' || lt.operator !== '<='))
-      return null
-  }
-
-  // will iterate one or zero times
-  for (const eq of eqSet) {
-    if (gt && !satisfies(eq, String(gt), options))
-      return null
-
-    if (lt && !satisfies(eq, String(lt), options))
-      return null
-
-    for (const c of dom) {
-      if (!satisfies(eq, String(c), options))
-        return false
-    }
-    return true
-  }
-
-  let higher, lower
-  let hasDomLT, hasDomGT
-  for (const c of dom) {
-    hasDomGT = hasDomGT || c.operator === '>' || c.operator === '>='
-    hasDomLT = hasDomLT || c.operator === '<' || c.operator === '<='
-    if (gt) {
-      if (c.operator === '>' || c.operator === '>=') {
-        higher = higherGT(gt, c, options)
-        if (higher === c)
-          return false
-      } else if (gt.operator === '>=' && !satisfies(gt.semver, String(c), options))
-        return false
-    }
-    if (lt) {
-      if (c.operator === '<' || c.operator === '<=') {
-        lower = lowerLT(lt, c, options)
-        if (lower === c)
-          return false
-      } else if (lt.operator === '<=' && !satisfies(lt.semver, String(c), options))
-        return false
-    }
-    if (!c.operator && (lt || gt) && gtltComp !== 0)
-      return false
-  }
-
-  // if there was a < or >, and nothing in the dom, then must be false
-  // UNLESS it was limited by another range in the other direction.
-  // Eg, >1.0.0 <1.0.1 is still a subset of <2.0.0
-  if (gt && hasDomLT && !lt && gtltComp !== 0)
-    return false
-
-  if (lt && hasDomGT && !gt && gtltComp !== 0)
-    return false
-
-  return true
-}
-
-// >=1.2.3 is lower than >1.2.3
-const higherGT = (a, b, options) => {
-  if (!a)
-    return b
-  const comp = compare(a.semver, b.semver, options)
-  return comp > 0 ? a
-    : comp < 0 ? b
-    : b.operator === '>' && a.operator === '>=' ? b
-    : a
-}
-
-// <=1.2.3 is higher than <1.2.3
-const lowerLT = (a, b, options) => {
-  if (!a)
-    return b
-  const comp = compare(a.semver, b.semver, options)
-  return comp < 0 ? a
-    : comp > 0 ? b
-    : b.operator === '<' && a.operator === '<=' ? b
-    : a
-}
-
-module.exports = subset
-
-
-/***/ }),
-
-/***/ 160:
-/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
-
-const { readFileSync, writeFileSync } = __webpack_require__(747)
-const { execFileSync } = __webpack_require__(129)
-const { parse } = __webpack_require__(828)
-
-const package = JSON.parse(readFileSync('./package.json', 'utf8'))
-const packageVer = parse(package.version)
-
-let prerelease = 0 // Main was changed, or no prev version, restart prerelease from 0.
-try {
-	// `abbrev=0` finds the closest tagname without any suffix.
-	execFileSync('git', ['fetch', '--depth=10'])
-	execFileSync('git', ['fetch', '--tags'])
-	const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0'], { encoding: 'utf8' }).trim()
-	const lastReleaseVer = parse(tag)
-	if (packageVer.compareMain(lastReleaseVer) === 0) {
-		prerelease = lastReleaseVer.prerelease[0] + 1 // Main is equal, auto-increment the prerelease.
-	}
-} catch (error) {
-}
-
-packageVer.prerelease = [ prerelease ]
-package.version = packageVer.format()
-console.log('Computed package version:', package.version)
-writeFileSync('./package.json', JSON.stringify(package, null, 4))
-
-
-/***/ }),
-
-/***/ 174:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compare = __webpack_require__(807)
-const compareLoose = (a, b) => compare(a, b, true)
-module.exports = compareLoose
-
-
-/***/ }),
-
-/***/ 179:
+/***/ 18:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const ANY = Symbol('SemVer ANY')
@@ -723,19 +180,84 @@ class Comparator {
 
 module.exports = Comparator
 
-const {re, t} = __webpack_require__(144)
-const cmp = __webpack_require__(472)
-const debug = __webpack_require__(775)
-const SemVer = __webpack_require__(346)
-const Range = __webpack_require__(404)
+const {re, t} = __webpack_require__(672)
+const cmp = __webpack_require__(820)
+const debug = __webpack_require__(401)
+const SemVer = __webpack_require__(522)
+const Range = __webpack_require__(696)
 
 
 /***/ }),
 
-/***/ 185:
+/***/ 30:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const SemVer = __webpack_require__(346)
+// just pre-load all the stuff that index.js lazily exports
+const internalRe = __webpack_require__(672)
+module.exports = {
+  re: internalRe.re,
+  src: internalRe.src,
+  tokens: internalRe.t,
+  SEMVER_SPEC_VERSION: __webpack_require__(807).SEMVER_SPEC_VERSION,
+  SemVer: __webpack_require__(522),
+  compareIdentifiers: __webpack_require__(995).compareIdentifiers,
+  rcompareIdentifiers: __webpack_require__(995).rcompareIdentifiers,
+  parse: __webpack_require__(608),
+  valid: __webpack_require__(741),
+  clean: __webpack_require__(776),
+  inc: __webpack_require__(68),
+  diff: __webpack_require__(763),
+  major: __webpack_require__(406),
+  minor: __webpack_require__(47),
+  patch: __webpack_require__(521),
+  prerelease: __webpack_require__(727),
+  compare: __webpack_require__(980),
+  rcompare: __webpack_require__(821),
+  compareLoose: __webpack_require__(152),
+  compareBuild: __webpack_require__(726),
+  sort: __webpack_require__(528),
+  rsort: __webpack_require__(321),
+  gt: __webpack_require__(981),
+  lt: __webpack_require__(505),
+  eq: __webpack_require__(464),
+  neq: __webpack_require__(931),
+  gte: __webpack_require__(120),
+  lte: __webpack_require__(524),
+  cmp: __webpack_require__(820),
+  coerce: __webpack_require__(400),
+  Comparator: __webpack_require__(18),
+  Range: __webpack_require__(696),
+  satisfies: __webpack_require__(333),
+  toComparators: __webpack_require__(639),
+  maxSatisfying: __webpack_require__(836),
+  minSatisfying: __webpack_require__(590),
+  minVersion: __webpack_require__(412),
+  validRange: __webpack_require__(512),
+  outside: __webpack_require__(162),
+  gtr: __webpack_require__(275),
+  ltr: __webpack_require__(993),
+  intersects: __webpack_require__(148),
+  simplifyRange: __webpack_require__(137),
+  subset: __webpack_require__(733),
+}
+
+
+/***/ }),
+
+/***/ 47:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const minor = (a, loose) => new SemVer(a, loose).minor
+module.exports = minor
+
+
+/***/ }),
+
+/***/ 68:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
 
 const inc = (version, release, options, identifier) => {
   if (typeof (options) === 'string') {
@@ -754,191 +276,427 @@ module.exports = inc
 
 /***/ }),
 
-/***/ 250:
+/***/ 120:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const {MAX_LENGTH} = __webpack_require__(862)
-const { re, t } = __webpack_require__(144)
-const SemVer = __webpack_require__(346)
-
-const parse = (version, options) => {
-  if (!options || typeof options !== 'object') {
-    options = {
-      loose: !!options,
-      includePrerelease: false
-    }
-  }
-
-  if (version instanceof SemVer) {
-    return version
-  }
-
-  if (typeof version !== 'string') {
-    return null
-  }
-
-  if (version.length > MAX_LENGTH) {
-    return null
-  }
-
-  const r = options.loose ? re[t.LOOSE] : re[t.FULL]
-  if (!r.test(version)) {
-    return null
-  }
-
-  try {
-    return new SemVer(version, options)
-  } catch (er) {
-    return null
-  }
-}
-
-module.exports = parse
-
-
-/***/ }),
-
-/***/ 263:
-/***/ (function(module) {
-
-const numeric = /^[0-9]+$/
-const compareIdentifiers = (a, b) => {
-  const anum = numeric.test(a)
-  const bnum = numeric.test(b)
-
-  if (anum && bnum) {
-    a = +a
-    b = +b
-  }
-
-  return a === b ? 0
-    : (anum && !bnum) ? -1
-    : (bnum && !anum) ? 1
-    : a < b ? -1
-    : 1
-}
-
-const rcompareIdentifiers = (a, b) => compareIdentifiers(b, a)
-
-module.exports = {
-  compareIdentifiers,
-  rcompareIdentifiers
-}
-
-
-/***/ }),
-
-/***/ 265:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compare = __webpack_require__(807)
+const compare = __webpack_require__(980)
 const gte = (a, b, loose) => compare(a, b, loose) >= 0
 module.exports = gte
 
 
 /***/ }),
 
-/***/ 269:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 129:
+/***/ (function(module) {
 
-const SemVer = __webpack_require__(346)
-const minor = (a, loose) => new SemVer(a, loose).minor
-module.exports = minor
-
+module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 305:
+/***/ 137:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const compare = __webpack_require__(807)
-const rcompare = (a, b, loose) => compare(b, a, loose)
-module.exports = rcompare
-
-
-/***/ }),
-
-/***/ 313:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compareBuild = __webpack_require__(68)
-const sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose))
-module.exports = sort
-
-
-/***/ }),
-
-/***/ 324:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const Range = __webpack_require__(404)
-
-const maxSatisfying = (versions, range, options) => {
-  let max = null
-  let maxSV = null
-  let rangeObj = null
-  try {
-    rangeObj = new Range(range, options)
-  } catch (er) {
-    return null
-  }
-  versions.forEach((v) => {
-    if (rangeObj.test(v)) {
-      // satisfies(v, range, options)
-      if (!max || maxSV.compare(v) === -1) {
-        // compare(max, v, true)
-        max = v
-        maxSV = new SemVer(max, options)
-      }
-    }
-  })
-  return max
-}
-module.exports = maxSatisfying
-
-
-/***/ }),
-
-/***/ 339:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const Range = __webpack_require__(404)
-const minSatisfying = (versions, range, options) => {
+// given a set of versions and a range, create a "simplified" range
+// that includes the same versions that the original range does
+// If the original range is shorter than the simplified one, return that.
+const satisfies = __webpack_require__(333)
+const compare = __webpack_require__(980)
+module.exports = (versions, range, options) => {
+  const set = []
   let min = null
-  let minSV = null
-  let rangeObj = null
-  try {
-    rangeObj = new Range(range, options)
-  } catch (er) {
-    return null
-  }
-  versions.forEach((v) => {
-    if (rangeObj.test(v)) {
-      // satisfies(v, range, options)
-      if (!min || minSV.compare(v) === 1) {
-        // compare(min, v, true)
-        min = v
-        minSV = new SemVer(min, options)
+  let prev = null
+  const v = versions.sort((a, b) => compare(a, b, options))
+  for (const version of v) {
+    const included = satisfies(version, range, options)
+    if (included) {
+      prev = version
+      if (!min)
+        min = version
+    } else {
+      if (prev) {
+        set.push([min, prev])
       }
+      prev = null
+      min = null
     }
-  })
-  return min
+  }
+  if (min)
+    set.push([min, null])
+
+  const ranges = []
+  for (const [min, max] of set) {
+    if (min === max)
+      ranges.push(min)
+    else if (!max && min === v[0])
+      ranges.push('*')
+    else if (!max)
+      ranges.push(`>=${min}`)
+    else if (min === v[0])
+      ranges.push(`<=${max}`)
+    else
+      ranges.push(`${min} - ${max}`)
+  }
+  const simplified = ranges.join(' || ')
+  const original = typeof range.raw === 'string' ? range.raw : String(range)
+  return simplified.length < original.length ? simplified : range
 }
-module.exports = minSatisfying
 
 
 /***/ }),
 
-/***/ 346:
+/***/ 148:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const debug = __webpack_require__(775)
-const { MAX_LENGTH, MAX_SAFE_INTEGER } = __webpack_require__(862)
-const { re, t } = __webpack_require__(144)
+const Range = __webpack_require__(696)
+const intersects = (r1, r2, options) => {
+  r1 = new Range(r1, options)
+  r2 = new Range(r2, options)
+  return r1.intersects(r2)
+}
+module.exports = intersects
 
-const { compareIdentifiers } = __webpack_require__(263)
+
+/***/ }),
+
+/***/ 152:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const compare = __webpack_require__(980)
+const compareLoose = (a, b) => compare(a, b, true)
+module.exports = compareLoose
+
+
+/***/ }),
+
+/***/ 162:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const Comparator = __webpack_require__(18)
+const {ANY} = Comparator
+const Range = __webpack_require__(696)
+const satisfies = __webpack_require__(333)
+const gt = __webpack_require__(981)
+const lt = __webpack_require__(505)
+const lte = __webpack_require__(524)
+const gte = __webpack_require__(120)
+
+const outside = (version, range, hilo, options) => {
+  version = new SemVer(version, options)
+  range = new Range(range, options)
+
+  let gtfn, ltefn, ltfn, comp, ecomp
+  switch (hilo) {
+    case '>':
+      gtfn = gt
+      ltefn = lte
+      ltfn = lt
+      comp = '>'
+      ecomp = '>='
+      break
+    case '<':
+      gtfn = lt
+      ltefn = gte
+      ltfn = gt
+      comp = '<'
+      ecomp = '<='
+      break
+    default:
+      throw new TypeError('Must provide a hilo val of "<" or ">"')
+  }
+
+  // If it satisifes the range it is not outside
+  if (satisfies(version, range, options)) {
+    return false
+  }
+
+  // From now on, variable terms are as if we're in "gtr" mode.
+  // but note that everything is flipped for the "ltr" function.
+
+  for (let i = 0; i < range.set.length; ++i) {
+    const comparators = range.set[i]
+
+    let high = null
+    let low = null
+
+    comparators.forEach((comparator) => {
+      if (comparator.semver === ANY) {
+        comparator = new Comparator('>=0.0.0')
+      }
+      high = high || comparator
+      low = low || comparator
+      if (gtfn(comparator.semver, high.semver, options)) {
+        high = comparator
+      } else if (ltfn(comparator.semver, low.semver, options)) {
+        low = comparator
+      }
+    })
+
+    // If the edge version comparator has a operator then our version
+    // isn't outside it
+    if (high.operator === comp || high.operator === ecomp) {
+      return false
+    }
+
+    // If the lowest version comparator has an operator and our version
+    // is less than it then it isn't higher than the range
+    if ((!low.operator || low.operator === comp) &&
+        ltefn(version, low.semver)) {
+      return false
+    } else if (low.operator === ecomp && ltfn(version, low.semver)) {
+      return false
+    }
+  }
+  return true
+}
+
+module.exports = outside
+
+
+/***/ }),
+
+/***/ 275:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+// Determine if version is greater than all the versions possible in the range.
+const outside = __webpack_require__(162)
+const gtr = (version, range, options) => outside(version, range, '>', options)
+module.exports = gtr
+
+
+/***/ }),
+
+/***/ 321:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const compareBuild = __webpack_require__(726)
+const rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose))
+module.exports = rsort
+
+
+/***/ }),
+
+/***/ 333:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const Range = __webpack_require__(696)
+const satisfies = (version, range, options) => {
+  try {
+    range = new Range(range, options)
+  } catch (er) {
+    return false
+  }
+  return range.test(version)
+}
+module.exports = satisfies
+
+
+/***/ }),
+
+/***/ 400:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const parse = __webpack_require__(608)
+const {re, t} = __webpack_require__(672)
+
+const coerce = (version, options) => {
+  if (version instanceof SemVer) {
+    return version
+  }
+
+  if (typeof version === 'number') {
+    version = String(version)
+  }
+
+  if (typeof version !== 'string') {
+    return null
+  }
+
+  options = options || {}
+
+  let match = null
+  if (!options.rtl) {
+    match = version.match(re[t.COERCE])
+  } else {
+    // Find the right-most coercible string that does not share
+    // a terminus with a more left-ward coercible string.
+    // Eg, '1.2.3.4' wants to coerce '2.3.4', not '3.4' or '4'
+    //
+    // Walk through the string checking with a /g regexp
+    // Manually set the index so as to pick up overlapping matches.
+    // Stop when we get a match that ends at the string end, since no
+    // coercible string can be more right-ward without the same terminus.
+    let next
+    while ((next = re[t.COERCERTL].exec(version)) &&
+        (!match || match.index + match[0].length !== version.length)
+    ) {
+      if (!match ||
+            next.index + next[0].length !== match.index + match[0].length) {
+        match = next
+      }
+      re[t.COERCERTL].lastIndex = next.index + next[1].length + next[2].length
+    }
+    // leave it in a clean state
+    re[t.COERCERTL].lastIndex = -1
+  }
+
+  if (match === null)
+    return null
+
+  return parse(`${match[2]}.${match[3] || '0'}.${match[4] || '0'}`, options)
+}
+module.exports = coerce
+
+
+/***/ }),
+
+/***/ 401:
+/***/ (function(module) {
+
+const debug = (
+  typeof process === 'object' &&
+  process.env &&
+  process.env.NODE_DEBUG &&
+  /\bsemver\b/i.test(process.env.NODE_DEBUG)
+) ? (...args) => console.error('SEMVER', ...args)
+  : () => {}
+
+module.exports = debug
+
+
+/***/ }),
+
+/***/ 406:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const major = (a, loose) => new SemVer(a, loose).major
+module.exports = major
+
+
+/***/ }),
+
+/***/ 412:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const Range = __webpack_require__(696)
+const gt = __webpack_require__(981)
+
+const minVersion = (range, loose) => {
+  range = new Range(range, loose)
+
+  let minver = new SemVer('0.0.0')
+  if (range.test(minver)) {
+    return minver
+  }
+
+  minver = new SemVer('0.0.0-0')
+  if (range.test(minver)) {
+    return minver
+  }
+
+  minver = null
+  for (let i = 0; i < range.set.length; ++i) {
+    const comparators = range.set[i]
+
+    comparators.forEach((comparator) => {
+      // Clone to avoid manipulating the comparator's semver object.
+      const compver = new SemVer(comparator.semver.version)
+      switch (comparator.operator) {
+        case '>':
+          if (compver.prerelease.length === 0) {
+            compver.patch++
+          } else {
+            compver.prerelease.push(0)
+          }
+          compver.raw = compver.format()
+          /* fallthrough */
+        case '':
+        case '>=':
+          if (!minver || gt(minver, compver)) {
+            minver = compver
+          }
+          break
+        case '<':
+        case '<=':
+          /* Ignore maximum versions */
+          break
+        /* istanbul ignore next */
+        default:
+          throw new Error(`Unexpected operation: ${comparator.operator}`)
+      }
+    })
+  }
+
+  if (minver && range.test(minver)) {
+    return minver
+  }
+
+  return null
+}
+module.exports = minVersion
+
+
+/***/ }),
+
+/***/ 464:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const compare = __webpack_require__(980)
+const eq = (a, b, loose) => compare(a, b, loose) === 0
+module.exports = eq
+
+
+/***/ }),
+
+/***/ 505:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const compare = __webpack_require__(980)
+const lt = (a, b, loose) => compare(a, b, loose) < 0
+module.exports = lt
+
+
+/***/ }),
+
+/***/ 512:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const Range = __webpack_require__(696)
+const validRange = (range, options) => {
+  try {
+    // Return '*' instead of '' so that truthiness works.
+    // This will throw if it's invalid anyway
+    return new Range(range, options).range || '*'
+  } catch (er) {
+    return null
+  }
+}
+module.exports = validRange
+
+
+/***/ }),
+
+/***/ 521:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const patch = (a, loose) => new SemVer(a, loose).patch
+module.exports = patch
+
+
+/***/ }),
+
+/***/ 522:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const debug = __webpack_require__(401)
+const { MAX_LENGTH, MAX_SAFE_INTEGER } = __webpack_require__(807)
+const { re, t } = __webpack_require__(672)
+
+const { compareIdentifiers } = __webpack_require__(995)
 class SemVer {
   constructor (version, options) {
     if (!options || typeof options !== 'object') {
@@ -1228,79 +986,343 @@ module.exports = SemVer
 
 /***/ }),
 
-/***/ 351:
+/***/ 524:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const SemVer = __webpack_require__(346)
-const parse = __webpack_require__(250)
-const {re, t} = __webpack_require__(144)
+const compare = __webpack_require__(980)
+const lte = (a, b, loose) => compare(a, b, loose) <= 0
+module.exports = lte
 
-const coerce = (version, options) => {
-  if (version instanceof SemVer) {
-    return version
+
+/***/ }),
+
+/***/ 528:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const compareBuild = __webpack_require__(726)
+const sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose))
+module.exports = sort
+
+
+/***/ }),
+
+/***/ 590:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const SemVer = __webpack_require__(522)
+const Range = __webpack_require__(696)
+const minSatisfying = (versions, range, options) => {
+  let min = null
+  let minSV = null
+  let rangeObj = null
+  try {
+    rangeObj = new Range(range, options)
+  } catch (er) {
+    return null
+  }
+  versions.forEach((v) => {
+    if (rangeObj.test(v)) {
+      // satisfies(v, range, options)
+      if (!min || minSV.compare(v) === 1) {
+        // compare(min, v, true)
+        min = v
+        minSV = new SemVer(min, options)
+      }
+    }
+  })
+  return min
+}
+module.exports = minSatisfying
+
+
+/***/ }),
+
+/***/ 608:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const {MAX_LENGTH} = __webpack_require__(807)
+const { re, t } = __webpack_require__(672)
+const SemVer = __webpack_require__(522)
+
+const parse = (version, options) => {
+  if (!options || typeof options !== 'object') {
+    options = {
+      loose: !!options,
+      includePrerelease: false
+    }
   }
 
-  if (typeof version === 'number') {
-    version = String(version)
+  if (version instanceof SemVer) {
+    return version
   }
 
   if (typeof version !== 'string') {
     return null
   }
 
-  options = options || {}
-
-  let match = null
-  if (!options.rtl) {
-    match = version.match(re[t.COERCE])
-  } else {
-    // Find the right-most coercible string that does not share
-    // a terminus with a more left-ward coercible string.
-    // Eg, '1.2.3.4' wants to coerce '2.3.4', not '3.4' or '4'
-    //
-    // Walk through the string checking with a /g regexp
-    // Manually set the index so as to pick up overlapping matches.
-    // Stop when we get a match that ends at the string end, since no
-    // coercible string can be more right-ward without the same terminus.
-    let next
-    while ((next = re[t.COERCERTL].exec(version)) &&
-        (!match || match.index + match[0].length !== version.length)
-    ) {
-      if (!match ||
-            next.index + next[0].length !== match.index + match[0].length) {
-        match = next
-      }
-      re[t.COERCERTL].lastIndex = next.index + next[1].length + next[2].length
-    }
-    // leave it in a clean state
-    re[t.COERCERTL].lastIndex = -1
+  if (version.length > MAX_LENGTH) {
+    return null
   }
 
-  if (match === null)
+  const r = options.loose ? re[t.LOOSE] : re[t.FULL]
+  if (!r.test(version)) {
     return null
+  }
 
-  return parse(`${match[2]}.${match[3] || '0'}.${match[4] || '0'}`, options)
+  try {
+    return new SemVer(version, options)
+  } catch (er) {
+    return null
+  }
 }
-module.exports = coerce
+
+module.exports = parse
 
 
 /***/ }),
 
-/***/ 373:
+/***/ 639:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const Range = __webpack_require__(404)
-const intersects = (r1, r2, options) => {
-  r1 = new Range(r1, options)
-  r2 = new Range(r2, options)
-  return r1.intersects(r2)
-}
-module.exports = intersects
+const Range = __webpack_require__(696)
+
+// Mostly just for testing and legacy API reasons
+const toComparators = (range, options) =>
+  new Range(range, options).set
+    .map(comp => comp.map(c => c.value).join(' ').trim().split(' '))
+
+module.exports = toComparators
 
 
 /***/ }),
 
-/***/ 404:
+/***/ 667:
+/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
+
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+// Run `ncc build action.js --out .` to produce `index.js`
+const { readFileSync, writeFileSync } = __webpack_require__(747);
+const { execFileSync } = __webpack_require__(129);
+const { parse } = __webpack_require__(30);
+
+const package = JSON.parse(readFileSync('./package.json', 'utf8'));
+const packageVer = parse(package.version);
+
+let prerelease = 0; // Main was changed, or no prev version, restart prerelease from 0.
+try {
+	execFileSync('git', ['log', '--oneline']);
+	execFileSync('git', ['fetch', '--depth=10']);
+	execFileSync('git', ['fetch', '--tags']);
+	// `abbrev=0` finds the closest tagname without any suffix.
+	// HEAD~1 assuming the lastest commit hasn't been tagged by this Action yet.
+	const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0', 'HEAD~1'], { encoding: 'utf8' }).trim();
+	const lastReleaseVer = parse(tag);
+	if (packageVer.compareMain(lastReleaseVer) === 0) {
+		prerelease = lastReleaseVer.prerelease[0] + 1; // Main is equal, auto-increment the prerelease.
+	}
+} catch (error) {
+}
+
+packageVer.prerelease = [ prerelease ];
+package.version = packageVer.format();
+console.log('Computed package version:', package.version);
+writeFileSync('./package.json', JSON.stringify(package, null, 4));
+
+
+/***/ }),
+
+/***/ 672:
+/***/ (function(module, exports, __webpack_require__) {
+
+const { MAX_SAFE_COMPONENT_LENGTH } = __webpack_require__(807)
+const debug = __webpack_require__(401)
+exports = module.exports = {}
+
+// The actual regexps go on exports.re
+const re = exports.re = []
+const src = exports.src = []
+const t = exports.t = {}
+let R = 0
+
+const createToken = (name, value, isGlobal) => {
+  const index = R++
+  debug(index, value)
+  t[name] = index
+  src[index] = value
+  re[index] = new RegExp(value, isGlobal ? 'g' : undefined)
+}
+
+// The following Regular Expressions can be used for tokenizing,
+// validating, and parsing SemVer version strings.
+
+// ## Numeric Identifier
+// A single `0`, or a non-zero digit followed by zero or more digits.
+
+createToken('NUMERICIDENTIFIER', '0|[1-9]\\d*')
+createToken('NUMERICIDENTIFIERLOOSE', '[0-9]+')
+
+// ## Non-numeric Identifier
+// Zero or more digits, followed by a letter or hyphen, and then zero or
+// more letters, digits, or hyphens.
+
+createToken('NONNUMERICIDENTIFIER', '\\d*[a-zA-Z-][a-zA-Z0-9-]*')
+
+// ## Main Version
+// Three dot-separated numeric identifiers.
+
+createToken('MAINVERSION', `(${src[t.NUMERICIDENTIFIER]})\\.` +
+                   `(${src[t.NUMERICIDENTIFIER]})\\.` +
+                   `(${src[t.NUMERICIDENTIFIER]})`)
+
+createToken('MAINVERSIONLOOSE', `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
+                        `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
+                        `(${src[t.NUMERICIDENTIFIERLOOSE]})`)
+
+// ## Pre-release Version Identifier
+// A numeric identifier, or a non-numeric identifier.
+
+createToken('PRERELEASEIDENTIFIER', `(?:${src[t.NUMERICIDENTIFIER]
+}|${src[t.NONNUMERICIDENTIFIER]})`)
+
+createToken('PRERELEASEIDENTIFIERLOOSE', `(?:${src[t.NUMERICIDENTIFIERLOOSE]
+}|${src[t.NONNUMERICIDENTIFIER]})`)
+
+// ## Pre-release Version
+// Hyphen, followed by one or more dot-separated pre-release version
+// identifiers.
+
+createToken('PRERELEASE', `(?:-(${src[t.PRERELEASEIDENTIFIER]
+}(?:\\.${src[t.PRERELEASEIDENTIFIER]})*))`)
+
+createToken('PRERELEASELOOSE', `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]
+}(?:\\.${src[t.PRERELEASEIDENTIFIERLOOSE]})*))`)
+
+// ## Build Metadata Identifier
+// Any combination of digits, letters, or hyphens.
+
+createToken('BUILDIDENTIFIER', '[0-9A-Za-z-]+')
+
+// ## Build Metadata
+// Plus sign, followed by one or more period-separated build metadata
+// identifiers.
+
+createToken('BUILD', `(?:\\+(${src[t.BUILDIDENTIFIER]
+}(?:\\.${src[t.BUILDIDENTIFIER]})*))`)
+
+// ## Full Version String
+// A main version, followed optionally by a pre-release version and
+// build metadata.
+
+// Note that the only major, minor, patch, and pre-release sections of
+// the version string are capturing groups.  The build metadata is not a
+// capturing group, because it should not ever be used in version
+// comparison.
+
+createToken('FULLPLAIN', `v?${src[t.MAINVERSION]
+}${src[t.PRERELEASE]}?${
+  src[t.BUILD]}?`)
+
+createToken('FULL', `^${src[t.FULLPLAIN]}$`)
+
+// like full, but allows v1.2.3 and =1.2.3, which people do sometimes.
+// also, 1.0.0alpha1 (prerelease without the hyphen) which is pretty
+// common in the npm registry.
+createToken('LOOSEPLAIN', `[v=\\s]*${src[t.MAINVERSIONLOOSE]
+}${src[t.PRERELEASELOOSE]}?${
+  src[t.BUILD]}?`)
+
+createToken('LOOSE', `^${src[t.LOOSEPLAIN]}$`)
+
+createToken('GTLT', '((?:<|>)?=?)')
+
+// Something like "2.*" or "1.2.x".
+// Note that "x.x" is a valid xRange identifer, meaning "any version"
+// Only the first item is strictly required.
+createToken('XRANGEIDENTIFIERLOOSE', `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`)
+createToken('XRANGEIDENTIFIER', `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`)
+
+createToken('XRANGEPLAIN', `[v=\\s]*(${src[t.XRANGEIDENTIFIER]})` +
+                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
+                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
+                   `(?:${src[t.PRERELEASE]})?${
+                     src[t.BUILD]}?` +
+                   `)?)?`)
+
+createToken('XRANGEPLAINLOOSE', `[v=\\s]*(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+                        `(?:${src[t.PRERELEASELOOSE]})?${
+                          src[t.BUILD]}?` +
+                        `)?)?`)
+
+createToken('XRANGE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAIN]}$`)
+createToken('XRANGELOOSE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`)
+
+// Coercion.
+// Extract anything that could conceivably be a part of a valid semver
+createToken('COERCE', `${'(^|[^\\d])' +
+              '(\\d{1,'}${MAX_SAFE_COMPONENT_LENGTH}})` +
+              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
+              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
+              `(?:$|[^\\d])`)
+createToken('COERCERTL', src[t.COERCE], true)
+
+// Tilde ranges.
+// Meaning is "reasonably at or greater than"
+createToken('LONETILDE', '(?:~>?)')
+
+createToken('TILDETRIM', `(\\s*)${src[t.LONETILDE]}\\s+`, true)
+exports.tildeTrimReplace = '$1~'
+
+createToken('TILDE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`)
+createToken('TILDELOOSE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`)
+
+// Caret ranges.
+// Meaning is "at least and backwards compatible with"
+createToken('LONECARET', '(?:\\^)')
+
+createToken('CARETTRIM', `(\\s*)${src[t.LONECARET]}\\s+`, true)
+exports.caretTrimReplace = '$1^'
+
+createToken('CARET', `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`)
+createToken('CARETLOOSE', `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`)
+
+// A simple gt/lt/eq thing, or just "" to indicate "any version"
+createToken('COMPARATORLOOSE', `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`)
+createToken('COMPARATOR', `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`)
+
+// An expression to strip any whitespace between the gtlt and the thing
+// it modifies, so that `> 1.2.3` ==> `>1.2.3`
+createToken('COMPARATORTRIM', `(\\s*)${src[t.GTLT]
+}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true)
+exports.comparatorTrimReplace = '$1$2$3'
+
+// Something like `1.2.3 - 1.2.4`
+// Note that these all use the loose form, because they'll be
+// checked against either the strict or loose comparator form
+// later.
+createToken('HYPHENRANGE', `^\\s*(${src[t.XRANGEPLAIN]})` +
+                   `\\s+-\\s+` +
+                   `(${src[t.XRANGEPLAIN]})` +
+                   `\\s*$`)
+
+createToken('HYPHENRANGELOOSE', `^\\s*(${src[t.XRANGEPLAINLOOSE]})` +
+                        `\\s+-\\s+` +
+                        `(${src[t.XRANGEPLAINLOOSE]})` +
+                        `\\s*$`)
+
+// Star ranges basically just allow anything at all.
+createToken('STAR', '(<|>)?=?\\s*\\*')
+// >=0.0.0 is like a star
+createToken('GTE0', '^\\s*>=\\s*0\.0\.0\\s*$')
+createToken('GTE0PRE', '^\\s*>=\\s*0\.0\.0-0\\s*$')
+
+
+/***/ }),
+
+/***/ 696:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 // hoisted class for cyclic dependency
@@ -1449,16 +1471,16 @@ class Range {
 }
 module.exports = Range
 
-const Comparator = __webpack_require__(179)
-const debug = __webpack_require__(775)
-const SemVer = __webpack_require__(346)
+const Comparator = __webpack_require__(18)
+const debug = __webpack_require__(401)
+const SemVer = __webpack_require__(522)
 const {
   re,
   t,
   comparatorTrimReplace,
   tildeTrimReplace,
   caretTrimReplace
-} = __webpack_require__(144)
+} = __webpack_require__(672)
 
 // take a set of comparators and determine whether there
 // exists a version which can satisfy it
@@ -1770,25 +1792,291 @@ const testSet = (set, version, options) => {
 
 /***/ }),
 
-/***/ 412:
+/***/ 726:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const compare = __webpack_require__(807)
-const gt = (a, b, loose) => compare(a, b, loose) > 0
-module.exports = gt
+const SemVer = __webpack_require__(522)
+const compareBuild = (a, b, loose) => {
+  const versionA = new SemVer(a, loose)
+  const versionB = new SemVer(b, loose)
+  return versionA.compare(versionB) || versionA.compareBuild(versionB)
+}
+module.exports = compareBuild
 
 
 /***/ }),
 
-/***/ 472:
+/***/ 727:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const eq = __webpack_require__(758)
-const neq = __webpack_require__(852)
-const gt = __webpack_require__(412)
-const gte = __webpack_require__(265)
-const lt = __webpack_require__(603)
-const lte = __webpack_require__(907)
+const parse = __webpack_require__(608)
+const prerelease = (version, options) => {
+  const parsed = parse(version, options)
+  return (parsed && parsed.prerelease.length) ? parsed.prerelease : null
+}
+module.exports = prerelease
+
+
+/***/ }),
+
+/***/ 733:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const Range = __webpack_require__(696)
+const { ANY } = __webpack_require__(18)
+const satisfies = __webpack_require__(333)
+const compare = __webpack_require__(980)
+
+// Complex range `r1 || r2 || ...` is a subset of `R1 || R2 || ...` iff:
+// - Every simple range `r1, r2, ...` is a subset of some `R1, R2, ...`
+//
+// Simple range `c1 c2 ...` is a subset of simple range `C1 C2 ...` iff:
+// - If c is only the ANY comparator
+//   - If C is only the ANY comparator, return true
+//   - Else return false
+// - Let EQ be the set of = comparators in c
+// - If EQ is more than one, return true (null set)
+// - Let GT be the highest > or >= comparator in c
+// - Let LT be the lowest < or <= comparator in c
+// - If GT and LT, and GT.semver > LT.semver, return true (null set)
+// - If EQ
+//   - If GT, and EQ does not satisfy GT, return true (null set)
+//   - If LT, and EQ does not satisfy LT, return true (null set)
+//   - If EQ satisfies every C, return true
+//   - Else return false
+// - If GT
+//   - If GT is lower than any > or >= comp in C, return false
+//   - If GT is >=, and GT.semver does not satisfy every C, return false
+// - If LT
+//   - If LT.semver is greater than that of any > comp in C, return false
+//   - If LT is <=, and LT.semver does not satisfy every C, return false
+// - If any C is a = range, and GT or LT are set, return false
+// - Else return true
+
+const subset = (sub, dom, options) => {
+  sub = new Range(sub, options)
+  dom = new Range(dom, options)
+  let sawNonNull = false
+
+  OUTER: for (const simpleSub of sub.set) {
+    for (const simpleDom of dom.set) {
+      const isSub = simpleSubset(simpleSub, simpleDom, options)
+      sawNonNull = sawNonNull || isSub !== null
+      if (isSub)
+        continue OUTER
+    }
+    // the null set is a subset of everything, but null simple ranges in
+    // a complex range should be ignored.  so if we saw a non-null range,
+    // then we know this isn't a subset, but if EVERY simple range was null,
+    // then it is a subset.
+    if (sawNonNull)
+      return false
+  }
+  return true
+}
+
+const simpleSubset = (sub, dom, options) => {
+  if (sub.length === 1 && sub[0].semver === ANY)
+    return dom.length === 1 && dom[0].semver === ANY
+
+  const eqSet = new Set()
+  let gt, lt
+  for (const c of sub) {
+    if (c.operator === '>' || c.operator === '>=')
+      gt = higherGT(gt, c, options)
+    else if (c.operator === '<' || c.operator === '<=')
+      lt = lowerLT(lt, c, options)
+    else
+      eqSet.add(c.semver)
+  }
+
+  if (eqSet.size > 1)
+    return null
+
+  let gtltComp
+  if (gt && lt) {
+    gtltComp = compare(gt.semver, lt.semver, options)
+    if (gtltComp > 0)
+      return null
+    else if (gtltComp === 0 && (gt.operator !== '>=' || lt.operator !== '<='))
+      return null
+  }
+
+  // will iterate one or zero times
+  for (const eq of eqSet) {
+    if (gt && !satisfies(eq, String(gt), options))
+      return null
+
+    if (lt && !satisfies(eq, String(lt), options))
+      return null
+
+    for (const c of dom) {
+      if (!satisfies(eq, String(c), options))
+        return false
+    }
+    return true
+  }
+
+  let higher, lower
+  let hasDomLT, hasDomGT
+  for (const c of dom) {
+    hasDomGT = hasDomGT || c.operator === '>' || c.operator === '>='
+    hasDomLT = hasDomLT || c.operator === '<' || c.operator === '<='
+    if (gt) {
+      if (c.operator === '>' || c.operator === '>=') {
+        higher = higherGT(gt, c, options)
+        if (higher === c)
+          return false
+      } else if (gt.operator === '>=' && !satisfies(gt.semver, String(c), options))
+        return false
+    }
+    if (lt) {
+      if (c.operator === '<' || c.operator === '<=') {
+        lower = lowerLT(lt, c, options)
+        if (lower === c)
+          return false
+      } else if (lt.operator === '<=' && !satisfies(lt.semver, String(c), options))
+        return false
+    }
+    if (!c.operator && (lt || gt) && gtltComp !== 0)
+      return false
+  }
+
+  // if there was a < or >, and nothing in the dom, then must be false
+  // UNLESS it was limited by another range in the other direction.
+  // Eg, >1.0.0 <1.0.1 is still a subset of <2.0.0
+  if (gt && hasDomLT && !lt && gtltComp !== 0)
+    return false
+
+  if (lt && hasDomGT && !gt && gtltComp !== 0)
+    return false
+
+  return true
+}
+
+// >=1.2.3 is lower than >1.2.3
+const higherGT = (a, b, options) => {
+  if (!a)
+    return b
+  const comp = compare(a.semver, b.semver, options)
+  return comp > 0 ? a
+    : comp < 0 ? b
+    : b.operator === '>' && a.operator === '>=' ? b
+    : a
+}
+
+// <=1.2.3 is higher than <1.2.3
+const lowerLT = (a, b, options) => {
+  if (!a)
+    return b
+  const comp = compare(a.semver, b.semver, options)
+  return comp < 0 ? a
+    : comp > 0 ? b
+    : b.operator === '<' && a.operator === '<=' ? b
+    : a
+}
+
+module.exports = subset
+
+
+/***/ }),
+
+/***/ 741:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const parse = __webpack_require__(608)
+const valid = (version, options) => {
+  const v = parse(version, options)
+  return v ? v.version : null
+}
+module.exports = valid
+
+
+/***/ }),
+
+/***/ 747:
+/***/ (function(module) {
+
+module.exports = require("fs");
+
+/***/ }),
+
+/***/ 763:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const parse = __webpack_require__(608)
+const eq = __webpack_require__(464)
+
+const diff = (version1, version2) => {
+  if (eq(version1, version2)) {
+    return null
+  } else {
+    const v1 = parse(version1)
+    const v2 = parse(version2)
+    const hasPre = v1.prerelease.length || v2.prerelease.length
+    const prefix = hasPre ? 'pre' : ''
+    const defaultResult = hasPre ? 'prerelease' : ''
+    for (const key in v1) {
+      if (key === 'major' || key === 'minor' || key === 'patch') {
+        if (v1[key] !== v2[key]) {
+          return prefix + key
+        }
+      }
+    }
+    return defaultResult // may be undefined
+  }
+}
+module.exports = diff
+
+
+/***/ }),
+
+/***/ 776:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const parse = __webpack_require__(608)
+const clean = (version, options) => {
+  const s = parse(version.trim().replace(/^[=v]+/, ''), options)
+  return s ? s.version : null
+}
+module.exports = clean
+
+
+/***/ }),
+
+/***/ 807:
+/***/ (function(module) {
+
+// Note: this is the semver.org version of the spec that it implements
+// Not necessarily the package version of this code.
+const SEMVER_SPEC_VERSION = '2.0.0'
+
+const MAX_LENGTH = 256
+const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
+  /* istanbul ignore next */ 9007199254740991
+
+// Max safe segment length for coercion.
+const MAX_SAFE_COMPONENT_LENGTH = 16
+
+module.exports = {
+  SEMVER_SPEC_VERSION,
+  MAX_LENGTH,
+  MAX_SAFE_INTEGER,
+  MAX_SAFE_COMPONENT_LENGTH
+}
+
+
+/***/ }),
+
+/***/ 820:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const eq = __webpack_require__(464)
+const neq = __webpack_require__(931)
+const gt = __webpack_require__(981)
+const gte = __webpack_require__(120)
+const lt = __webpack_require__(505)
+const lte = __webpack_require__(524)
 
 const cmp = (a, op, b, loose) => {
   switch (op) {
@@ -1835,153 +2123,62 @@ module.exports = cmp
 
 /***/ }),
 
-/***/ 504:
+/***/ 821:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const compareBuild = __webpack_require__(68)
-const rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose))
-module.exports = rsort
+const compare = __webpack_require__(980)
+const rcompare = (a, b, loose) => compare(b, a, loose)
+module.exports = rcompare
 
 
 /***/ }),
 
-/***/ 563:
+/***/ 836:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-// given a set of versions and a range, create a "simplified" range
-// that includes the same versions that the original range does
-// If the original range is shorter than the simplified one, return that.
-const satisfies = __webpack_require__(854)
-const compare = __webpack_require__(807)
-module.exports = (versions, range, options) => {
-  const set = []
-  let min = null
-  let prev = null
-  const v = versions.sort((a, b) => compare(a, b, options))
-  for (const version of v) {
-    const included = satisfies(version, range, options)
-    if (included) {
-      prev = version
-      if (!min)
-        min = version
-    } else {
-      if (prev) {
-        set.push([min, prev])
+const SemVer = __webpack_require__(522)
+const Range = __webpack_require__(696)
+
+const maxSatisfying = (versions, range, options) => {
+  let max = null
+  let maxSV = null
+  let rangeObj = null
+  try {
+    rangeObj = new Range(range, options)
+  } catch (er) {
+    return null
+  }
+  versions.forEach((v) => {
+    if (rangeObj.test(v)) {
+      // satisfies(v, range, options)
+      if (!max || maxSV.compare(v) === -1) {
+        // compare(max, v, true)
+        max = v
+        maxSV = new SemVer(max, options)
       }
-      prev = null
-      min = null
     }
-  }
-  if (min)
-    set.push([min, null])
-
-  const ranges = []
-  for (const [min, max] of set) {
-    if (min === max)
-      ranges.push(min)
-    else if (!max && min === v[0])
-      ranges.push('*')
-    else if (!max)
-      ranges.push(`>=${min}`)
-    else if (min === v[0])
-      ranges.push(`<=${max}`)
-    else
-      ranges.push(`${min} - ${max}`)
-  }
-  const simplified = ranges.join(' || ')
-  const original = typeof range.raw === 'string' ? range.raw : String(range)
-  return simplified.length < original.length ? simplified : range
+  })
+  return max
 }
+module.exports = maxSatisfying
 
 
 /***/ }),
 
-/***/ 568:
+/***/ 931:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const parse = __webpack_require__(250)
-const valid = (version, options) => {
-  const v = parse(version, options)
-  return v ? v.version : null
-}
-module.exports = valid
+const compare = __webpack_require__(980)
+const neq = (a, b, loose) => compare(a, b, loose) !== 0
+module.exports = neq
 
 
 /***/ }),
 
-/***/ 603:
+/***/ 980:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const compare = __webpack_require__(807)
-const lt = (a, b, loose) => compare(a, b, loose) < 0
-module.exports = lt
-
-
-/***/ }),
-
-/***/ 679:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-// Determine if version is greater than all the versions possible in the range.
-const outside = __webpack_require__(86)
-const gtr = (version, range, options) => outside(version, range, '>', options)
-module.exports = gtr
-
-
-/***/ }),
-
-/***/ 726:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const Range = __webpack_require__(404)
-
-// Mostly just for testing and legacy API reasons
-const toComparators = (range, options) =>
-  new Range(range, options).set
-    .map(comp => comp.map(c => c.value).join(' ').trim().split(' '))
-
-module.exports = toComparators
-
-
-/***/ }),
-
-/***/ 747:
-/***/ (function(module) {
-
-module.exports = require("fs");
-
-/***/ }),
-
-/***/ 758:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compare = __webpack_require__(807)
-const eq = (a, b, loose) => compare(a, b, loose) === 0
-module.exports = eq
-
-
-/***/ }),
-
-/***/ 775:
-/***/ (function(module) {
-
-const debug = (
-  typeof process === 'object' &&
-  process.env &&
-  process.env.NODE_DEBUG &&
-  /\bsemver\b/i.test(process.env.NODE_DEBUG)
-) ? (...args) => console.error('SEMVER', ...args)
-  : () => {}
-
-module.exports = debug
-
-
-/***/ }),
-
-/***/ 807:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
+const SemVer = __webpack_require__(522)
 const compare = (a, b, loose) =>
   new SemVer(a, loose).compare(new SemVer(b, loose))
 
@@ -1990,10 +2187,20 @@ module.exports = compare
 
 /***/ }),
 
-/***/ 827:
+/***/ 981:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-const outside = __webpack_require__(86)
+const compare = __webpack_require__(980)
+const gt = (a, b, loose) => compare(a, b, loose) > 0
+module.exports = gt
+
+
+/***/ }),
+
+/***/ 993:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const outside = __webpack_require__(162)
 // Determine if version is less than all the versions possible in the range
 const ltr = (version, range, options) => outside(version, range, '<', options)
 module.exports = ltr
@@ -2001,233 +2208,32 @@ module.exports = ltr
 
 /***/ }),
 
-/***/ 828:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-// just pre-load all the stuff that index.js lazily exports
-const internalRe = __webpack_require__(144)
-module.exports = {
-  re: internalRe.re,
-  src: internalRe.src,
-  tokens: internalRe.t,
-  SEMVER_SPEC_VERSION: __webpack_require__(862).SEMVER_SPEC_VERSION,
-  SemVer: __webpack_require__(346),
-  compareIdentifiers: __webpack_require__(263).compareIdentifiers,
-  rcompareIdentifiers: __webpack_require__(263).rcompareIdentifiers,
-  parse: __webpack_require__(250),
-  valid: __webpack_require__(568),
-  clean: __webpack_require__(886),
-  inc: __webpack_require__(185),
-  diff: __webpack_require__(82),
-  major: __webpack_require__(959),
-  minor: __webpack_require__(269),
-  patch: __webpack_require__(902),
-  prerelease: __webpack_require__(11),
-  compare: __webpack_require__(807),
-  rcompare: __webpack_require__(305),
-  compareLoose: __webpack_require__(174),
-  compareBuild: __webpack_require__(68),
-  sort: __webpack_require__(313),
-  rsort: __webpack_require__(504),
-  gt: __webpack_require__(412),
-  lt: __webpack_require__(603),
-  eq: __webpack_require__(758),
-  neq: __webpack_require__(852),
-  gte: __webpack_require__(265),
-  lte: __webpack_require__(907),
-  cmp: __webpack_require__(472),
-  coerce: __webpack_require__(351),
-  Comparator: __webpack_require__(179),
-  Range: __webpack_require__(404),
-  satisfies: __webpack_require__(854),
-  toComparators: __webpack_require__(726),
-  maxSatisfying: __webpack_require__(324),
-  minSatisfying: __webpack_require__(339),
-  minVersion: __webpack_require__(896),
-  validRange: __webpack_require__(991),
-  outside: __webpack_require__(86),
-  gtr: __webpack_require__(679),
-  ltr: __webpack_require__(827),
-  intersects: __webpack_require__(373),
-  simplifyRange: __webpack_require__(563),
-  subset: __webpack_require__(147),
-}
-
-
-/***/ }),
-
-/***/ 852:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compare = __webpack_require__(807)
-const neq = (a, b, loose) => compare(a, b, loose) !== 0
-module.exports = neq
-
-
-/***/ }),
-
-/***/ 854:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const Range = __webpack_require__(404)
-const satisfies = (version, range, options) => {
-  try {
-    range = new Range(range, options)
-  } catch (er) {
-    return false
-  }
-  return range.test(version)
-}
-module.exports = satisfies
-
-
-/***/ }),
-
-/***/ 862:
+/***/ 995:
 /***/ (function(module) {
 
-// Note: this is the semver.org version of the spec that it implements
-// Not necessarily the package version of this code.
-const SEMVER_SPEC_VERSION = '2.0.0'
+const numeric = /^[0-9]+$/
+const compareIdentifiers = (a, b) => {
+  const anum = numeric.test(a)
+  const bnum = numeric.test(b)
 
-const MAX_LENGTH = 256
-const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
-  /* istanbul ignore next */ 9007199254740991
+  if (anum && bnum) {
+    a = +a
+    b = +b
+  }
 
-// Max safe segment length for coercion.
-const MAX_SAFE_COMPONENT_LENGTH = 16
+  return a === b ? 0
+    : (anum && !bnum) ? -1
+    : (bnum && !anum) ? 1
+    : a < b ? -1
+    : 1
+}
+
+const rcompareIdentifiers = (a, b) => compareIdentifiers(b, a)
 
 module.exports = {
-  SEMVER_SPEC_VERSION,
-  MAX_LENGTH,
-  MAX_SAFE_INTEGER,
-  MAX_SAFE_COMPONENT_LENGTH
+  compareIdentifiers,
+  rcompareIdentifiers
 }
-
-
-/***/ }),
-
-/***/ 886:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const parse = __webpack_require__(250)
-const clean = (version, options) => {
-  const s = parse(version.trim().replace(/^[=v]+/, ''), options)
-  return s ? s.version : null
-}
-module.exports = clean
-
-
-/***/ }),
-
-/***/ 896:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const Range = __webpack_require__(404)
-const gt = __webpack_require__(412)
-
-const minVersion = (range, loose) => {
-  range = new Range(range, loose)
-
-  let minver = new SemVer('0.0.0')
-  if (range.test(minver)) {
-    return minver
-  }
-
-  minver = new SemVer('0.0.0-0')
-  if (range.test(minver)) {
-    return minver
-  }
-
-  minver = null
-  for (let i = 0; i < range.set.length; ++i) {
-    const comparators = range.set[i]
-
-    comparators.forEach((comparator) => {
-      // Clone to avoid manipulating the comparator's semver object.
-      const compver = new SemVer(comparator.semver.version)
-      switch (comparator.operator) {
-        case '>':
-          if (compver.prerelease.length === 0) {
-            compver.patch++
-          } else {
-            compver.prerelease.push(0)
-          }
-          compver.raw = compver.format()
-          /* fallthrough */
-        case '':
-        case '>=':
-          if (!minver || gt(minver, compver)) {
-            minver = compver
-          }
-          break
-        case '<':
-        case '<=':
-          /* Ignore maximum versions */
-          break
-        /* istanbul ignore next */
-        default:
-          throw new Error(`Unexpected operation: ${comparator.operator}`)
-      }
-    })
-  }
-
-  if (minver && range.test(minver)) {
-    return minver
-  }
-
-  return null
-}
-module.exports = minVersion
-
-
-/***/ }),
-
-/***/ 902:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const patch = (a, loose) => new SemVer(a, loose).patch
-module.exports = patch
-
-
-/***/ }),
-
-/***/ 907:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const compare = __webpack_require__(807)
-const lte = (a, b, loose) => compare(a, b, loose) <= 0
-module.exports = lte
-
-
-/***/ }),
-
-/***/ 959:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const SemVer = __webpack_require__(346)
-const major = (a, loose) => new SemVer(a, loose).major
-module.exports = major
-
-
-/***/ }),
-
-/***/ 991:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const Range = __webpack_require__(404)
-const validRange = (range, options) => {
-  try {
-    // Return '*' instead of '' so that truthiness works.
-    // This will throw if it's invalid anyway
-    return new Range(range, options).range || '*'
-  } catch (er) {
-    return null
-  }
-}
-module.exports = validRange
 
 
 /***/ })
