@@ -137,7 +137,7 @@
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
         "mobx-react": "6.1.8",
-        "node-fetch": "2.6.0",
+        "node-fetch": "2.6.1",
         "react": "16.13.1",
         "react-dom": "16.13.1",
         "semver": "7.3.2",
