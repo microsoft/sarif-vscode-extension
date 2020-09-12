@@ -14,10 +14,6 @@
         "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
     },
     "icon": "icon.png",
-    "galleryBanner": {
-        "color": "#c9c2a0",
-        "theme": "light"
-    },
     "categories": [
         "Other"
     ],
