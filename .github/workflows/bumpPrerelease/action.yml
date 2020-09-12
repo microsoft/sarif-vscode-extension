@@ -1,0 +1,7 @@
+name: 'Bump Prerelease'
+runs:
+  using: 'node12'
+  main: 'index.js'
+outputs:
+  version:
+    description: "The version of current npm package"
