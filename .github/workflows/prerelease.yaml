@@ -1,8 +1,10 @@
 name: Create Pre-release
 on:
-  push:
-    branches:
-      - master
+  # push:
+  #   branches:
+  #     - master
+  workflow_dispatch:
+
 
 jobs:
   createPrerelease:
