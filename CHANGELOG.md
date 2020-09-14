@@ -1,5 +1,8 @@
 # Change Log
 
+## 3.0.0
+* See README for details
+
 ## 2.16.0
 * Open file dialogs for tool file conversion now include an "All files" ("*") filter. [issue #200](https://github.com/Microsoft/sarif-vscode-extension/issues/200)
 
