@@ -12,15 +12,15 @@ const proxyquire = require('proxyquire').noCallThru();
 // Releases typically ordered most recent first.
 const releases = [
     {
-        'tag_name': 'v3.2020.430009-insiders',
+        'tag_name': 'v3.0.1-0',
         'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/26068659/assets'
     },
     {
-        'tag_name': 'v3.2020.428010-insiders',
+        'tag_name': 'v3.0.0', // installedVersion
         'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25973815/assets'
     },
     {
-        'tag_name': 'v3.2020.428006-insiders',
+        'tag_name': 'v3.0.0-0',
         'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25964127/assets'
     },
     {
@@ -83,7 +83,7 @@ const makeStubs = () => ({
             executeCommand: fake() // (command: string, ...rest: any[]) => undefined
         },
         extensions: {
-            getExtension: () => ({ packageJSON: { version: '3.2020.428010' } })
+            getExtension: () => ({ packageJSON: { version: '3.0.0' } })
         },
         Uri: {
             file: (path: string) => ({ path })
@@ -107,12 +107,12 @@ describe('update', () => {
 
     it('does not update, if already up to date', async () => {
         const stubs = makeStubs();
-        stubs['vscode'].extensions.getExtension = () => ({ packageJSON: { version: '3.2020.430009-insiders' } });
+        stubs['vscode'].extensions.getExtension = () => ({ packageJSON: { version: '3.0.1-0' } });
         const { update } = proxyquire('./update', stubs);
         assert.strictEqual(await update(), false);
     });
 
-    it('does not update, update channel is incorrect', async () => {
+    it('does not update, update channel is not "Insiders"', async () => {
         const stubs = makeStubs();
         stubs['follow-redirects'];
         stubs['vscode'].workspace.getConfiguration = () => ({ get: () => 'Default' });

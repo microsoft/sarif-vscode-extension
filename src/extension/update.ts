@@ -5,7 +5,7 @@ import { https as redirectableHttps } from 'follow-redirects';
 import fs from 'fs';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
-import { gt, prerelease } from 'semver';
+import { gt } from 'semver';
 import { tmpNameSync } from 'tmp';
 import { parse as urlParse } from 'url';
 import { commands, extensions, Uri, window, workspace } from 'vscode';
@@ -38,7 +38,7 @@ function getHttpsProxyAgent() {
         port: port && +port,
         host: host,
         auth: auth,
-        secureProxy: vscode.workspace.getConfiguration().get('http.proxyStrictSSL', true)
+        secureProxy: workspace.getConfiguration().get('http.proxyStrictSSL', true)
     });
 }
 
@@ -69,10 +69,7 @@ export async function update() {
             const releasesResponse = await fetch('https://api.github.com/repos/Microsoft/sarif-vscode-extension/releases', { agent });
             if (releasesResponse.status !== 200) return false;
             const releases = await releasesResponse.json() as { tag_name: string, assets_url: string }[];
-            const release = releases.find(release =>
-                prerelease(release.tag_name)?.some(tag => tag === 'insiders')
-                && gt(release.tag_name, installedVersion)
-            );
+            const release = releases.find(release => gt(release.tag_name, installedVersion));
             if (!release) return false;
 
             // 2) Find the right asset from the release assets.
