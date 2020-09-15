@@ -101,6 +101,10 @@ export class Panel {
                 store.logs.removeFirst(log => log._uri === message.uri);
                 break;
             }
+            case 'removeAllLogs': {
+                store.logs.splice(0);
+                break;
+            }
             case 'select': {
                 const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
                 const validatedUri = await basing.translateArtifactToLocal(uri);

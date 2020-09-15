@@ -55,7 +55,12 @@ export { DetailsLayouts } from './details.layouts';
                         </div>
                         <Icon name={allCollapsed ? 'expand-all' : 'collapse-all'}
                             title={allCollapsed ? 'Expand All' : 'Collapse All'}
+                            visible={!!activeTableStore}
                             onClick={() => activeTableStore?.groupsFilteredSorted.forEach(group => group.expanded = allCollapsed) } />
+                        <Icon name="close-all"
+                            title="Remove All Logs"
+                            visible={!activeTableStore}
+                            onClick={() => vscode.postMessage({ command: 'removeAllLogs' })} />
                         <Icon name="folder-opened" title="Open Log" onClick={() => vscode.postMessage({ command: 'open' })} />
                     </>}>
                     <Tab name={store.tabs[0]} count={store.resultTableStoreByLocation.groupsFilteredSorted.length}>
