@@ -58,9 +58,9 @@ export { DetailsLayouts } from './details.layouts';
                             visible={!!activeTableStore}
                             onClick={() => activeTableStore?.groupsFilteredSorted.forEach(group => group.expanded = allCollapsed) } />
                         <Icon name="close-all"
-                            title="Remove All Logs"
+                            title="Close All Logs"
                             visible={!activeTableStore}
-                            onClick={() => vscode.postMessage({ command: 'removeAllLogs' })} />
+                            onClick={() => vscode.postMessage({ command: 'closeAllLogs' })} />
                         <Icon name="folder-opened" title="Open Log" onClick={() => vscode.postMessage({ command: 'open' })} />
                     </>}>
                     <Tab name={store.tabs[0]} count={store.resultTableStoreByLocation.groupsFilteredSorted.length}>
@@ -89,8 +89,8 @@ export { DetailsLayouts } from './details.layouts';
                                 return <div key={i} className="svListItem">
                                     <div>{pathname.file}</div>
                                     <div className="ellipsis svSecondary">{decodeFileUri(log._uri)}</div>
-                                    <Icon name="close" title="Remove Log"
-                                        onClick={() => vscode.postMessage({ command: 'removeLog', uri: log._uri })} />
+                                    <Icon name="close" title="Close Log"
+                                        onClick={() => vscode.postMessage({ command: 'closeLog', uri: log._uri })} />
                                 </div>;
                             })}
                         </div>
