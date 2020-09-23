@@ -152,26 +152,13 @@ describe('effectiveLevel', () => {
             ]
         } as Run;
 
-        // These length checks can't fail because we defined the test data above,
-        // but they prevent the compiler from complaining below that the result
-        // objects or the rule object might be undefined.
-        if (run.results?.length != 2) {
-            throw `'results' array does not have expected length.`;
-        }
-
-        const rules = run.tool.driver.rules;
-        if (rules?.length != 1) {
-            throw `'rules' array does not have expected length.`;
-        }
-
-        const rule = rules[0];
-
         // Hook up each result to its rule.
-        run.results[0]._rule = rule;
-        run.results[1]._rule = rule;
+        const rule = run.tool.driver.rules![0];
+        run.results![0]._rule = rule;
+        run.results![1]._rule = rule;
 
-        assert.strictEqual(effectiveLevel(run.results[0]), 'error');
-        assert.strictEqual(effectiveLevel(run.results[1]), 'error');
+        assert.strictEqual(effectiveLevel(run.results![0]), 'error');
+        assert.strictEqual(effectiveLevel(run.results![1]), 'error');
     });
 });
 
