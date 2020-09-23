@@ -152,7 +152,7 @@ describe('effectiveLevel', () => {
             ]
         } as Run;
 
-        // This length checks can't fail because we defined the test data above,
+        // These length checks can't fail because we defined the test data above,
         // but they prevent the compiler from complaining below that the result
         // objects or the rule object might be undefined.
         if (run.results?.length != 2) {
