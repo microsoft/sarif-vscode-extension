@@ -88,7 +88,7 @@ describe('augmentLog', () => {
 
 describe('effectiveLevel', () => {
     it(`treats non-'fail' results appropriately`, () => {
-        var result = {
+        let result = {
             kind: 'informational'
         } as Result;
 
