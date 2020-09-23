@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import assert from 'assert';
-import { Log, ReportingDescriptor, Result } from 'sarif';
+import { Log, ReportingDescriptor, Result, Run } from 'sarif';
 import { augmentLog, decodeFileUri, effectiveLevel } from '.';
 import './extension';
 
@@ -87,40 +87,32 @@ describe('augmentLog', () => {
 });
 
 describe('effectiveLevel', () => {
-    it(`treats 'informational' as 'note'`, () => {
-        const result = {
+    it(`treats non-'fail' results appropriately`, () => {
+        var result = {
             kind: 'informational'
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
-    });
 
-    it(`treats 'notApplicable' as 'note'`, () => {
-        const result = {
+        result = {
             kind: 'notApplicable'
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
-    });
 
-    it(`treats 'pass' as 'note'`, () => {
-        const result = {
+        result = {
             kind: 'pass'
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
-    });
 
-    it(`treats 'open' as 'warning'`, () => {
-        const result = {
+        result = {
             kind: 'open'
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'warning');
-    });
 
-    it(`treats 'review' as 'warning'`, () => {
-        const result = {
+        result = {
             kind: 'review'
         } as Result;
 
@@ -134,6 +126,52 @@ describe('effectiveLevel', () => {
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'error');
+    });
+
+    it (`takes 'level' from 'rule' if necessary`, () => {
+        const run = {
+            tool: {
+                driver: {
+                    rules: [
+                        {
+                            defaultConfiguration: {
+                                level: 'error'
+                            }
+                        }
+                    ]
+                }
+            },
+            results: [
+                {
+                    kind: 'fail'
+                    // 'level' not specified.
+                },
+                {
+                    // Neither 'kind' nor 'level' specified.
+                }
+            ]
+        } as Run;
+
+        // This length checks can't fail because we defined the test data above,
+        // but they prevent the compiler from complaining below that the result
+        // objects or the rule object might be undefined.
+        if (run.results?.length != 2) {
+            throw `'results' array does not have expected length.`;
+        }
+
+        const rules = run.tool.driver.rules;
+        if (rules?.length != 1) {
+            throw `'rules' array does not have expected length.`;
+        }
+
+        const rule = rules[0];
+
+        // Hook up each result to its rule.
+        run.results[0]._rule = rule;
+        run.results[1]._rule = rule;
+
+        assert.strictEqual(effectiveLevel(run.results[0]), 'error');
+        assert.strictEqual(effectiveLevel(run.results[1]), 'error');
     });
 });
 

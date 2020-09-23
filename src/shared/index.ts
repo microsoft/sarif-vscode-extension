@@ -151,7 +151,7 @@ export function effectiveLevel(result: Result): Result.level {
         case 'review':
             return 'warning';
         case 'fail':
-        default:    // default case should never happen.
+        default:
             return result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
     }
 }
