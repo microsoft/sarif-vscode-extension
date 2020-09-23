@@ -126,7 +126,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
             result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
 
-            result.level = result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
+            result.level = effectiveLevel(result);
             result.baselineState = result.baselineState ?? 'new';
             result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
                 ? 'not suppressed'
@@ -139,6 +139,21 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
         });
     });
     log._distinct = mapDistinct(fileAndUris);
+}
+
+export function effectiveLevel(result: Result): Result.level {
+    switch (result.kind) {
+        case 'informational':
+        case 'notApplicable':
+        case 'pass':
+            return 'note';
+        case 'open':
+        case 'review':
+            return 'warning';
+        case 'fail':
+        default:
+            return result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
+    }
 }
 
 /*

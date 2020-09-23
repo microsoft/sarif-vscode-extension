@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 import assert from 'assert';
-import { Log, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, decodeFileUri } from '.';
+import { Log, ReportingDescriptor, Result, Run } from 'sarif';
+import { augmentLog, decodeFileUri, effectiveLevel } from '.';
 import './extension';
 
 describe('augmentLog', () => {
@@ -83,6 +83,82 @@ describe('augmentLog', () => {
 
         augmentLog(log, new Map<string, ReportingDescriptor>());
         assert.strictEqual(run0result._rule, run1result._rule);
+    });
+});
+
+describe('effectiveLevel', () => {
+    it(`treats non-'fail' results appropriately`, () => {
+        let result = {
+            kind: 'informational'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+
+        result = {
+            kind: 'notApplicable'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+
+        result = {
+            kind: 'pass'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+
+        result = {
+            kind: 'open'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'warning');
+
+        result = {
+            kind: 'review'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'warning');
+    });
+
+    it (`treats 'fail' according to 'level'`, () => {
+        const result = {
+            kind: 'fail',
+            level: 'error'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'error');
+    });
+
+    it (`takes 'level' from 'rule' if necessary`, () => {
+        const run = {
+            tool: {
+                driver: {
+                    rules: [
+                        {
+                            defaultConfiguration: {
+                                level: 'error'
+                            }
+                        }
+                    ]
+                }
+            },
+            results: [
+                {
+                    kind: 'fail'
+                    // 'level' not specified.
+                },
+                {
+                    // Neither 'kind' nor 'level' specified.
+                }
+            ]
+        } as Run;
+
+        // Hook up each result to its rule.
+        const rule = run.tool.driver.rules![0];
+        run.results![0]._rule = rule;
+        run.results![1]._rule = rule;
+
+        assert.strictEqual(effectiveLevel(run.results![0]), 'error');
+        assert.strictEqual(effectiveLevel(run.results![1]), 'error');
     });
 });
 
