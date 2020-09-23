@@ -97,8 +97,12 @@ export class Panel {
                 store.logs.push(...await loadLogs(uris));
                 break;
             }
-            case 'removeLog': {
+            case 'closeLog': {
                 store.logs.removeFirst(log => log._uri === message.uri);
+                break;
+            }
+            case 'closeAllLogs': {
+                store.logs.splice(0);
                 break;
             }
             case 'select': {

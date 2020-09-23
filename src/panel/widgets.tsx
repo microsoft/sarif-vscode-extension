@@ -39,9 +39,10 @@ export class Badge extends PureComponent<{ text: { toString: () => string } }> {
     }
 }
 
-export class Icon extends PureComponent<{ name: string, title?: string } & React.HTMLAttributes<HTMLDivElement>> {
+export class Icon extends PureComponent<{ name: string, title?: string, visible?: boolean } & React.HTMLAttributes<HTMLDivElement>> {
     render() {
-        const {name, ...divProps} = this.props;
+        const {name, visible, ...divProps} = this.props;
+        if (visible !== undefined && !visible) return null;
         return <div className={`codicon codicon-${name}`} {...divProps}></div>;
     }
 }

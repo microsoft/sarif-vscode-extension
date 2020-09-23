@@ -9,7 +9,7 @@ describe('TableStore', () => {
     const groupBy = (item: number) => item % 2 === 0 ? 'even' : 'odd';
     const selection = observable.box();
 
-    it('should collapse and expand row groups', () => {
+    it.skip('should collapse and expand row groups', () => {
         const itemSource = { results: [1,2,3,4,5] };
         const tableStore = new TableStore(groupBy, itemSource, selection);
 
