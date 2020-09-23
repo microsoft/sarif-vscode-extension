@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { Log, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, decodeFileUri } from '.';
+import { augmentLog, decodeFileUri, effectiveLevel } from '.';
 import './extension';
 
 describe('augmentLog', () => {
@@ -83,6 +83,57 @@ describe('augmentLog', () => {
 
         augmentLog(log, new Map<string, ReportingDescriptor>());
         assert.strictEqual(run0result._rule, run1result._rule);
+    });
+});
+
+describe('effectiveLevel', () => {
+    it(`treats 'informational' as 'note'`, () => {
+        const result = {
+            kind: 'informational'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+    });
+
+    it(`treats 'notApplicable' as 'note'`, () => {
+        const result = {
+            kind: 'notApplicable'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+    });
+
+    it(`treats 'pass' as 'note'`, () => {
+        const result = {
+            kind: 'pass'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'note');
+    });
+
+    it(`treats 'open' as 'warning'`, () => {
+        const result = {
+            kind: 'open'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'warning');
+    });
+
+    it(`treats 'review' as 'warning'`, () => {
+        const result = {
+            kind: 'review'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'warning');
+    });
+
+    it (`treats 'fail' according to 'level'`, () => {
+        const result = {
+            kind: 'fail',
+            level: 'error'
+        } as Result;
+
+        assert.strictEqual(effectiveLevel(result), 'error');
     });
 });
 
