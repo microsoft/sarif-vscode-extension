@@ -31,7 +31,7 @@ describe('loadLogs', () => {
     const uris = Object.keys(files).map(path => Uri.file(path));
     const stubs = {
         'fs': {
-            readFileSync: (fsPath: string) => JSON.stringify(files[fsPath]),
+            readFileSync: (fsPath: string) => JSON.stringify(files[Uri.file(fsPath).path]),
         },
         'vscode': {
             Uri,
