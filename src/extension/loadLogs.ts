@@ -56,7 +56,7 @@ export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log
         const schema = log.$schema
             ?.replace('http://json.schemastore.org/sarif-', '')
             ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
-             ?.replace(/\.json$/, '');
+            ?.replace(/\.json$/, '');
         if (schema === undefined || schema === '2.1.0-rtm.5'
             || schema === 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0'
             || schema == 'https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0') {
