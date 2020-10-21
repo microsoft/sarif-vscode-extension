@@ -83,7 +83,7 @@ const makeStubs = () => ({
             executeCommand: fake() // (command: string, ...rest: any[]) => undefined
         },
         extensions: {
-            getExtension: () => ({ packageJSON: { version: '3.0.1' } })
+            getExtension: () => ({ packageJSON: { version: '3.0.0' } })
         },
         Uri: {
             file: (path: string) => ({ path })
