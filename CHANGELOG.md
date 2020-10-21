@@ -1,5 +1,9 @@
 # Change Log
 
+## 3.0.1
+
+* Fixed bug that prevented opening files that declared the `$schema` from docs.open-oasys.org [issue #363](https://github.com/Microsoft/sarif-vscode-extension/issues/363)
+
 ## 3.0.0
 * See README for details
 
