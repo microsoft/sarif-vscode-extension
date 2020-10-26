@@ -6,6 +6,7 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
+import { activateFeedback } from './feedback';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
@@ -46,6 +47,7 @@ export async function activate(context: ExtensionContext) {
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store, panel);
     activateVirtualDocuments(disposables, store);
+    activateFeedback(disposables);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
