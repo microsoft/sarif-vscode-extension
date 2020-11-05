@@ -1,9 +1,11 @@
 name: Create Pre-release
 on:
-  # push:
-  #   branches:
-  #     - master
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag'     
+        required: true
+        default: '0.0.0-x'
 
 jobs:
   createPrerelease:
@@ -19,8 +21,6 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - id: bumpPrerelease
-        uses: ./.github/workflows/bumpPrerelease
       - run: |
           npm install
           npm run package
@@ -29,8 +29,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.bumpPrerelease.outputs.version }}
-          release_name: ${{ steps.bumpPrerelease.outputs.version }}
+          tag_name: ${{ github.event.inputs.tag }}
+          release_name: ${{ github.event.inputs.tag }}
           prerelease: true
       - id: upload-release-asset 
         uses: actions/upload-release-asset@v1
@@ -38,6 +38,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./sarif-viewer-${{ steps.bumpPrerelease.outputs.version }}.vsix
-          asset_name: sarif-viewer-${{ steps.bumpPrerelease.outputs.version }}.vsix
+          asset_path: ./sarif-viewer-${{ github.event.inputs.tag }}.vsix
+          asset_name: sarif-viewer-${{ github.event.inputs.tag }}.vsix
           asset_content_type: application/vsix
