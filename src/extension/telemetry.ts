@@ -18,3 +18,7 @@ export function deactivate() {
 export function sendLogVersion(version: string, $schema: string) {
     reporter?.sendTelemetryEvent('logVersion', { version, $schema });
 }
+
+export function sendFeedback(reason: string, feedback: Record<string, string> = {}) {
+    reporter?.sendTelemetryEvent('feedback', { reason, ...feedback });
+}
