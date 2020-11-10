@@ -47,7 +47,7 @@ export async function activate(context: ExtensionContext) {
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store, panel);
     activateVirtualDocuments(disposables, store);
-    activateFeedback(disposables);
+    activateFeedback(disposables, store);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
