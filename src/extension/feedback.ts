@@ -17,7 +17,14 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
     languages.registerHoverProvider('*', new class implements HoverProvider {
         provideHover(document: TextDocument, position: Position, _token: CancellationToken): ProviderResult<Hover> {
             const diagnostics = languages.getDiagnostics(document.uri);
-            const diagnostic = diagnostics.find(d => d.range.contains(position)) as ResultDiagnostic | undefined;
+            const diagnostic = diagnostics.find(diag => {
+                let {range} = diag;
+                if (range.isEmpty) {
+                    // Accomodating PREfast as it only expresses the range to the beginning of the last token.
+                    range = document.getWordRangeAtPosition(range.start) ?? range;
+                };
+                return range.contains(position)
+            }) as ResultDiagnostic | undefined;
             const result = diagnostic?.result;
             if (!result) return undefined;
 
