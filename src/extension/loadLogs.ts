@@ -19,7 +19,8 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
                 const file = readFileSync(uri.fsPath, 'utf8')  // Assume scheme file.
                     .replace(/^\uFEFF/, ''); // Trim BOM.
                 const log = JSON.parse(file) as Log;
-                log._uri = uri.toString();
+                // skipEncoding=true because otherwise 'file:///c:' incorrectly round-trips as 'file:///c%3A'.
+                log._uri = uri.toString(true /* skipEncoding */);
                 return log;
             } catch (error) {
                 window.showErrorMessage(`Failed to parse '${uri.fsPath}'`);
