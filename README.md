@@ -3,7 +3,7 @@
 
 # SARIF Viewer for Visual Studio Code
 
-A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/VSCode) that adds support for viewing [SARIF](http://sarifweb.azurewebsites.net/) logs. SARIF log results can be viewed as squiggles in your source, in the Problems list, or in a dedicated **SARIF Results Panel**. The **SARIF Results Panel** offers richer grouping, filtering, column, and details options over the standard Problems list.
+A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/VSCode) that adds support for viewing [SARIF](https://sarifweb.azurewebsites.net/) logs. SARIF log results can be viewed as squiggles in your source, in the Problems list, or in a dedicated **SARIF Results Panel**. The **SARIF Results Panel** offers richer grouping, filtering, column, and details options over the standard Problems list.
 
 ![overview](README.hero.png)
 
