@@ -13,6 +13,15 @@ function expandRange(document: TextDocument, range: Range) {
     return new Range(startLine, 0, endLine, Number.MAX_SAFE_INTEGER) // Arbitrarily large number representing the rest of the line.
 }
 
+type FeedbackListener = (reason: string, details: Record<string, string>) => void
+const feedbackListeners = [] as FeedbackListener[];
+export function registerFeedbackListener(listener: FeedbackListener): Disposable {
+    feedbackListeners.push(listener);
+    return new Disposable(
+        () => feedbackListeners.removeFirst(item => item === listener)
+    );
+}
+
 export function activateFeedback(disposables: Disposable[], store: Store) {
     languages.registerHoverProvider('*', new class implements HoverProvider {
         provideHover(document: TextDocument, position: Position, _token: CancellationToken): ProviderResult<Hover> {
@@ -53,6 +62,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             ruleId: result._rule?.id ?? '',
         };
         sendFeedback('Helpful', feedback);
+        feedbackListeners.forEach(listener => listener('Helpful', feedback));
         window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 
@@ -94,6 +104,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             snippet,
         };
         sendFeedback(reason, feedback);
+        feedbackListeners.forEach(listener => listener('Helpful', feedback));
         await window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 }

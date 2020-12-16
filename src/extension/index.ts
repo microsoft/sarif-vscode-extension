@@ -6,7 +6,7 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { activateFeedback } from './feedback';
+import { activateFeedback, registerFeedbackListener } from './feedback';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
@@ -79,6 +79,7 @@ export async function activate(context: ExtensionContext) {
         set uriBases(values) {
             baser.uriBases = values.map(uri => uri.toString());
         },
+        registerFeedbackListener,
     };
 }
 
