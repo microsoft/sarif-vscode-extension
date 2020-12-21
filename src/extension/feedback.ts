@@ -14,13 +14,21 @@ function expandRange(document: TextDocument, range: Range) {
 }
 
 type FeedbackListener = (reason: string, details: Record<string, string>) => void
-const feedbackListeners = new Map<string, FeedbackListener>();
-export function registerFeedbackListener(extensionId: string, listener: FeedbackListener): void {
+const feedbackListeners = new Map<string, { listener: FeedbackListener, defaultDetails: Record<string, string> }>();
+export function registerFeedbackListener(
+    extensionId: string,
+    listener: FeedbackListener,
+    defaultDetails: Record<string, string> = {},
+    ): void {
+
     if (feedbackListeners.has(extensionId)) return;
-    feedbackListeners.set(extensionId, listener);
+    feedbackListeners.set(extensionId, { listener, defaultDetails });
 }
 export function unregisterFeedbackListener(extensionId: string): void {
     feedbackListeners.delete(extensionId);
+}
+function notifyListeners(reason: string, feedback: Record<string, string> = {}) {
+    feedbackListeners.forEach(({ listener, defaultDetails }) => listener(reason, { ...defaultDetails, ...feedback }));
 }
 
 export function activateFeedback(disposables: Disposable[], store: Store) {
@@ -63,7 +71,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             ruleId: result._rule?.id ?? '',
         };
         sendFeedback('Helpful', feedback);
-        feedbackListeners.forEach(listener => listener('Helpful', feedback));
+        notifyListeners('Helpful', feedback);
         window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 
@@ -105,7 +113,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             snippet,
         };
         sendFeedback(reason, feedback);
-        feedbackListeners.forEach(listener => listener('Helpful', feedback));
+        notifyListeners(reason, feedback);
         await window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 }
