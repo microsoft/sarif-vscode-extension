@@ -14,12 +14,13 @@ function expandRange(document: TextDocument, range: Range) {
 }
 
 type FeedbackListener = (reason: string, details: Record<string, string>) => void
-const feedbackListeners = [] as FeedbackListener[];
-export function registerFeedbackListener(listener: FeedbackListener): Disposable {
-    feedbackListeners.push(listener);
-    return new Disposable(
-        () => feedbackListeners.removeFirst(item => item === listener)
-    );
+const feedbackListeners = new Map<string, FeedbackListener>();
+export function registerFeedbackListener(extensionId: string, listener: FeedbackListener): void {
+    if (feedbackListeners.has(extensionId)) return;
+    feedbackListeners.set(extensionId, listener);
+}
+export function unregisterFeedbackListener(extensionId: string): void {
+    feedbackListeners.delete(extensionId);
 }
 
 export function activateFeedback(disposables: Disposable[], store: Store) {
