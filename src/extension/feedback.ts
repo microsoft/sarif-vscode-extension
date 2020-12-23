@@ -46,6 +46,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             const result = diagnostic?.result;
             if (!result) return undefined;
 
+            // Need to fix the range here also.
             const feedback = encodeURIComponent(JSON.stringify([
                 result._id,
                 document.getText(expandRange(document, diagnostic!.range)),
