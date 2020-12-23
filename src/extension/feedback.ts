@@ -72,7 +72,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             ruleId: result._rule?.id ?? '',
         };
         sendFeedback('Helpful', feedback);
-        notifyListeners('Helpful', feedback);
+        notifyListeners('Helpful', { ...feedback, artifactUri: result._uri ?? '' });
         window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 
@@ -114,7 +114,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             snippet,
         };
         sendFeedback(reason, feedback);
-        notifyListeners(reason, feedback);
+        notifyListeners(reason, { ...feedback, artifactUri: result._uri ?? '' });
         await window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 }
