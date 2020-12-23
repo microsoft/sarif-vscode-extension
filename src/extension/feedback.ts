@@ -60,7 +60,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
     });
 
     const feedbackConfirmationMessage = 'Feedback sent.';
-    disposables.push(commands.registerCommand('sarif.feedbackPositive', (resultId: ResultId, _snippet: string) => {
+    disposables.push(commands.registerCommand('sarif.feedbackPositive', (resultId: ResultId, snippet: string) => {
         const [logUri, runIndex, resultIndex] = resultId;
         const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
         if (!result) return;
@@ -72,7 +72,7 @@ export function activateFeedback(disposables: Disposable[], store: Store) {
             ruleId: result._rule?.id ?? '',
         };
         sendFeedback('Helpful', feedback);
-        notifyListeners('Helpful', { ...feedback, artifactUri: result._uri ?? '' });
+        notifyListeners('Helpful', { ...feedback, snippet, artifactUri: result._uri ?? '' });
         window.showInformationMessage(`${feedbackConfirmationMessage} ${JSON.stringify(feedback)}.`);
     }));
 
