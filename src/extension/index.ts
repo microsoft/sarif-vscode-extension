@@ -11,6 +11,7 @@ import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
 import { regionToSelection } from './regionToSelection';
+import { ResultCountByArtifactByRule, resultCountByArtifactByRule } from './resultCountByArtifactByRule';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import * as Telemetry from './telemetry';
@@ -60,10 +61,12 @@ export async function activate(context: ExtensionContext) {
 
     // API
     return {
-        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
-            store.logs.push(...await loadLogs(logs, cancellationToken));
+        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken): Promise<ResultCountByArtifactByRule | undefined> {
+            const loadedLogs = await loadLogs(logs, cancellationToken);
+            store.logs.push(...loadedLogs);
             if (cancellationToken?.isCancellationRequested) return;
             if (store.results.length) panel.show();
+            return resultCountByArtifactByRule(loadedLogs);
         },
         async closeLogs(logs: Uri[]) {
             for (const uri of logs) {
