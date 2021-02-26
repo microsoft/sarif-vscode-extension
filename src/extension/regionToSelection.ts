@@ -26,6 +26,11 @@ export function regionToSelection(doc: TextDocument, region: Region | undefined)
     if (startLine !== undefined) {
         const line = doc.lineAt(startLine - 1);
         const minusOne = (n: number | undefined) => n === undefined ? undefined : n - 1;
+        /**
+         * Note according to SARIF format standard, line (number) is 1-based,
+         * AND VS Code shows lines as 1-based to the user, but internally VS Code `Range`s are 0-based,
+         * So we need to minus one on line numbers of SARIF region before using them to construct VS Code Selection object.
+         */
         return new Selection(
             startLine - 1,
             minusOne(region.startColumn) ?? line.firstNonWhitespaceCharacterIndex, // Trimming whitespace for default startColumn value.
