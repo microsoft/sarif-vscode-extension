@@ -63,7 +63,7 @@ export class Panel {
                 <meta http-equiv="Content-Security-Policy" content="
                     default-src 'none';
                     connect-src vscode-resource:;
-                    font-src    data:;
+                    font-src    vscode-resource:;
                     script-src  vscode-resource: 'unsafe-inline';
                     style-src   vscode-resource: 'unsafe-inline';
                     ">

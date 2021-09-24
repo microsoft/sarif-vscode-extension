@@ -9,7 +9,7 @@
             "problemMatcher": {
                 "background": {
                     "beginsPattern": "webpack --watch --mode development",
-                    "endsPattern": "context.js.+emitted"
+                    "endsPattern": "asset context\\.js"
                 },
                 "pattern": [
                     {
