@@ -23,14 +23,14 @@ const common = {
             },
             {
                 test: /\.ttf$/,
-                use: 'url-loader',
+                type: 'asset/resource'
             },
         ]
     },
 
     devtool: 'source-map', // 'inline-source-map' hits breakpoints more reliability, but inflate file size.
     output: {
-        filename: '[name].js',
+        filename: '[name].js', // Default, consider omitting.
         path: outputPath,
     },
 
@@ -55,9 +55,16 @@ module.exports = [
             globalObject: 'this',
         },
         devServer : {
-            // index: 'devServer.html', // Not working.
-            port: 8000,
-            stats: 'none',
+            client: {
+                overlay: {
+                    errors: true,
+                    warnings: false, // Workaround for: "Module not found: Error: Can't resolve 'applicationinsights-native-metrics' in '.../node_modules/applicationinsights/out/AutoCollection'"
+                },
+            },
+            static: {
+                directory: __dirname, // Otherwise will default to /public
+            },
+            port: 8000
         },
         performance: {
             hints: 'warning',
