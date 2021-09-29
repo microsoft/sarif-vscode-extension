@@ -109,7 +109,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
                 }
             }
             result._region = ploc?.region;
-            result._line = result._region?.startLine ?? -1;
+            result._line = result._region?.startLine ?? 0;
 
             result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
                 ?? run.tool.driver.rules?.find(rule => rule.id === result.ruleId)
