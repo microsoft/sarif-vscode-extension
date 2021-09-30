@@ -100,7 +100,11 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                 }}>
                                                                 {result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
                                                             </a>
-                            {/* <span>Properties</span>		<span><pre><code>{JSON.stringify(selected.properties, null, '  ')}</code></pre></span> */}
+                            <span>Properties</span>		    <span>
+                                                                <pre>
+                                                                    <code>{JSON.stringify(result.properties, null, 2)}</code>
+                                                                </pre>
+                                                            </span>
                         </div>
                     </div>
                 </Tab>
