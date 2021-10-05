@@ -118,23 +118,18 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             const zeroBasedLineNumber = result._region?.startLine ?? -1;
             result._line = zeroBasedLineNumber + 1; // Convert 0-based to 1-based. See `_line` for reason.
 
-            // Rule lookup is quite complicated. We ignore guid based lookup at the moment.
-            // Case 1: result has a ReportingDescriptorReference with a toolComponent and index.
-            //         We take the component from the extensions and look up the rules via index.
-            // Case 2: result has a ReportingDescriptorReference with a toolComponent but no index.
-            //         We take the component from the extensions and fall back on ruleIndex to determine the rule
-            // Case 3: result has a ReportingDescriptorReference without a toolComponent (or the toolComponent has no index) but with an index.
-            //         Component defaults to driver and we look up the rule via index
-            // Case 4: result has no ReportingDescriptorReference but a ruleIndex
-            //         Component defaults to driver and we look up the rule via ruleIndex
-            // Case 5: We make a last effort to look up the rule via id in the driver
-            // Case 6: Give up and create a rule without metadata
-            result._rule = run.tool.extensions?.[result?.rule?.toolComponent?.index ?? -1]?.rules?.[result?.rule?.index ?? -1] // 1
-                ?? run.tool.extensions?.[result?.rule?.toolComponent?.index ?? -1]?.rules?.[result?.ruleIndex ?? -1] // 2
-                ?? run.tool.driver.rules?.[result?.rule?.index ?? -1] // 3
-                ?? run.tool.driver.rules?.[result.ruleIndex ?? -1] // 4
-                ?? run.tool.driver.rules?.find(rule => rule.id === result.ruleId) // 5
-                ?? getDriverlessRule(result.ruleId); // 6
+            // The toolComponent is either specified in a ToolComponentReference or defaults to driver.
+            // We're only supporting index-based lookup at the moment, though the spec also defines using guids.
+            const toolComponent
+                =  run.tool.extensions?.[result?.rule?.toolComponent?.index ?? -1]
+                ?? run.tool.driver
+
+            // We look up the rule in the toolComponent via index. (We're not supporting guid-based lookup at the moment.)
+            // Failing the index-based lookup we fall back to searching the rule via id.
+            result._rule
+                =  toolComponent?.rules?.[result?.rule?.index ?? result?.ruleIndex ?? -1]
+                ?? toolComponent?.rules?.find(rule => rule.id === result.ruleId)
+                ?? getDriverlessRule(result.ruleId);
 
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
