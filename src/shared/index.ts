@@ -36,13 +36,7 @@ declare module 'sarif' {
         _uriContents?: string; // ArtifactContent. Do not use this uri for display.
         _relativeUri?: string;
         _region?: Region;
-
-        /**
-         * Caching the line number as derived from _region. Primarily user-facing and thus is 1-based. 0 if empty.
-         * Note VS Code shows lines as 1-based to the user, but internally VS Code `Range`s are 0-based.
-         * */
         _line: number;
-
         _rule?: ReportingDescriptor;
         _message: string; // '—' if empty.
         _markdown?: string;
@@ -115,8 +109,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
                 }
             }
             result._region = ploc?.region;
-            const zeroBasedLineNumber = result._region?.startLine ?? -1;
-            result._line = zeroBasedLineNumber + 1; // Convert 0-based to 1-based. See `_line` for reason.
+            result._line = result._region?.startLine ?? 0;
 
             // The toolComponent is either specified in a ToolComponentReference or defaults to driver.
             // We're only supporting index-based lookup at the moment, though the spec also defines using guids.
