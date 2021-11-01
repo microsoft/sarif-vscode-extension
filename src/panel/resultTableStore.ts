@@ -27,7 +27,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 
     // Columns
     private columnsPermanent = [
-        new Column<Result>('Line', 50, result => result._line + '', result => result._line),
+        new Column<Result>('Line', 50, result => result._region?.startLine?.toString() ?? '—', result => result._region?.startLine ?? 0),
         new Column<Result>('File', 250, result => result._relativeUri ?? ''),
         new Column<Result>('Message', 300, result => result._message ?? ''),
     ]
