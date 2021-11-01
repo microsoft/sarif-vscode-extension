@@ -25,7 +25,7 @@ describe('ResultTableStore', () => {
         const resultTableStore1 = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
         assert.deepStrictEqual(resultTableStore1.visibleColumns.map((col) => col.name), ['Line', 'Message']);
 
-        const resultTableStore2 = new ResultTableStore('Line', result => result._line, resultsSource, filtersSource, selection);
+        const resultTableStore2 = new ResultTableStore('Line', result => result._region?.startLine ?? 0, resultsSource, filtersSource, selection);
         assert.deepStrictEqual(resultTableStore2.visibleColumns.map((col) => col.name), ['File', 'Message']);
 
         const resultTableStore3 = new ResultTableStore('Message', result => result._message, resultsSource, filtersSource, selection);
