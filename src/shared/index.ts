@@ -109,8 +109,17 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             }
             result._region = ploc?.region;
 
-            result._rule = run.tool.driver.rules?.[result.ruleIndex ?? -1] // If result.ruleIndex is undefined, that's okay.
-                ?? run.tool.driver.rules?.find(rule => rule.id === result.ruleId)
+            // The toolComponent is either specified in a ToolComponentReference or defaults to driver.
+            // We're only supporting index-based lookup at the moment, though the spec also defines using guids.
+            const toolComponent
+                =  run.tool.extensions?.[result?.rule?.toolComponent?.index ?? -1]
+                ?? run.tool.driver
+
+            // We look up the rule in the toolComponent via index. (We're not supporting guid-based lookup at the moment.)
+            // Failing the index-based lookup we fall back to searching the rule via id.
+            result._rule
+                =  toolComponent?.rules?.[result?.rule?.index ?? result?.ruleIndex ?? -1]
+                ?? toolComponent?.rules?.find(rule => rule.id === result.ruleId)
                 ?? getDriverlessRule(result.ruleId);
 
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
