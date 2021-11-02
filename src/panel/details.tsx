@@ -6,7 +6,7 @@
 import { autorun, computed, IObservableValue, observable } from 'mobx';
 import { observer } from 'mobx-react';
 import * as React from 'react';
-import { Component } from 'react';
+import { Component, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame } from 'sarif';
 import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
@@ -100,7 +100,29 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                                                 }}>
                                                                 {result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
                                                             </a>
-                            {/* <span>Properties</span>		<span><pre><code>{JSON.stringify(selected.properties, null, '  ')}</code></pre></span> */}
+                            {(() => {
+                                // Rendering "tags" reserved for a future release.
+                                const { tags, ...rest } = result.properties ?? {};
+                                return <>
+                                    <span>&nbsp;</span><span></span>{/* Blank separator line */}
+                                    {Object.entries(rest).map(([key, value]) => {
+                                        return <Fragment key={key}>
+                                            <span className="ellipsis">{key}</span>
+                                            <span>{(() => {
+                                                if (value === null)
+                                                    return '—';
+                                                if (Array.isArray(value))
+                                                    return <span style={{ whiteSpace: 'pre' }}>{value.join('\n')}</span>;
+                                                if (typeof value === 'boolean')
+                                                    return JSON.stringify(value, null, 2);
+                                                if (typeof value === 'object')
+                                                    return <pre style={{ margin: 0, fontSize: '0.7rem' }}><code>{JSON.stringify(value, null, 2)}</code></pre>;
+                                                return value;
+                                            })()}</span>
+                                        </Fragment>;
+                                    })}
+                                </>;
+                            })()}
                         </div>
                     </div>
                 </Tab>
