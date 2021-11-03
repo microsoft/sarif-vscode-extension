@@ -5,6 +5,7 @@ import { action, computed, intercept, observable, observe, toJS, when } from 'mo
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
+import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
 
@@ -120,6 +121,13 @@ export class IndexStore {
 }
 
 export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation) {
+    // If this panel is not active, then any selection change did not originate from (a user's action) here.
+    // It must have originated from (a user's action in) the editor, which then sent a message here.
+    // If that is the case, don't send another 'select' message back. This would cause selection unstability.
+    // The most common example is when the caret is moving, a selection-sync feedback loop will cause a range to
+    // be selected in editor outside of the user's intent.
+    if (!isActive()) return;
+
     if (!ploc) return;
     const log = result._log;
     const logUri = log._uri;
