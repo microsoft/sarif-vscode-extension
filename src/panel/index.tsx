@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { autorun, IReactionDisposer, observable } from 'mobx';
+import { observable } from 'mobx';
 import { observer } from 'mobx-react';
 import * as React from 'react';
 import { Component, Fragment } from 'react';
@@ -11,7 +11,7 @@ import '../shared/extension';
 import { Details } from './details';
 import { FilterKeywordContext } from './filterKeywordContext';
 import './index.scss';
-import { IndexStore, postSelectArtifact } from './indexStore';
+import { IndexStore } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
@@ -115,20 +115,11 @@ export { DetailsLayouts } from './details.layouts';
         </FilterKeywordContext.Provider>;
     }
 
-    private selectionAutoRunDisposer = null as IReactionDisposer | null
-
     componentDidMount() {
         addEventListener('message', this.props.store.onMessage);
-        this.selectionAutoRunDisposer = autorun(() => {
-            const selectedRow = this.props.store.selection.get();
-            const result = selectedRow instanceof RowItem && selectedRow.item;
-            if (!result?._uri) return; // Bail on no result or location-less result.
-            postSelectArtifact(result, result.locations?.[0]?.physicalLocation);
-        });
     }
 
     componentWillUnmount() {
         removeEventListener('message', this.props.store.onMessage);
-        this.selectionAutoRunDisposer?.();
     }
 }

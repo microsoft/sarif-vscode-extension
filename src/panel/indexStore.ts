@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { action, computed, intercept, observable, observe, toJS, when } from 'mobx';
+import { action, autorun, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
@@ -47,6 +47,13 @@ export class IndexStore {
                 this.selection.set(item);
             });
         }
+
+        autorun(() => {
+            const selectedRow = this.selection.get();
+            const result = selectedRow instanceof RowItem && selectedRow.item;
+            if (!result?._uri) return; // Bail on no result or location-less result.
+            postSelectArtifact(result, result.locations?.[0]?.physicalLocation);
+        });
     }
 
     // Results
