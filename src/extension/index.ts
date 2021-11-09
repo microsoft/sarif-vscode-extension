@@ -41,8 +41,9 @@ export async function activate(context: ExtensionContext) {
     //     8000      500-600ms
     //     20000     600ms
     //     1 of 20K  100ms (Only 1 file matches, but 20K need to be searched)
-    //     Note" `File: Exclude` setting is respected.
-    const urisNonSarif = await workspace.findFiles('**', '.sarif', 1000); // Ignore folders?
+    //     Note: `File: Exclude` setting is respected.
+    //     Hardware: 2020 MacBook Pro i7
+    const urisNonSarif = await workspace.findFiles('**', '.sarif', 10000); // Ignore folders?
     const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true /* skipEncoding */)]) as [string, string][];
     const baser = new UriRebaser(mapDistinct(fileAndUris), store);
 
