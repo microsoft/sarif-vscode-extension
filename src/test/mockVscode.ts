@@ -78,6 +78,7 @@ export const mockVscode = {
                 },
             };
         },
+        onDidChangeTextEditorSelection: () => {},
         showErrorMessage: (message: any) => console.error(`showErrorMessage: '${message}'`),
         showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
         showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult!.map(path => ({ path })),

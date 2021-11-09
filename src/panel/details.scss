@@ -25,6 +25,7 @@
 
                 & > * {
                     &:nth-child(odd) {
+                        width: 100%; // For ellipsis.
                         color: rgb(139, 139, 139); // svSecondary.
                     }
                 }

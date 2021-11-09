@@ -7,7 +7,7 @@
 
 import assert from 'assert';
 import { URI as Uri } from 'vscode-uri';
-import { postSelectArtifact, postSelectLog } from '../panel/indexStore';
+import { postSelectLog } from '../panel/indexStore';
 import { log } from '../test/mockLog';
 import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
 
@@ -38,6 +38,11 @@ describe('activate', () => {
     });
 
     it('can postSelectArtifact', async () => {
+        const { postSelectArtifact } = proxyquire('../panel/indexStore', {
+            '../panel/isActive': {
+                isActive: () => true,
+            },
+        });
         const result = mockVscodeTestFacing.store!.results[0]!;
         await postSelectArtifact(result, result.locations![0].physicalLocation);
         assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
