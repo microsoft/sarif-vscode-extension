@@ -1,0 +1,46 @@
+{
+	"$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+	"version": "2.1.0",
+	"runs": [
+		{
+			"tool": {
+				"driver": {
+					"name": "NoNameScanner"
+				}
+			},
+			"results": [
+				{
+					"message": {
+						"text": "Result with property bag."
+					},
+					"properties": {
+						"tags": ["openSource"],
+						"sampleBoolean": true,
+						"sampleNumber": 12345,
+						"sampleString": "lorem ipsum",
+						"sampleArray": ["foo", "bar", "baz"],
+						"sampleObject": { "foo": "bar" },
+						"sampleNull": null,
+						"veryLongPropertyName" : "Very long string. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+					}
+				}
+			],
+			"columnKind": "utf16CodeUnits"
+		},
+		{
+			"tool": {
+				"driver": {
+					"name": "NoNameScanner"
+				}
+			},
+			"results": [
+				{
+					"message": {
+						"text": "Result without property bag."
+					}
+				}
+			],
+			"columnKind": "utf16CodeUnits"
+		}
+	]
+}
