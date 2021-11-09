@@ -44,8 +44,9 @@ export async function activate(context: ExtensionContext) {
     // General Activation
     activateDiagnostics(disposables, store, baser);
     activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store, panel);
+    activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
+    activateSelectionSync(disposables, panel);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
@@ -128,8 +129,8 @@ function activateWatchDocuments(disposables: Disposable[], store: Store, panel: 
     }));
 }
 
-// Decorations are for Call Trees. This also handles panel selection sync.
-function activateDecorations(disposables: Disposable[], store: Store, panel: Panel) {
+// Decorations are for Call Trees.
+function activateDecorations(disposables: Disposable[], store: Store) {
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
@@ -146,7 +147,6 @@ function activateDecorations(disposables: Disposable[], store: Store, panel: Pan
             if (!diagnostic) return;
 
             const result = diagnostic?.result;
-            panel.select(result);
             if (!result) return; // Don't clear the decorations until the next result is selected.
 
             const editor = window.visibleTextEditors.find(editor => editor.document === doc);
@@ -211,6 +211,27 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
             token.isCancellationRequested = true;
             return '';
         }
+    }));
+}
+
+// Syncronize selection between editor and panel.
+function activateSelectionSync(disposables: Disposable[], panel: Panel) {
+    disposables.push(window.onDidChangeTextEditorSelection(({ selections, textEditor }) => {
+        // Anti-feedback-loop. Prevent panel-originated changes from echoing back to the panel.
+        if (window.activeTextEditor !== textEditor) return;
+
+        // Length 0  - I have yet to see this in practice.
+        // Length 2+ - User is likely editing and does not want to be distracted by selection changes.
+        if (selections.length !== 1) return;
+        const selection = selections[0];
+        const position = selection.isReversed ? selection.start : selection.end; // The blinking caret.
+
+        const diagnostics = languages.getDiagnostics(textEditor.document.uri);
+        const diagnostic = diagnostics.find(diagnostic => diagnostic.range.contains(position)) as ResultDiagnostic | undefined;
+        const result = diagnostic?.result;
+        if (!result) return;
+
+        panel.select(result);
     }));
 }
 
