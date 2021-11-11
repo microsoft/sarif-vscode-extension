@@ -1,5 +1,15 @@
 # Change Log
 
+For future releases, see the [Release Page](https://github.com/microsoft/sarif-vscode-extension/releases) for change logs.
+
+## 3.1.0
+* Use `ReportingDescriptorReference` for rule lookup [issue #392](https://github.com/Microsoft/sarif-vscode-extension/issues/392)
+* Line numbers in panel off by one [issue #397](https://github.com/Microsoft/sarif-vscode-extension/issues/397)
+* Render "Property Bags" in result details [issue #407](https://github.com/Microsoft/sarif-vscode-extension/issues/407)
+* Mitigate selection sync feedback loop [issue #408](https://github.com/Microsoft/sarif-vscode-extension/issues/408)
+* Limit `findFiles` against very large workspaces [issue #409](https://github.com/Microsoft/sarif-vscode-extension/issues/409)
+* Addess multiple NPM security advisories
+
 ## 3.0.2
 
 * Fixed bug that prevented opening files that declared the `$schema` from docs.open-oasys.org [issue #363](https://github.com/Microsoft/sarif-vscode-extension/issues/363)

@@ -6,4 +6,4 @@ extension:
 reporter: spec
 require: ts-node/register
 timeout: 3000 # For log upgrades.
-watch: true
+watch: false # Default is false, but leaving this here to make it easy to switch on.
