@@ -65,7 +65,18 @@ export const mockVscode = {
                 filtersRow,
                 filtersColumn,
             };
-            mockVscodeTestFacing.store = new IndexStore(defaultState);
+
+            // Simulate the top-level script block of the webview.
+            (async () => {
+                mockVscodeTestFacing.store = new IndexStore(defaultState);
+                const spliceLogsData = {
+                    command: 'spliceLogs',
+                    removed: [],
+                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }]
+                };
+                await mockVscodeTestFacing.store.onMessage({ data: spliceLogsData } as any);
+            })();
+
             return {
                 onDidDispose: () => {},
                 webview: {

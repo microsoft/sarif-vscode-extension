@@ -75,11 +75,15 @@ export class Panel {
                 <div id="root"></div>
                 <script src="${webview.asWebviewUri(src).toString()}"></script>
                 <script>
-                    vscode = acquireVsCodeApi()
-                    ReactDOM.render(
-                        React.createElement(Index, { store: new Store(${JSON.stringify(state)}) }),
-                        document.getElementById('root'),
-                    )
+                    vscode = acquireVsCodeApi();
+                    (async () => {
+                        const store = new Store(${JSON.stringify(state)})
+                        await store.onMessage({ data: ${JSON.stringify(this.createSpliceLogsMessage([], store.logs))} })
+                        ReactDOM.render(
+                            React.createElement(Index, { store }),
+                            document.getElementById('root'),
+                        )
+                    })();
                 </script>
             </body>
             </html>`;
@@ -145,8 +149,6 @@ export class Panel {
                 throw new Error(`Unhandled command: ${message.command}`,);
             }
         }, undefined, context.subscriptions);
-
-        await this.spliceLogs([], store.logs);
     }
 
     public async selectLocal(logUri: string, localUri: string, region: Region | undefined) {
@@ -170,8 +172,8 @@ export class Panel {
         this.panel?.webview.postMessage({ command: 'select', id: result?._id });
     }
 
-    private async spliceLogs(removed: Log[], added: Log[]) {
-        await this.panel?.webview.postMessage({
+    private createSpliceLogsMessage(removed: Log[], added: Log[]) {
+        return {
             command: 'spliceLogs',
             removed: removed.map(log => log._uri),
             added: added.map(log => ({
@@ -179,6 +181,10 @@ export class Panel {
                 uriUpgraded: log._uriUpgraded,
                 webviewUri: this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
             })),
-        });
+        };
+    }
+
+    private async spliceLogs(removed: Log[], added: Log[]) {
+        await this.panel?.webview.postMessage(this.createSpliceLogsMessage(removed, added));
     }
 }
