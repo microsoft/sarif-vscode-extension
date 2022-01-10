@@ -51,7 +51,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
             return <>
                 <div className="ellipsis">{message ?? '—'}</div>
                 <div className="svSecondary">{uri?.file ?? '—'}</div>
-                <div className="svLineNum">{region?.startLine}:1</div>
+                <div className="svLineNum">{region?.startLine}:{region?.startColumn ?? 1}</div>
             </>;
         };
         const renderStack = (stackFrame: StackFrame) => {
