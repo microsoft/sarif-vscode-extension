@@ -29,6 +29,14 @@
                         color: rgb(139, 139, 139); // svSecondary.
                     }
                 }
+
+                .svDetailsGridLocations {
+                    display: flex;
+                    flex-direction: column;
+                    *:not(:first-child) { // Rhythm.
+                        margin-top: 4px;
+                    }
+                }
             }
         }
 

@@ -80,7 +80,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                             <span>Level</span>				<span>{result.level}</span>
                             <span>Kind</span>				<span>{result.kind ?? '—'}</span>
                             <span>Baseline State</span>		<span>{result.baselineState}</span>
-                            <span>Locations</span>			<span>
+                            <span>Locations</span>			<span className="svDetailsGridLocations">
                                                                 {result.locations?.map((loc, i) => {
                                                                     const ploc = loc.physicalLocation;
                                                                     const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation);
