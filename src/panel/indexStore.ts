@@ -116,9 +116,10 @@ export class IndexStore {
                 const i = this.logs.findIndex(log => log._uri === uri);
                 if (i >= 0) this.logs.splice(i, 1);
             }
-            for (const {uri, uriUpgraded, webviewUri} of event.data.added) {
-                const response = await fetch(webviewUri);
-                const log = await response.json() as Log;
+            for (const {text, uri, uriUpgraded, webviewUri} of event.data.added) {
+                const log: Log = text
+                    ? JSON.parse(text)
+                    : await (await fetch(webviewUri)).json();
                 log._uri = uri;
                 log._uriUpgraded = uriUpgraded;
                 this.logs.push(log);

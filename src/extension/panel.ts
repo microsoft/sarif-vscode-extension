@@ -177,9 +177,10 @@ export class Panel {
             command: 'spliceLogs',
             removed: removed.map(log => log._uri),
             added: added.map(log => ({
+                text: log._text,
                 uri: log._uri,
                 uriUpgraded: log._uriUpgraded,
-                webviewUri: this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
+                webviewUri: log._text ? '' : this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
             })),
         };
     }

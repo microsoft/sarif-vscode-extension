@@ -6,6 +6,7 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
+import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
@@ -57,6 +58,7 @@ export async function activate(context: ExtensionContext) {
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
+    activateGithubAnalyses(store, panel);
 
     // Check for Updates
     if (!isDebugOrTestMode) {

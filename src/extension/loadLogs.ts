@@ -9,7 +9,7 @@ import { Uri, window } from 'vscode';
 import { augmentLog } from '../shared';
 import * as Telemetry from './telemetry';
 
-const driverlessRules = new Map<string, ReportingDescriptor>();
+export const driverlessRules = new Map<string, ReportingDescriptor>();
 
 export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: boolean }) {
     const logs = uris

@@ -17,6 +17,7 @@ export type ResultId = [string, number, number]
 // I don't see a need for them in the long term (after the design phase).
 declare module 'sarif' {
     interface Log {
+        _text: string; // If downloaded from a source (such as api.github) that the WebView cannot reach.
         _uri: string;
         _uriUpgraded?: string; // Only present if upgraded.
         _jsonMap?: JsonMap; // Only used by the "extension" side for navigating original SARIF sources. The "panel" side does not need this feature and thus does not use this field.
@@ -209,7 +210,13 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 
 export function decodeFileUri(uriString: string) {
     const uri = URI.parse(uriString, false);
-    return uri.scheme === 'file' ? uri.fsPath : uriString;
+    if (uri.scheme === 'file') {
+        return uri.fsPath;
+    }
+    if (uri.scheme === 'https') { // For github api fetch situations.
+        return uri.authority;
+    }
+    return uriString;
 }
 
 export type Visibility = 'visible' | false; // Undefined will not round-trip.
