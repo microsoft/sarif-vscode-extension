@@ -131,7 +131,7 @@
         "webpack-dev-server": "^4.2.1"
     },
     "dependencies": {
-        "follow-redirects": "1.11.0",
+        "follow-redirects": "1.14.7",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
         "mobx-react": "6.1.8",
