@@ -2,15 +2,18 @@
 // Licensed under the MIT License.
 /* eslint-disable filenames/match-regex */
 
+import { readFileSync, existsSync, watch } from 'fs';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, extensions } from 'vscode';
+import { authentication, extensions, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { GitExtension } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { Store } from './store';
+
+let currentLogUri: string | undefined = undefined;
 
 export function activateGithubAnalyses(store: Store, panel: Panel) {
     const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
@@ -19,7 +22,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
     const git = gitExtension.getAPI(1);
 
     // eslint-disable-next-line no-inner-declarations
-    async function fetchAnalysis() {
+    async function initialize() {
         const repo = git.repositories[0];
         if (!repo) return console.warn('No repo');
 
@@ -27,12 +30,25 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)\.git/) ?? [];
         if (!user || !repoName) return console.warn('No acceptable origin');
 
+        // procces.cwd() returns '/'
+        const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
+        if (!workspacePath) return console.warn('No workspace');
+        const gitHeadPath = `${workspacePath}/.git/HEAD`;
+        if (!existsSync(gitHeadPath)) return console.warn('No .git/HEAD');
+
+        await update(user, repoName, gitHeadPath);
+        watch(`${workspacePath}/.git`, async (_event, filename) => {
+            // _event expected to be 'rename'.
+            if (filename !== 'HEAD') return;
+            await update(user, repoName, gitHeadPath);
+        });
+    }
+
+    async function update(user: string, repoName: string, gitHeadPath: string) {
         const branchName = await (async () => {
-            const commits = await repo.log({ maxEntries: 1 });
-            const hash = commits?.[0]?.hash;
-            const branches = await repo.getBranches({ remote: false });
-            // optionally bail if no hash...
-            return branches.find(branch => branch.commit === hash)?.name;
+            const branchRef = readFileSync(gitHeadPath, 'utf8');
+            if (!branchRef.startsWith('ref: refs/heads/')) return undefined;
+            return branchRef.replace('ref: refs/heads/', '');
         })();
         if (!branchName) return console.warn('No branchName');
 
@@ -49,35 +65,45 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
             const analyses = await analysesResponse.json() as { id: number }[];
             return analyses[0]?.id;
         })();
-        if (!analysisId) return console.warn('No analysisId');
 
-        const log = await (async () => {
-            const uri = `https://api.github.com/repos/${user}/${repoName}/code-scanning/analyses/${analysisId}`;
-            const analysisResponse = await fetch(uri, {
-                headers: {
-                    accept: 'application/sarif+json',
-                    authorization: `Bearer ${accessToken}`,
-                },
-            });
-            const logText = await analysisResponse.text();
-            const log = JSON.parse(logText) as Log;
-            log._text = logText;
-            log._uri = uri;
-            augmentLog(log, driverlessRules);
-            return log;
-        })();
+        const log = !analysisId
+            ? undefined
+            : await (async () => {
+                const uri = `https://api.github.com/repos/${user}/${repoName}/code-scanning/analyses/${analysisId}`;
+                const analysisResponse = await fetch(uri, {
+                    headers: {
+                        accept: 'application/sarif+json',
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                });
+                const logText = await analysisResponse.text();
+                const log = JSON.parse(logText) as Log;
+                log._text = logText;
+                log._uri = uri;
+                augmentLog(log, driverlessRules);
+                return log;
+            })();
 
-        store.logs.push(log);
-        if (store.results.length) panel.show();
+        if (currentLogUri) {
+            store.logs.removeFirst(log => log._uri === currentLogUri);
+            currentLogUri = undefined;
+        }
+
+        if (log) {
+            store.logs.push(log);
+            currentLogUri = log._uri;
+            if (store.results.length) panel.show();
+        }
     }
 
+    // `git` api only used for reading config. Consider reading directly from disk.
     if (git.state !== 'initialized') {
         git.onDidChangeState(async state => {
             if (state === 'initialized') {
-                fetchAnalysis();
+                initialize();
             }
         });
     } else {
-        fetchAnalysis();
+        initialize();
     }
 }
