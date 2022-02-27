@@ -1,0 +1,40 @@
+name: ESLint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install ESLint
+        run: |
+          npm i eslint
+          npm i @microsoft/eslint-formatter-sarif
+          
+      - name: Run ESLint
+        run: npx eslint .
+             --config .eslintrc.js
+             --ext .js,.jsx,.ts,.tsx
+             --format @microsoft/eslint-formatter-sarif 
+             --output-file eslint.sarif
+        continue-on-error: true
+        
+      - name: Upload SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: eslint.sarif
+          
+      - name: Upload eslint results as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: eslint-result
+          path: eslint.sarif
