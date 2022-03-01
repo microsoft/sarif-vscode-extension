@@ -8,7 +8,7 @@
             "promptOnClose": true,
             "problemMatcher": {
                 "background": {
-                    "beginsPattern": "webpack --watch --mode development",
+                    "beginsPattern": "> webpack --watch --mode development",
                     "endsPattern": "asset context\\.js"
                 },
                 "pattern": [
