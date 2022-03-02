@@ -10,6 +10,8 @@ import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
 
 export class IndexStore {
+    @observable banner = '';
+
     private driverlessRules = new Map<string, ReportingDescriptor>();
 
     constructor(state: Record<string, Record<string, Record<string, Visibility>>>, defaultSelection?: boolean) {
@@ -124,6 +126,10 @@ export class IndexStore {
                 log._uriUpgraded = uriUpgraded;
                 this.logs.push(log);
             }
+        }
+
+        if (command === 'setBanner') {
+            this.banner = event.data?.text ?? '';
         }
     }
 }

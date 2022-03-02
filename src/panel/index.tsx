@@ -30,19 +30,26 @@ export { DetailsLayouts } from './details.layouts';
         const {store} = this.props;
         if (!store.logs.length) {
             return <div className="svZeroData">
-                <div onClick={() => vscode.postMessage({ command: 'open' })}>
+                <div style={{ lineHeight: '20px', marginBottom: 20, textAlign: 'center' }}>
+                    <b>GitHub code scanning:</b> This branch hasn't been scanned yet.
+                </div>
+                <div className="svZeroDataButton" onClick={() => vscode.postMessage({ command: 'open' })}>
                     Open SARIF log
                 </div>
             </div>;
         }
 
-        const {logs, keywords} = store;
+        const {banner, logs, keywords} = store;
         const {showFilterPopup, detailsPaneHeight} = this;
         const activeTableStore = store.selectedTab.get().store;
         const allCollapsed = activeTableStore?.groupsFilteredSorted.every(group => !group.expanded) ?? false;
         const selectedRow = store.selection.get();
         const selected = selectedRow instanceof RowItem && selectedRow.item;
         return <FilterKeywordContext.Provider value={keywords ?? ''}>
+            {banner && <div className="svBanner">
+                <Icon name="info" />
+                <span>{banner}</span>
+            </div>}
             <div className="svListPane">
                 <TabPanel selection={store.selectedTab}
                     extras={<>

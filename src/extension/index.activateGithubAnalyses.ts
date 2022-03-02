@@ -103,6 +103,9 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (log) {
             store.logs.push(log);
             currentLogUri = log._uri;
+            panel.setBanner('Results updated for current branch.');
+        } else {
+            panel.setBanner('');
         }
 
         panel.show();

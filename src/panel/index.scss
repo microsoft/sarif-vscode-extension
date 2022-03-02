@@ -48,6 +48,17 @@ mark {
     text-overflow: ellipsis;
 }
 
+.svBanner {
+    padding: 12px 22px;
+    border-bottom: 1px solid var(--vscode-editorGroup-border);
+    display: flex;
+    align-items: center;
+
+    & > :not(:first-child) {
+        margin-left: 6px;
+    }
+}
+
 .svZeroData {
     flex: 1 1 auto;
     display: flex;
@@ -56,7 +67,7 @@ mark {
     justify-content: center;
     & > * + * { margin-top: 16px; }
 
-    & > div {
+    .svZeroDataButton {
         color: var(--vscode-button-foreground);
         background: var(--vscode-button-background);
         width: 200px;

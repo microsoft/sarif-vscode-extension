@@ -249,4 +249,4 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
 };
 
 export type CommandPanelToExtension = 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState';
-export type CommandExtensionToPanel = 'select' | 'spliceLogs';
+export type CommandExtensionToPanel = 'select' | 'spliceLogs' | 'setBanner';

@@ -188,4 +188,8 @@ export class Panel {
     private async spliceLogs(removed: Log[], added: Log[]) {
         await this.panel?.webview.postMessage(this.createSpliceLogsMessage(removed, added));
     }
+
+    public setBanner(text: string) {
+        this.panel?.webview.postMessage({ command: 'setBanner', text });
+    }
 }
