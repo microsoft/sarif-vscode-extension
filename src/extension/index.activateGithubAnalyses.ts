@@ -5,7 +5,8 @@
 import { readFileSync, existsSync, watch } from 'fs';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, extensions, workspace } from 'vscode';
+import { authentication, Disposable, extensions, workspace } from 'vscode';
+import { StatusBarAlignment, StatusBarItem, window } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { GitExtension } from './git';
@@ -13,9 +14,18 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { Store } from './store';
 
+const defaultStatusText = '$(shield) SARIF';
+let statusBarItem: StatusBarItem;
 let currentLogUri: string | undefined = undefined;
 
-export function activateGithubAnalyses(store: Store, panel: Panel) {
+export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
+    statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+    disposables.push(statusBarItem);
+    statusBarItem.text = defaultStatusText;
+    statusBarItem.command = 'sarif.showPanel';
+    statusBarItem.tooltip ='Show SARIF Panel';
+    statusBarItem.show();
+
     const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
     if (!gitExtension) return console.warn('No gitExtension');
 
@@ -40,6 +50,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         watch(`${workspacePath}/.git`, async (_event, filename) => {
             // _event expected to be 'rename'.
             if (filename !== 'HEAD') return;
+            statusBarItem.text = '$(sync~spin) SARIF Updating...';
             await update(user, repoName, gitHeadPath);
         });
     }
@@ -92,8 +103,10 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         if (log) {
             store.logs.push(log);
             currentLogUri = log._uri;
-            if (store.results.length) panel.show();
         }
+
+        panel.show();
+        statusBarItem.text = defaultStatusText;
     }
 
     // `git` api only used for reading config. Consider reading directly from disk.
