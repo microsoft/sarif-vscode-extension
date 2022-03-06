@@ -10,6 +10,16 @@ import { tmpNameSync } from 'tmp';
 import { parse as urlParse } from 'url';
 import { commands, extensions, Uri, window, workspace } from 'vscode';
 
+interface GitHubAsset {
+    content_type: string;
+    browser_download_url: string;
+}
+
+interface GitHubRelease {
+    tag_name: string;
+    assets: GitHubAsset[];
+}
+
 /**
  * Retrieves @see HttpsProxyAgent information that may be setup in VSCode or in the process environment
  * to use for HTTP(s) requests.
@@ -59,7 +69,6 @@ export async function update() {
     if (!isUpdateEnabled()) return false;
 
     const extensionFullName = `MS-SarifVSCode.${extensionName}`;
-    const vsixAssetName = `${extensionFullName}.vsix`;
     const installedVersion = extensions.getExtension(extensionFullName)!.packageJSON.version;
     const agent = getHttpsProxyAgent();
 
@@ -68,16 +77,13 @@ export async function update() {
             // 1) Find the right release from the list.
             const releasesResponse = await fetch('https://api.github.com/repos/Microsoft/sarif-vscode-extension/releases', { agent });
             if (releasesResponse.status !== 200) return false;
-            const releases = await releasesResponse.json() as { tag_name: string, assets_url: string }[];
+            const releases = await releasesResponse.json() as GitHubRelease[];
             const release = releases.find(release => gt(release.tag_name, installedVersion));
             if (!release) return false;
 
             // 2) Find the right asset from the release assets.
-            const assetsResponse = await fetch(release.assets_url, { agent });
-            if (assetsResponse.status !== 200) return false;
-            const assets = await assetsResponse.json() as { browser_download_url: string, content_type: string, name: string }[];
-            const asset = assets.find(asset => asset.content_type === 'application/octet-stream'
-                && asset.name === vsixAssetName);
+            // Our releases only contain a single VSIX. Thus we assume the first one is the correct one.
+            const asset = release.assets.find(asset => asset.content_type === 'application/vsix');
             if (!asset) return false;
 
             // 3) Download the VSIX to temp.
