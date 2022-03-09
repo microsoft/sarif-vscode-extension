@@ -1,4 +1,4 @@
-name: ESLint
+name: eslint
 
 on:
   push:
@@ -31,5 +31,5 @@ jobs:
       - name: Upload eslint results as artifact
         uses: actions/upload-artifact@v2
         with:
-          name: eslint-result
+          name: eslint
           path: eslint.sarif
