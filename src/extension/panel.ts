@@ -91,62 +91,62 @@ export class Panel {
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
             switch (message.command as CommandPanelToExtension) {
-            case 'open': {
-                const uris = await window.showOpenDialog({
-                    canSelectMany: true,
-                    defaultUri: workspace.workspaceFolders?.[0]?.uri,
-                    filters: { 'SARIF files': ['sarif', 'json'] },
-                });
-                if (!uris) return;
-                store.logs.push(...await loadLogs(uris));
-                break;
-            }
-            case 'closeLog': {
-                store.logs.removeFirst(log => log._uri === message.uri);
-                break;
-            }
-            case 'closeAllLogs': {
-                store.logs.splice(0);
-                break;
-            }
-            case 'select': {
-                const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
-                const validatedUri = await basing.translateArtifactToLocal(uri);
-                if (!validatedUri) return;
-                await this.selectLocal(logUri, validatedUri, region);
-                break;
-            }
-            case 'selectLog': {
-                const [logUri, runIndex, resultIndex] = message.id as ResultId;
-                const log = store.logs.find(log => log._uri === logUri);
-                const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
-                if (!log || !result) return;
-
-                const logUriUpgraded = log._uriUpgraded ?? log._uri;
-                if (!log._jsonMap) {
-                    const file = fs.readFileSync(Uri.parse(logUriUpgraded).fsPath, 'utf8')  // Assume scheme file.
-                        .replace(/^\uFEFF/, ''); // Trim BOM.
-                    log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
+                case 'open': {
+                    const uris = await window.showOpenDialog({
+                        canSelectMany: true,
+                        defaultUri: workspace.workspaceFolders?.[0]?.uri,
+                        filters: { 'SARIF files': ['sarif', 'json'] },
+                    });
+                    if (!uris) return;
+                    store.logs.push(...await loadLogs(uris));
+                    break;
                 }
+                case 'closeLog': {
+                    store.logs.removeFirst(log => log._uri === message.uri);
+                    break;
+                }
+                case 'closeAllLogs': {
+                    store.logs.splice(0);
+                    break;
+                }
+                case 'select': {
+                    const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
+                    const validatedUri = await basing.translateArtifactToLocal(uri);
+                    if (!validatedUri) return;
+                    await this.selectLocal(logUri, validatedUri, region);
+                    break;
+                }
+                case 'selectLog': {
+                    const [logUri, runIndex, resultIndex] = message.id as ResultId;
+                    const log = store.logs.find(log => log._uri === logUri);
+                    const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
+                    if (!log || !result) return;
 
-                const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
-                const resultRegion = {
-                    startLine: value.line,
-                    startColumn: value.column,
-                    endLine: valueEnd.line,
-                    endColumn: valueEnd.column,
-                } as Region;
-                await this.selectLocal(logUri, logUriUpgraded, resultRegion);
-                break;
-            }
-            case 'setState': {
-                const oldState = Store.globalState.get('view', defaultState);
-                const {state} = message;
-                await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)));
-                break;
-            }
-            default:
-                throw new Error(`Unhandled command: ${message.command}`,);
+                    const logUriUpgraded = log._uriUpgraded ?? log._uri;
+                    if (!log._jsonMap) {
+                        const file = fs.readFileSync(Uri.parse(logUriUpgraded).fsPath, 'utf8')  // Assume scheme file.
+                            .replace(/^\uFEFF/, ''); // Trim BOM.
+                        log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
+                    }
+
+                    const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
+                    const resultRegion = {
+                        startLine: value.line,
+                        startColumn: value.column,
+                        endLine: valueEnd.line,
+                        endColumn: valueEnd.column,
+                    } as Region;
+                    await this.selectLocal(logUri, logUriUpgraded, resultRegion);
+                    break;
+                }
+                case 'setState': {
+                    const oldState = Store.globalState.get('view', defaultState);
+                    const {state} = message;
+                    await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)));
+                    break;
+                }
+                default:
+                    throw new Error(`Unhandled command: ${message.command}`,);
             }
         }, undefined, context.subscriptions);
     }

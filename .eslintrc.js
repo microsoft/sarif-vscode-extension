@@ -22,7 +22,7 @@ module.exports = {
                     " Copyright (c) Microsoft Corporation. All rights reserved.",
                     " Licensed under the MIT License.",
                 ]],
-                "indent": [ERROR, 4],
+                "indent": [ERROR, 4, { "SwitchCase": 1 }],
                 "no-trailing-spaces": ERROR,
                 "quotes": [ERROR, "single", {"allowTemplateLiterals": true}],
                 "semi": ERROR,
