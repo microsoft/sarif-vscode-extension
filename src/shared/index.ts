@@ -143,16 +143,16 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
 
 export function effectiveLevel(result: Result): Result.level {
     switch (result.kind) {
-    case 'informational':
-    case 'notApplicable':
-    case 'pass':
-        return 'note';
-    case 'open':
-    case 'review':
-        return 'warning';
-    case 'fail':
-    default:
-        return result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
+        case 'informational':
+        case 'notApplicable':
+        case 'pass':
+            return 'note';
+        case 'open':
+        case 'review':
+            return 'warning';
+        case 'fail':
+        default:
+            return result.level ?? result._rule?.defaultConfiguration?.level ?? 'warning';
     }
 }
 
