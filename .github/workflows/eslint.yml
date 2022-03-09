@@ -28,7 +28,7 @@ jobs:
         with:
           sarif_file: eslint.sarif
           
-      - name: Upload eslint results as artifact
+      - name: Upload SARIF as artifact
         uses: actions/upload-artifact@v2
         with:
           name: eslint
