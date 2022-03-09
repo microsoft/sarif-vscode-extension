@@ -113,7 +113,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             // We're only supporting index-based lookup at the moment, though the spec also defines using guids.
             const toolComponent
                 =  run.tool.extensions?.[result?.rule?.toolComponent?.index ?? -1]
-                ?? run.tool.driver
+                ?? run.tool.driver;
 
             // We look up the rule in the toolComponent via index. (We're not supporting guid-based lookup at the moment.)
             // Failing the index-based lookup we fall back to searching the rule via id.

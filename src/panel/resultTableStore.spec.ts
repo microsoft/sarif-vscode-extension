@@ -32,7 +32,7 @@ describe('ResultTableStore', () => {
         assert.deepStrictEqual(resultTableStore3.visibleColumns.map((col) => col.name), ['Line', 'File']);
     });
 
-    it.skip('groups the rows and rowItems based the grouping logic applied on resultsSource', () => { 
+    it.skip('groups the rows and rowItems based the grouping logic applied on resultsSource', () => {
         const groupBy = (result: Result) => result.locations
             ? result.locations[0].physicalLocation?.artifactLocation?.uri === '/folder/file_1.txt' ? 'file_1' : 'non file_1'
             : undefined;

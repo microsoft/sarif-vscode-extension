@@ -82,14 +82,14 @@ export function tryFastUpgradeLog(log: Log): boolean {
         ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
         ?.replace(/\.json$/, '');
     switch (schema) {
-    case '2.1.0-rtm.1':
-    case '2.1.0-rtm.2':
-    case '2.1.0-rtm.3':
-    case '2.1.0-rtm.4':
-        applyRtm5(log);
-        return true;
-    default:
-        return false;
+        case '2.1.0-rtm.1':
+        case '2.1.0-rtm.2':
+        case '2.1.0-rtm.3':
+        case '2.1.0-rtm.4':
+            applyRtm5(log);
+            return true;
+        default:
+            return false;
     }
 }
 
