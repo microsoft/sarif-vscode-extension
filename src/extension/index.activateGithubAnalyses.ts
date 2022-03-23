@@ -37,7 +37,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (!repo) return console.warn('No repo');
 
         const origin = await repo.getConfig('remote.origin.url');
-        const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)\.git/) ?? [];
+        const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)(?:\.git)?/) ?? [];
         if (!user || !repoName) return console.warn('No acceptable origin');
 
         // procces.cwd() returns '/'
