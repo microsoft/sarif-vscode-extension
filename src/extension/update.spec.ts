@@ -13,7 +13,18 @@ const proxyquire = require('proxyquire').noCallThru();
 const releases = [
     {
         'tag_name': 'v3.0.1-0',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/26068659/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/26068659/assets',
+        'assets': [
+            {
+                'url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/assets/20315654',
+                'name': 'MS-SarifVSCode.sarif-viewer.vsix',
+                'label': '',
+                'content_type': 'application/vsix',
+                'state': 'uploaded',
+                'size': 112615432,
+                'browser_download_url': 'https://github.com/microsoft/sarif-vscode-extension/releases/download/v3.2020.430009-insiders/MS-SarifVSCode.sarif-viewer.vsix'
+            }
+        ]
     },
     {
         'tag_name': 'v3.0.0', // installedVersion
@@ -41,19 +52,6 @@ const releases = [
     }
 ];
 
-// https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/assets/20315654
-const assets = [
-    {
-        'url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/assets/20315654',
-        'name': 'MS-SarifVSCode.sarif-viewer.vsix',
-        'label': '',
-        'content_type': 'application/octet-stream',
-        'state': 'uploaded',
-        'size': 112615432,
-        'browser_download_url': 'https://github.com/microsoft/sarif-vscode-extension/releases/download/v3.2020.430009-insiders/MS-SarifVSCode.sarif-viewer.vsix'
-    }
-];
-
 const makeStubs = () => ({
     'follow-redirects': {
         https: {
@@ -74,8 +72,6 @@ const makeStubs = () => ({
     'node-fetch': async (url: string) => {
         if (url.endsWith('releases'))
             return { status: 200, json: async () => releases };
-        if (url.endsWith('assets'))
-            return { status: 200, json: async () => assets };
         return undefined;
     },
     'vscode': {
