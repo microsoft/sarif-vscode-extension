@@ -20,6 +20,9 @@ export class Store {
         return mapDistinct(fileAndUris);
     }
 
+    @observable branch = ''
+    public commitHash = ''
+
     constructor() {
         intercept(this.logs, objChange => {
             const change = objChange as unknown as IArrayWillSplice<Log>;

@@ -83,6 +83,7 @@ module.exports = [
         },
         target: 'node',
         externals: {
+            fsevents: 'fsevents',
             vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded.
         },
     },
