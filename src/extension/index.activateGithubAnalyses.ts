@@ -34,7 +34,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     statusBarItem.tooltip ='Show SARIF Panel';
     statusBarItem.show();
 
-    const poller = new Poller(pollerRepeatAction, pollerFinalAction);
+    const poller = new Poller(pollerRepeatAction, pollerFinalAction, 30001);
 
     autorun(() => {
         const branch = store.branch;
