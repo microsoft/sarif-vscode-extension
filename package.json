@@ -135,6 +135,7 @@
         "webpack-dev-server": "^4.2.1"
     },
     "dependencies": {
+        "chokidar": "^3.3.0",
         "follow-redirects": "1.11.0",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
