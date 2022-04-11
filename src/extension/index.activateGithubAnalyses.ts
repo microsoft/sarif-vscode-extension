@@ -111,7 +111,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // Get remote hash (if it exists).
         const branches = await repo.getBranches({ remote: true });
         const commitOrigin = branches.find(branch => branch.name === `origin/${branchName}`);
-        if (!commitOrigin) return;
+        if (!commitOrigin) {
+            panel.setBanner('No origin branch found.');
+            return;
+        }
 
         // Compare hashes
         if (commitLocal.hash === commitOrigin?.commit) {
@@ -127,6 +130,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
+            panel.setBanner('Unable to authenticate.');
             return true; // console.warn('No accessToken');
         }
 
@@ -138,6 +142,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             },
         });
         if (analysesResponse.status === 403) {
+            panel.setBanner('GitHub Advanced Security is not enabled for this repository.');
             return true;
         }
         const analyses = await analysesResponse.json() as { id: number, commit_sha: string }[];
