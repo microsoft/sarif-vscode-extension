@@ -13,9 +13,10 @@ export class Poller<T> {
     private timer = new Timer(this.timeoutMs);
 
     // if `action` returns:
-    // false | undefined - continue trying.
-    // json              - success, stop, call action.
-    // undefined         - failure, stop, call final.
+    // false - continue trying.
+    // true  - failure, stop, call final.
+    // other - success, stop, call final.
+    // When the timer runs out, final will be called.
     constructor(
         readonly repeatAction: () => Promise<boolean | T>,
         readonly finalAction: (result: T | undefined, timeout?: boolean) => Promise<void>,
@@ -42,7 +43,7 @@ export class Poller<T> {
         this.clearShortTimeout(); // In case the shortTimeout was already running.
 
         if (!this.timer.isActive) {
-            this.finalAction(undefined, true);
+            this.finalAction(undefined, true); // Timeout.
             return;
         }
 
