@@ -28,28 +28,35 @@ export { DetailsLayouts } from './details.layouts';
 
     render() {
         const {store} = this.props;
+        const {banner} = store;
+
+        const bannerElement = banner && <div className="svBanner">
+            <Icon name="info" />
+            <span>{banner}</span>
+        </div>;
+
         if (!store.logs.length) {
-            return <div className="svZeroData">
-                <div style={{ lineHeight: '20px', marginBottom: 20, textAlign: 'center' }}>
-                    <b>GitHub code scanning:</b> This branch hasn't been scanned yet.
+            return <>
+                {bannerElement}
+                <div className="svZeroData">
+                    <div style={{ lineHeight: '20px', marginBottom: 20, textAlign: 'center' }}>
+                        <b>GitHub code scanning:</b> This branch hasn't been scanned yet.
+                    </div>
+                    <div className="svZeroDataButton" onClick={() => vscode.postMessage({ command: 'open' })}>
+                        Open SARIF log
+                    </div>
                 </div>
-                <div className="svZeroDataButton" onClick={() => vscode.postMessage({ command: 'open' })}>
-                    Open SARIF log
-                </div>
-            </div>;
+            </>;
         }
 
-        const {banner, logs, keywords} = store;
+        const {logs, keywords} = store;
         const {showFilterPopup, detailsPaneHeight} = this;
         const activeTableStore = store.selectedTab.get().store;
         const allCollapsed = activeTableStore?.groupsFilteredSorted.every(group => !group.expanded) ?? false;
         const selectedRow = store.selection.get();
         const selected = selectedRow instanceof RowItem && selectedRow.item;
         return <FilterKeywordContext.Provider value={keywords ?? ''}>
-            {banner && <div className="svBanner">
-                <Icon name="info" />
-                <span>{banner}</span>
-            </div>}
+            {bannerElement}
             <div className="svListPane">
                 <TabPanel selection={store.selectedTab}
                     extras={<>
