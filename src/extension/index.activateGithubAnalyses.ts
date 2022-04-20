@@ -69,10 +69,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (!repo) return console.warn('No repo');
 
         const origin = await repo.getConfig('remote.origin.url');
-        const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)(?:\.git)?/) ?? [];
+        const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)/) ?? [];
         if (!user || !repoName) return console.warn('No acceptable origin');
         config.user = user;
-        config.repoName = repoName;
+        config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
 
         // procces.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
