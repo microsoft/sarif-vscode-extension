@@ -42,6 +42,11 @@
                     "type": "boolean",
                     "default": true
                 },
+                "sarif-viewer.enableGhasIntegration": {
+                    "description": "Indicates whether to enable GitHub Advanced Security integration.",
+                    "type": "boolean",
+                    "default": false
+                },
                 "sarif-viewer.updateChannel": {
                     "description": "Specifies the type of updates the extension receives.",
                     "type": "string",
