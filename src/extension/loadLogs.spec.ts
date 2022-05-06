@@ -51,30 +51,30 @@ describe('loadLogs', () => {
         assert.strictEqual(logs.every(log => log.version === '2.1.0'), true);
     });
 
-    it('detects upgrades', async () => {
-        const logsNoUpgrade = [] as Log[];
-        const logsToUpgrade = [] as Log[];
-        const { detectUpgrade } = proxyquire('./loadLogs', stubs);
+    it('detects supported vs unsupported logs', async () => {
+        const logsSupported = [] as Log[];
+        const logsNotSupported = [] as Log[];
+        const { detectSupport } = proxyquire('./loadLogs', stubs);
 
-        detectUpgrade({
+        detectSupport({
             version: '2.1.0',
             $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json',
-        } as any, logsNoUpgrade, logsToUpgrade);
-        assert.strictEqual(logsNoUpgrade.length, 1);
-        assert.strictEqual(logsToUpgrade.length, 0);
+        } as any, logsSupported, logsNotSupported);
+        assert.strictEqual(logsSupported.length, 1);
+        assert.strictEqual(logsNotSupported.length, 0);
 
-        detectUpgrade({
+        detectSupport({
             version: '2.1.0',
             $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json',
-        } as any, logsNoUpgrade, logsToUpgrade);
-        assert.strictEqual(logsNoUpgrade.length, 1);
-        assert.strictEqual(logsToUpgrade.length, 1);
+        } as any, logsSupported, logsNotSupported);
+        assert.strictEqual(logsSupported.length, 1);
+        assert.strictEqual(logsNotSupported.length, 1);
 
-        detectUpgrade({
+        detectSupport({
             version: '2.1.0',
-        } as any, logsNoUpgrade, logsToUpgrade);
-        assert.strictEqual(logsNoUpgrade.length, 2);
-        assert.strictEqual(logsToUpgrade.length, 1);
+        } as any, logsSupported, logsNotSupported);
+        assert.strictEqual(logsSupported.length, 2);
+        assert.strictEqual(logsNotSupported.length, 1);
     });
 
     it('honors cancellation', async () => {
@@ -110,5 +110,42 @@ describe('loadLogs', () => {
         assert.strictEqual(await tryFastUpgradeLog(rtm4), true);
         assert.strictEqual(rtm4.runs[0].results[0].suppressions[0].status, 'accepted');
         assert.strictEqual(rtm4.runs[0].results[0].suppressions[0].state, undefined);
+    });
+
+    it('can normalize schema strings', () => {
+        const { normalizeSchema } = proxyquire('./loadLogs', stubs);
+
+        // Actual schemas from telemetry, ordered by popularity.
+        const schemas = [
+            ['https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json'                                                        , 'sarif-2.1.0-rtm.5'],
+            ['https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json'                                                        , 'sarif-2.1.0-rtm.4'],
+            ['https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json'                                   , 'sarif-2.1.0'],
+            ['http://json.schemastore.org/sarif-2.1.0-rtm.1'                                                                                    , 'sarif-2.1.0-rtm.1'],
+            ['https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json'                                             , 'sarif-2.1.0'],
+            ['https://json.schemastore.org/sarif-2.1.0.json'                                                                                    , 'sarif-2.1.0'],
+            ['http://json.schemastore.org/sarif-2.1.0-rtm.4'                                                                                    , 'sarif-2.1.0-rtm.4'],
+            [''                                                                                                                                 , ''],
+            ['http://json.schemastore.org/sarif-1.0.0'                                                                                          , 'sarif-1.0.0'],
+            ['http://json.schemastore.org/sarif-2.1.0-rtm.5'                                                                                    , 'sarif-2.1.0-rtm.5'],
+            ['https://json.schemastore.org/sarif-2.1.0-rtm.5.json'                                                                              , 'sarif-2.1.0-rtm.5'],
+            ['https://schemastore.azurewebsites.net/schemas/json/sarif-1.0.0.json'                                                              , 'sarif-1.0.0'],
+            ['http://json.schemastore.org/sarif-2.1.0-rtm.5.json'                                                                               , 'sarif-2.1.0-rtm.5'],
+            ['https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Documents/CommitteeSpecifications/2.1.0/sarif-schema-2.1.0.json'    , 'sarif-2.1.0'],
+            ['http://json.schemastore.org/sarif-2.1.0'                                                                                          , 'sarif-2.1.0'],
+            ['https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0'                                                  , 'sarif-2.1.0'],
+            ['http://json-schema.org/draft-04/schema#'                                                                                          , 'schema'],
+            ['http://json.schemastore.org/sarif-2.1.0-rtm.0'                                                                                    , 'sarif-2.1.0-rtm.0'],
+            ['http://json.schemastore.org/sarif-2.1.0.json'                                                                                     , 'sarif-2.1.0'],
+            ['https://www.schemastore.org/schemas/json/sarif-2.1.0-rtm.5.json'                                                                  , 'sarif-2.1.0-rtm.5'],
+            ['https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos01/schemas/sarif-schema-2.1.0.json'                                             , 'sarif-2.1.0'],
+            ['https://docs.oasis-open.org/sarif/sarif/v2.0/csprd02/schemas/sarif-schema-2.1.0.json'                                             , 'sarif-2.1.0'],
+            ['https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json'                                                              , 'sarif-2.1.0'],
+            ['http://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json'                                                 , 'sarif-2.1.0'],
+            ['https://docs.oasis-open.org/sarif/sarif/v2.1.0/csprd01/schemas/sarif-schema-2.1.0.json'                                           , 'sarif-2.1.0'],
+            ['http://json.schemastore.org/sarif-2.0.0'                                                                                          , 'sarif-2.0.0'],
+            ['https://raw.githubusercontent.com/schemastore/schemastore/master/src/schemas/json/sarif-2.1.0-rtm.5.json'                         , 'sarif-2.1.0-rtm.5'],
+        ];
+
+        assert(schemas.every(([schema, normalized]) => normalizeSchema(schema) === normalized));
     });
 });
