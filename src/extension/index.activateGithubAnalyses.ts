@@ -11,7 +11,7 @@ import { authentication, Disposable, extensions, workspace } from 'vscode';
 import { StatusBarAlignment, StatusBarItem, window } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
-import { GitExtension, Repository } from './git';
+import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { Poller } from './poller';
@@ -20,6 +20,24 @@ import { Store } from './store';
 const defaultStatusText = '$(shield) SARIF';
 let statusBarItem: StatusBarItem;
 let currentLogUri: string | undefined = undefined;
+
+async function getInitializedGitApi(): Promise<API | undefined> {
+    return new Promise(resolve => {
+        const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
+        if (!gitExtension) return undefined;
+
+        const git = gitExtension.getAPI(1);
+        if (git.state !== 'initialized') {
+            git.onDidChangeState(async state => {
+                if (state === 'initialized') {
+                    resolve(git);
+                }
+            });
+        } else {
+            resolve(git);
+        }
+    })
+}
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
     const config = {
@@ -48,23 +66,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
     });
 
-    const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
-    if (!gitExtension) return console.warn('No gitExtension');
+    (async () => {
+        const git = await getInitializedGitApi();
+        if (!git) return console.warn('No GitExtension or GitExtension API');
 
-    const git = gitExtension.getAPI(1);
-
-    if (git.state !== 'initialized') {
-        git.onDidChangeState(async state => {
-            if (state === 'initialized') {
-                initialize();
-            }
-        });
-    } else {
-        initialize();
-    }
-
-    // eslint-disable-next-line no-inner-declarations
-    async function initialize() {
         const repo = git.repositories[0];
         if (!repo) return console.warn('No repo');
 
@@ -92,7 +97,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // if (path !== 'HEAD') return;
             // statusBarItem.text = '$(sync~spin) SARIF Updating...';
         });
-    }
+    })();
 
     async function onGitChanged(repo: Repository, gitHeadPath: string, store: Store) {
         // Get current branch. No better way:
