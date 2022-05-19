@@ -53,9 +53,10 @@ mark {
     border-bottom: 1px solid var(--vscode-editorGroup-border);
     display: flex;
     align-items: center;
+    line-height: 1.4em;
 
-    & > :not(:first-child) {
-        margin-left: 6px;
+    & > :not(:first-child) { // Between icon and text.
+        margin-left: 10px;
     }
 }
 

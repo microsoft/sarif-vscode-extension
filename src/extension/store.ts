@@ -24,6 +24,9 @@ export class Store {
 
     @observable branch = ''
     public commitHash = ''
+    public intersectingHash = ''
+    public intersectingDate = new Date(0)
+    public intersectingCommitsAgo = -1
 
     constructor() {
         intercept(this.logs, objChange => {

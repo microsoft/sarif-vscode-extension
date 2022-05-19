@@ -4,7 +4,7 @@
 
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
-import { autorun } from 'mobx';
+import { runInAction } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, workspace } from 'vscode';
@@ -14,14 +14,14 @@ import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
-import { Poller } from './poller';
 import { Store } from './store';
 
-const defaultStatusText = '$(shield) SARIF';
+const defaultStatusText = '$(shield) Sarif';
+const spinningStatusText = '$(sync~spin) Sarif';
 let statusBarItem: StatusBarItem;
 let currentLogUri: string | undefined = undefined;
 
-async function getInitializedGitApi(): Promise<API | undefined> {
+export async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
         const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
         if (!gitExtension) {
@@ -55,20 +55,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     statusBarItem.tooltip ='Show SARIF Panel';
     statusBarItem.show();
 
-    const poller = new Poller(pollerRepeatAction, pollerFinalAction, 30001);
-
-    autorun(() => {
-        const branch = store.branch;
-        const branchRel = branch.slice(-1);
-
-        // Fine tune branch changes
-        if (branchRel === '+') { // local is a head and origin does not have analyses to provide
-            poller.stop();
-        } else { // = or - means origin has analyses to provide
-            poller.start();
-        }
-    });
-
     (async () => {
         const git = await getInitializedGitApi();
         if (!git) return console.warn('No GitExtension or GitExtension API');
@@ -90,8 +76,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         await onGitChanged(repo, gitHeadPath, store);
         const watcher = watch([
-            `${workspacePath}/.git/HEAD`,
-            `${workspacePath}/.git/refs`,
+            `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
         ], { ignoreInitial: true });
         watcher.on('all', () => {
             // args: event = change, path = .git/refs/heads/demo
@@ -107,42 +92,30 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
         // * repo.getBranches({ remote: true }) doesn't show which is the current
+        // TODO: Guard against !branchRef.startsWith('ref: refs/heads/')
         const branchRef = readFileSync(gitHeadPath, 'utf8').replace('ref: ', '').trim(); // example: refs/heads/demo
         const branchName = branchRef.replace('refs/heads/', '');
-
-        // TODO: Guard against !branchRef.startsWith('ref: refs/heads/')
-
-        // Get local hash
         const commitLocal = await repo.getCommit(branchRef);
-        store.commitHash = commitLocal.hash;
 
-        // Get remote hash (if it exists).
-        const branches = await repo.getBranches({ remote: true });
-        const commitOrigin = branches.find(branch => branch.name === `origin/${branchName}`);
-        if (!commitOrigin) {
-            panel.setBanner('No origin branch found.');
-            return;
-        }
+        runInAction(() => {
+            store.branch = branchName;
+            store.commitHash = commitLocal.hash;
+        });
 
-        // Compare hashes
-        if (commitLocal.hash === commitOrigin?.commit) {
-            store.branch = `${branchName}=`;
-        } else {
-            const log = await repo.log({});
-            const i = log.findIndex(commit => commit.hash === commitOrigin?.commit);
-            store.branch = i < 0 ? `${branchName}-` : `${branchName}+${i}`;
-        }
+        const analysisId = await pollerRepeatAction();
+        await pollerFinalAction(analysisId);
     }
 
-    async function pollerRepeatAction() {
+
+    async function pollerRepeatAction(): Promise<number | undefined> {
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
             store.banner = 'Unable to authenticate.';
+            return undefined;
         }
 
-        let branchName = store.branch.slice(0, -1);
-        if (branchName === 'mar25') branchName = 'main';
+        const branchName = store.branch;
         const analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
             headers: {
                 authorization: `Bearer ${accessToken}`,
@@ -150,30 +123,43 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         });
         if (analysesResponse.status === 403) {
             store.banner = 'GitHub Advanced Security is not enabled for this repository.';
+            return undefined;
         }
-        const analyses = await analysesResponse.json() as { id: number, commit_sha: string }[];
+        const analyses = await analysesResponse.json() as { id: number, commit_sha: string, created_at: string }[];
 
         // Possibilities:
         // a) analysis is not enabled for repo or branch.
         // b) analysis is enabled, but pending.
         if (!analyses.length) {
-            return false;
+            return undefined;
         }
 
-        const analysesForCommit = analyses.filter(analysis => analysis.commit_sha === store.commitHash);
+        // Find the intersection.
+        const git = await getInitializedGitApi();
+        if (!git) return undefined; // No GitExtension or GitExtension API.
+
+        const repo = git.repositories[0];
+        const commits = await repo.log({});
+        const intersectingAnalysis = analyses.find(analysis => {
+            return commits.some(commit => analysis.commit_sha === commit.hash);
+        });
 
         // Possibilities:
-        // a) analysis pending
-        // b) local is ahead of remote? trust that caller will start/stop
-        if (!analysesForCommit.length) {
-            return false;
+        // a) the intersection is outside of the page size
+        // b) other?
+        if (!intersectingAnalysis) {
+            return undefined; // Might need to return true. TODO: Think about what this means.
         }
 
-        // return results
-        return analysesForCommit[0].id;
+        store.intersectingHash = intersectingAnalysis.commit_sha;
+        store.intersectingDate = new Date(intersectingAnalysis.created_at);
+        store.intersectingCommitsAgo = commits.findIndex(commit => commit.hash === intersectingAnalysis.commit_sha);
+        return intersectingAnalysis.id;
     }
 
-    async function pollerFinalAction(analysisId: number | undefined) {
+    async function pollerFinalAction(analysisId: number | undefined): Promise<void> {
+        statusBarItem.text = spinningStatusText;
+
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
@@ -203,7 +189,14 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (log) {
             store.logs.push(log);
             currentLogUri = log._uri;
-            store.banner = 'Results updated for current branch.';
+
+            const messageWarnStale = store.intersectingHash !== store.commitHash
+                ? ` The most recent scan was ${store.intersectingCommitsAgo} commit(s) ago` +
+                  ` on ${store.intersectingDate.toLocaleString()}.` +
+                  ` Refresh to check for more current results.`
+                : '';
+
+            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
         } else {
             store.banner = '';
         }

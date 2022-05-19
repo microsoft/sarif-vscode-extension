@@ -1,12 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { diffChars } from 'diff';
 import { IArraySplice, observe } from 'mobx';
 import { Log } from 'sarif';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { activateGithubAnalyses } from './index.activateGithubAnalyses';
+import { getOffset, measureDrift } from './antiDrift';
+import { activateStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
+import { activateGithubAnalyses, getInitializedGitApi } from './index.activateGithubAnalyses';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
@@ -59,6 +62,7 @@ export async function activate(context: ExtensionContext) {
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
     activateGithubAnalyses(disposables, store, panel);
+    activateStatusBarItem(disposables);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
@@ -96,36 +100,85 @@ export async function activate(context: ExtensionContext) {
 function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
-    const setDiags = (doc: TextDocument) => {
+    const setDiags = async (doc: TextDocument) => {
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
+        if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri...""
 
         const artifactUri = baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
         } as Record<string, DiagnosticSeverity>;
-        const diags = store.results
+        const matchingResults = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
                 return uri === artifactUri && !result._fixed;
-            })
-            .map(result => new ResultDiagnostic(
-                regionToSelection(doc, result._region),
-                result._message ?? '—',
-                severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
-                result,
-            ));
+            });
+        if (!matchingResults.length) {
+            diagsAll.set(doc.uri, []);
+            return;
+        }
+
+        const scannedFile = await (async () => {
+            // What if text=''?
+            if (!antiDriftEnabled.get()) return '';
+            if (!store.intersectingHash) return '';
+
+            const git = await getInitializedGitApi();
+            const repo = git?.repositories[0];
+            if (!repo) return '';
+
+            const scannedFile = await repo.show(store.intersectingHash, doc.uri.fsPath);
+            return scannedFile;
+        })();
+        const diffBlocks = !antiDriftEnabled.get() ? [] : diffChars(scannedFile, doc.getText());
+
+        const diags = matchingResults
+            .map(result => {
+                const range = regionToSelection(doc, result._region);
+
+                const driftedRange = (() => {
+                    if (!antiDriftEnabled.get()) return range;
+
+                    if (range.isReversed) console.warn('REVERSED');
+
+                    const drift = measureDrift(
+                        diffBlocks,
+                        getOffset(scannedFile, range.start),
+                        getOffset(scannedFile, range.end)
+                    );
+                    return drift === undefined
+                        ? new Selection(
+                            doc.positionAt(0),
+                            doc.positionAt(0)
+                        )
+                        : new Selection(
+                            doc.positionAt(getOffset(scannedFile, range.start) + drift),
+                            doc.positionAt(getOffset(scannedFile, range.end  ) + drift)
+                        );
+                })();
+
+                return new ResultDiagnostic(
+                    driftedRange,
+                    result._message ?? '—',
+                    severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
+                    result,
+                );
+            });
+
         diagsAll.set(doc.uri, diags);
     };
     workspace.textDocuments.forEach(setDiags);
     disposables.push(workspace.onDidOpenTextDocument(setDiags));
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
-    const disposer = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
-    disposables.push({ dispose: disposer });
+    const disposerStore = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
+    disposables.push({ dispose: disposerStore });
+    const disposerAntiDrift = observe(antiDriftEnabled, () => workspace.textDocuments.forEach(setDiags));
+    disposables.push({ dispose: disposerAntiDrift });
 }
 
-// Open Documents <-sync-> Store.logs
+// Sync Open SARIF TextDocuments with Store.logs
 function activateWatchDocuments(disposables: Disposable[], store: Store, panel: Panel) {
     const addLog = async (doc: TextDocument) => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
