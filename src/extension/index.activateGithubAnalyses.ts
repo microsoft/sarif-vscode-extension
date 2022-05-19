@@ -24,7 +24,10 @@ let currentLogUri: string | undefined = undefined;
 async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
         const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
-        if (!gitExtension) return undefined;
+        if (!gitExtension) {
+            resolve(undefined);
+            return;
+        }
 
         const git = gitExtension.getAPI(1);
         if (git.state !== 'initialized') {
@@ -36,7 +39,7 @@ async function getInitializedGitApi(): Promise<API | undefined> {
         } else {
             resolve(git);
         }
-    })
+    });
 }
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
