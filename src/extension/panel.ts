@@ -19,7 +19,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'logs' | 'results'>) {
+        readonly store: Pick<Store, 'banner' | 'logs' | 'results'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -29,6 +29,9 @@ export class Panel {
             const count = store.results.length;
             if (!this.panel) return;
             this.panel.title = `${count} ${this.title}${count === 1 ? '' : 's'}`;
+        });
+        autorun(() => {
+            this.panel?.webview.postMessage({ command: 'setBanner', text: store.banner });
         });
     }
 
@@ -78,6 +81,7 @@ export class Panel {
                     vscode = acquireVsCodeApi();
                     (async () => {
                         const store = new Store(${JSON.stringify(state)})
+                        store.banner = '${store.banner}'
                         await store.onMessage({ data: ${JSON.stringify(this.createSpliceLogsMessage([], store.logs))} })
                         ReactDOM.render(
                             React.createElement(Index, { store }),
@@ -187,9 +191,5 @@ export class Panel {
 
     private async spliceLogs(removed: Log[], added: Log[]) {
         await this.panel?.webview.postMessage(this.createSpliceLogsMessage(removed, added));
-    }
-
-    public setBanner(text: string) {
-        this.panel?.webview.postMessage({ command: 'setBanner', text });
     }
 }

@@ -135,8 +135,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
-            panel.setBanner('Unable to authenticate.');
-            return true; // console.warn('No accessToken');
+            store.banner = 'Unable to authenticate.';
         }
 
         let branchName = store.branch.slice(0, -1);
@@ -147,8 +146,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             },
         });
         if (analysesResponse.status === 403) {
-            panel.setBanner('GitHub Advanced Security is not enabled for this repository.');
-            return true;
+            store.banner = 'GitHub Advanced Security is not enabled for this repository.';
         }
         const analyses = await analysesResponse.json() as { id: number, commit_sha: string }[];
 
@@ -202,9 +200,9 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (log) {
             store.logs.push(log);
             currentLogUri = log._uri;
-            panel.setBanner('Results updated for current branch.');
+            store.banner = 'Results updated for current branch.';
         } else {
-            panel.setBanner('');
+            store.banner = '';
         }
 
         panel.show();

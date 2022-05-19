@@ -10,6 +10,8 @@ import '../shared/extension';
 export class Store {
     static globalState: Memento
 
+    @observable banner = '';
+
     @observable.shallow logs = [] as Log[]
     @computed get results() {
         const runs = this.logs.map(log => log.runs).flat();
