@@ -93,10 +93,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const branchName = branchRef.replace('refs/heads/', '');
         const commitLocal = await repo.getCommit(branchRef);
 
-        runInAction(() => {
             store.branch = branchName;
             store.commitHash = commitLocal.hash;
-        });
 
         const analysisId = await pollerRepeatAction();
         await pollerFinalAction(analysisId);

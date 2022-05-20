@@ -22,7 +22,7 @@ export class Store {
         return mapDistinct(fileAndUris);
     }
 
-    @observable branch = ''
+    public branch = ''
     public commitHash = ''
     public intersectingHash = ''
     public intersectingDate = new Date(0)
