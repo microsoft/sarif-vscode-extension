@@ -6,3 +6,4 @@ devServer/index.js
 *.vsix
 coverage
 .nyc_output
+ignore/
