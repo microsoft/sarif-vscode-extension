@@ -4,7 +4,7 @@
 
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
-import { runInAction } from 'mobx';
+import { observe } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, workspace } from 'vscode';
@@ -15,6 +15,13 @@ import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { Store } from './store';
+
+// Subset of the GitHub API.
+export interface AnalysisInfo {
+    id: number;
+    commit_sha: string;
+    created_at: string;
+}
 
 const defaultStatusText = '$(shield) Sarif';
 const spinningStatusText = '$(sync~spin) Sarif';
@@ -93,20 +100,17 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const branchName = branchRef.replace('refs/heads/', '');
         const commitLocal = await repo.getCommit(branchRef);
 
-            store.branch = branchName;
-            store.commitHash = commitLocal.hash;
-
-        const analysisId = await pollerRepeatAction();
-        await pollerFinalAction(analysisId);
+        store.branch = branchName;
+        store.commitHash = commitLocal.hash;
+        await updateAnalysisInfo();
     }
 
-
-    async function pollerRepeatAction(): Promise<number | undefined> {
+    async function updateAnalysisInfo(): Promise<void> {
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
             store.banner = 'Unable to authenticate.';
-            return undefined;
+            store.analysisInfo = undefined;
         }
 
         const branchName = store.branch;
@@ -117,15 +121,15 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         });
         if (analysesResponse.status === 403) {
             store.banner = 'GitHub Advanced Security is not enabled for this repository.';
-            return undefined;
+            store.analysisInfo = undefined;
         }
-        const analyses = await analysesResponse.json() as { id: number, commit_sha: string, created_at: string }[];
+        const analyses = await analysesResponse.json() as AnalysisInfo[];
 
         // Possibilities:
         // a) analysis is not enabled for repo or branch.
         // b) analysis is enabled, but pending.
         if (!analyses.length) {
-            return undefined;
+            store.analysisInfo = undefined;
         }
 
         // Find the intersection.
@@ -134,33 +138,41 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         const repo = git.repositories[0];
         const commits = await repo.log({});
-        const intersectingAnalysis = analyses.find(analysis => {
+        const analysisInfo = analyses.find(analysis => {
             return commits.some(commit => analysis.commit_sha === commit.hash);
         });
 
-        // Possibilities:
+        // If `analysisInfo` is undefined at this point, then...
         // a) the intersection is outside of the page size
         // b) other?
-        if (!intersectingAnalysis) {
-            return undefined; // Might need to return true. TODO: Think about what this means.
+        if (analysisInfo) {
+            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
+            const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
+                ? ` The most recent scan was ${commitsAgo} commit(s) ago` +
+                  ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
+                  ` Refresh to check for more current results.`
+                : '';
+
+            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
+        } else {
+            store.banner = '';
         }
 
-        store.intersectingHash = intersectingAnalysis.commit_sha;
-        store.intersectingDate = new Date(intersectingAnalysis.created_at);
-        store.intersectingCommitsAgo = commits.findIndex(commit => commit.hash === intersectingAnalysis.commit_sha);
-        return intersectingAnalysis.id;
+        if (store.analysisInfo?.id !== analysisInfo?.id) {
+            store.analysisInfo = analysisInfo;
+        }
     }
 
-    async function pollerFinalAction(analysisId: number | undefined): Promise<void> {
+    async function fetchAnalysis(analysisInfo: AnalysisInfo | undefined): Promise<void> {
         statusBarItem.text = spinningStatusText;
 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
-        const log = !analysisId
+        const log = !analysisInfo?.id
             ? undefined
             : await (async () => {
-                const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
+                const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisInfo.id}`;
                 const analysisResponse = await fetch(uri, {
                     headers: {
                         accept: 'application/sarif+json',
@@ -183,19 +195,11 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (log) {
             store.logs.push(log);
             currentLogUri = log._uri;
-
-            const messageWarnStale = store.intersectingHash !== store.commitHash
-                ? ` The most recent scan was ${store.intersectingCommitsAgo} commit(s) ago` +
-                  ` on ${store.intersectingDate.toLocaleString()}.` +
-                  ` Refresh to check for more current results.`
-                : '';
-
-            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
-        } else {
-            store.banner = '';
         }
 
         panel.show();
         statusBarItem.text = defaultStatusText;
     }
+
+    observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
 }

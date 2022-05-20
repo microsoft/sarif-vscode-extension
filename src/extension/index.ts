@@ -123,13 +123,13 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         const scannedFile = await (async () => {
             // What if text=''?
             if (!antiDriftEnabled.get()) return '';
-            if (!store.intersectingHash) return '';
+            if (!store.analysisInfo) return '';
 
             const git = await getInitializedGitApi();
             const repo = git?.repositories[0];
             if (!repo) return '';
 
-            const scannedFile = await repo.show(store.intersectingHash, doc.uri.fsPath);
+            const scannedFile = await repo.show(store.analysisInfo.commit_sha, doc.uri.fsPath);
             return scannedFile;
         })();
         const diffBlocks = !antiDriftEnabled.get() ? [] : diffChars(scannedFile, doc.getText());

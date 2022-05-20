@@ -6,6 +6,7 @@ import { Log, Result } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
+import { AnalysisInfo } from './index.activateGithubAnalyses';
 
 export class Store {
     static globalState: Memento
@@ -24,9 +25,7 @@ export class Store {
 
     public branch = ''
     public commitHash = ''
-    public intersectingHash = ''
-    public intersectingDate = new Date(0)
-    public intersectingCommitsAgo = -1
+    @observable analysisInfo: AnalysisInfo | undefined
 
     constructor() {
         intercept(this.logs, objChange => {
