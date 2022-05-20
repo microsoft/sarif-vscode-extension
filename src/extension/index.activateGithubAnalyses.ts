@@ -7,13 +7,13 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, Disposable, extensions, workspace } from 'vscode';
-import { StatusBarAlignment, StatusBarItem, window } from 'vscode';
+import { authentication, extensions, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
+import { isSpinning } from './statusBarItem';
 import { Store } from './store';
 
 // Subset of the GitHub API.
@@ -23,9 +23,6 @@ export interface AnalysisInfo {
     created_at: string;
 }
 
-const defaultStatusText = '$(shield) Sarif';
-const spinningStatusText = '$(sync~spin) Sarif';
-let statusBarItem: StatusBarItem;
 let currentLogUri: string | undefined = undefined;
 
 export async function getInitializedGitApi(): Promise<API | undefined> {
@@ -49,18 +46,11 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
+export function activateGithubAnalyses(store: Store, panel: Panel) {
     const config = {
         user: '',
         repoName: '',
     };
-
-    statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-    disposables.push(statusBarItem);
-    statusBarItem.text = defaultStatusText;
-    statusBarItem.command = 'sarif.showPanel';
-    statusBarItem.tooltip ='Show SARIF Panel';
-    statusBarItem.show();
 
     (async () => {
         const git = await getInitializedGitApi();
@@ -164,7 +154,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     }
 
     async function fetchAnalysis(analysisInfo: AnalysisInfo | undefined): Promise<void> {
-        statusBarItem.text = spinningStatusText;
+        isSpinning.set(true);
 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
@@ -198,7 +188,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
 
         panel.show();
-        statusBarItem.text = defaultStatusText;
+        isSpinning.set(false);
     }
 
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));

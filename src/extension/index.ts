@@ -8,13 +8,14 @@ import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionC
 import { mapDistinct } from '../shared';
 import '../shared/extension';
 import { getOffset, measureDrift } from './antiDrift';
-import { activateStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
+import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
 import { activateGithubAnalyses, getInitializedGitApi } from './index.activateGithubAnalyses';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
 import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
+import { activateSarifStatusBarItem } from './statusBarItem';
 import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
@@ -56,13 +57,14 @@ export async function activate(context: ExtensionContext) {
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // General Activation
+    activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser);
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
-    activateGithubAnalyses(disposables, store, panel);
-    activateStatusBarItem(disposables);
+    activateGithubAnalyses(store, panel);
+    activateAntiDriftStatusBarItem(disposables);
 
     // Check for Updates
     if (!isDebugOrTestMode) {

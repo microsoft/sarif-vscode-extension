@@ -13,7 +13,7 @@ function getStatusText() {
     return `$(beaker) Anti-Drift: ${antiDriftEnabled.get() ? 'On' : 'Off'}`;
 }
 
-export function activateStatusBarItem(disposables: { dispose(): void }[]): void {
+export function activateAntiDriftStatusBarItem(disposables: { dispose(): void }[]): void {
     if (statusBarItem) return;
 
     statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
