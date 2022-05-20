@@ -78,12 +78,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const watcher = watch([
             `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
         ], { ignoreInitial: true });
-        watcher.on('all', () => {
-            // args: event = change, path = .git/refs/heads/demo
+        watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
             onGitChanged(repo, gitHeadPath, store);
-
-            // if (path !== 'HEAD') return;
-            // statusBarItem.text = '$(sync~spin) SARIF Updating...';
         });
     })();
 
