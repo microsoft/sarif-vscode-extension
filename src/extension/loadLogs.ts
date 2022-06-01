@@ -33,7 +33,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
 
     const logsSupported = [] as Log[];
     const logsNotSupported = [] as Log[];
-    const warnUpgradeExtension = logs.some(log => detectUpgrade(log, logsSupported, logsNotSupported));
+    const warnUpgradeExtension = logs.some(log => detectSupport(log, logsSupported, logsNotSupported));
     for (const log of logsNotSupported) {
         if (token?.isCancellationRequested) break;
         const {fsPath} = Uri.parse(log._uri, true);
@@ -46,24 +46,31 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
     return logsSupported;
 }
 
-export function detectUpgrade(log: Log, logsNoUpgrade: Log[], logsToUpgrade: Log[]) {
+export function normalizeSchema(schema: string): string {
+    if (schema === '') return '';
+    return new URL(schema).pathname.split('/').pop()
+        ?.replace('-schema', '')
+        ?.replace(/\.json$/, '')
+        ?? '';
+}
+
+export function detectSupport(log: Log, logsSupported: Log[], logsNotSupported: Log[]): boolean {
     const {version} = log;
     if (!version || lt(version, '2.1.0')) {
-        logsToUpgrade.push(log);
+        logsNotSupported.push(log);
     } else if (gt(version, '2.1.0')) {
         return true; // warnUpgradeExtension
     } else if (eq(version, '2.1.0')) {
-        const schema = log.$schema
-            ?.replace('http://json.schemastore.org/sarif-', '')
-            ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
-            ?.replace(/\.json$/, '');
-        if (schema === undefined || schema === '2.1.0-rtm.5'
-            || schema === 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0'
-            || schema === 'https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0') {
-            // https://github.com/microsoft/sarif-vscode-extension/issues/330
-            logsNoUpgrade.push(log);
+        const normalizedSchema = normalizeSchema(log.$schema ?? '');
+        const supportedSchemas = [
+            '',
+            'sarif-2.1.0-rtm.5',
+            'sarif-2.1.0', // As of Aug 2020 the contents of `2.1.0` = `2.1.0-rtm.5`. Still true on May 2022.
+        ];
+        if (supportedSchemas.includes(normalizedSchema)) {
+            logsSupported.push(log);
         } else {
-            logsToUpgrade.push(log);
+            logsNotSupported.push(log);
         }
     }
     return false;
@@ -77,10 +84,7 @@ export function tryFastUpgradeLog(log: Log): boolean {
     const { version } = log;
     if (!eq(version, '2.1.0')) return false;
 
-    const schema = log.$schema
-        ?.replace('http://json.schemastore.org/sarif-', '')
-        ?.replace('https://schemastore.azurewebsites.net/schemas/json/sarif-', '')
-        ?.replace(/\.json$/, '');
+    const schema = normalizeSchema(log.$schema ?? '').replace(/^sarif-/, '');
     switch (schema) {
         case '2.1.0-rtm.1':
         case '2.1.0-rtm.2':
