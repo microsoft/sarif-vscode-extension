@@ -37,7 +37,10 @@ describe('loadLogs', () => {
             Uri,
             window: {
                 showWarningMessage: () => { },
-            }
+            },
+            workspace: {
+                workspaceFolders: undefined,
+            },
         },
         './telemetry': {
             activate: () => { },

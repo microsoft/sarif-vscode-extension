@@ -5,8 +5,9 @@
 import { readFileSync } from 'fs';
 import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
-import { Uri, window } from 'vscode';
+import { Uri, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
+import { overrideBaseUri } from '../shared/overrideBaseUri';
 import * as Telemetry from './telemetry';
 
 const driverlessRules = new Map<string, ReportingDescriptor>();
@@ -39,7 +40,14 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
         const {fsPath} = Uri.parse(log._uri, true);
         window.showWarningMessage(`'${fsPath}' was not loaded. Version '${log.version}' and schema '${log.$schema ?? ''}' is not supported.`);
     }
-    logsSupported.forEach(log => augmentLog(log, driverlessRules));
+
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
+    logsSupported.forEach(log => {
+        // Only supporting single workspaces for now.
+        overrideBaseUri(log, primaryWorkspaceFolderUriString);
+        augmentLog(log, driverlessRules);
+    });
+
     if (warnUpgradeExtension) {
         window.showWarningMessage('Some log versions are newer than this extension.');
     }

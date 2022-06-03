@@ -56,6 +56,7 @@ export class Panel {
             filtersColumn,
         };
         const state = Store.globalState.get('view', defaultState);
+        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString();
         webview.html = `<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -77,7 +78,7 @@ export class Panel {
                 <script>
                     vscode = acquireVsCodeApi();
                     (async () => {
-                        const store = new Store(${JSON.stringify(state)})
+                        const store = new Store(${JSON.stringify(state)}, ${workspaceUri ? `'${workspaceUri}'` : 'undefined'})
                         await store.onMessage({ data: ${JSON.stringify(this.createSpliceLogsMessage([], store.logs))} })
                         ReactDOM.render(
                             React.createElement(Index, { store }),
