@@ -42,28 +42,32 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                 return docUriString === artifactUriString;
             });
 
-            const messages = locationsInDoc.map((tfl) => {
-                const text = tfl.location?.message?.text;
-                return `Step ${locations.indexOf(tfl) + 1}${text ? `: ${text}` : ''}`;
-            });
             const ranges = locationsInDoc.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
-            const rangesEnd = ranges.map(range => {
-                const endPos = doc.lineAt(range.end.line).range.end;
-                return new Range(endPos, endPos);
-            });
-            const rangesEndAdj = rangesEnd.map(range => {
-                const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
-                const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
-                return range.end.character + tabCharAdj;
-            });
-            const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
-            const decorCallouts = rangesEnd.map((range, i) => ({
-                range,
-                hoverMessage: messages[i],
-                renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
-            }));
-            editor.setDecorations(decorationTypeCallout, decorCallouts);
             editor.setDecorations(decorationTypeHighlight, ranges);
+
+            { // Sub-scope for callouts.
+                const messages = locationsInDoc.map((tfl) => {
+                    const text = tfl.location?.message?.text;
+                    return `Step ${locations.indexOf(tfl) + 1}${text ? `: ${text}` : ''}`;
+                });
+                const rangesEnd = ranges.map(range => {
+                    const endPos = doc.lineAt(range.end.line).range.end;
+                    return new Range(endPos, endPos);
+                });
+                const rangesEndAdj = rangesEnd.map(range => {
+                    const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
+                    const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
+                    return range.end.character + tabCharAdj;
+                });
+                const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
+                const decorCallouts = rangesEnd.map((range, i) => ({
+                    range,
+                    hoverMessage: messages[i],
+                    renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
+                }));
+                editor.setDecorations(decorationTypeCallout, decorCallouts);
+            }
+
             return [];
         }
     }));
