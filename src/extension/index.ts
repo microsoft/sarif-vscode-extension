@@ -163,11 +163,18 @@ function activateDecorations(disposables: Disposable[], store: Store) {
             if (!editor) return; // When would editor be undef?
 
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
-            const messages = locations.map((tfl, i) => {
-                const text = tfl.location?.message?.text;
-                return `Step ${i + 1}${text ? `: ${text}` : ''}`;
+
+            const docUriString = doc.uri.toString();
+            const locationsInDoc = locations.filter(tfl => {
+                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
+                return docUriString === artifactUriString;
             });
-            const ranges = locations.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
+
+            const messages = locationsInDoc.map((tfl) => {
+                const text = tfl.location?.message?.text;
+                return `Step ${locations.indexOf(tfl) + 1}${text ? `: ${text}` : ''}`;
+            });
+            const ranges = locationsInDoc.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
             const rangesEnd = ranges.map(range => {
                 const endPos = doc.lineAt(range.end.line).range.end;
                 return new Range(endPos, endPos);
