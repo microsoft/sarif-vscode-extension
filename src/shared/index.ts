@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { ArtifactLocation, Location, Log, ReportingDescriptor, Result } from 'sarif';
+import { ArtifactLocation, Location, Log, ReportingDescriptor, Result, Message } from 'sarif';
 import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
 
@@ -122,9 +122,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
                 ?? toolComponent?.rules?.find(rule => rule.id === result.ruleId)
                 ?? getDriverlessRule(result.ruleId);
 
-            const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
-            result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
-            result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
+            [result._message, result._markdown] = parseMessage(result, result.message);
 
             result.level = effectiveLevel(result);
             result.baselineState = result.baselineState ?? 'new';
@@ -178,6 +176,13 @@ export function parseLocation(result: Result, loc?: Location) {
     const [uri, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };
+}
+
+export function parseMessage(result: Result, message: Message): [string, string | undefined] {
+    const _message = result._rule?.messageStrings?.[message.id ?? -1] ?? message;
+    const textMessage = format(_message.text, message.arguments) ?? '—';
+    const markdownMessage = format(_message.markdown, message.arguments); // No '—', leave undefined if empty.
+    return [textMessage, markdownMessage]
 }
 
 // Improve: `result` purely used for `_run.artifacts`.

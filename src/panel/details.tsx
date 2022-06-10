@@ -9,7 +9,7 @@ import * as React from 'react';
 import { Component, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame } from 'sarif';
-import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
+import { parseArtifactLocation, parseLocation, decodeFileUri, parseMessage } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postSelectArtifact, postSelectLog } from './indexStore';
@@ -83,14 +83,23 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                             <span>Locations</span>			<span className="svDetailsGridLocations">
                                                                 {result.locations?.map((loc, i) => {
                                                                     const ploc = loc.physicalLocation;
-                                                                    const [uri, _] = parseArtifactLocation(result, ploc?.artifactLocation);
-                                                                    return <a key={i} href="#" className="ellipsis" title={uri}
-                                                                        onClick={e => {
-                                                                            e.preventDefault(); // Cancel # nav.
-                                                                            postSelectArtifact(result, ploc);
-                                                                        }}>
-                                                                        {uri?.file ?? '-'}
-                                                                    </a>;
+                                                                    const artifactLocation = ploc?.artifactLocation;
+                                                                    const artifactDescription = artifactLocation?.description;
+                                                                    let artifactTextDescription = '';
+                                                                    if (artifactDescription) {
+                                                                        [artifactTextDescription, ] = parseMessage(result, artifactDescription);
+                                                                    }
+                                                                    const [uri, ] = parseArtifactLocation(result, artifactLocation);
+                                                                    
+                                                                    return <>
+                                                                        <a key={i} href="#" className="ellipsis" title={uri}
+                                                                            onClick={e => {
+                                                                                e.preventDefault(); // Cancel # nav.
+                                                                                postSelectArtifact(result, ploc);
+                                                                            }}>
+                                                                            {uri?.file ?? '-'}
+                                                                        </a>&nbsp;{artifactTextDescription ?? ''}<br/>
+                                                                    </>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
                             <span>Log</span>				<a href="#" title={decodeFileUri(result._log._uri)}
