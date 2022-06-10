@@ -151,7 +151,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                     <span className="svSecondary">No stacks in selected result.</span>
                                 </div>;
 
-                            return this.stacks.map(stack => {
+                            return this.stacks.map((stack, key) => {
                                 const stackFrames = stack.frames;
 
                                 const selection = observable.box<Location | undefined>(undefined, { deep: false });
@@ -160,7 +160,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                     postSelectArtifact(result, location?.physicalLocation);
                                 });
                                 if (stack.message?.text) {
-                                    return <div className="svStack">
+                                    return <div key={key} className="svStack">
                                         <div className="svStacksMessage">
                                             {stack?.message?.text}
                                         </div>
