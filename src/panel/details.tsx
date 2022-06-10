@@ -154,10 +154,10 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                             return this.stacks.map((stack, key) => {
                                 const stackFrames = stack.frames;
 
-                                const selection = observable.box<Location | undefined>(undefined, { deep: false });
+                                const selection = observable.box<StackFrame | undefined>(undefined, { deep: false });
                                 selection.observe(change => {
-                                    const location = change.newValue;
-                                    postSelectArtifact(result, location?.physicalLocation);
+                                    const frame = change.newValue;
+                                    postSelectArtifact(result, frame?.location?.physicalLocation);
                                 });
                                 if (stack.message?.text) {
                                     return <div key={key} className="svStack">
