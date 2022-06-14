@@ -56,8 +56,8 @@
                     "default": "Default",
                     "scope": "application"
                 },
-                "sarif-viewer.maximumRecursionDepth":{
-                    "description":"The maximum recursion depth for mapping location attemption in the sarif file that can't be found. Set the value to 0 to disable recursive mapping.",
+                "sarif-viewer.maximumRecursionDepth": {
+                    "description": "The maximum recursion depth for mapping location attemption in the sarif file that can't be found. Set the value to 0 to disable recursive mapping.",
                     "type": "number",
                     "minimum": 0,
                     "default": 1
