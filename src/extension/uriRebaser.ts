@@ -144,8 +144,6 @@ export class UriRebaser {
                 }
             }
 
-
-
             return ''; // Signals inability to rebase.
         };
 
