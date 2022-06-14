@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Uri, window, workspace } from 'vscode';
+import { FileType, Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import platformUriNormalize from './platformUriNormalize';
 import { Store } from './store';
@@ -70,6 +70,22 @@ export class UriRebaser {
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
     public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
         if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
+        const recursiveMapping = async (maximumRecursionDepth:number, tempBase: string, artifactUri:string ) => {
+            if (maximumRecursionDepth = 0) {
+                let tempLocalUri = tempBase + artifactUri.slice(1);
+                if (!await uriExists(tempLocalUri))
+                    return ''; 
+                this.updateValidatedUris(artifactUri, tempLocalUri);
+                this.updateBases(splitUri(artifactUri), splitUri(tempLocalUri));
+                return tempLocalUri;
+            } else {
+                for (const [name, type] of await workspace.fs.readDirectory(Uri.parse(tempBase)) {
+                    if (type == FileType.Directory){
+                        const subFolder = await recursiveMapping(maximumRecursionDepth-1, tempBase + "/")
+                    }
+                }
+            }
+        }
         const validateUri = async () => {
             // Cache
             if (this.validatedUrisArtifactToLocal.has(artifactUri))
@@ -112,6 +128,18 @@ export class UriRebaser {
                 return localUri;
             }
 
+            // Recursive map uri base
+            const maximumRecursionDepthConfigSection = 'maximumRecursionDepth';
+            const extensionName = 'sarif-viewer';
+            const defaultMaximumRecursionDepth = 1;
+            const maximumRecursionDepth = workspace.getConfiguration(extensionName).get<number>(maximumRecursionDepthConfigSection, defaultMaximumRecursionDepth);
+            vscode.showInformationMessage(maximumRecursionDepth);
+            let counter=0
+            while (counter<maximumRecursionDepth) {
+
+            }
+
+
             return ''; // Signals inability to rebase.
         };
 
@@ -151,9 +179,12 @@ export class UriRebaser {
     }
 
     public uriBases = [] as string[]
-    private async tryUriBases(artifactUri: string) {
+    private async tryUriBases(artifactUri: string, uriBases?: string[]) {
+        if (uriBases === undefined) {
+            uriBases = this.uriBases;
+        }
         const artifactParts = splitUri(artifactUri);
-        for (const localUriBase of this.uriBases) {
+        for (const localUriBase of uriBases) {
             const localParts = splitUri(localUriBase);
             for (const [artifactIndex, localIndex] of UriRebaser.commonIndices(artifactParts, localParts)) {
                 const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
