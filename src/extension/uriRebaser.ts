@@ -185,12 +185,9 @@ export class UriRebaser {
     }
 
     public uriBases = [] as string[]
-    private async tryUriBases(artifactUri: string, uriBases?: string[]) {
-        if (uriBases === undefined) {
-            uriBases = this.uriBases;
-        }
+    private async tryUriBases(artifactUri: string) {
         const artifactParts = splitUri(artifactUri);
-        for (const localUriBase of uriBases) {
+        for (const localUriBase of this.uriBases) {
             const localParts = splitUri(localUriBase);
             for (const [artifactIndex, localIndex] of UriRebaser.commonIndices(artifactParts, localParts)) {
                 const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
