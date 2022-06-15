@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { ArtifactLocation, Location, Log, ReportingDescriptor, Result } from 'sarif';
+import { ArtifactLocation, Location, Log, Region, ReportingDescriptor, Result } from 'sarif';
 import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
 
@@ -241,5 +241,42 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
     },
 };
 
-export type CommandPanelToExtension = 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState';
 export type CommandExtensionToPanel = 'select' | 'spliceLogs';
+
+interface IOpenMessage {
+    command: 'open';
+}
+
+interface ICloseLogMessage {
+    command: 'closeLog';
+    uri: string;
+}
+
+interface ICloseAllLogsMessage {
+    command: 'closeAllLogs';
+}
+
+interface ISelectMessage {
+    command: 'select';
+    id: ResultId;
+    uri: string;
+    region: Region;
+}
+
+interface ISelectLogMessage {
+    command: 'selectLog';
+    id: ResultId;
+}
+
+interface ISetStateMessage {
+    command: 'setState';
+    state: string;
+}
+
+export type PanelToExtensionMessage =
+    | IOpenMessage
+    | ICloseLogMessage
+    | ICloseAllLogsMessage
+    | ISelectMessage
+    | ISelectLogMessage
+    | ISetStateMessage;
