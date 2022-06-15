@@ -258,7 +258,7 @@ interface ICloseAllLogsMessage {
 
 interface ISelectMessage {
     command: 'select';
-    logUri: string;
+    id: ResultId;
     uri: string;
     region: Region;
 }

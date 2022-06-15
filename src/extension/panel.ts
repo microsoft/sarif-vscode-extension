@@ -6,15 +6,21 @@ import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Region, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
-import { filtersColumn, filtersRow, JsonMap, PanelToExtensionMessage, ResultId } from '../shared';
+import { filtersColumn, filtersRow, JsonMap, PanelToExtensionMessage } from '../shared';
 import { loadLogs } from './loadLogs';
 import { regionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
 
+interface IPanelSelection {
+    result: Result;
+    uri: string;
+}
+
 export class Panel {
     private title = 'SARIF Result'
     @observable private panel: WebviewPanel | null = null
+    selection = observable.box<IPanelSelection | null>(null, { deep: false })
 
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
@@ -110,10 +116,13 @@ export class Panel {
                     break;
                 }
                 case 'select': {
-                    const {logUri, uri, region} = message;
+                    const { id, uri, region } = message;
+                    const [logUri, runIndex, resultIndex] = id;
                     const validatedUri = await basing.translateArtifactToLocal(uri);
                     if (!validatedUri) return;
                     await this.selectLocal(logUri, validatedUri, region);
+                    const result = store.logs.find(log => log._uri === logUri)?.runs?.[runIndex]?.results?.[resultIndex];
+                    this.selection.set(result ? { result, uri: validatedUri } : null);
                     break;
                 }
                 case 'selectLog': {

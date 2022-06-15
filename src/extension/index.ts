@@ -54,7 +54,7 @@ export async function activate(context: ExtensionContext) {
     // General Activation
     activateDiagnostics(disposables, store, baser);
     activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store);
+    activateDecorations(disposables, store, panel);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
 
@@ -140,7 +140,7 @@ function activateWatchDocuments(disposables: Disposable[], store: Store, panel: 
 }
 
 // Decorations are for Call Trees.
-function activateDecorations(disposables: Disposable[], store: Store) {
+function activateDecorations(disposables: Disposable[], store: Store, panel: Panel) {
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
@@ -149,47 +149,50 @@ function activateDecorations(disposables: Disposable[], store: Store) {
         borderStyle: 'solid',
         borderColor: new ThemeColor('problemsWarningIcon.foreground'),
     });
-    disposables.push(languages.registerCodeActionsProvider('*', {
-        provideCodeActions: (doc, _range, context) => {
-            if (context.only) return;
+    let disposer = observe(panel.selection, change => {
+        const selection = change?.newValue;
+        if (!selection) return;
 
-            const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
-            if (!diagnostic) return;
+        const uri = Uri.parse(selection.uri, true);
+        const editor = window.visibleTextEditors.find(editor => editor.document.fileName === uri.fsPath);
+        if (!editor) return;
+        const doc = editor.document;
 
-            const result = diagnostic?.result;
-            if (!result) return; // Don't clear the decorations until the next result is selected.
-
-            const editor = window.visibleTextEditors.find(editor => editor.document === doc);
-            if (!editor) return; // When would editor be undef?
-
-            const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
-            const messages = locations.map((tfl, i) => {
-                const text = tfl.location?.message?.text;
-                return `Step ${i + 1}${text ? `: ${text}` : ''}`;
-            });
-            const ranges = locations.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
-            const rangesEnd = ranges.map(range => {
-                const endPos = doc.lineAt(range.end.line).range.end;
-                return new Range(endPos, endPos);
-            });
-            const rangesEndAdj = rangesEnd.map(range => {
-                const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
-                const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
-                return range.end.character + tabCharAdj;
-            });
-            const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
-            const decorCallouts = rangesEnd.map((range, i) => ({
-                range,
-                hoverMessage: messages[i],
-                renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
-            }));
-            editor.setDecorations(decorationTypeCallout, decorCallouts);
-            editor.setDecorations(decorationTypeHighlight, ranges);
-            return [];
-        }
-    }));
-    const disposer = observe(store.logs, change => {
-        const {removed} = change as unknown as IArraySplice<Log>;
+        const { result } = selection;
+        const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
+        const messages = locations.map((tfl, i) => {
+            const text = tfl.location?.message?.text;
+            return `Step ${i + 1}${text ? `: ${text}` : ''}`;
+        });
+        const ranges = locations
+            .filter(tfl => {
+                const threadFlowUri = tfl.location?.physicalLocation?.artifactLocation?.uri;
+                if (!threadFlowUri) return false;
+                // TODO: Improve the matching logic to avoid false positives.
+                return doc.uri.toString().file === threadFlowUri.file;
+            })
+            .map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
+        const rangesEnd = ranges.map(range => {
+            const endPos = doc.lineAt(range.end.line).range.end;
+            return new Range(endPos, endPos);
+        });
+        const rangesEndAdj = rangesEnd.map(range => {
+            const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
+            const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
+            return range.end.character + tabCharAdj;
+        });
+        const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
+        const decorCallouts = rangesEnd.map((range, i) => ({
+            range,
+            hoverMessage: messages[i],
+            renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
+        }));
+        editor.setDecorations(decorationTypeCallout, decorCallouts);
+        editor.setDecorations(decorationTypeHighlight, ranges);
+    });
+    disposables.push({ dispose: disposer });
+    disposer = observe(store.logs, change => {
+        const { removed } = change as unknown as IArraySplice<Log>;
         if (!removed.length) return;
         window.visibleTextEditors.forEach(editor => {
             editor.setDecorations(decorationTypeCallout, []);
