@@ -72,16 +72,19 @@ export class UriRebaser {
         if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
         const recursiveMapping = async (maximumRecursionDepth:number, tempBase: string, artifactUri:string ): Promise<string[]> => {
             if (maximumRecursionDepth == 0) {
-                let tempLocalUri = tempBase + "/" +splitUri(artifactUri).slice(1).join('/');
-                if (!await uriExists(tempLocalUri))
-                    return []; 
-                return [tempLocalUri];
+                return [];
             } else {
                 let returnList = [] as string[];
+                let tempLocalUri = tempBase + "/" +splitUri(artifactUri).slice(1).join('/');
+                if (await uriExists(tempLocalUri)) {
+                    returnList.push(tempLocalUri);
+                    return returnList; // premature return to reduce time execution, comment this line to receive all qualified URIs 
+                }
                 for (const [name, type] of await workspace.fs.readDirectory(Uri.parse(tempBase))) {
                     if (type == FileType.Directory){
                         const subLstReturn = await recursiveMapping(maximumRecursionDepth-1, tempBase + "/" + name, artifactUri);
                         returnList = returnList.concat(subLstReturn);
+                        if (returnList.length) return returnList; // premature return to reduce time execution, comment this line to receive all qualified URIs 
                     }
                 }
                 return returnList;
