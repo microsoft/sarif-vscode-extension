@@ -114,6 +114,20 @@ export class UriRebaser {
                 if (localUri) return localUri;
             }
 
+            // Distinct Project Items v2
+            /*
+                Instead of stored amount of distinctLocalNames and distinctArtifactNames in pre-active stage,
+                We can directly try to directly map the artifactUri to localUri with the workspace Uri base
+            */
+            if (workspace.workspaceFolders?.[0]?.uri) {
+                const localUri = [...splitUri(workspace.workspaceFolders[0].uri.toString()), ...splitUri(artifactUri).slice(1)].join('/');
+                if (await uriExists(localUri)){
+                    this.updateValidatedUris(artifactUri, localUri);
+                    this.updateBases(splitUri(artifactUri), splitUri(localUri)); 
+                    return localUri;                   
+                }
+            }     
+
             // Distinct Project Items
             const {file} = artifactUri;
             if (this.distinctLocalNames.has(file) && this.store.distinctArtifactNames.has(file)) {
