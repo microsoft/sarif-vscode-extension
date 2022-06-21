@@ -3,7 +3,7 @@
 
 import { action, autorun, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, Visibility } from '../shared';
+import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, findResult, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
 import { overrideBaseUri } from '../shared/overrideBaseUri';
 import { isActive } from './isActive';
@@ -108,8 +108,7 @@ export class IndexStore {
             if (!id) {
                 this.selection.set(undefined);
             } else {
-                const [logUri, runIndex, resultIndex] = id;
-                const result = this.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
+                const result = findResult(this.logs, id);
                 if (!result) throw new Error('Unexpected: result undefined');
                 this.selectedTab.get().store?.select(result);
             }
