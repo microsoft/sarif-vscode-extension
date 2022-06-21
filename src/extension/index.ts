@@ -68,7 +68,7 @@ export async function activate(context: ExtensionContext) {
     }
 
     // API
-    return {
+    const api = {
         async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
             store.logs.push(...await loadLogs(logs, cancellationToken));
             if (cancellationToken?.isCancellationRequested) return;
@@ -89,6 +89,11 @@ export async function activate(context: ExtensionContext) {
             baser.uriBases = values.map(uri => uri.toString());
         },
     };
+
+    // During development, use the following line to auto-load a log.
+    // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
+
+    return api;
 }
 
 function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
