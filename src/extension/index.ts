@@ -103,7 +103,27 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
 
-        const artifactUri = baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+        const artifactUri = (() => {
+            // TODO: Recall why skipEncoding=true in the common case.
+            // TODO: Review for consistent usage of skipEncoding (for example in `provideTextDocumentContent`)
+            // For now, we are bypassing the legacy code path for the `sarif:` paths.
+            // The lack of consistent encoding was causing `uri === artifactUri` to be incorrect.
+
+            // Intended
+            // sarif:                                                        /0/0/file.text
+            //       file :     /      /     /     Downloads /    myLog.sarif
+
+            // Raw     (skipEncoding = true)
+            // sarif:file  %3A   %2F   %2F   %2F   Downloads %2F   myLog.sarif/0/0/file.text
+
+            // Encoded (skipEncoding = false), Also this = result._uriContents.
+            // sarif:file  %253A %252F %252F %252F Downloads %252F myLog.sarif/0/0/file.text
+
+            if (doc.uri.scheme === 'sarif') {
+                return doc.uri.toString(); // skipEncoding=false;
+            }
+            return baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+        })();
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
