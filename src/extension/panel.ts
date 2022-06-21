@@ -120,8 +120,7 @@ export class Panel {
                 case 'selectLog': {
                     const [logUri, runIndex, resultIndex] = message.id as ResultId;
                     const log = store.logs.find(log => log._uri === logUri);
-                    const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
-                    if (!log || !result) return;
+                    if (!log) return;
 
                     const logUriUpgraded = log._uriUpgraded ?? log._uri;
                     if (!log._jsonMap) {
