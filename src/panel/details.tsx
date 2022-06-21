@@ -20,8 +20,8 @@ type TabName = 'Info' | 'Analysis Steps';
 interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
     private selectedTab = observable.box<TabName>('Info')
-    @computed private get threadFlowLocations() {
-		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations;
+    @computed private get threadFlowLocations(): ThreadFlowLocation[] {
+		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations ?? [];
 	}
     @computed private get stacks() {
         return this.props.result?.stacks;
@@ -29,7 +29,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
     constructor(props: DetailsProps) {
         super(props);
         autorun(() => {
-            const hasThreadFlows = !!this.threadFlowLocations?.length;
+            const hasThreadFlows = !!this.threadFlowLocations.length;
             this.selectedTab.set(hasThreadFlows ? 'Analysis Steps' : 'Info');
         });
     }
@@ -106,7 +106,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         </div>
                     </div>
                 </Tab>
-                <Tab name="Analysis Steps" count={this.threadFlowLocations?.length || 0}>
+                <Tab name="Analysis Steps" count={this.threadFlowLocations.length}>
                     <div className="svDetailsBody svDetailsCodeflowAndStacks">
                         {(() => {
                             const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
