@@ -2,10 +2,10 @@
 // Licensed under the MIT License.
 /* eslint-disable filenames/match-regex */
 
-import { IArraySplice, observe } from 'mobx';
+import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
 import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
-import { parseArtifactLocation } from '../shared';
+import { findResult, parseArtifactLocation, ResultId } from '../shared';
 import '../shared/extension';
 import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
@@ -13,6 +13,10 @@ import { Store } from './store';
 
 // Decorations are for Analysis Steps.
 export function activateDecorations(disposables: Disposable[], store: Store) {
+    // Navigating away from a diagnostic/result will not clear the `activeResultId`.
+    // This keeps the decorations "pinned" while users navigate the thread flow steps.
+    const activeResultId = observable.box<string | undefined>();
+
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
@@ -21,19 +25,48 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
         borderStyle: 'solid',
         borderColor: new ThemeColor('problemsWarningIcon.foreground'),
     });
+
+    // On selection change, set the `activeResultId`.
     disposables.push(languages.registerCodeActionsProvider('*', {
-        provideCodeActions: (doc, _range, context) => {
+        provideCodeActions: (_doc, _range, context) => {
             if (context.only) return;
 
             const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
             if (!diagnostic) return;
 
             const result = diagnostic?.result;
-            if (!result) return; // Don't clear the decorations until the next result is selected.
+            if (!result) return; // Don't clear the decorations. See `activeResultId` comments.
 
-            const editor = window.visibleTextEditors.find(editor => editor.document === doc);
-            if (!editor) return; // When would editor be undef?
+            activeResultId.set(JSON.stringify(result._id)); // Stringify for comparability.
 
+            // Technically should be using `onDidChangeTextEditorSelection` and `languages.getDiagnostics`
+            // then manually figuring with diagnostics are at the caret. However `languages.registerCodeActionsProvider`
+            // provides the diagnostics for free. The only odd part is that we always return [] when `provideCodeActions` is called.
+            return [];
+        }
+    }));
+
+    // Update decorations on:
+    // * `activeResultId` change
+    // * `window.visibleTextEditors` change
+    // * `store.logs` item removed
+    //    We don't trigger on log added as the user would need to select a result first.
+    function update() {
+        const resultId = activeResultId.get();
+        if (!resultId) {
+            // This code path is only expected if `activeResultId` has not be set yet. See `activeResultId` comments.
+            // Thus we are not concerned with clearing any previously rendered decorations.
+            return;
+        }
+        const result = findResult(store.logs,JSON.parse(resultId) as ResultId);
+        if (!result) {
+            // Only in rare cases does `findResult` fail to resolve a `resultId` into a `result`.
+            // Such as if a log were closed after an `activeResultId` was set.
+            return;
+        }
+
+        for (const editor of window.visibleTextEditors) {
+            const doc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
             const docUriString = doc.uri.toString();
@@ -67,17 +100,17 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                 }));
                 editor.setDecorations(decorationTypeCallout, decorCallouts);
             }
-
-            return [];
         }
-    }));
-    const disposer = observe(store.logs, change => {
+    }
+
+    disposables.push({ dispose: observe(activeResultId, update) });
+    disposables.push(window.onDidChangeVisibleTextEditors(update));
+    disposables.push({ dispose: observe(store.logs, change => {
         const {removed} = change as unknown as IArraySplice<Log>;
         if (!removed.length) return;
         window.visibleTextEditors.forEach(editor => {
             editor.setDecorations(decorationTypeCallout, []);
             editor.setDecorations(decorationTypeHighlight, []);
         });
-    });
-    disposables.push({ dispose: disposer });
+    }) });
 }
