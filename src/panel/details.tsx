@@ -109,8 +109,6 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                 <Tab name="Analysis Steps" count={this.threadFlowLocations?.length || 0}>
                     <div className="svDetailsBody svDetailsCodeflowAndStacks">
                         {(() => {
-                            const items = this.threadFlowLocations;
-
                             const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
                                 const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 24;
                                 const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
@@ -127,7 +125,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                 postSelectArtifact(result, threadFlowLocation?.location?.physicalLocation);
                             });
 
-                            return <List items={items} renderItem={renderThreadFlowLocation} selection={selection} allowClear>
+                            return <List items={this.threadFlowLocations} renderItem={renderThreadFlowLocation} selection={selection} allowClear>
                                 <span className="svSecondary">No analysis steps in selected result.</span>
                             </List>;
                         })()}
