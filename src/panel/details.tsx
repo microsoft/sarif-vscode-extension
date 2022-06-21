@@ -8,7 +8,7 @@ import { observer } from 'mobx-react';
 import * as React from 'react';
 import { Component, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Location, Result, StackFrame } from 'sarif';
+import { Location, Result, StackFrame, ThreadFlowLocation } from 'sarif';
 import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
@@ -21,9 +21,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
     private selectedTab = observable.box<TabName>('Info')
     @computed private get threadFlowLocations() {
-		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations
-			.map(threadFlowLocation => threadFlowLocation.location)
-			.filter(locations => locations);
+		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations;
 	}
     @computed private get stacks() {
         return this.props.result?.stacks;
@@ -46,10 +44,11 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
-        const renderLocation = (location: Location) => {
-            const { message, uri, region } = parseLocation(result, location);
+        const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
+            const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 24;
+            const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
             return <>
-                <div className="ellipsis">{message ?? '—'}</div>
+                <div className="ellipsis" style={{ marginLeft }}>{message ?? '—'}</div>
                 <div className="svSecondary">{uri?.file ?? '—'}</div>
                 <div className="svLineNum">{region?.startLine}:{region?.startColumn ?? 1}</div>
             </>;
@@ -131,13 +130,13 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         {(() => {
                             const items = this.threadFlowLocations;
 
-                            const selection = observable.box<Location | undefined>(undefined, { deep: false });
+                            const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false });
                             selection.observe(change => {
-                                const location = change.newValue;
-                                postSelectArtifact(result, location?.physicalLocation);
+                                const threadFlowLocation = change.newValue;
+                                postSelectArtifact(result, threadFlowLocation?.location?.physicalLocation);
                             });
 
-                            return <List items={items as ReadonlyArray<Location>} renderItem={renderLocation} selection={selection} allowClear>
+                            return <List items={items} renderItem={renderThreadFlowLocation} selection={selection} allowClear>
                                 <span className="svSecondary">No analysis steps in selected result.</span>
                             </List>;
                         })()}
