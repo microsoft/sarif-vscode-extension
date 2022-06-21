@@ -44,26 +44,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
 
         const {result, height} = this.props;
         const helpUri = result?._rule?.helpUri;
-        const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
-            const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 24;
-            const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
-            return <>
-                <div className="ellipsis" style={{ marginLeft }}>{message ?? '—'}</div>
-                <div className="svSecondary">{uri?.file ?? '—'}</div>
-                <div className="svLineNum">{region?.startLine}:{region?.startColumn ?? 1}</div>
-            </>;
-        };
-        const renderStack = (stackFrame: StackFrame) => {
-            const location = stackFrame.location;
-            const logicalLocation = stackFrame.location?.logicalLocations?.[0];
-            const { message, uri, region } = parseLocation(result, location);
-            const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
-            return <>
-                <div className="ellipsis">{text ?? '—'}</div>
-                <div className="svSecondary">{uri?.file ?? '—'}</div>
-                <div className="svLineNum">{region?.startLine}:1</div>
-            </>;
-        };
+
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
@@ -130,6 +111,16 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                         {(() => {
                             const items = this.threadFlowLocations;
 
+                            const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
+                                const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 24;
+                                const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
+                                return <>
+                                    <div className="ellipsis" style={{ marginLeft }}>{message ?? '—'}</div>
+                                    <div className="svSecondary">{uri?.file ?? '—'}</div>
+                                    <div className="svLineNum">{region?.startLine}:{region?.startColumn ?? 1}</div>
+                                </>;
+                            };
+
                             const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false });
                             selection.observe(change => {
                                 const threadFlowLocation = change.newValue;
@@ -149,6 +140,18 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                 return <div className="svZeroData">
                                     <span className="svSecondary">No stacks in selected result.</span>
                                 </div>;
+
+                            const renderStack = (stackFrame: StackFrame) => {
+                                const location = stackFrame.location;
+                                const logicalLocation = stackFrame.location?.logicalLocations?.[0];
+                                const { message, uri, region } = parseLocation(result, location);
+                                const text = `${message ?? ''} ${logicalLocation?.fullyQualifiedName ?? ''}`;
+                                return <>
+                                    <div className="ellipsis">{text ?? '—'}</div>
+                                    <div className="svSecondary">{uri?.file ?? '—'}</div>
+                                    <div className="svLineNum">{region?.startLine}:1</div>
+                                </>;
+                            };
 
                             return this.stacks.map(stack => {
                                 const stackFrames = stack.frames;
