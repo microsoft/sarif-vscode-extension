@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.1.2",
+    "version": "3.2.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -84,7 +84,8 @@
         "start": "webpack --watch --mode development",
         "server": "webpack serve --mode development",
         "test": "mocha",
-        "testcoverage": "nyc mocha --watch=false",
+        "test:watch": "mocha --watch",
+        "testcoverage": "nyc mocha",
         "package": "vsce package",
         "vscode:prepublish": "webpack --mode production",
         "lint": "eslint src"
