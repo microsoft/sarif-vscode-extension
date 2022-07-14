@@ -11,6 +11,11 @@ export type JsonMap = Record<string, JsonRange>
 
 export type ResultId = [string, number, number]
 
+export function findResult(logs: Log[], id: ResultId): Result | undefined {
+    const [logUri, runIndex, resultIndex] = id;
+    return logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
+}
+
 // The extended members we're adding here are prefixed with an underscore.
 // Using this marker to easily get a sense of how much we're depending on these extended members.
 // Once this design stabilities, these underscores will likely be removed as

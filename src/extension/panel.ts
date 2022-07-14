@@ -66,6 +66,7 @@ export class Panel {
             filtersColumn,
         };
         const state = Store.globalState.get('view', defaultState);
+        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString();
         webview.html = `<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -87,7 +88,7 @@ export class Panel {
                 <script>
                     vscode = acquireVsCodeApi();
                     (async () => {
-                        const store = new Store(${JSON.stringify(state)})
+                        const store = new Store(${JSON.stringify(state)}, ${workspaceUri ? `'${workspaceUri}'` : 'undefined'})
                         store.banner = '${store.banner}'
                         await store.onMessage({ data: ${JSON.stringify(this.createSpliceLogsMessage([], store.logs))} })
                         ReactDOM.render(
@@ -130,8 +131,7 @@ export class Panel {
                 case 'selectLog': {
                     const [logUri, runIndex, resultIndex] = message.id as ResultId;
                     const log = store.logs.find(log => log._uri === logUri);
-                    const result = store.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
-                    if (!log || !result) return;
+                    if (!log) return;
 
                     const logUriUpgraded = log._uriUpgraded ?? log._uri;
                     if (!log._jsonMap) {

@@ -28,10 +28,13 @@ function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
 
     if (startLine !== undefined) {
         const line = doc.lineAt(startLine - 1);
+
+        // Translate from Region (1-based) to Range (0-based).
         const minusOne = (n: number | undefined) => n === undefined ? undefined : n - 1;
+
         return new Selection(
             startLine - 1,
-            minusOne(region.startColumn) ?? line.firstNonWhitespaceCharacterIndex, // Trimming whitespace for default startColumn value.
+            Math.max(line.firstNonWhitespaceCharacterIndex, minusOne(region.startColumn) ?? 0), // Trim leading whitespace.
             (region.endLine ?? startLine) - 1,
             minusOne(region.endColumn) ?? line.range.end.character,
         );

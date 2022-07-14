@@ -3,8 +3,9 @@
 
 import { action, autorun, computed, intercept, observable, observe, toJS, when } from 'mobx';
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
-import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, parseArtifactLocation, Visibility } from '../shared';
+import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, findResult, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
+import { overrideBaseUri } from '../shared/overrideBaseUri';
 import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
@@ -14,7 +15,7 @@ export class IndexStore {
 
     private driverlessRules = new Map<string, ReportingDescriptor>();
 
-    constructor(state: Record<string, Record<string, Record<string, Visibility>>>, defaultSelection?: boolean) {
+    constructor(state: Record<string, Record<string, Record<string, Visibility>>>, workspaceUri?: string, defaultSelection?: boolean) {
         this.filtersRow = state.filtersRow;
         this.filtersColumn = state.filtersColumn;
         const setState = () => {
@@ -33,7 +34,10 @@ export class IndexStore {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         intercept(this.logs, (change: any) => {
             if (change.type !== 'splice') throw new Error(`Unexpected change type. ${change.type}`);
-            change.added.forEach((log: Log) => augmentLog(log, this.driverlessRules));
+            change.added.forEach((log: Log) => {
+                overrideBaseUri(log, workspaceUri);
+                augmentLog(log, this.driverlessRules);
+            });
             return change;
         });
 
@@ -108,8 +112,7 @@ export class IndexStore {
             if (!id) {
                 this.selection.set(undefined);
             } else {
-                const [logUri, runIndex, resultIndex] = id;
-                const result = this.logs.find(log => log._uri === logUri)?.runs[runIndex]?.results?.[resultIndex];
+                const result = findResult(this.logs, id);
                 if (!result) throw new Error('Unexpected: result undefined');
                 this.selectedTab.get().store?.select(result);
             }

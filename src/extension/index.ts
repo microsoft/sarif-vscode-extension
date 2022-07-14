@@ -2,14 +2,14 @@
 // Licensed under the MIT License.
 
 import { diffChars } from 'diff';
-import { IArraySplice, observe } from 'mobx';
-import { Log } from 'sarif';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
+import { observe } from 'mobx';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, TextDocument, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
 import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
 import { getOriginalDoc } from './getOriginalDoc';
 import { activateGithubAnalyses } from './index.activateGithubAnalyses';
+import { activateDecorations } from './index.activateDecorations';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
@@ -76,7 +76,7 @@ export async function activate(context: ExtensionContext) {
     }
 
     // API
-    return {
+    const api = {
         async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
             store.logs.push(...await loadLogs(logs, cancellationToken));
             if (cancellationToken?.isCancellationRequested) return;
@@ -97,6 +97,11 @@ export async function activate(context: ExtensionContext) {
             baser.uriBases = values.map(uri => uri.toString());
         },
     };
+
+    // During development, use the following line to auto-load a log.
+    // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
+
+    return api;
 }
 
 function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
@@ -107,7 +112,27 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.fileName.endsWith('.git')) return;
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri...""
 
-        const artifactUri = baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+        const artifactUri = (() => {
+            // TODO: Recall why skipEncoding=true in the common case.
+            // TODO: Review for consistent usage of skipEncoding (for example in `provideTextDocumentContent`)
+            // For now, we are bypassing the legacy code path for the `sarif:` paths.
+            // The lack of consistent encoding was causing `uri === artifactUri` to be incorrect.
+
+            // Intended
+            // sarif:                                                        /0/0/file.text
+            //       file :     /      /     /     Downloads /    myLog.sarif
+
+            // Raw     (skipEncoding = true)
+            // sarif:file  %3A   %2F   %2F   %2F   Downloads %2F   myLog.sarif/0/0/file.text
+
+            // Encoded (skipEncoding = false), Also this = result._uriContents.
+            // sarif:file  %253A %252F %252F %252F Downloads %252F myLog.sarif/0/0/file.text
+
+            if (doc.uri.scheme === 'sarif') {
+                return doc.uri.toString(); // skipEncoding=false;
+            }
+            return baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+        })();
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
@@ -161,71 +186,6 @@ function activateWatchDocuments(disposables: Disposable[], store: Store, panel: 
         if (!doc.fileName.match(/\.sarif$/i)) return;
         store.logs.removeFirst(log => log._uri === doc.uri.toString());
     }));
-}
-
-// Decorations are for Call Trees.
-function activateDecorations(disposables: Disposable[], store: Store) {
-    const decorationTypeCallout = window.createTextEditorDecorationType({
-        after: { color: new ThemeColor('problemsWarningIcon.foreground') }
-    });
-    const decorationTypeHighlight = window.createTextEditorDecorationType({
-        border: '1px',
-        borderStyle: 'solid',
-        borderColor: new ThemeColor('problemsWarningIcon.foreground'),
-    });
-    disposables.push(languages.registerCodeActionsProvider('*', {
-        provideCodeActions: async (currentDoc, _range, context) => {
-            // Typical bail out case: `context.only = { value: 'quickFix' }`
-            // We only care about initial load (which `context === undefined`)
-            if (context.only) return;
-
-            const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
-            if (!diagnostic) return;
-
-            const result = diagnostic?.result;
-            if (!result) return; // Don't clear the decorations until the next result is selected.
-
-            const editor = window.visibleTextEditors.find(editor => editor.document === currentDoc);
-            if (!editor) return; // When would editor be undef?
-
-            const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
-            const messages = locations.map((tfl, i) => {
-                const text = tfl.location?.message?.text;
-                return `Step ${i + 1}${text ? `: ${text}` : ''}`;
-            });
-
-            const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
-            const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
-            const ranges = locations.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
-            const rangesEnd = ranges.map(range => {
-                const endPos = currentDoc.lineAt(range.end.line).range.end;
-                return new Range(endPos, endPos);
-            });
-            const rangesEndAdj = rangesEnd.map(range => {
-                const tabCount = currentDoc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
-                const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
-                return range.end.character + tabCharAdj;
-            });
-            const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
-            const decorCallouts = rangesEnd.map((range, i) => ({
-                range,
-                hoverMessage: messages[i],
-                renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
-            }));
-            editor.setDecorations(decorationTypeCallout, decorCallouts);
-            editor.setDecorations(decorationTypeHighlight, ranges);
-            return [];
-        }
-    }));
-    const disposer = observe(store.logs, change => {
-        const {removed} = change as unknown as IArraySplice<Log>;
-        if (!removed.length) return;
-        window.visibleTextEditors.forEach(editor => {
-            editor.setDecorations(decorationTypeCallout, []);
-            editor.setDecorations(decorationTypeHighlight, []);
-        });
-    });
-    disposables.push({ dispose: disposer });
 }
 
 function activateVirtualDocuments(disposables: Disposable[], store: Store) {

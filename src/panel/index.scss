@@ -84,6 +84,7 @@ mark {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 20px; // Prevent the splitter from completely hiding the list pane.
 
     .svTable {
         flex: 1 1;
