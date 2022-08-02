@@ -1,7 +1,7 @@
 # Development Guide
 
 ## Overview
-This document guides starting development on the SARIF Viewer extension for Visual Studio Code.
+The instructions in this document will help you get started with the SARIF Viewer extension for Visual Studio Code.
 
 This extension conforms to patterns common to all Visual Studio Code extensions. We recommend reading [the official guide](https://code.visualstudio.com/api/get-started/your-first-extension). That guide may overlap with some topics covered in this guide.
 
