@@ -1,5 +1,7 @@
 # Development Guide
 
+
+
 ## Overview
 The instructions in this document will help you get started with the SARIF Viewer extension for Visual Studio Code.
 
@@ -21,6 +23,8 @@ As these two parts run in separate processes, communication is limited to [messa
 
 [^1]: If running on the desktop. Otherwise see [here](https://code.visualstudio.com/api/advanced-topics/extension-host).
 
+
+
 ## Setup
 Make sure you have [GIT](https://git-scm.com/), [Visual Studio Code](https://code.visualstudio.com/), and [Node.js](https://nodejs.org/en/).
 For Node.js, the "LTS" version will be sufficient.
@@ -30,6 +34,7 @@ Run `git clone https://github.com/microsoft/sarif-vscode-extension.git` or an eq
 
 ### Local Build
 Build is already integrated with `F5`. If you must build separately, run `npx webpack`.
+
 
 
 ## Debugging
@@ -46,9 +51,11 @@ Build is already integrated with `F5`. If you must build separately, run `npx we
 * `src/panel/indexStore.ts` function `IndexStore.constructor`- This is the core of the WebView which houses the bulk of the UI.
 
 
+
 ## FAQ
 * Can I use [Visual Studio](https://visualstudio.microsoft.com/vs/) as my IDE? No, you must use Visual Studio Code.
 * Is there a solution file? No, Visual Studio Code projects are just folders.
+
 
 
 ## Legal
