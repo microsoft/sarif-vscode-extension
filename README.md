@@ -50,7 +50,7 @@ We collect basic anonymous information such as activation and the versions/schem
 
 ## Development
 
-`F5` launches this extension. Subsequent changes are watched and rebuilt. Use command `workbench.action.reloadWindow` to see the changes. For more details see the [Development Guide](README.develop.md).
+`F5` launches this extension. Subsequent changes are watched and rebuilt. Use command `workbench.action.reloadWindow` to see the changes. For more details see [Contributing to SARIF Viewer](CONTRIBUTING.md).
 
 Other common tasks:
 | Command | Comments |
