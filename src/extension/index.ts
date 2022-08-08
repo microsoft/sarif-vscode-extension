@@ -123,25 +123,25 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         }
 
         const scannedFile = await (async () => {
-            // What if text=''?
-            if (!antiDriftEnabled.get()) return '';
-            if (!store.analysisInfo) return '';
+            if (!antiDriftEnabled.get()) return undefined;
+            if (!store.analysisInfo) return undefined;
 
             const git = await getInitializedGitApi();
             const repo = git?.repositories[0];
-            if (!repo) return '';
+            if (!repo) return undefined;
 
             const scannedFile = await repo.show(store.analysisInfo.commit_sha, doc.uri.fsPath);
             return scannedFile;
         })();
-        const diffBlocks = !antiDriftEnabled.get() ? [] : diffChars(scannedFile, doc.getText());
+
+        const diffBlocks = scannedFile !== undefined ? diffChars(scannedFile, doc.getText()) : [];
 
         const diags = matchingResults
             .map(result => {
                 const range = regionToSelection(doc, result._region);
 
                 const driftedRange = (() => {
-                    if (!antiDriftEnabled.get()) return range;
+                    if (scannedFile === undefined) return range;
 
                     if (range.isReversed) console.warn('REVERSED');
 
