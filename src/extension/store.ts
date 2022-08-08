@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { computed, IArrayWillSplice, intercept, observable } from 'mobx';
-import { Log, Result } from 'sarif';
+import { Log } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
@@ -14,9 +14,11 @@ export class Store {
     @observable banner = '';
 
     @observable.shallow logs = [] as Log[]
+    @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set.
     @computed get results() {
         const runs = this.logs.map(log => log.runs).flat();
-        return runs.map(run => run.results).filter(run => run).flat() as Result[];
+        return runs.map(run => run.results ?? []).flat()
+            .filter(result => !this.resultsFixed.includes(JSON.stringify(result._id)));
     }
     @computed get distinctArtifactNames() {
         const fileAndUris = this.logs.map(log => [...log._distinct.entries()]).flat();

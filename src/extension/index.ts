@@ -115,7 +115,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         const matchingResults = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
-                return uri === artifactUri && !result._fixed;
+                return uri === artifactUri;
             });
         if (!matchingResults.length) {
             diagsAll.set(doc.uri, []);
@@ -174,7 +174,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
     workspace.textDocuments.forEach(setDiags);
     disposables.push(workspace.onDidOpenTextDocument(setDiags));
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
-    const disposerStore = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
+    const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags));
     disposables.push({ dispose: disposerStore });
     const disposerAntiDrift = observe(antiDriftEnabled, () => workspace.textDocuments.forEach(setDiags));
     disposables.push({ dispose: disposerAntiDrift });

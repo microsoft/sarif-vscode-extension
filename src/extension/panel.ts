@@ -19,11 +19,16 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'banner' | 'logs' | 'results'>) {
+        readonly store: Pick<Store, 'banner' | 'logs' | 'results' | 'resultsFixed'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
             this.spliceLogs(removed, added);
+        });
+        observe(store.resultsFixed, change => {
+            const {type, removed, added} = change as unknown as IArraySplice<string>;
+            if (type !== 'splice') throw new Error('Only splice allowed on store.resultFixes.');
+            this.spliceResultsFixed(removed, added);
         });
         autorun(() => {
             const count = store.results.length;
@@ -191,5 +196,13 @@ export class Panel {
 
     private async spliceLogs(removed: Log[], added: Log[]) {
         await this.panel?.webview.postMessage(this.createSpliceLogsMessage(removed, added));
+    }
+
+    private async spliceResultsFixed(removed: string[], added: string[]) {
+        await this.panel?.webview.postMessage({
+            command: 'spliceResultsFixed',
+            removed,
+            added,
+        });
     }
 }

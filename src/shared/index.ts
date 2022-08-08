@@ -41,7 +41,6 @@ declare module 'sarif' {
         _message: string; // '—' if empty.
         _markdown?: string;
         _suppression?: 'not suppressed' | 'suppressed';
-        _fixed: true | undefined; // Used exclusively with CodeActions.
     }
 }
 
@@ -249,4 +248,4 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
 };
 
 export type CommandPanelToExtension = 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState';
-export type CommandExtensionToPanel = 'select' | 'spliceLogs' | 'setBanner';
+export type CommandExtensionToPanel = 'select' | 'spliceLogs' | 'spliceResultsFixed' | 'setBanner';

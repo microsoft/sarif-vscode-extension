@@ -63,8 +63,10 @@ export class IndexStore {
     @computed private get runs() {
         return this.logs.map(log => log.runs).flat();
     }
+    @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set
     @computed public get results() {
-        return this.runs.map(run => run.results || []).flat();
+        return this.runs.map(run => run.results ?? []).flat()
+            .filter(result => !this.resultsFixed.includes(JSON.stringify(result._id)));
     }
     selection = observable.box<Row | undefined>(undefined)
     resultTableStoreByLocation = new ResultTableStore('File', result => result._relativeUri, this, this, this.selection)
@@ -125,6 +127,15 @@ export class IndexStore {
                 log._uri = uri;
                 log._uriUpgraded = uriUpgraded;
                 this.logs.push(log);
+            }
+        }
+
+        if (command === 'spliceResultsFixed') {
+            for (const resultIdString of event.data.removed) {
+                this.resultsFixed.remove(resultIdString);
+            }
+            for (const resultIdString of event.data.added) {
+                this.resultsFixed.push(resultIdString);
             }
         }
 
