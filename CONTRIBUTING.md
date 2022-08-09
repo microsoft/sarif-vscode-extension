@@ -1,5 +1,64 @@
-# Legal
+# Contributing to SARIF Viewer
 
+
+
+## Overview
+The instructions in this document will help you get started with the SARIF Viewer extension for Visual Studio Code.
+
+This extension conforms to patterns common to all Visual Studio Code extensions. We recommend reading [the official guide](https://code.visualstudio.com/api/get-started/your-first-extension). That guide may overlap with some topics covered in this guide.
+
+### Prerequisites
+Proficiency of the following topics is required:
+* Typescript (https://www.typescriptlang.org/)
+* ReactJS (https://reactjs.org/)
+* Visual Studio Code Extensions (https://code.visualstudio.com/api)
+
+### Architecture
+The extension is organized into two main parts:
+
+* `/src/extension` - The main entry point. It runs within a `Node.js` process[^1] and can be thought of as a background task. It does not directly draw any UI.
+* `/src/panel` - This runs within a [VS Code WebView](https://code.visualstudio.com/api/extension-guides/webview), which is essentially an `iframe`. This code is really just a web page which is rendered by ReactJS. In fact, during development, this page can be viewed directly in a browser.
+
+As these two parts run in separate processes, communication is limited to [message passing](https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing). Shared logic is refactored into `/src/shared`.
+
+[^1]: If running on the desktop. Otherwise see [here](https://code.visualstudio.com/api/advanced-topics/extension-host).
+
+
+
+## Setup
+Make sure you have [GIT](https://git-scm.com/), [Visual Studio Code](https://code.visualstudio.com/), and [Node.js](https://nodejs.org/en/).
+For Node.js, the "LTS" version will be sufficient.
+
+### Enlistment
+Run `git clone https://github.com/microsoft/sarif-vscode-extension.git` or an equivalent command.
+
+### Local Build
+Build is already integrated with `F5`. If you must build separately, run `npx webpack`.
+
+
+
+## Debugging
+1) Place breakpoints at the first two "Key Break Point" locations (see below).
+1) Start Debugging (`F5`). This will compile and run the extension in a new Extension Development Host window.
+1) Run the `SARIF: Show Panel` command from the Command Palette in the new window. Your first breakpoint will hit.
+1) Click "Open SARIF log" and pick a *.sarif file. Your second breakpoint will hit.
+1) If you make changes to the source code, you can reload the Extension Development Host window by running the `Developer: Reload Window` command from the Command Palette of the that window.
+1) To view console log output, run `Help > Toggle Developer Tools` from the menu of the Extension Development Host window.
+
+### Key Break Points
+* `src/extension/index.ts` function `activate` - This covers all the one-time prepration before any SARIF Logs are loaded.
+* `src/extension/loadLogs.ts` function `loadLogs` - This runs each time one or more SARIF Logs are opened.
+* `src/panel/indexStore.ts` function `IndexStore.constructor`- This is the core of the WebView which houses the bulk of the UI.
+
+
+
+## FAQ
+* Can I use [Visual Studio](https://visualstudio.microsoft.com/vs/) as my IDE? No, you must use Visual Studio Code.
+* Is there a solution file? No, Visual Studio Code projects are just folders.
+
+
+
+## Legal
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit https://cla.microsoft.com.
@@ -11,37 +70,3 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-# Prerequisites
-* Install VSCode
-* Clone the repository to a local folder
-
-# Build/Debug Extension
-1. Open the local repo folder up in VSCode
-2. First time you’ll need to:
-    * install npm modules, run "npm install" 
-    * install tslint, run "npm install -g tslint"
-3. Run BuildExplorer task the first time and anytime you modify the webviewer.ts file(task compiles the Sarif Explorer typescript without the module code, because the webview doesn’t have commonjs)
-    1. Click the Tasks on the top bar
-    2. Click Run Task
-    3. Type in BuildExplorer and hit enter to run the BuildExplorer task
-4. Press F5 to launch a VSCode instance with the extension loaded
-
-# Package Extension
-1. Open cmd prompt to the local repo folder 
-    * you can also open the cmd line in vscode’s Integrated Terminal panel
-2. First time you’ll need to:
-    * install vsce module, run "npm install -g vsce"
-3. run "vsce package"
-
-sarif-viewer-`<version>`.vsix will be created(`version` is defined in the package.json and package-lock.json files)
-
-Instructions pulled from: [publish extension](https://code.visualstudio.com/docs/extensions/publish-extension)
-
-# Install Package
-1. Open cmd prompt to the location of the vsix package 
-    * you can also open the cmd line in vscode’s Integrated Terminal panel
-2. run "code --install-extension sarif-viewer-`<version>`.vsix"
-
-Instructions pulled from: [install from a vsix](https://code.visualstudio.com/docs/editor/extension-gallery#_install-from-a-vsix)
-
