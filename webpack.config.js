@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+const CopyPlugin = require("copy-webpack-plugin");
 const outputPath = require('path').join(__dirname, 'out');
 
 const common = {
@@ -71,6 +72,11 @@ module.exports = [
             maxAssetSize: 400 * 1024,
             maxEntrypointSize: 400 * 1024,
         },
+        plugins: [
+            new CopyPlugin({
+                patterns: [ 'src/panel/init.js' ],
+            }),
+        ],
     },
     {
         ...common,
