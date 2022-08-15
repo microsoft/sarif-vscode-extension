@@ -59,14 +59,15 @@ export class Panel {
         );
         this.panel.onDidDispose(() => this.panel = null);
 
-        const src = Uri.file(`${context.extensionPath}/out/panel.js`);
+        const srcPanel = Uri.file(`${context.extensionPath}/out/panel.js`);
+        const srcInit = Uri.file(`${context.extensionPath}/out/init.js`);
         const defaultState = {
             version: 0,
             filtersRow,
             filtersColumn,
         };
-        const state = Store.globalState.get('view', defaultState);
-        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString();
+
+        // JSON.stringify emits double quotes. To not conflict, certain attribute values use single quotes.
         webview.html = `<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -75,28 +76,21 @@ export class Panel {
                     default-src 'none';
                     connect-src vscode-resource:;
                     font-src    vscode-resource:;
-                    script-src  vscode-resource: 'unsafe-inline';
+                    script-src  vscode-resource:;
                     style-src   vscode-resource: 'unsafe-inline';
                     ">
+                <meta name="storeState"        content='${JSON.stringify(Store.globalState.get('view', defaultState))}'>
+                <meta name="storeWorkspaceUri" content="${workspace.workspaceFolders?.[0]?.uri.toString() ?? ''}">
+                <meta name="storeBanner"       content='${store.banner}'>
+                <meta name="spliceLogsMessage" content='${JSON.stringify(this.createSpliceLogsMessage([], store.logs))}'>
                 <style>
                     code { font-family: ${workspace.getConfiguration('editor').get('fontFamily')} }
                 </style>
             </head>
             <body>
                 <div id="root"></div>
-                <script src="${webview.asWebviewUri(src).toString()}"></script>
-                <script>
-                    vscode = acquireVsCodeApi();
-                    (async () => {
-                        const store = new Store(${JSON.stringify(state)}, ${workspaceUri ? `'${workspaceUri}'` : 'undefined'})
-                        store.banner = '${store.banner}'
-                        await store.onMessage({ data: ${JSON.stringify(this.createSpliceLogsMessage([], store.logs))} })
-                        ReactDOM.render(
-                            React.createElement(Index, { store }),
-                            document.getElementById('root'),
-                        )
-                    })();
-                </script>
+                <script src="${webview.asWebviewUri(srcPanel).toString()}"></script>
+                <script src="${webview.asWebviewUri(srcInit).toString()}"></script>
             </body>
             </html>`;
 
