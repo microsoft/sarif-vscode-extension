@@ -50,7 +50,7 @@ export class UriRebaser {
     public translateLocalToArtifact(localUri: string): string { // Future: Ret undefined when certain.
         const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
         if (workspaceUri) {
-            const relativeLocalUri = 'file:///' + localUri.replace(`${workspaceUri}/`, '');
+            const relativeLocalUri = localUri.replace(`${workspaceUri}/`, 'file:///');
             // Unable to cheaply validate if this exists in the SARIF or not without some preprocessing.
             // Temporarily assuming this location exists.
             return relativeLocalUri; // as ArtifactUri
