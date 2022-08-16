@@ -2,10 +2,11 @@
 // Licensed under the MIT License.
 
 import { Region } from 'sarif';
-import { Selection, TextDocument } from 'vscode';
+import { Selection } from 'vscode';
 import '../shared/extension';
+import { TextDocumentLike } from './stringTextDocument';
 
-export function regionToSelection(doc: TextDocument, region: Region | undefined) {
+export function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
     if (!region) return new Selection(0, 0, 0, 0); // TODO: Decide if empty regions should be pre-filtered.
 
     const { byteOffset, startLine, charOffset } = region;
@@ -30,7 +31,7 @@ export function regionToSelection(doc: TextDocument, region: Region | undefined)
             startLine - 1,
             minusOne(region.startColumn) ?? line.firstNonWhitespaceCharacterIndex, // Trimming whitespace for default startColumn value.
             (region.endLine ?? startLine) - 1,
-            minusOne(region.endColumn) ?? Number.MAX_SAFE_INTEGER, // Arbitrarily large number representing the rest of the line.
+            minusOne(region.endColumn) ?? line.range.end.character,
         );
     }
 

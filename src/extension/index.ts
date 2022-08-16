@@ -7,7 +7,7 @@ import { Log } from 'sarif';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { getOffset, measureDrift } from './antiDrift';
+import { measureDrift } from './antiDrift';
 import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
 import { activateGithubAnalyses, getInitializedGitApi } from './index.activateGithubAnalyses';
 import { loadLogs } from './loadLogs';
@@ -17,6 +17,7 @@ import { regionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { activateSarifStatusBarItem } from './statusBarItem';
 import { Store } from './store';
+import { StringTextDocument } from './stringTextDocument';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
@@ -122,7 +123,8 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             return;
         }
 
-        const scannedFile = await (async () => {
+        const currentDoc = doc; // Alias for juxtaposition.
+        const originalDoc = await (async () => {
             if (!antiDriftEnabled.get()) return undefined;
             if (!store.analysisInfo) return undefined;
 
@@ -130,39 +132,39 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             const repo = git?.repositories[0];
             if (!repo) return undefined;
 
-            const scannedFile = await repo.show(store.analysisInfo.commit_sha, doc.uri.fsPath);
-            return scannedFile;
+            const scannedFile = await repo.show(store.analysisInfo.commit_sha, currentDoc.uri.fsPath);
+            return new StringTextDocument(scannedFile);
         })();
 
-        const diffBlocks = scannedFile !== undefined ? diffChars(scannedFile, doc.getText()) : [];
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
         const diags = matchingResults
             .map(result => {
-                const range = regionToSelection(doc, result._region);
+                const range = (() => {
+                    // If there is no originalDoc, the best we can do is hope no drift has occured since the scan.
+                    if (originalDoc === undefined) return regionToSelection(currentDoc, result._region);
 
-                const driftedRange = (() => {
-                    if (scannedFile === undefined) return range;
-
-                    if (range.isReversed) console.warn('REVERSED');
+                    const originalRange = regionToSelection(originalDoc, result._region);
+                    if (originalRange.isReversed) console.warn('REVERSED');
 
                     const drift = measureDrift(
                         diffBlocks,
-                        getOffset(scannedFile, range.start),
-                        getOffset(scannedFile, range.end)
+                        originalDoc.offsetAt(originalRange.start),
+                        originalDoc.offsetAt(originalRange.end),
                     );
                     return drift === undefined
                         ? new Selection(
-                            doc.positionAt(0),
-                            doc.positionAt(0)
+                            currentDoc.positionAt(0),
+                            currentDoc.positionAt(0)
                         )
                         : new Selection(
-                            doc.positionAt(getOffset(scannedFile, range.start) + drift),
-                            doc.positionAt(getOffset(scannedFile, range.end  ) + drift)
+                            currentDoc.positionAt(originalDoc.offsetAt(originalRange.start) + drift),
+                            currentDoc.positionAt(originalDoc.offsetAt(originalRange.end)   + drift)
                         );
                 })();
 
                 return new ResultDiagnostic(
-                    driftedRange,
+                    range,
                     result._message ?? '—',
                     severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
                     result,

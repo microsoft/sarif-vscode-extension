@@ -2,20 +2,6 @@
 // Licensed under the MIT License.
 
 import { Change } from 'diff';
-import { Position } from 'vscode';
-
-export function getOffset(text: string, position: Position): number {
-    let line = 0;
-    for (let i = 0; i < text.length; i++) {
-        if (line === position.line) {
-            return i + position.character;
-        }
-
-        const ch = text[i];
-        if (ch === '\n') line++;
-    }
-    return text.length; // Right design?
-}
 
 export function measureDrift(diffBlocks: Change[], offsetStart: number, offsetEnd: number): number | undefined {
     if (diffBlocks[0]?.added || diffBlocks[0]?.removed) {
