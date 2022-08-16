@@ -208,6 +208,8 @@ function activateDecorations(disposables: Disposable[], store: Store) {
     });
     disposables.push(languages.registerCodeActionsProvider('*', {
         provideCodeActions: (doc, _range, context) => {
+            // Typical bail out case: `context.only = { value: 'quickFix' }`
+            // We only care about initial load (which `context === undefined`)
             if (context.only) return;
 
             const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
