@@ -38,7 +38,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
             const desc = result?._rule?.fullDescription ?? result?._rule?.shortDescription;
             if (!desc) return '—';
             return desc.markdown
-                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} escapeHtml={false} />
+                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} />
                 : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
@@ -51,7 +51,7 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                     <div className="svDetailsBody svDetailsInfo">
                         <div className="svDetailsMessage">
                             {result._markdown
-                                ? <ReactMarkdown className="svMarkDown" source={result._markdown} escapeHtml={false} />
+                                ? <ReactMarkdown className="svMarkDown" source={result._markdown} />
                                 : renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</div>
                         <div className="svDetailsGrid">
                             <span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}
