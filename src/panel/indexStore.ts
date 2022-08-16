@@ -94,7 +94,7 @@ export class IndexStore {
     selectedTab = observable.box(this.tabs[0], { deep: false })
 
     // Messages
-    @action.bound public async onMessage(event: MessageEvent) {
+    @action.bound public async onMessage(event: Pick<MessageEvent, 'data'>) {
         // During development while running via webpack-dev-server, we need to filter
         // out some development specific messages that would not occur in production.
         if (!event.data) return; // Ignore mysterious empty message
