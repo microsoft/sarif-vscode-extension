@@ -24,8 +24,10 @@ interface TextLineLike {
 export interface TextDocumentLike {
     lineAt(line: number): TextLineLike;
     positionAt(offset: number): Position;
+    offsetAt(position: Position): number;
 }
 
+// A TextDocument-like object backed by a string rather than a file on disk.
 export class StringTextDocument implements TextDocumentLike {
     constructor(readonly text: string) {}
 

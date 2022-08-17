@@ -1,14 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { diffChars } from 'diff';
 import * as fs from 'fs';
 import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Region, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
 import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId } from '../shared';
+import { getOriginalDoc } from './getOriginalDoc';
 import { loadLogs } from './loadLogs';
-import { regionToSelection } from './regionToSelection';
+import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
 
@@ -19,7 +21,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'banner' | 'logs' | 'results' | 'resultsFixed'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -168,11 +170,15 @@ export class Panel {
             await commands.executeCommand('workbench.action.keepEditor');
         }
 
-        const doc = await workspace.openTextDocument(Uri.parse(localUri, true));
-        const editor = await window.showTextDocument(doc, ViewColumn.One, true);
+        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true));
+        const editor = await window.showTextDocument(currentDoc, ViewColumn.One, true);
 
         if (region === undefined) return;
-        editor.selection = regionToSelection(doc, region);
+
+        const originalDoc = await getOriginalDoc(this.store.analysisInfo, currentDoc);
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+        editor.selection = driftedRegionToSelection(diffBlocks, currentDoc, region, originalDoc);
         editor.revealRange(editor.selection, TextEditorRevealType.InCenterIfOutsideViewport);
     }
 

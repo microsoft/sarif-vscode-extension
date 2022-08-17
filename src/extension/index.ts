@@ -4,20 +4,19 @@
 import { diffChars } from 'diff';
 import { IArraySplice, observe } from 'mobx';
 import { Log } from 'sarif';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, Selection, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, Range, TextDocument, ThemeColor, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { measureDrift } from './antiDrift';
 import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
-import { activateGithubAnalyses, getInitializedGitApi } from './index.activateGithubAnalyses';
+import { getOriginalDoc } from './getOriginalDoc';
+import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
-import { regionToSelection } from './regionToSelection';
+import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { activateSarifStatusBarItem } from './statusBarItem';
 import { Store } from './store';
-import { StringTextDocument } from './stringTextDocument';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
@@ -124,47 +123,13 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         }
 
         const currentDoc = doc; // Alias for juxtaposition.
-        const originalDoc = await (async () => {
-            if (!antiDriftEnabled.get()) return undefined;
-            if (!store.analysisInfo) return undefined;
-
-            const git = await getInitializedGitApi();
-            const repo = git?.repositories[0];
-            if (!repo) return undefined;
-
-            const scannedFile = await repo.show(store.analysisInfo.commit_sha, currentDoc.uri.fsPath);
-            return new StringTextDocument(scannedFile);
-        })();
-
+        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
         const diags = matchingResults
             .map(result => {
-                const range = (() => {
-                    // If there is no originalDoc, the best we can do is hope no drift has occured since the scan.
-                    if (originalDoc === undefined) return regionToSelection(currentDoc, result._region);
-
-                    const originalRange = regionToSelection(originalDoc, result._region);
-                    if (originalRange.isReversed) console.warn('REVERSED');
-
-                    const drift = measureDrift(
-                        diffBlocks,
-                        originalDoc.offsetAt(originalRange.start),
-                        originalDoc.offsetAt(originalRange.end),
-                    );
-                    return drift === undefined
-                        ? new Selection(
-                            currentDoc.positionAt(0),
-                            currentDoc.positionAt(0)
-                        )
-                        : new Selection(
-                            currentDoc.positionAt(originalDoc.offsetAt(originalRange.start) + drift),
-                            currentDoc.positionAt(originalDoc.offsetAt(originalRange.end)   + drift)
-                        );
-                })();
-
                 return new ResultDiagnostic(
-                    range,
+                    driftedRegionToSelection(diffBlocks, currentDoc, result._region, originalDoc),
                     result._message ?? '—',
                     severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
                     result,
@@ -209,7 +174,7 @@ function activateDecorations(disposables: Disposable[], store: Store) {
         borderColor: new ThemeColor('problemsWarningIcon.foreground'),
     });
     disposables.push(languages.registerCodeActionsProvider('*', {
-        provideCodeActions: (doc, _range, context) => {
+        provideCodeActions: async (currentDoc, _range, context) => {
             // Typical bail out case: `context.only = { value: 'quickFix' }`
             // We only care about initial load (which `context === undefined`)
             if (context.only) return;
@@ -220,7 +185,7 @@ function activateDecorations(disposables: Disposable[], store: Store) {
             const result = diagnostic?.result;
             if (!result) return; // Don't clear the decorations until the next result is selected.
 
-            const editor = window.visibleTextEditors.find(editor => editor.document === doc);
+            const editor = window.visibleTextEditors.find(editor => editor.document === currentDoc);
             if (!editor) return; // When would editor be undef?
 
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
@@ -228,13 +193,16 @@ function activateDecorations(disposables: Disposable[], store: Store) {
                 const text = tfl.location?.message?.text;
                 return `Step ${i + 1}${text ? `: ${text}` : ''}`;
             });
-            const ranges = locations.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
+
+            const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+            const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+            const ranges = locations.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
             const rangesEnd = ranges.map(range => {
-                const endPos = doc.lineAt(range.end.line).range.end;
+                const endPos = currentDoc.lineAt(range.end.line).range.end;
                 return new Range(endPos, endPos);
             });
             const rangesEndAdj = rangesEnd.map(range => {
-                const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
+                const tabCount = currentDoc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
                 const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
                 return range.end.character + tabCharAdj;
             });
