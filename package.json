@@ -91,7 +91,7 @@
         "lint": "eslint src"
     },
     "devDependencies": {
-        "@actions/core": "1.2.6",
+        "@actions/core": "1.9.1",
         "@actions/github": "2.1.1",
         "@types/follow-redirects": "1.8.0",
         "@types/mocha": "2.2.48",
