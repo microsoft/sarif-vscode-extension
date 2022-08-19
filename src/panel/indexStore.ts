@@ -148,6 +148,10 @@ export class IndexStore {
     }
 }
 
+export async function postLoad() {
+    await vscode.postMessage({ command: 'load' });
+}
+
 export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation) {
     // If this panel is not active, then any selection change did not originate from (a user's action) here.
     // It must have originated from (a user's action in) the editor, which then sent a message here.

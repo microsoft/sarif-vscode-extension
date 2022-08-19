@@ -82,7 +82,6 @@ export class Panel {
                 <meta name="storeState"        content='${JSON.stringify(Store.globalState.get('view', defaultState))}'>
                 <meta name="storeWorkspaceUri" content="${workspace.workspaceFolders?.[0]?.uri.toString() ?? ''}">
                 <meta name="storeBanner"       content='${store.banner}'>
-                <meta name="spliceLogsMessage" content='${JSON.stringify(this.createSpliceLogsMessage([], store.logs))}'>
                 <style>
                     code { font-family: ${workspace.getConfiguration('editor').get('fontFamily')} }
                 </style>
@@ -97,6 +96,11 @@ export class Panel {
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
             switch (message.command as CommandPanelToExtension) {
+                case 'load' : {
+                    // Extension sends Panel an initial set of logs.
+                    await this.panel?.webview.postMessage(this.createSpliceLogsMessage([], store.logs));
+                    break;
+                }
                 case 'open': {
                     const uris = await window.showOpenDialog({
                         canSelectMany: true,
