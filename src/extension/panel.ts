@@ -21,7 +21,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUdpated'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -152,6 +152,10 @@ export class Panel {
                     const oldState = Store.globalState.get('view', defaultState);
                     const {state} = message;
                     await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)));
+                    break;
+                }
+                case 'refresh': {
+                    await store.remoteAnalysisInfoUdpated++;
                     break;
                 }
                 default:

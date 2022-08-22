@@ -68,15 +68,18 @@ mark {
     justify-content: center;
     & > * + * { margin-top: 16px; }
 
-    .svZeroDataButton {
-        color: var(--vscode-button-foreground);
-        background: var(--vscode-button-background);
+    .svButton {
         width: 200px;
-        padding: 4px;
-        line-height: 1.4em;
-        text-align: center;
-        cursor: pointer;
     }
+}
+
+.svButton {
+    color: var(--vscode-button-foreground);
+    background: var(--vscode-button-background);
+    padding: 4px 8px;
+    line-height: 1.4em;
+    text-align: center;
+    cursor: pointer;
 }
 
 .svListPane {

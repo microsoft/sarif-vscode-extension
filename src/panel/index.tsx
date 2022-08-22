@@ -11,7 +11,7 @@ import '../shared/extension';
 import { Details } from './details';
 import { FilterKeywordContext } from './filterKeywordContext';
 import './index.scss';
-import { IndexStore, postLoad } from './indexStore';
+import { IndexStore, postLoad, postRefresh } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
@@ -32,7 +32,10 @@ export { DetailsLayouts } from './details.layouts';
 
         const bannerElement = banner && <div className="svBanner">
             <Icon name="info" />
-            <span>{banner}</span>
+            <span style={{ flex: '1 1' }}>{banner}</span>
+            <div className="svButton" onClick={() => postRefresh()}>
+                Refresh results
+            </div>
         </div>;
 
         if (!store.logs.length) {
@@ -42,7 +45,7 @@ export { DetailsLayouts } from './details.layouts';
                     <div style={{ lineHeight: '20px', marginBottom: 20, textAlign: 'center' }}>
                         <b>GitHub code scanning:</b> This branch hasn't been scanned yet.
                     </div>
-                    <div className="svZeroDataButton" onClick={() => vscode.postMessage({ command: 'open' })}>
+                    <div className="svButton" onClick={() => vscode.postMessage({ command: 'open' })}>
                         Open SARIF log
                     </div>
                 </div>

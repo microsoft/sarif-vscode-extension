@@ -171,3 +171,7 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
 export async function postSelectLog(result: Result) {
     await vscode.postMessage({ command: 'selectLog', id: result._id });
 }
+
+export async function postRefresh() {
+    await vscode.postMessage({ command: 'refresh' });
+}

@@ -53,6 +53,9 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         repoName: '',
     };
 
+    // TODO: Block re-entrancy.
+    observe(store, 'remoteAnalysisInfoUdpated', () => updateAnalysisInfo());
+
     (async () => {
         const git = await getInitializedGitApi();
         if (!git) return console.warn('No GitExtension or GitExtension API');
