@@ -21,6 +21,7 @@ export interface AnalysisInfo {
     id: number;
     commit_sha: string;
     created_at: string;
+    commitsAgo: number; // Not part of the API. We added this.
 }
 
 let currentLogUri: string | undefined = undefined;
@@ -71,6 +72,11 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
         if (!existsSync(gitHeadPath)) return console.warn('No .git/HEAD');
 
+        // At this point all the local requirements have been satisfied.
+        // We preemptively show the panel (even before the result as fetched)
+        // so that the banner is visible.
+        await panel.show();
+
         await onGitChanged(repo, gitHeadPath, store);
         const watcher = watch([
             `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
@@ -96,6 +102,8 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
     }
 
     async function updateAnalysisInfo(): Promise<void> {
+        store.banner = 'Checking GitHub Advanced Security...';
+
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
@@ -117,8 +125,9 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
 
         // Possibilities:
         // a) analysis is not enabled for repo or branch.
-        // b) analysis is enabled, but pending.
+        // b) analysis is enabled, but pending first-ever run.
         if (!analyses.length) {
+            store.banner = 'Refresh to check for more current results.';
             store.analysisInfo = undefined;
         }
 
@@ -137,13 +146,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         // b) other?
         if (analysisInfo) {
             const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
-            const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
-                ? ` The most recent scan was ${commitsAgo} commit(s) ago` +
-                  ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
-                  ` Refresh to check for more current results.`
-                : '';
-
-            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
+            analysisInfo.commitsAgo = commitsAgo;
         } else {
             store.banner = '';
         }
@@ -189,6 +192,15 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
 
         panel.show();
         isSpinning.set(false);
+
+        if (analysisInfo) {
+            const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
+                ? ` The most recent scan was ${analysisInfo.commitsAgo} commit(s) ago` +
+                ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
+                ` Refresh to check for more current results.`
+                : '';
+            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
+        }
     }
 
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
