@@ -20,6 +20,7 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
+import { activateFixes } from './index.activateFixes';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -65,6 +66,7 @@ export async function activate(context: ExtensionContext) {
     activateSelectionSync(disposables, panel);
     activateGithubAnalyses(store, panel);
     activateAntiDriftStatusBarItem(disposables);
+    activateFixes(disposables, store);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
