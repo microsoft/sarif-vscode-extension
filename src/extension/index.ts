@@ -66,7 +66,7 @@ export async function activate(context: ExtensionContext) {
     activateSelectionSync(disposables, panel);
     activateGithubAnalyses(store, panel);
     activateAntiDriftStatusBarItem(disposables);
-    activateFixes(disposables, store);
+    activateFixes(disposables, store, baser);
 
     // Check for Updates
     if (!isDebugOrTestMode) {

@@ -2,12 +2,17 @@
 // Licensed under the MIT License.
 /* eslint-disable filenames/match-regex */
 
-import { Result } from 'sarif';
-import { CodeAction, CodeActionKind, Disposable, languages } from 'vscode';
+import { diffChars } from 'diff';
+import { Fix, Result } from 'sarif';
+import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, Uri, workspace, WorkspaceEdit } from 'vscode';
+import { parseArtifactLocation } from '../shared';
+import { getOriginalDoc } from './getOriginalDoc';
+import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
+import { UriRebaser } from './uriRebaser';
 
-export function activateFixes(disposables: Disposable[], store: Pick<Store, 'resultsFixed'>) {
+export function activateFixes(disposables: Disposable[], store: Pick<Store, 'analysisInfo' | 'resultsFixed'>, baser: UriRebaser) {
     disposables.push(languages.registerCodeActionsProvider('*',
         {
             provideCodeActions(_doc, _range, context) {
@@ -21,19 +26,39 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'res
                 if (!diagnostic) return;
 
                 const result = diagnostic?.result;
-                if (!result) [];
+                if (!result) return;
 
-                const quickFixes = [];
-                {
-                    const markAsFixed = new ResultQuickFix('Mark as fixed', result);
-                    markAsFixed.diagnostics = [diagnostic]; // Note: VSCode does not use this to clear the diagnostic.
-                    quickFixes.push(markAsFixed);
+                return [
+                    new ResultQuickFix(diagnostic, result), // Mark as fixed
+                    ...result.fixes?.map(fix => new ResultQuickFix(diagnostic, result, fix)) ?? []
+                ];
+            },
+            async resolveCodeAction(codeAction: ResultQuickFix) {
+                const { result, fix } = codeAction;
+
+                if (fix) {
+                    const edit = new WorkspaceEdit();
+                    for (const artifactChange of fix.artifactChanges) {
+                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation);
+                        const artifactUri = uri;
+                        if (!artifactUri) continue;
+
+                        const localUri = await baser.translateArtifactToLocal(artifactUri);
+                        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
+                        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+                        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+                        for (const replacement of artifactChange.replacements) {
+                            edit.replace(
+                                Uri.parse(localUri),
+                                driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
+                                replacement.insertedContent?.text ?? '',
+                            );
+                        }
+                    }
+                    workspace.applyEdit(edit);
                 }
 
-                return quickFixes;
-            },
-            resolveCodeAction(codeAction: ResultQuickFix) {
-                const result = codeAction.result;
                 store.resultsFixed.push(JSON.stringify(result._id));
                 return codeAction;
             },
@@ -45,7 +70,10 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'res
 }
 
 class ResultQuickFix extends CodeAction {
-    constructor(title: string, readonly result: Result) {
-        super(title, CodeActionKind.QuickFix);
+    constructor(diagnostic: Diagnostic, readonly result: Result, readonly fix?: Fix) {
+        // If `fix` then use the `fix.description`
+        // If no `fix` then intent is 'Mark as fixed'.
+        super(fix ? (fix.description?.text ?? '?') : 'Mark as fixed', CodeActionKind.QuickFix);
+        this.diagnostics = [diagnostic]; // Note: VSCode does not use this to clear the diagnostic.
     }
 }
