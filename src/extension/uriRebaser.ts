@@ -48,14 +48,6 @@ export class UriRebaser {
     // If 2 logs have the same uri, then likely the same (unless the uri is super short)
     // If 2 logs don't have the same uri, they can still potentially be the same match
     public translateLocalToArtifact(localUri: string): string { // Future: Ret undefined when certain.
-        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
-        if (workspaceUri) {
-            const relativeLocalUri = localUri.replace(`${workspaceUri}/`, 'file:///');
-            // Unable to cheaply validate if this exists in the SARIF or not without some preprocessing.
-            // Temporarily assuming this location exists.
-            return relativeLocalUri; // as ArtifactUri
-        }
-
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
             const { file } = platformUriNormalize(localUri);
