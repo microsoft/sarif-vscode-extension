@@ -7,7 +7,6 @@ import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { Uri, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
-import { overrideBaseUri } from '../shared/overrideBaseUri';
 import * as Telemetry from './telemetry';
 
 export const driverlessRules = new Map<string, ReportingDescriptor>();
@@ -44,8 +43,7 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
     const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
     logsSupported.forEach(log => {
         // Only supporting single workspaces for now.
-        overrideBaseUri(log, primaryWorkspaceFolderUriString);
-        augmentLog(log, driverlessRules);
+        augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
     });
 
     if (warnUpgradeExtension) {

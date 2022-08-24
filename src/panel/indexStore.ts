@@ -5,7 +5,6 @@ import { action, autorun, computed, intercept, observable, observe, toJS, when }
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, findResult, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
-import { overrideBaseUri } from '../shared/overrideBaseUri';
 import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
@@ -35,8 +34,7 @@ export class IndexStore {
         intercept(this.logs, (change: any) => {
             if (change.type !== 'splice') throw new Error(`Unexpected change type. ${change.type}`);
             change.added.forEach((log: Log) => {
-                overrideBaseUri(log, workspaceUri);
-                augmentLog(log, this.driverlessRules);
+                augmentLog(log, this.driverlessRules, workspaceUri);
             });
             return change;
         });
@@ -58,7 +56,7 @@ export class IndexStore {
             const selectedRow = this.selection.get();
             const result = selectedRow instanceof RowItem && selectedRow.item;
             if (!result?._uri) return; // Bail on no result or location-less result.
-            postSelectArtifact(result, result.locations?.[0]?.physicalLocation);
+            postSelectArtifact(result, result.locations?.[0]?.physicalLocation, workspaceUri);
         });
     }
 
@@ -152,7 +150,7 @@ export async function postLoad() {
     await vscode.postMessage({ command: 'load' });
 }
 
-export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation) {
+export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation, overrideUriBase?: string) {
     // If this panel is not active, then any selection change did not originate from (a user's action) here.
     // It must have originated from (a user's action in) the editor, which then sent a message here.
     // If that is the case, don't send another 'select' message back. This would cause selection unstability.
@@ -163,7 +161,7 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
     if (!ploc) return;
     const log = result._log;
     const logUri = log._uri;
-    const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation);
+    const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation, overrideUriBase);
     const region = ploc?.region;
     await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, region });
 }

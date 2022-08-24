@@ -179,7 +179,8 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
                 const log = JSON.parse(logText) as Log;
                 log._text = logText;
                 log._uri = uri;
-                augmentLog(log, driverlessRules);
+                const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
+                augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
                 return log;
             })();
 
