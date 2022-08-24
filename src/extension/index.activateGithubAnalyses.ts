@@ -156,6 +156,8 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
 
         if (store.analysisInfo?.id !== analysisInfo?.id) {
             store.analysisInfo = analysisInfo;
+        } else {
+            setBannerResultsUpdated(analysisInfo, 'unchanged');
         }
     }
 
@@ -197,14 +199,18 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
         panel.show();
         isSpinning.set(false);
 
-        if (analysisInfo) {
-            const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
-                ? ` The most recent scan was ${analysisInfo.commitsAgo} commit(s) ago` +
-                ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
-                ` Refresh to check for more current results.`
-                : '';
-            store.banner = `Results updated for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
-        }
+        setBannerResultsUpdated(analysisInfo);
+    }
+
+    function setBannerResultsUpdated(analysisInfo: AnalysisInfo | undefined, verb: 'updated' | 'unchanged' = 'updated') {
+        if (!analysisInfo) return;
+
+        const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
+            ? ` The most recent scan was ${analysisInfo.commitsAgo} commit(s) ago` +
+            ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
+            ` Refresh to check for more current results.`
+            : '';
+        store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
     }
 
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
