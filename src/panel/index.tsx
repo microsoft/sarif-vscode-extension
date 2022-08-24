@@ -42,9 +42,6 @@ export { DetailsLayouts } from './details.layouts';
             return <>
                 {bannerElement}
                 <div className="svZeroData">
-                    <div style={{ lineHeight: '20px', marginBottom: 20, textAlign: 'center' }}>
-                        <b>GitHub code scanning:</b> This branch hasn't been scanned yet.
-                    </div>
                     <div className="svButton" onClick={() => vscode.postMessage({ command: 'open' })}>
                         Open SARIF log
                     </div>
