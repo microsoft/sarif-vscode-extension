@@ -124,7 +124,21 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
             store.banner = 'GitHub Advanced Security is not enabled for this repository.';
             store.analysisInfo = undefined;
         }
-        const analyses = await analysesResponse.json() as AnalysisInfo[];
+
+        const anyResponse = await analysesResponse.json();
+        if (anyResponse.message) {
+            // Sample message response:
+            // {
+            //     "message": "You are not authorized to read code scanning alerts.",
+            //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
+            // }
+            const messageResponse = anyResponse as { message: string, documentation_url: string };
+            store.banner = messageResponse.message;
+            store.analysisInfo = undefined;
+            return;
+        }
+
+        const analyses = anyResponse as AnalysisInfo[];
 
         // Possibilities:
         // a) analysis is not enabled for repo or branch.
@@ -179,6 +193,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
                 });
                 const logText = await analysisResponse.text();
                 const log = JSON.parse(logText) as Log;
+                (await import('fs')).writeFileSync(`/Volumes/Jeff/projects/sarif-vscode-extension/ignore/sarif-testing/${analysisInfo.id}.sarif`, logText);
                 log._text = logText;
                 log._uri = uri;
                 const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
