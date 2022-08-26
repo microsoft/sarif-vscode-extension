@@ -89,6 +89,12 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                         return <Fragment key={key}>
                                             <span className="ellipsis">{key}</span>
                                             <span>{(() => {
+                                                if (key === 'github/alertUrl' && typeof value === 'string') {
+                                                    const href = value
+                                                        .replace('api.github.com/repos', 'github.com')
+                                                        .replace('/code-scanning/alerts', '/security/code-scanning');
+                                                    return <a href={href}>{href}</a>;
+                                                }
                                                 if (value === null)
                                                     return '—';
                                                 if (Array.isArray(value))
