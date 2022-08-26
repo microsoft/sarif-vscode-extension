@@ -5,7 +5,7 @@
 import { diffChars } from 'diff';
 import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
-import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
+import { Disposable, languages, Range, ThemeColor, window, workspace } from 'vscode';
 import { findResult, parseArtifactLocation, ResultId } from '../shared';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
@@ -73,13 +73,14 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
 
             const docUriString = currentDoc.uri.toString();
             const locationsInDoc = locations.filter(tfl => {
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
+                const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
+                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation, workspaceUri);
                 return docUriString === artifactUriString;
             });
 
             const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
-            const ranges = locations.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
+            const ranges = locationsInDoc.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
             editor.setDecorations(decorationTypeHighlight, ranges);
 
             { // Sub-scope for callouts.
