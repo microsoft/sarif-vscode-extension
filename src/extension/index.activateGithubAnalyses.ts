@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, Disposable, extensions, OutputChannel, window, workspace } from 'vscode';
+import { authentication, extensions, OutputChannel, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -47,12 +47,7 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-let outputChannel: OutputChannel;
-
-export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
-    outputChannel = window.createOutputChannel('Sarif Viewer');
-    disposables.push(outputChannel);
-
+export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel: OutputChannel) {
     const config = {
         user: '',
         repoName: '',

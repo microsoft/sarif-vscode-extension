@@ -31,6 +31,10 @@ export async function activate(context: ExtensionContext) {
     if (!isDebugOrTestMode) Telemetry.activate();
 
     const disposables = context.subscriptions;
+
+    const outputChannel = window.createOutputChannel('Sarif Viewer');
+    disposables.push(outputChannel);
+
     Store.globalState = context.globalState;
     disposables.push(commands.registerCommand('sarif.clearState', () => {
         context.globalState.update('view', undefined);
@@ -64,7 +68,7 @@ export async function activate(context: ExtensionContext) {
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
-    activateGithubAnalyses(disposables, store, panel);
+    activateGithubAnalyses(store, panel, outputChannel);
     activateAntiDriftStatusBarItem(disposables);
     activateFixes(disposables, store, baser);
 
