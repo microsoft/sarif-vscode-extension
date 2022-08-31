@@ -202,7 +202,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 });
                 const logText = await analysisResponse.text();
                 const log = JSON.parse(logText) as Log;
-                (await import('fs')).writeFileSync(`/Volumes/Jeff/projects/sarif-vscode-extension/ignore/sarif-testing/${analysisInfo.id}.sarif`, logText);
                 log._text = logText;
                 log._uri = uri;
                 const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
