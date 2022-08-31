@@ -3,7 +3,7 @@
 
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, TextDocument, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
 import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
@@ -63,7 +63,7 @@ export async function activate(context: ExtensionContext) {
 
     // General Activation
     activateSarifStatusBarItem(disposables);
-    activateDiagnostics(disposables, store, baser);
+    activateDiagnostics(disposables, store, baser, outputChannel);
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
@@ -110,7 +110,7 @@ export async function activate(context: ExtensionContext) {
     return api;
 }
 
-function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
+function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser, outputChannel: OutputChannel) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
     const setDiags = async (doc: TextDocument) => {
@@ -148,6 +148,10 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
                 const uri = result._uriContents ?? result._uri;
                 return uri === artifactUri;
             });
+
+        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString() ?? 'file://';
+        outputChannel.appendLine(`updateDiags ${doc.uri.toString().replace(workspaceUri, '')}. ${matchingResults.length} Results.\n`);
+
         if (!matchingResults.length) {
             diagsAll.set(doc.uri, []);
             return;
