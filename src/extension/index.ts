@@ -64,7 +64,7 @@ export async function activate(context: ExtensionContext) {
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
-    activateGithubAnalyses(store, panel);
+    activateGithubAnalyses(disposables, store, panel);
     activateAntiDriftStatusBarItem(disposables);
     activateFixes(disposables, store, baser);
 

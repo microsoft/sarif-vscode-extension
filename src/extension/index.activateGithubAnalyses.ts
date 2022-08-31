@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, extensions, workspace } from 'vscode';
+import { authentication, Disposable, extensions, OutputChannel, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -47,7 +47,12 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-export function activateGithubAnalyses(store: Store, panel: Panel) {
+let outputChannel: OutputChannel;
+
+export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
+    outputChannel = window.createOutputChannel('Sarif Viewer');
+    disposables.push(outputChannel);
+
     const config = {
         user: '',
         repoName: '',
@@ -147,6 +152,8 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
             store.banner = 'Refresh to check for more current results.';
             store.analysisInfo = undefined;
         }
+        const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
+        outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
         // Find the intersection.
         const git = await getInitializedGitApi();
@@ -154,6 +161,8 @@ export function activateGithubAnalyses(store: Store, panel: Panel) {
 
         const repo = git.repositories[0];
         const commits = await repo.log({});
+        const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
+        outputChannel.appendLine(`Commits:\n${commitsString}\n`);
         const analysisInfo = analyses.find(analysis => {
             return commits.some(commit => analysis.commit_sha === commit.hash);
         });
