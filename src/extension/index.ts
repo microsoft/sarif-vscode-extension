@@ -116,7 +116,8 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
     const setDiags = async (doc: TextDocument) => {
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
-        if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri...""
+        if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
+        if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
 
         const artifactUri = (() => {
             // TODO: Recall why skipEncoding=true in the common case.
