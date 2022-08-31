@@ -92,7 +92,6 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             return driverlessRules.get(id)!;
         }
 
-        let implicitBaseParts = undefined as string[] | undefined;
         run.results?.forEach((result, resultIndex) => {
             result._log = log;
             result._run = run;
@@ -102,11 +101,9 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation, workspaceUri);
             result._uri = uri;
             result._uriContents = uriContents;
+            result._relativeUri = result._uri?.replace(workspaceUri ?? '' , '') ?? ''; // For grouping, Empty works more predictably than undefined
             {
                 const parts = uri?.split('/');
-                implicitBaseParts = // Base calc (inclusive of dash for now)
-                    implicitBaseParts?.slice(0, Array.commonLength(implicitBaseParts, parts ?? []))
-                    ?? parts;
                 const file = parts?.pop();
                 if (file && uri) {
                     fileAndUris.push([file, uri.replace(/^\//, '')]); // Normalize leading slashes.
@@ -136,11 +133,6 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
                 ? 'not suppressed'
                 : 'suppressed';
-        });
-
-        const implicitBase = implicitBaseParts?.join('/')  ?? '';
-        run.results?.forEach(result => {
-            result._relativeUri = result._uri?.replace(implicitBase , '') ?? ''; // For grouping, Empty works more predictably than undefined
         });
     });
     log._distinct = mapDistinct(fileAndUris);
