@@ -168,6 +168,8 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
     workspace.textDocuments.forEach(setDiags);
     disposables.push(workspace.onDidOpenTextDocument(setDiags));
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
+    disposables.push(workspace.onDidChangeTextDocument(({ document }) => setDiags(document))); // TODO: Consider updating the regions independently of the list of diagnostics.
+
     const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags));
     disposables.push({ dispose: disposerStore });
     const disposerAntiDrift = observe(antiDriftEnabled, () => workspace.textDocuments.forEach(setDiags));
