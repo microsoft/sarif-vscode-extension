@@ -28,10 +28,10 @@ interface TableProps<T, G> {
         ].join(' ');
     }
 
-    private TableItem = memo<{ isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string }>(props => {
+    private TableItem = memo<{ isLineThrough: boolean, isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string }>(props => {
         const { columns, store, renderIconName, renderCell } = this.props;
-        const { isSelected, item, gridTemplateColumns } = props;
-        return <div className={css('svTableRow', 'svTableRowItem', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
+        const { isLineThrough, isSelected, item, gridTemplateColumns } = props;
+        return <div className={css('svTableRow', 'svTableRowItem', isLineThrough && 'svLineThrough', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
             ref={ele => { // TODO: ForwardRef for Group
                 if (!isSelected || !ele) return;
                 setTimeout(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' })); // requestAnimationFrame not working.
@@ -82,7 +82,8 @@ interface TableProps<T, G> {
                             </Hi>;
                         }
                         if (row instanceof RowItem) {
-                            return <TableItem key={row.key} isSelected={isSelected} item={row} gridTemplateColumns={this.gridTemplateColumns} />;
+                            // Must evaluate isLineThrough outside of <TableItem /> so the function component knows to update.
+                            return <TableItem key={row.key} isLineThrough={store.isLineThrough(row.item)} isSelected={isSelected} item={row} gridTemplateColumns={this.gridTemplateColumns} />;
                         }
                         return undefined; // Closed system: No other types expected.
                     })}

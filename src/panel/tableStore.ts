@@ -119,4 +119,8 @@ export class TableStore<T, G> {
         this.selection.set(row);
         if (row?.group) row.group.expanded = true;
     }
+
+    isLineThrough(_item: T): boolean {
+        return false;
+    }
 }

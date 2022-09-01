@@ -18,6 +18,13 @@
         & > * + * { margin-left: 6px; } // Cell-part.
     }
 
+    // We can to avoid a line-through on the icon which is a <div>
+    // However, targeting <span> is an abstraction break.
+    .svTableRowItem.svLineThrough > .svTableCell > span {
+        text-decoration: line-through;
+        opacity: 0.5;
+    }
+
     .svTableHeader {
         display: grid;
         grid-auto-rows: 33px;
