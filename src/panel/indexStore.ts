@@ -67,8 +67,7 @@ export class IndexStore {
     }
     @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set
     @computed public get results() {
-        return this.runs.map(run => run.results ?? []).flat()
-            .filter(result => !this.resultsFixed.includes(JSON.stringify(result._id)));
+        return this.runs.map(run => run.results ?? []).flat();
     }
     selection = observable.box<Row | undefined>(undefined)
     resultTableStoreByLocation = new ResultTableStore('File', result => result._relativeUri, this, this, this.selection)
