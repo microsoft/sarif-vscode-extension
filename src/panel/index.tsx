@@ -114,7 +114,7 @@ export { DetailsLayouts } from './details.layouts';
             <div className="svResizer">
                 <ResizeHandle size={detailsPaneHeight} />
             </div>
-            <Details result={selected} height={detailsPaneHeight} />
+            <Details result={selected} resultsFixed={store.resultsFixed} height={detailsPaneHeight} />
             <Popover show={showFilterPopup} style={{ top: 35, right: 8 + 35 + 35 + 8 }}>
                 {Object.entries(store.filtersRow).map(([name, state]) => <Fragment key={name}>
                     <div className="svPopoverTitle">{name}</div>

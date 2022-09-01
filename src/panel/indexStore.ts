@@ -172,3 +172,7 @@ export async function postSelectLog(result: Result) {
 export async function postRefresh() {
     await vscode.postMessage({ command: 'refresh' });
 }
+
+export async function postRemoveResultFixed(result: Result) {
+    await vscode.postMessage({ command: 'removeResultFixed', id: result._id });
+}

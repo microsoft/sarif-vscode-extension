@@ -158,6 +158,11 @@ export class Panel {
                     await store.remoteAnalysisInfoUdpated++;
                     break;
                 }
+                case 'removeResultFixed': {
+                    const idToRemove = JSON.stringify(message.id);
+                    store.resultsFixed.removeFirst(id => id === idToRemove);
+                    break;
+                }
                 default:
                     throw new Error(`Unhandled command: ${message.command}`,);
             }
