@@ -1,3 +1,11 @@
+const errorHandler = e => {
+    const errorElement = document.getElementById('error')
+    errorElement.innerText = `Error: ${e.error.message}`;
+    errorElement.style.display = 'block';
+}
+window.addEventListener('error', errorHandler);
+window.addEventListener('unhandledrejection', errorHandler)
+
 vscode = acquireVsCodeApi();
 (() => {
     function getMetaContent(name) {

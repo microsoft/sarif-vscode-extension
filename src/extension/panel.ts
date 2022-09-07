@@ -87,6 +87,7 @@ export class Panel {
                 </style>
             </head>
             <body>
+                <div id="error" style="display: none; padding: 10px;"></div>
                 <div id="root"></div>
                 <script src="${webview.asWebviewUri(srcPanel).toString()}"></script>
                 <script src="${webview.asWebviewUri(srcInit).toString()}"></script>
