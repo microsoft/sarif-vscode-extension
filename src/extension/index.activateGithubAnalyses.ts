@@ -112,6 +112,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         if (!accessToken) {
             store.banner = 'Unable to authenticate.';
             store.analysisInfo = undefined;
+            return;
         }
 
         const branchName = store.branch;
@@ -123,6 +124,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         if (analysesResponse.status === 403) {
             store.banner = 'GitHub Advanced Security is not enabled for this repository.';
             store.analysisInfo = undefined;
+            return;
         }
 
         const anyResponse = await analysesResponse.json();
@@ -146,14 +148,19 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         if (!analyses.length) {
             store.banner = 'Refresh to check for more current results.';
             store.analysisInfo = undefined;
+            return;
         }
         const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
-        // Find the intersection.
         const git = await getInitializedGitApi();
-        if (!git) return undefined; // No GitExtension or GitExtension API.
+        if (!git) {
+            store.banner = 'Unable to initialize Git.'; // No GitExtension or GitExtension API.
+            store.analysisInfo = undefined;
+            return;
+        }
 
+        // Find the intersection.
         const repo = git.repositories[0];
         const commits = await repo.log({});
         const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
