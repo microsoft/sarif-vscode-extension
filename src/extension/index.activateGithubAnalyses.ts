@@ -196,10 +196,12 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
                     },
                 });
                 const logText = await analysisResponse.text();
+                // Useful for saving/examining fetched logs:
+                // (await import('fs')).writeFileSync(`${primaryWorkspaceFolderUriString}/ignore/sarif-testing/${analysisInfo.id}.sarif`, logText);
                 const log = JSON.parse(logText) as Log;
                 log._text = logText;
                 log._uri = uri;
-                const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
+                const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
                 augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
                 return log;
             })();
