@@ -69,7 +69,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
 
-        // procces.cwd() returns '/'
+        // proccess.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
         if (!workspacePath) return console.warn('No workspace');
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
