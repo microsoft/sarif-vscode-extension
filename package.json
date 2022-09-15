@@ -24,10 +24,10 @@
         "vscode": "^1.57.0"
     },
     "activationEvents": [
-        "*",
         "onLanguage:json",
         "onCommand:sarif.showPanel",
-        "onCommand:sarif.clearState"
+        "onCommand:sarif.clearState",
+        "workspaceContains:.git"
     ],
     "extensionDependencies": [
         "vscode.git"
