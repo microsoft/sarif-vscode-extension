@@ -46,6 +46,21 @@
                     "type": "boolean",
                     "default": true
                 },
+                "sarif-viewer.connectToGithubCodeScanning": {
+                    "description": "Connect to GitHub and display any code scanning results. Setting takes effect on editor restart.",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "on",
+                        "onWithIntroduction"
+                    ],
+                    "enumDescriptions": [
+                        "If do not anticipate having or using GitHub code scanning results, this will save compute and network resources.",
+                        "",
+                        "On, but with an introductory explanation and a way to opt-out."
+                    ],
+                    "default": "onWithIntroduction"
+                },
                 "sarif-viewer.updateChannel": {
                     "description": "Specifies the type of updates the extension receives.",
                     "type": "string",

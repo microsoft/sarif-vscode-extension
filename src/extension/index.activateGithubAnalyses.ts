@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, extensions, OutputChannel, workspace } from 'vscode';
+import { authentication, commands, extensions, OutputChannel, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -48,6 +48,25 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
 }
 
 export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel: OutputChannel) {
+    /*
+        Determined (via experiments) that is not possible to discern between default and unset.
+        This is even when using `inspect()`.
+
+        If equal to default (false or unset):
+        {
+            defaultValue: false
+            key: ...
+        }
+
+        If not equal to default (true):
+        {
+            defaultValue: false
+            globalValue: true
+        }
+    */
+    const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<'off' | 'on' | 'onWithIntroduction'>('connectToGithubCodeScanning');
+    if (connectToGithubCodeScanning === 'off') return;
+
     const config = {
         user: '',
         repoName: '',
@@ -79,6 +98,25 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         // We preemptively show the panel (even before the result as fetched)
         // so that the banner is visible.
         await panel.show();
+
+        if (connectToGithubCodeScanning === 'onWithIntroduction') {
+            // This information message runs in parallel with loading, so we wrap it with an async function.
+            (async () => {
+                const choice = await window.showInformationMessage(
+                    'Any repository with a GitHub origin may have code scanning results. The Sarif Viewer is connecting to GitHub and will display any results.',
+                    'Keep', 'Disable', 'Settings...',
+                );
+                if (choice === 'Keep') {
+                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
+                }
+                if (choice === 'Disable') {
+                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
+                }
+                if (choice === 'Settings...') {
+                    commands.executeCommand( 'workbench.action.openSettings', 'sarif-viewer.connectToGithubCodeScanning');
+                }
+            })();
+        }
 
         await onGitChanged(repo, gitHeadPath, store);
         const watcher = watch([
