@@ -72,9 +72,6 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         repoName: '',
     };
 
-    // TODO: Block re-entrancy.
-    observe(store, 'remoteAnalysisInfoUpdated', () => updateAnalysisInfo());
-
     (async () => {
         const git = await getInitializedGitApi();
         if (!git) return console.warn('No GitExtension or GitExtension API');
@@ -283,5 +280,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
     }
 
+    // TODO: Block re-entrancy.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
+    observe(store, 'remoteAnalysisInfoUpdated', () => updateAnalysisInfo());
 }
