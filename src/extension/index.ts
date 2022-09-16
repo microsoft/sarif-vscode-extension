@@ -6,7 +6,6 @@ import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { activateAntiDriftStatusBarItem, antiDriftEnabled } from './antiDriftToggle';
 import { getOriginalDoc } from './getOriginalDoc';
 import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateDecorations } from './index.activateDecorations';
@@ -69,7 +68,6 @@ export async function activate(context: ExtensionContext) {
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
     activateGithubAnalyses(store, panel, outputChannel);
-    activateAntiDriftStatusBarItem(disposables);
     activateFixes(disposables, store, baser);
 
     // Check for Updates
@@ -181,8 +179,6 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
 
     const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags));
     disposables.push({ dispose: disposerStore });
-    const disposerAntiDrift = observe(antiDriftEnabled, () => workspace.textDocuments.forEach(setDiags));
-    disposables.push({ dispose: disposerAntiDrift });
 }
 
 // Sync Open SARIF TextDocuments with Store.logs

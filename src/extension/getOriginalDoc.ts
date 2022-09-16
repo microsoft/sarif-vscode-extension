@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 import { Uri } from 'vscode';
-import { antiDriftEnabled } from './antiDriftToggle';
 import { AnalysisInfo, getInitializedGitApi } from './index.activateGithubAnalyses';
 import { StringTextDocument } from './stringTextDocument';
 
@@ -12,7 +11,6 @@ export async function getOriginalDoc(
     currentDoc: { uri: Uri })
     : Promise<StringTextDocument | undefined> {
 
-    if (!antiDriftEnabled.get()) return undefined;
     if (!analysisInfo) return undefined;
 
     const git = await getInitializedGitApi();
