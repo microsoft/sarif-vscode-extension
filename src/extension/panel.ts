@@ -21,7 +21,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUdpated'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
