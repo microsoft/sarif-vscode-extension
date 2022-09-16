@@ -73,7 +73,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
     };
 
     // TODO: Block re-entrancy.
-    observe(store, 'remoteAnalysisInfoUdpated', () => updateAnalysisInfo());
+    observe(store, 'remoteAnalysisInfoUpdated', () => updateAnalysisInfo());
 
     (async () => {
         const git = await getInitializedGitApi();

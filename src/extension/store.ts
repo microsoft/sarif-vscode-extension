@@ -28,7 +28,7 @@ export class Store {
     public branch = ''
     public commitHash = ''
     @observable analysisInfo: AnalysisInfo | undefined
-    @observable remoteAnalysisInfoUdpated = 0 // A version number as a substitute for a value-less observable.
+    @observable remoteAnalysisInfoUpdated = 0 // A version number as a substitute for a value-less observable.
 
     constructor() {
         intercept(this.logs, objChange => {

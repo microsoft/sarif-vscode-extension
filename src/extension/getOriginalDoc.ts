@@ -5,7 +5,7 @@ import { Uri } from 'vscode';
 import { AnalysisInfo, getInitializedGitApi } from './index.activateGithubAnalyses';
 import { StringTextDocument } from './stringTextDocument';
 
-// TOOD: Consider caching the retval.
+// TODO: Consider caching the retval.
 export async function getOriginalDoc(
     analysisInfo: AnalysisInfo | undefined,
     currentDoc: { uri: Uri })

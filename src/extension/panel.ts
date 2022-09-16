@@ -156,7 +156,7 @@ export class Panel {
                     break;
                 }
                 case 'refresh': {
-                    await store.remoteAnalysisInfoUdpated++;
+                    await store.remoteAnalysisInfoUpdated++;
                     break;
                 }
                 case 'removeResultFixed': {
