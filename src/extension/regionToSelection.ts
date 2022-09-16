@@ -5,7 +5,7 @@ import { Change } from 'diff';
 import { Region } from 'sarif';
 import { Selection } from 'vscode';
 import '../shared/extension';
-import { measureDrift } from './antiDrift';
+import { measureDrift } from './measureDrift';
 import { TextDocumentLike } from './stringTextDocument';
 
 function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
