@@ -7,6 +7,7 @@ import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { Uri, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
+import { overrideBaseUri } from '../shared/overrideBaseUri';
 import * as Telemetry from './telemetry';
 
 export const driverlessRules = new Map<string, ReportingDescriptor>();
