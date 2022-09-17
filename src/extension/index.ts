@@ -127,16 +127,6 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             // sarif:                                                        /0/0/file.text
             //       file :     /      /     /     Downloads /    myLog.sarif
 
-        const artifactUri = (() => {
-            // TODO: Recall why skipEncoding=true in the common case.
-            // TODO: Review for consistent usage of skipEncoding (for example in `provideTextDocumentContent`)
-            // For now, we are bypassing the legacy code path for the `sarif:` paths.
-            // The lack of consistent encoding was causing `uri === artifactUri` to be incorrect.
-
-            // Intended
-            // sarif:                                                        /0/0/file.text
-            //       file :     /      /     /     Downloads /    myLog.sarif
-
             // Raw     (skipEncoding = true)
             // sarif:file  %3A   %2F   %2F   %2F   Downloads %2F   myLog.sarif/0/0/file.text
 

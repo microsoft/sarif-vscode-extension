@@ -5,7 +5,6 @@ import { action, autorun, computed, intercept, observable, observe, toJS, when }
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, findResult, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
-import { overrideBaseUri } from '../shared/overrideBaseUri';
 import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
