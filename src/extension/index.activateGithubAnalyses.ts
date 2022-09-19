@@ -5,7 +5,7 @@
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
-import fetch from 'node-fetch';
+import fetch, { Response} from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, commands, extensions, OutputChannel, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
@@ -151,11 +151,27 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
         }
 
         const branchName = store.branch;
-        const analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
-            headers: {
-                authorization: `Bearer ${accessToken}`,
-            },
-        });
+        let analysesResponse: Response | undefined;
+        try {
+            analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            });
+        } catch (error) {
+            // Expected error value if the network is disabled.
+            // {
+            //     "message": "request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com",
+            //     "type": "system",
+            //     "errno": "ENOTFOUND",
+            //     "code": "ENOTFOUND"
+            // }
+            store.banner = 'Network error. Refresh to try again.';
+        }
+        if (!analysesResponse) {
+            store.analysisInfo = undefined;
+            return;
+        }
         if (analysesResponse.status === 403) {
             store.banner = 'GitHub Advanced Security is not enabled for this repository.';
             store.analysisInfo = undefined;
