@@ -32,7 +32,6 @@ jobs:
           tag_name: ${{ steps.bumpPrerelease.outputs.version }}
           release_name: ${{ steps.bumpPrerelease.outputs.version }}
           prerelease: true
-      - run: ls
       - id: upload-release-asset 
         uses: actions/upload-release-asset@v1
         env:
