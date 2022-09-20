@@ -145,6 +145,9 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         const matchingResults = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
+                outputChannel.appendLine(`local === artifact:`);
+                outputChannel.appendLine(`  ${uri}`);
+                outputChannel.appendLine(`  ${artifactUri}`);
                 return uri === artifactUri;
             });
 
@@ -218,6 +221,16 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
             }
             token.isCancellationRequested = true;
             return '';
+        }
+    }));
+
+    // <script src="${webview.asWebviewUri(Uri.parse('foobar:/foo')).toString()}"></script>
+    // 401: https://foobar+.vscode-resource.vscode-cdn.net/foo
+    //      https://file+  .vscode-resource.vscode-cdn.net/Volumes/Jeff/projects/sarif-vscode-extension/out/init.js
+    disposables.push(workspace.registerTextDocumentContentProvider('foobar', {
+        provideTextDocumentContent: uri => {
+            console.log(uri);
+            return 'console.log(234);';
         }
     }));
 }
