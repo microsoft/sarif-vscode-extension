@@ -76,6 +76,7 @@ export class Panel {
                     default-src 'none';
                     connect-src vscode-resource:;
                     font-src    vscode-resource:;
+                    img-src     data:;
                     script-src  vscode-resource:;
                     style-src   vscode-resource: 'unsafe-inline';
                     ">
