@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 10 # Increase history for bumpPrerelease. Subsequent `git fetch --depth=10` not working.
+          fetch-depth: 20 # Increase history for bumpPrerelease. Subsequent `git fetch --depth=20` not working.
       - uses: actions/cache@v1
         with:
           path: ~/.npm
