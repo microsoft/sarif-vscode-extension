@@ -1155,7 +1155,7 @@ const { parse } = __webpack_require__(30);
 const package = JSON.parse(readFileSync('./package.json', 'utf8'));
 const packageVer = parse(package.version);
 
-let prerelease = 8; // Main was changed, or no prev version, restart prerelease from 0.
+let prerelease = 0; // Main was changed, or no prev version, restart prerelease from 0.
 try {
 	core.startGroup('Fetching tags');
 	execFileSync('git', ['fetch', '--tags']);
