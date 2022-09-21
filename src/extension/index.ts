@@ -53,7 +53,7 @@ export async function activate(context: ExtensionContext) {
     //     Note: `File: Exclude` setting is respected.
     //     Hardware: 2020 MacBook Pro i7
     const urisNonSarif = await workspace.findFiles('**', '.sarif', 10000); // Ignore folders?
-    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true /* skipEncoding */)]) as [string, string][];
+    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true)]) as [string, string][];
     const baser = new UriRebaser(mapDistinct(fileAndUris), store);
 
     // Panel
@@ -118,25 +118,10 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
 
         const artifactUri = (() => {
-            // TODO: Recall why skipEncoding=true in the common case.
-            // TODO: Review for consistent usage of skipEncoding (for example in `provideTextDocumentContent`)
-            // For now, we are bypassing the legacy code path for the `sarif:` paths.
-            // The lack of consistent encoding was causing `uri === artifactUri` to be incorrect.
-
-            // Intended
-            // sarif:                                                        /0/0/file.text
-            //       file :     /      /     /     Downloads /    myLog.sarif
-
-            // Raw     (skipEncoding = true)
-            // sarif:file  %3A   %2F   %2F   %2F   Downloads %2F   myLog.sarif/0/0/file.text
-
-            // Encoded (skipEncoding = false), Also this = result._uriContents.
-            // sarif:file  %253A %252F %252F %252F Downloads %252F myLog.sarif/0/0/file.text
-
             if (doc.uri.scheme === 'sarif') {
-                return doc.uri.toString(); // skipEncoding=false;
+                return doc.uri.toString();
             }
-            return baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+            return baser.translateLocalToArtifact(doc.uri.toString());
         })();
         const severities = {
             error: DiagnosticSeverity.Error,

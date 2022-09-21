@@ -40,6 +40,9 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
         window.showWarningMessage(`'${fsPath}' was not loaded. Version '${log.version}' and schema '${log.$schema ?? ''}' is not supported.`);
     }
 
+    // primaryWorkspaceFolderUriString expected to be
+    // encoded as `file:///c%3A/folder/`  (toString(false /* encode */))
+    // and not as `file:///c:/folder/`    (toString(true /* skip encode */))
     const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString();
     logsSupported.forEach(log => {
         // Only supporting single workspaces for now.
