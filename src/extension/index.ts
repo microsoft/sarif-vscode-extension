@@ -127,6 +127,8 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
         } as Record<string, DiagnosticSeverity>;
+
+        outputChannel.appendLine(`workspaceUri: ${workspace.workspaceFolders?.[0]?.uri.toString()}`);
         const matchingResults = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
