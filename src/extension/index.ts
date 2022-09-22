@@ -67,7 +67,7 @@ export async function activate(context: ExtensionContext) {
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
-    activateGithubAnalyses(store, panel, outputChannel);
+    activateGithubAnalyses(disposables, store, panel, outputChannel);
     activateFixes(disposables, store, baser);
 
     // Check for Updates

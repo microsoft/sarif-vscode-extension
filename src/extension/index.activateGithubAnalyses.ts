@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch, { Response} from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, commands, extensions, OutputChannel, window, workspace } from 'vscode';
+import { authentication, commands, Disposable, extensions, OutputChannel, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -15,6 +15,7 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
+import { sendGithubConfig, sendGithubEligibility, sendGithubIntroductionChoice } from './telemetry';
 
 // Subset of the GitHub API.
 export interface AnalysisInfo {
@@ -47,7 +48,15 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel: OutputChannel) {
+export type ConnectToGithubCodeScanning = 'off' | 'on' | 'onWithIntroduction'
+
+export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
+    disposables.push(workspace.onDidChangeConfiguration(e => {
+        if (!e.affectsConfiguration('sarif-viewer.connectToGithubCodeScanning')) return;
+        const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
+        sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
+    }));
+
     /*
         Determined (via experiments) that is not possible to discern between default and unset.
         This is even when using `inspect()`.
@@ -64,7 +73,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
             globalValue: true
         }
     */
-    const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<'off' | 'on' | 'onWithIntroduction'>('connectToGithubCodeScanning');
+    const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
 
     const config = {
@@ -74,22 +83,24 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
 
     (async () => {
         const git = await getInitializedGitApi();
-        if (!git) return console.warn('No GitExtension or GitExtension API');
+        if (!git) return sendGithubEligibility('No Git api');
 
         const repo = git.repositories[0];
-        if (!repo) return console.warn('No repo');
+        if (!repo) return sendGithubEligibility('No Git repository');
 
         const origin = await repo.getConfig('remote.origin.url');
         const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)/) ?? [];
-        if (!user || !repoName) return console.warn('No acceptable origin');
+        if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
 
         // proccess.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
-        if (!workspacePath) return console.warn('No workspace');
+        if (!workspacePath) return sendGithubEligibility('No workspace');
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
-        if (!existsSync(gitHeadPath)) return console.warn('No .git/HEAD');
+        if (!existsSync(gitHeadPath)) return sendGithubEligibility('No .git/HEAD');
+
+        sendGithubEligibility('Eligible');
 
         // At this point all the local requirements have been satisfied.
         // We preemptively show the panel (even before the result as fetched)
@@ -103,6 +114,7 @@ export function activateGithubAnalyses(store: Store, panel: Panel, outputChannel
                     'Any repository with a GitHub origin may have code scanning results. The Sarif Viewer is connecting to GitHub and will display any results.',
                     'Keep', 'Disable', 'Settings...',
                 );
+                sendGithubIntroductionChoice(choice);
                 if (choice === 'Keep') {
                     workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                 }

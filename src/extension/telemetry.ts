@@ -18,3 +18,15 @@ export function deactivate() {
 export function sendLogVersion(version: string, $schema: string) {
     reporter?.sendTelemetryEvent('logVersion', { version, $schema });
 }
+
+export function sendGithubEligibility(eligibility: string) {
+    reporter?.sendTelemetryEvent('githubEligibility', { eligibility });
+}
+
+export function sendGithubIntroductionChoice(choice: string | undefined) {
+    reporter?.sendTelemetryEvent('githubIntroductionChoice', { choice: choice ?? 'undefined' });
+}
+
+export function sendGithubConfig(value: string) {
+    reporter?.sendTelemetryEvent('githubConfig', { value });
+}
