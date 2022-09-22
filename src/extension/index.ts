@@ -1,20 +1,25 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { diffChars } from 'diff';
 import { observe } from 'mobx';
-import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, TextDocument, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
+import { getOriginalDoc } from './getOriginalDoc';
+import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateDecorations } from './index.activateDecorations';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import platformUriNormalize from './platformUriNormalize';
-import { regionToSelection } from './regionToSelection';
+import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
+import { activateSarifStatusBarItem } from './statusBarItem';
 import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
+import { activateFixes } from './index.activateFixes';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -25,6 +30,10 @@ export async function activate(context: ExtensionContext) {
     if (!isDebugOrTestMode) Telemetry.activate();
 
     const disposables = context.subscriptions;
+
+    const outputChannel = window.createOutputChannel('Sarif Viewer');
+    disposables.push(outputChannel);
+
     Store.globalState = context.globalState;
     disposables.push(commands.registerCommand('sarif.clearState', () => {
         context.globalState.update('view', undefined);
@@ -44,7 +53,7 @@ export async function activate(context: ExtensionContext) {
     //     Note: `File: Exclude` setting is respected.
     //     Hardware: 2020 MacBook Pro i7
     const urisNonSarif = await workspace.findFiles('**', '.sarif', 10000); // Ignore folders?
-    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true /* skipEncoding */)]) as [string, string][];
+    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true)]) as [string, string][];
     const baser = new UriRebaser(mapDistinct(fileAndUris), store);
 
     // Panel
@@ -52,11 +61,14 @@ export async function activate(context: ExtensionContext) {
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // General Activation
-    activateDiagnostics(disposables, store, baser);
+    activateSarifStatusBarItem(disposables);
+    activateDiagnostics(disposables, store, baser, outputChannel);
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, panel);
+    activateGithubAnalyses(disposables, store, panel, outputChannel);
+    activateFixes(disposables, store, baser);
 
     // Check for Updates
     if (!isDebugOrTestMode) {
@@ -96,59 +108,65 @@ export async function activate(context: ExtensionContext) {
     return api;
 }
 
-function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
+function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser, outputChannel: OutputChannel) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
-    const setDiags = (doc: TextDocument) => {
+    const setDiags = async (doc: TextDocument) => {
         // When the user opens a doc, VS Code commonly silently opens the associate `*.git`. We are not interested in these events.
         if (doc.fileName.endsWith('.git')) return;
+        if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
+        if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
 
         const artifactUri = (() => {
-            // TODO: Recall why skipEncoding=true in the common case.
-            // TODO: Review for consistent usage of skipEncoding (for example in `provideTextDocumentContent`)
-            // For now, we are bypassing the legacy code path for the `sarif:` paths.
-            // The lack of consistent encoding was causing `uri === artifactUri` to be incorrect.
-
-            // Intended
-            // sarif:                                                        /0/0/file.text
-            //       file :     /      /     /     Downloads /    myLog.sarif
-
-            // Raw     (skipEncoding = true)
-            // sarif:file  %3A   %2F   %2F   %2F   Downloads %2F   myLog.sarif/0/0/file.text
-
-            // Encoded (skipEncoding = false), Also this = result._uriContents.
-            // sarif:file  %253A %252F %252F %252F Downloads %252F myLog.sarif/0/0/file.text
-
             if (doc.uri.scheme === 'sarif') {
-                return doc.uri.toString(); // skipEncoding=false;
+                return doc.uri.toString();
             }
-            return baser.translateLocalToArtifact(doc.uri.toString(true /* skipEncoding */));
+            return baser.translateLocalToArtifact(doc.uri.toString());
         })();
         const severities = {
             error: DiagnosticSeverity.Error,
             warning: DiagnosticSeverity.Warning,
         } as Record<string, DiagnosticSeverity>;
-        const diags = store.results
+        const matchingResults = store.results
             .filter(result => {
                 const uri = result._uriContents ?? result._uri;
-                return uri === artifactUri && !result._fixed;
-            })
-            .map(result => new ResultDiagnostic(
-                regionToSelection(doc, result._region),
-                result._message ?? '—',
-                severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
-                result,
-            ));
+                return uri === artifactUri;
+            });
+
+        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString() ?? 'file://';
+        outputChannel.appendLine(`updateDiags ${doc.uri.toString().replace(workspaceUri, '')}. ${matchingResults.length} Results.\n`);
+
+        if (!matchingResults.length) {
+            diagsAll.set(doc.uri, []);
+            return;
+        }
+
+        const currentDoc = doc; // Alias for juxtaposition.
+        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+        const diags = matchingResults
+            .map(result => {
+                return new ResultDiagnostic(
+                    driftedRegionToSelection(diffBlocks, currentDoc, result._region, originalDoc),
+                    result._message ?? '—',
+                    severities[result.level ?? ''] ?? DiagnosticSeverity.Information, // note, none, undefined.
+                    result,
+                );
+            });
+
         diagsAll.set(doc.uri, diags);
     };
     workspace.textDocuments.forEach(setDiags);
     disposables.push(workspace.onDidOpenTextDocument(setDiags));
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
-    const disposer = observe(store.logs, () => workspace.textDocuments.forEach(setDiags));
-    disposables.push({ dispose: disposer });
+    disposables.push(workspace.onDidChangeTextDocument(({ document }) => setDiags(document))); // TODO: Consider updating the regions independently of the list of diagnostics.
+
+    const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags));
+    disposables.push({ dispose: disposerStore });
 }
 
-// Open Documents <-sync-> Store.logs
+// Sync Open SARIF TextDocuments with Store.logs
 function activateWatchDocuments(disposables: Disposable[], store: Store, panel: Panel) {
     const addLog = async (doc: TextDocument) => {
         if (!doc.fileName.match(/\.sarif$/i)) return;

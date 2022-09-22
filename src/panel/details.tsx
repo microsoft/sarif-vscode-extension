@@ -12,12 +12,12 @@ import { Location, Result, StackFrame, ThreadFlowLocation } from 'sarif';
 import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
-import { postSelectArtifact, postSelectLog } from './indexStore';
+import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
 type TabName = 'Info' | 'Analysis Steps';
 
-interface DetailsProps { result: Result, height: IObservableValue<number> }
+interface DetailsProps { result: Result, resultsFixed: string[], height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
     private selectedTab = observable.box<TabName>('Info')
     @computed private get threadFlowLocations(): ThreadFlowLocation[] {
@@ -42,13 +42,20 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                 : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
-        const {result, height} = this.props;
+        const {result, resultsFixed, height} = this.props;
         const helpUri = result?._rule?.helpUri;
 
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
                 <Tab name="Info">
                     <div className="svDetailsBody svDetailsInfo">
+                        {resultsFixed.includes(JSON.stringify(result._id)) && <div className="svDetailsMessage">
+                            This result has been marked as fixed.&nbsp;
+                            <a href="#" onClick={e => {
+                                e.preventDefault(); // Cancel # nav.
+                                postRemoveResultFixed(result);
+                            }}>Clear</a>.
+                        </div>}
                         <div className="svDetailsMessage">
                             {result._markdown
                                 ? <ReactMarkdown className="svMarkDown" source={result._markdown} />
@@ -89,6 +96,12 @@ interface DetailsProps { result: Result, height: IObservableValue<number> }
                                         return <Fragment key={key}>
                                             <span className="ellipsis">{key}</span>
                                             <span>{(() => {
+                                                if (key === 'github/alertUrl' && typeof value === 'string') {
+                                                    const href = value
+                                                        .replace('api.github.com/repos', 'github.com')
+                                                        .replace('/code-scanning/alerts', '/security/code-scanning');
+                                                    return <a href={href}>{href}</a>;
+                                                }
                                                 if (value === null)
                                                     return '—';
                                                 if (Array.isArray(value))

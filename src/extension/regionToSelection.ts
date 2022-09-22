@@ -1,11 +1,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { Change } from 'diff';
 import { Region } from 'sarif';
-import { Selection, TextDocument } from 'vscode';
+import { Selection } from 'vscode';
 import '../shared/extension';
+import { measureDrift } from './measureDrift';
+import { TextDocumentLike } from './stringTextDocument';
 
-export function regionToSelection(doc: TextDocument, region: Region | undefined) {
+function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
     if (!region) return new Selection(0, 0, 0, 0); // TODO: Decide if empty regions should be pre-filtered.
 
     const { byteOffset, startLine, charOffset } = region;
@@ -33,7 +36,7 @@ export function regionToSelection(doc: TextDocument, region: Region | undefined)
             startLine - 1,
             Math.max(line.firstNonWhitespaceCharacterIndex, minusOne(region.startColumn) ?? 0), // Trim leading whitespace.
             (region.endLine ?? startLine) - 1,
-            minusOne(region.endColumn) ?? Number.MAX_SAFE_INTEGER, // Arbitrarily large number representing the rest of the line.
+            minusOne(region.endColumn) ?? line.range.end.character,
         );
     }
 
@@ -45,4 +48,27 @@ export function regionToSelection(doc: TextDocument, region: Region | undefined)
     }
 
     return new Selection(0, 0, 0, 0); // Technically an invalid region, but no use complaining to the user.
+}
+
+export function driftedRegionToSelection(diffBlocks: Change[], currentDoc: TextDocumentLike, region: Region | undefined, originalDoc?: TextDocumentLike) {
+    // If there is no originalDoc, the best we can do is hope no drift has occured since the scan.
+    if (originalDoc === undefined) return regionToSelection(currentDoc, region);
+
+    const originalRange = regionToSelection(originalDoc, region);
+    if (originalRange.isReversed) console.warn('REVERSED');
+
+    const drift = measureDrift(
+        diffBlocks,
+        originalDoc.offsetAt(originalRange.start),
+        originalDoc.offsetAt(originalRange.end),
+    );
+    return drift === undefined
+        ? new Selection(
+            currentDoc.positionAt(0),
+            currentDoc.positionAt(0)
+        )
+        : new Selection(
+            currentDoc.positionAt(originalDoc.offsetAt(originalRange.start) + drift),
+            currentDoc.positionAt(originalDoc.offsetAt(originalRange.end)   + drift)
+        );
 }

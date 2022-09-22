@@ -5,12 +5,13 @@ import { action, autorun, computed, intercept, observable, observe, toJS, when }
 import { Log, PhysicalLocation, ReportingDescriptor, Result } from 'sarif';
 import { augmentLog, CommandExtensionToPanel, filtersColumn, filtersRow, findResult, parseArtifactLocation, Visibility } from '../shared';
 import '../shared/extension';
-import { overrideBaseUri } from '../shared/overrideBaseUri';
 import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
 
 export class IndexStore {
+    @observable banner = '';
+
     private driverlessRules = new Map<string, ReportingDescriptor>();
 
     constructor(state: Record<string, Record<string, Record<string, Visibility>>>, workspaceUri?: string, defaultSelection?: boolean) {
@@ -33,8 +34,7 @@ export class IndexStore {
         intercept(this.logs, (change: any) => {
             if (change.type !== 'splice') throw new Error(`Unexpected change type. ${change.type}`);
             change.added.forEach((log: Log) => {
-                overrideBaseUri(log, workspaceUri);
-                augmentLog(log, this.driverlessRules);
+                augmentLog(log, this.driverlessRules, workspaceUri);
             });
             return change;
         });
@@ -56,7 +56,7 @@ export class IndexStore {
             const selectedRow = this.selection.get();
             const result = selectedRow instanceof RowItem && selectedRow.item;
             if (!result?._uri) return; // Bail on no result or location-less result.
-            postSelectArtifact(result, result.locations?.[0]?.physicalLocation);
+            postSelectArtifact(result, result.locations?.[0]?.physicalLocation, workspaceUri);
         });
     }
 
@@ -65,8 +65,9 @@ export class IndexStore {
     @computed private get runs() {
         return this.logs.map(log => log.runs).flat();
     }
+    @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set
     @computed public get results() {
-        return this.runs.map(run => run.results || []).flat();
+        return this.runs.map(run => run.results ?? []).flat();
     }
     selection = observable.box<Row | undefined>(undefined)
     resultTableStoreByLocation = new ResultTableStore('File', result => result._relativeUri, this, this, this.selection)
@@ -119,18 +120,36 @@ export class IndexStore {
                 const i = this.logs.findIndex(log => log._uri === uri);
                 if (i >= 0) this.logs.splice(i, 1);
             }
-            for (const {uri, uriUpgraded, webviewUri} of event.data.added) {
-                const response = await fetch(webviewUri);
-                const log = await response.json() as Log;
+            for (const {text, uri, uriUpgraded, webviewUri} of event.data.added) {
+                const log: Log = text
+                    ? JSON.parse(text)
+                    : await (await fetch(webviewUri)).json();
                 log._uri = uri;
                 log._uriUpgraded = uriUpgraded;
                 this.logs.push(log);
             }
         }
+
+        if (command === 'spliceResultsFixed') {
+            for (const resultIdString of event.data.removed) {
+                this.resultsFixed.remove(resultIdString);
+            }
+            for (const resultIdString of event.data.added) {
+                this.resultsFixed.push(resultIdString);
+            }
+        }
+
+        if (command === 'setBanner') {
+            this.banner = event.data?.text ?? '';
+        }
     }
 }
 
-export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation) {
+export async function postLoad() {
+    await vscode.postMessage({ command: 'load' });
+}
+
+export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation, overrideUriBase?: string) {
     // If this panel is not active, then any selection change did not originate from (a user's action) here.
     // It must have originated from (a user's action in) the editor, which then sent a message here.
     // If that is the case, don't send another 'select' message back. This would cause selection unstability.
@@ -141,11 +160,19 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
     if (!ploc) return;
     const log = result._log;
     const logUri = log._uri;
-    const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation);
+    const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation, overrideUriBase);
     const region = ploc?.region;
     await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, region });
 }
 
 export async function postSelectLog(result: Result) {
     await vscode.postMessage({ command: 'selectLog', id: result._id });
+}
+
+export async function postRefresh() {
+    await vscode.postMessage({ command: 'refresh' });
+}
+
+export async function postRemoveResultFixed(result: Result) {
+    await vscode.postMessage({ command: 'removeResultFixed', id: result._id });
 }

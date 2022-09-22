@@ -2,23 +2,33 @@
 // Licensed under the MIT License.
 
 import { computed, IArrayWillSplice, intercept, observable } from 'mobx';
-import { Log, Result } from 'sarif';
+import { Log } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
+import { AnalysisInfo } from './index.activateGithubAnalyses';
 
 export class Store {
     static globalState: Memento
 
+    @observable banner = '';
+
     @observable.shallow logs = [] as Log[]
+    @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set.
     @computed get results() {
         const runs = this.logs.map(log => log.runs).flat();
-        return runs.map(run => run.results).filter(run => run).flat() as Result[];
+        return runs.map(run => run.results ?? []).flat()
+            .filter(result => !this.resultsFixed.includes(JSON.stringify(result._id)));
     }
     @computed get distinctArtifactNames() {
         const fileAndUris = this.logs.map(log => [...log._distinct.entries()]).flat();
         return mapDistinct(fileAndUris);
     }
+
+    public branch = ''
+    public commitHash = ''
+    @observable analysisInfo: AnalysisInfo | undefined
+    @observable remoteAnalysisInfoUpdated = 0 // A version number as a substitute for a value-less observable.
 
     constructor() {
         intercept(this.logs, objChange => {

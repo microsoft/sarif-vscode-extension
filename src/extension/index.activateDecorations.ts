@@ -2,12 +2,14 @@
 // Licensed under the MIT License.
 /* eslint-disable filenames/match-regex */
 
+import { diffChars } from 'diff';
 import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
-import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
+import { Disposable, languages, Range, ThemeColor, window, workspace } from 'vscode';
 import { findResult, parseArtifactLocation, ResultId } from '../shared';
 import '../shared/extension';
-import { regionToSelection } from './regionToSelection';
+import { getOriginalDoc } from './getOriginalDoc';
+import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 
@@ -51,7 +53,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
     // * `window.visibleTextEditors` change
     // * `store.logs` item removed
     //    We don't trigger on log added as the user would need to select a result first.
-    function update() {
+    async function update() {
         const resultId = activeResultId.get();
         if (!resultId) {
             // This code path is only expected if `activeResultId` has not be set yet. See `activeResultId` comments.
@@ -66,16 +68,19 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
         }
 
         for (const editor of window.visibleTextEditors) {
-            const doc = editor.document;
+            const currentDoc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
-            const docUriString = doc.uri.toString();
+            const docUriString = currentDoc.uri.toString();
             const locationsInDoc = locations.filter(tfl => {
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
+                const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
+                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation, workspaceUri);
                 return docUriString === artifactUriString;
             });
 
-            const ranges = locationsInDoc.map(tfl => regionToSelection(doc, tfl.location?.physicalLocation?.region));
+            const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+            const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+            const ranges = locationsInDoc.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
             editor.setDecorations(decorationTypeHighlight, ranges);
 
             { // Sub-scope for callouts.
@@ -84,11 +89,11 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                     return `Step ${locations.indexOf(tfl) + 1}${text ? `: ${text}` : ''}`;
                 });
                 const rangesEnd = ranges.map(range => {
-                    const endPos = doc.lineAt(range.end.line).range.end;
+                    const endPos = currentDoc.lineAt(range.end.line).range.end;
                     return new Range(endPos, endPos);
                 });
                 const rangesEndAdj = rangesEnd.map(range => {
-                    const tabCount = doc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
+                    const tabCount = currentDoc.lineAt(range.end.line).text.match(/\t/g)?.length ?? 0;
                     const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
                     return range.end.character + tabCharAdj;
                 });

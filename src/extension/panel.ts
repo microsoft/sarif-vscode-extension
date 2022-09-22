@@ -1,14 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { diffChars } from 'diff';
 import * as fs from 'fs';
 import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Region, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
 import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId } from '../shared';
+import { getOriginalDoc } from './getOriginalDoc';
 import { loadLogs } from './loadLogs';
-import { regionToSelection } from './regionToSelection';
+import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
 
@@ -19,16 +21,24 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'logs' | 'results'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
             this.spliceLogs(removed, added);
         });
+        observe(store.resultsFixed, change => {
+            const {type, removed, added} = change as unknown as IArraySplice<string>;
+            if (type !== 'splice') throw new Error('Only splice allowed on store.resultFixes.');
+            this.spliceResultsFixed(removed, added);
+        });
         autorun(() => {
             const count = store.results.length;
             if (!this.panel) return;
             this.panel.title = `${count} ${this.title}${count === 1 ? '' : 's'}`;
+        });
+        autorun(() => {
+            this.panel?.webview.postMessage({ command: 'setBanner', text: store.banner });
         });
     }
 
@@ -66,17 +76,19 @@ export class Panel {
                     default-src 'none';
                     connect-src vscode-resource:;
                     font-src    vscode-resource:;
+                    img-src     data:;
                     script-src  vscode-resource:;
                     style-src   vscode-resource: 'unsafe-inline';
                     ">
                 <meta name="storeState"        content='${JSON.stringify(Store.globalState.get('view', defaultState))}'>
                 <meta name="storeWorkspaceUri" content="${workspace.workspaceFolders?.[0]?.uri.toString() ?? ''}">
-                <meta name="spliceLogsMessage" content='${JSON.stringify(this.createSpliceLogsMessage([], store.logs))}'>
+                <meta name="storeBanner"       content='${store.banner}'>
                 <style>
                     code { font-family: ${workspace.getConfiguration('editor').get('fontFamily')} }
                 </style>
             </head>
             <body>
+                <div id="error" style="display: none; padding: 10px;"></div>
                 <div id="root"></div>
                 <script src="${webview.asWebviewUri(srcPanel).toString()}"></script>
                 <script src="${webview.asWebviewUri(srcInit).toString()}"></script>
@@ -86,6 +98,11 @@ export class Panel {
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
             switch (message.command as CommandPanelToExtension) {
+                case 'load' : {
+                    // Extension sends Panel an initial set of logs.
+                    await this.panel?.webview.postMessage(this.createSpliceLogsMessage([], store.logs));
+                    break;
+                }
                 case 'open': {
                     const uris = await window.showOpenDialog({
                         canSelectMany: true,
@@ -139,6 +156,15 @@ export class Panel {
                     await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)));
                     break;
                 }
+                case 'refresh': {
+                    await store.remoteAnalysisInfoUpdated++;
+                    break;
+                }
+                case 'removeResultFixed': {
+                    const idToRemove = JSON.stringify(message.id);
+                    store.resultsFixed.removeFirst(id => id === idToRemove);
+                    break;
+                }
                 default:
                     throw new Error(`Unhandled command: ${message.command}`,);
             }
@@ -153,11 +179,15 @@ export class Panel {
             await commands.executeCommand('workbench.action.keepEditor');
         }
 
-        const doc = await workspace.openTextDocument(Uri.parse(localUri, true));
-        const editor = await window.showTextDocument(doc, ViewColumn.One, true);
+        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true));
+        const editor = await window.showTextDocument(currentDoc, ViewColumn.One, true);
 
         if (region === undefined) return;
-        editor.selection = regionToSelection(doc, region);
+
+        const originalDoc = await getOriginalDoc(this.store.analysisInfo, currentDoc);
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+        editor.selection = driftedRegionToSelection(diffBlocks, currentDoc, region, originalDoc);
         editor.revealRange(editor.selection, TextEditorRevealType.InCenterIfOutsideViewport);
     }
 
@@ -171,14 +201,23 @@ export class Panel {
             command: 'spliceLogs',
             removed: removed.map(log => log._uri),
             added: added.map(log => ({
+                text: log._text,
                 uri: log._uri,
                 uriUpgraded: log._uriUpgraded,
-                webviewUri: this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
+                webviewUri: log._text ? '' : this.panel?.webview.asWebviewUri(Uri.parse(log._uriUpgraded ?? log._uri, true)).toString(),
             })),
         };
     }
 
     private async spliceLogs(removed: Log[], added: Log[]) {
         await this.panel?.webview.postMessage(this.createSpliceLogsMessage(removed, added));
+    }
+
+    private async spliceResultsFixed(removed: string[], added: string[]) {
+        await this.panel?.webview.postMessage({
+            command: 'spliceResultsFixed',
+            removed,
+            added,
+        });
     }
 }

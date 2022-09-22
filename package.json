@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.2.2",
+    "version": "3.3.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -21,12 +21,16 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.44.0"
+        "vscode": "^1.57.0"
     },
     "activationEvents": [
         "onLanguage:json",
         "onCommand:sarif.showPanel",
-        "onCommand:sarif.clearState"
+        "onCommand:sarif.clearState",
+        "workspaceContains:.git"
+    ],
+    "extensionDependencies": [
+        "vscode.git"
     ],
     "main": "./out/context.js",
     "contributes": {
@@ -41,6 +45,21 @@
                     "description": "Indicates whether to open the explorer when there are no results in the log.",
                     "type": "boolean",
                     "default": true
+                },
+                "sarif-viewer.connectToGithubCodeScanning": {
+                    "description": "Connect to GitHub and display any code scanning results. Setting takes effect on editor restart.",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "on",
+                        "onWithIntroduction"
+                    ],
+                    "enumDescriptions": [
+                        "If do not anticipate having or using GitHub code scanning results, this will save compute and network resources.",
+                        "",
+                        "On, but with an introductory explanation and a way to opt-out."
+                    ],
+                    "default": "onWithIntroduction"
                 },
                 "sarif-viewer.updateChannel": {
                     "description": "Specifies the type of updates the extension receives.",
@@ -76,6 +95,11 @@
                 "command": "sarif.clearState",
                 "category": "SARIF",
                 "title": "Clear State"
+            },
+            {
+                "command": "sarif.toggleDrift",
+                "category": "SARIF",
+                "title": "Toggle Drift"
             }
         ]
     },
@@ -106,7 +130,7 @@
         "@types/sinon": "9.0.4",
         "@types/tmp": "0.1.0",
         "@types/url-join": "4.0.0",
-        "@types/vscode": "1.44.0",
+        "@types/vscode": "1.57",
         "@typescript-eslint/eslint-plugin": "3.1.0",
         "@typescript-eslint/parser": "3.1.0",
         "@zeit/ncc": "0.22.1",
@@ -133,6 +157,9 @@
         "webpack-dev-server": "^4.2.1"
     },
     "dependencies": {
+        "@types/diff": "^5.0.2",
+        "chokidar": "^3.3.0",
+        "diff": "^3.5.0",
         "follow-redirects": "1.14.8",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",

@@ -11,7 +11,7 @@ import '../shared/extension';
 import { Details } from './details';
 import { FilterKeywordContext } from './filterKeywordContext';
 import './index.scss';
-import { IndexStore } from './indexStore';
+import { IndexStore, postLoad, postRefresh } from './indexStore';
 import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
@@ -28,12 +28,25 @@ export { DetailsLayouts } from './details.layouts';
 
     render() {
         const {store} = this.props;
+        const {banner} = store;
+
+        const bannerElement = banner && <div className="svBanner">
+            <Icon name="info" />
+            <span style={{ flex: '1 1' }}>{banner}</span>
+            <div className="svButton" onClick={() => postRefresh()}>
+                Refresh results
+            </div>
+        </div>;
+
         if (!store.logs.length) {
-            return <div className="svZeroData">
-                <div onClick={() => vscode.postMessage({ command: 'open' })}>
-                    Open SARIF log
+            return <>
+                {bannerElement}
+                <div className="svZeroData">
+                    <div className="svButton" onClick={() => vscode.postMessage({ command: 'open' })}>
+                        Open SARIF log
+                    </div>
                 </div>
-            </div>;
+            </>;
         }
 
         const {logs, keywords} = store;
@@ -43,6 +56,7 @@ export { DetailsLayouts } from './details.layouts';
         const selectedRow = store.selection.get();
         const selected = selectedRow instanceof RowItem && selectedRow.item;
         return <FilterKeywordContext.Provider value={keywords ?? ''}>
+            {bannerElement}
             <div className="svListPane">
                 <TabPanel selection={store.selectedTab}
                     extras={<>
@@ -100,7 +114,7 @@ export { DetailsLayouts } from './details.layouts';
             <div className="svResizer">
                 <ResizeHandle size={detailsPaneHeight} />
             </div>
-            <Details result={selected} height={detailsPaneHeight} />
+            <Details result={selected} resultsFixed={store.resultsFixed} height={detailsPaneHeight} />
             <Popover show={showFilterPopup} style={{ top: 35, right: 8 + 35 + 35 + 8 }}>
                 {Object.entries(store.filtersRow).map(([name, state]) => <Fragment key={name}>
                     <div className="svPopoverTitle">{name}</div>
@@ -117,6 +131,7 @@ export { DetailsLayouts } from './details.layouts';
 
     componentDidMount() {
         addEventListener('message', this.props.store.onMessage);
+        postLoad();
     }
 
     componentWillUnmount() {

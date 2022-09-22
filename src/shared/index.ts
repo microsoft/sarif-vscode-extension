@@ -22,6 +22,7 @@ export function findResult(logs: Log[], id: ResultId): Result | undefined {
 // I don't see a need for them in the long term (after the design phase).
 declare module 'sarif' {
     interface Log {
+        _text: string; // If downloaded from a source (such as api.github) that the WebView cannot reach.
         _uri: string;
         _uriUpgraded?: string; // Only present if upgraded.
         _jsonMap?: JsonMap; // Only used by the "extension" side for navigating original SARIF sources. The "panel" side does not need this feature and thus does not use this field.
@@ -45,7 +46,6 @@ declare module 'sarif' {
         _message: string; // '—' if empty.
         _markdown?: string;
         _suppression?: 'not suppressed' | 'suppressed';
-        _fixed: true | undefined; // Used exclusively with CodeActions.
     }
 }
 
@@ -72,7 +72,7 @@ export function mapDistinct(pairs: [string, string][]): Map<string, string> {
     return distinct as Map<string, string>;
 }
 
-export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
+export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, workspaceUri?: string) {
     if (log._augmented) return;
     log._augmented = true;
     const fileAndUris = [] as [string, string][];
@@ -92,21 +92,18 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             return driverlessRules.get(id)!;
         }
 
-        let implicitBaseParts = undefined as string[] | undefined;
         run.results?.forEach((result, resultIndex) => {
             result._log = log;
             result._run = run;
             result._id = [log._uri, runIndex, resultIndex];
 
             const ploc = result.locations?.[0]?.physicalLocation;
-            const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation);
+            const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation, workspaceUri);
             result._uri = uri;
             result._uriContents = uriContents;
+            result._relativeUri = result._uri?.replace(workspaceUri ?? '' , '') ?? ''; // For grouping, Empty works more predictably than undefined
             {
                 const parts = uri?.split('/');
-                implicitBaseParts = // Base calc (inclusive of dash for now)
-                    implicitBaseParts?.slice(0, Array.commonLength(implicitBaseParts, parts ?? []))
-                    ?? parts;
                 const file = parts?.pop();
                 if (file && uri) {
                     fileAndUris.push([file, uri.replace(/^\//, '')]); // Normalize leading slashes.
@@ -136,11 +133,6 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>) {
             result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
                 ? 'not suppressed'
                 : 'suppressed';
-        });
-
-        const implicitBase = implicitBaseParts?.join('/')  ?? '';
-        run.results?.forEach(result => {
-            result._relativeUri = result._uri?.replace(implicitBase , '') ?? ''; // For grouping, Empty works more predictably than undefined
         });
     });
     log._distinct = mapDistinct(fileAndUris);
@@ -178,29 +170,40 @@ Run.artifacts: Art[]
    location: ArtLoc
    contents: ArtCon
 */
-export function parseLocation(result: Result, loc?: Location) {
+export function parseLocation(result: Result, loc?: Location, overrideUriBase?: string) {
     const message = loc?.message?.text;
-    const [uri, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation);
+    const [uri, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation, overrideUriBase);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };
 }
 
 // Improve: `result` purely used for `_run.artifacts`.
-export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocation | undefined) {
+export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, anyArtLoc: ArtifactLocation | undefined, overrideUriBase?: string) {
     if (!anyArtLoc) return [undefined, undefined];
     const runArt = result._run.artifacts?.[anyArtLoc.index ?? -1];
     const runArtLoc = runArt?.location;
     const runArtCon = runArt?.contents;
+    let uri = anyArtLoc.uri ?? runArtLoc?.uri ?? ''; // If index (§3.4.5) is absent, uri SHALL be present.
 
     // Currently not supported: recursive resolution of uriBaseId.
+    // Note: While an uriBase often results in an absolute URI, there is no guarantee.
+    // Note: While an uriBase often represents the project root, there is no guarantee.
     const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
-    const uriBase = result._run.originalUriBaseIds?.[uriBaseId ?? '']?.uri ?? '';
-    const relativeUri = anyArtLoc.uri ?? runArtLoc?.uri; // If index (§3.4.5) is absent, uri SHALL be present.
+    if (uriBaseId) {
+        const uriBase
+            =  overrideUriBase // Typically the workspaceUri, which takes precedence.
+            ?? result._run.originalUriBaseIds?.[uriBaseId]?.uri
+            ?? '';
+        uri = urlJoin(uriBase, uri);
+    }
 
-    // Convert possible relative URIs to absolute. Also serves to normalize leading slashes.
-    // skipEncoding=true because otherwise 'file:///c:' incorrectly round-trips as 'file:///c%3A'.
-    const normalizeUri = (uri: string) => URI.parse(uri, false /* allow relative URI */).toString(true /* skipEncoding */);
-    const uri = relativeUri && normalizeUri(urlJoin(uriBase, relativeUri));
+    // Determine if `uri` absolute or relative. Using scheme as an approximation.
+    const rxUriScheme = /^([^:/?#]+?):/;
+    const isRelative = !rxUriScheme.test(uri);
+    if (isRelative) {
+        uri = urlJoin(overrideUriBase ?? 'file://', uri);
+        // After this point, the URI must be absolute.
+    }
 
     // A shorter more transparent URI format would be:
     // `sarif://${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`
@@ -214,7 +217,13 @@ export function parseArtifactLocation(result: Result, anyArtLoc: ArtifactLocatio
 
 export function decodeFileUri(uriString: string) {
     const uri = URI.parse(uriString, false);
-    return uri.scheme === 'file' ? uri.fsPath : uriString;
+    if (uri.scheme === 'file') {
+        return uri.fsPath;
+    }
+    if (uri.scheme === 'https') { // For github api fetch situations.
+        return uri.authority;
+    }
+    return uriString;
 }
 
 export type Visibility = 'visible' | false; // Undefined will not round-trip.
@@ -246,5 +255,5 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
     },
 };
 
-export type CommandPanelToExtension = 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState';
-export type CommandExtensionToPanel = 'select' | 'spliceLogs';
+export type CommandPanelToExtension = 'load' | 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState' | 'refresh' | 'removeResultFixed';
+export type CommandExtensionToPanel = 'select' | 'spliceLogs' | 'spliceResultsFixed' | 'setBanner';

@@ -21,6 +21,7 @@ try {
 	// `abbrev=0` finds the closest tagname without any suffix.
 	// HEAD~1 assuming the latest commit hasn't been tagged by this Action yet.
 	const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0', 'HEAD~1'], { encoding: 'utf8' }).trim();
+	core.info('Tag for HEAD~1', tag);
 	const lastReleaseVer = parse(tag);
 	if (packageVer.compareMain(lastReleaseVer) === 0) {
 		prerelease = lastReleaseVer.prerelease[0] + 1; // Main is equal, auto-increment the prerelease.

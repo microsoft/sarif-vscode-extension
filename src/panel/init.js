@@ -1,5 +1,13 @@
+const errorHandler = e => {
+    const errorElement = document.getElementById('error')
+    errorElement.innerText = `Error: ${e.error.message}`;
+    errorElement.style.display = 'block';
+}
+window.addEventListener('error', errorHandler);
+window.addEventListener('unhandledrejection', errorHandler)
+
 vscode = acquireVsCodeApi();
-(async () => {
+(() => {
     function getMetaContent(name) {
         // We assert the meta name exists as they are hardcoded in the `webview.html`.
         return document.querySelector(`meta[name="${name}"]`).content
@@ -9,7 +17,7 @@ vscode = acquireVsCodeApi();
         JSON.parse(getMetaContent('storeState')),
         getMetaContent('storeWorkspaceUri') || undefined,
     )
-    await store.onMessage({ data: JSON.parse(getMetaContent('spliceLogsMessage')) })
+    store.banner = getMetaContent('storeBanner')
     ReactDOM.render(
         React.createElement(Index, { store }),
         document.getElementById('root'),

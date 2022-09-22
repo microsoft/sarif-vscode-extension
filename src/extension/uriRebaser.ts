@@ -79,6 +79,14 @@ export class UriRebaser {
             if (await uriExists(artifactUri))
                 return artifactUri;
 
+            // File System Exist with Workspace prefixed
+            const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
+            if (workspaceUri) {
+                const workspaceArtifactUri = `${workspaceUri}/${artifactUri.replace('file:///', '')}`;
+                if (await uriExists(workspaceArtifactUri))
+                    return workspaceArtifactUri;
+            }
+
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                 if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?

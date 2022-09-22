@@ -21,11 +21,21 @@ export abstract class Row {
 }
 
 export class RowGroup<T, G> extends Row {
-    @observable expanded = false
+    private expandedState: IObservableValue<boolean>;
+    get expanded() {
+        return this.expandedState.get();
+    }
+    set expanded(value: boolean) {
+        this.expandedState.set(value);
+    }
     public items = [] as RowItem<T>[]
     public itemsFiltered = [] as RowItem<T>[]
-    constructor(readonly title: G) {
+    constructor(readonly title: G, expansionStates: Map<G, IObservableValue<boolean>>) {
         super();
+        if (!expansionStates.has(title)) {
+            expansionStates.set(title, observable.box(false));
+        }
+        this.expandedState = expansionStates.get(this.title)!;
     }
 }
 
@@ -42,6 +52,7 @@ enum SortDir {
 }
 
 export class TableStore<T, G> {
+    private expansionStates = new Map<G, IObservableValue<boolean>>();
     constructor(
         readonly groupBy: (item: T) => G | undefined,
         readonly itemsSource: { results: ReadonlyArray<T> }, // Abstraction break.
@@ -55,7 +66,7 @@ export class TableStore<T, G> {
         const map = new Map<G | undefined, RowGroup<T, G | undefined>>();
         this.rowItems.forEach(item => {
             const key = this.groupBy(item.item);
-            if (!map.has(key)) map.set(key, new RowGroup(key));
+            if (!map.has(key)) map.set(key, new RowGroup(key, this.expansionStates));
             const group = map.get(key)!;
             group.items.push(item);
             item.group = group;
@@ -107,5 +118,9 @@ export class TableStore<T, G> {
         const row = this.rowItems.find(row => row.item === item);
         this.selection.set(row);
         if (row?.group) row.group.expanded = true;
+    }
+
+    isLineThrough(_item: T): boolean {
+        return false;
     }
 }

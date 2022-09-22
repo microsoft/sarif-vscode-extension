@@ -4,13 +4,14 @@
 import { computed, IObservableValue } from 'mobx';
 import { Result } from 'sarif';
 import { Visibility } from '../shared';
+import { IndexStore } from './indexStore';
 import { Column, Row, TableStore } from './tableStore';
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
     constructor(
         readonly groupName: string,
         readonly groupBy: (item: Result) => G | undefined,
-        resultsSource: { results: ReadonlyArray<Result> },
+        private readonly resultsSource: Pick<IndexStore, 'results' | 'resultsFixed'>,
         readonly filtersSource: {
             keywords: string;
             filtersRow: Record<string, Record<string, Visibility>>;
@@ -73,5 +74,9 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
                 return isMatch(field, filterKeywords);
             });
         };
+    }
+
+    public isLineThrough(result: Result): boolean {
+        return this.resultsSource.resultsFixed.includes(JSON.stringify(result._id));
     }
 }
