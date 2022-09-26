@@ -154,6 +154,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     async function updateAnalysisInfo(): Promise<void> {
         store.banner = 'Checking GitHub Advanced Security...';
 
+        // STEP 1: Auth
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
@@ -162,6 +163,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return;
         }
 
+        // STEP 2: Fetch
         const branchName = store.branch;
         let analysesResponse: Response | undefined;
         try {
@@ -190,6 +192,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return;
         }
 
+        // STEP 3: Parse
         const anyResponse = await analysesResponse.json();
         if (anyResponse.message) {
             // Sample message response:
@@ -216,6 +219,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
+        // STEP 4: Cross-reference with Git
         const git = await getInitializedGitApi();
         if (!git) {
             store.banner = 'Unable to initialize Git.'; // No GitExtension or GitExtension API.
