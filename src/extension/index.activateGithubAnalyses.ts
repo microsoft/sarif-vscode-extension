@@ -238,14 +238,21 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (analysisInfo) {
             const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
             analysisInfo.commitsAgo = commitsAgo;
+            if (store.analysisInfo?.id !== analysisInfo?.id) {
+                store.analysisInfo = analysisInfo;
+                // Banner will be updated during fetchAnalysis()
+            } else {
+                setBannerResultsUpdated(analysisInfo, 'unchanged');
+            }
         } else {
-            store.banner = '';
-        }
-
-        if (store.analysisInfo?.id !== analysisInfo?.id) {
-            store.analysisInfo = analysisInfo;
-        } else {
-            setBannerResultsUpdated(analysisInfo, 'unchanged');
+            // In the first page analyses, but none that match this commit.
+            // Possibilities:
+            // a) User checked-out a really old commit.
+            // b) Not all branches are scanned.
+            if (store.analysisInfo !== undefined) {
+                store.analysisInfo = undefined;
+            }
+            store.banner = `This commit ${store.commitHash.slice(0, 7)} has not been scanned.`;
         }
     }
 
