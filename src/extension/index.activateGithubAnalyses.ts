@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch, { Response} from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, commands, Disposable, extensions, OutputChannel, window, workspace } from 'vscode';
+import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -102,41 +102,62 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         sendGithubEligibility('Eligible');
 
-        // At this point all the local requirements have been satisfied.
-        // We preemptively show the panel (even before the result as fetched)
-        // so that the banner is visible.
-        await panel.show();
-
         if (connectToGithubCodeScanning === 'onWithIntroduction') {
-            // This information message runs in parallel with loading, so we wrap it with an async function.
-            (async () => {
-                const choice = await window.showInformationMessage(
-                    'Any repository with a GitHub origin may have code scanning results. The Sarif Viewer is connecting to GitHub and will display any results.',
-                    'Keep', 'Disable', 'Settings...',
-                );
-                sendGithubIntroductionChoice(choice);
-                if (choice === 'Keep') {
-                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
+            const choice = await window.showInformationMessage(
+                'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
+                'Yes', 'Not now', 'Never',
+            );
+            sendGithubIntroductionChoice(choice);
+            if (choice === 'Never') {
+                workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
+            } else if (choice === 'Yes') {
+                const promptForNextTime = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
+                    progress.report({ increment: 20 });
+                    await onGitChanged(repo, gitHeadPath, store, true);
+                    const analysisInfo = await fetchAnalysisInfo(message => {
+                        progress.report({ message, increment: 20 });
+                    });
+                    if (analysisInfo) {
+                        workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
+                        await panel.show();
+                        updateAnalysisInfo(analysisInfo);
+                        beginWatch();
+                        return false;
+                    } else {
+                        return true;
+                    }
+                });
+
+                if (promptForNextTime) {
+                    const choiceNextTime = await window.showInformationMessage(
+                        'No results found. Ask again next time? This can be changed in the settings.',
+                        'Yes', 'No',
+                    );
+                    if (choiceNextTime === 'No') {
+                        workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
+                    }
                 }
-                if (choice === 'Disable') {
-                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
-                }
-                if (choice === 'Settings...') {
-                    commands.executeCommand( 'workbench.action.openSettings', 'sarif-viewer.connectToGithubCodeScanning');
-                }
-            })();
+            }
+        } else {
+            // At this point all the local requirements have been satisfied.
+            // We preemptively show the panel (even before the result as fetched)
+            // so that the banner is visible.
+            await panel.show();
+            await onGitChanged(repo, gitHeadPath, store);
+            beginWatch();
         }
 
-        await onGitChanged(repo, gitHeadPath, store);
-        const watcher = watch([
-            `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
-        ], { ignoreInitial: true });
-        watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-            onGitChanged(repo, gitHeadPath, store);
-        });
+        function beginWatch() {
+            const watcher = watch([
+                `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
+            ], { ignoreInitial: true });
+            watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
+                onGitChanged(repo, gitHeadPath, store);
+            });
+        }
     })();
 
-    async function onGitChanged(repo: Repository, gitHeadPath: string, store: Store) {
+    async function onGitChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
@@ -148,17 +169,20 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
-        await updateAnalysisInfo();
+        if (!skipAnalysisInfo) {
+            const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+            updateAnalysisInfo(analysisInfo);
+        }
     }
 
-    async function updateAnalysisInfo(): Promise<void> {
-        store.banner = 'Checking GitHub Advanced Security...';
+    async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfo | undefined> {
+        updateMessage('Checking GitHub Advanced Security...');
 
         // STEP 1: Auth
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
-            store.banner = 'Unable to authenticate.';
+            updateMessage('Unable to authenticate.');
             store.analysisInfo = undefined;
             return;
         }
@@ -180,14 +204,14 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             //     "errno": "ENOTFOUND",
             //     "code": "ENOTFOUND"
             // }
-            store.banner = 'Network error. Refresh to try again.';
+            updateMessage('Network error. Refresh to try again.');
         }
         if (!analysesResponse) {
             store.analysisInfo = undefined;
             return;
         }
         if (analysesResponse.status === 403) {
-            store.banner = 'GitHub Advanced Security is not enabled for this repository.';
+            updateMessage('GitHub Advanced Security is not enabled for this repository.');
             store.analysisInfo = undefined;
             return;
         }
@@ -201,7 +225,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
             // }
             const messageResponse = anyResponse as { message: string, documentation_url: string };
-            store.banner = messageResponse.message;
+            updateMessage(messageResponse.message);
             store.analysisInfo = undefined;
             return;
         }
@@ -212,7 +236,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // a) analysis is not enabled for repo or branch.
         // b) analysis is enabled, but pending first-ever run.
         if (!analyses.length) {
-            store.banner = 'Refresh to check for more current results.';
+            updateMessage('Refresh to check for more current results.');
             store.analysisInfo = undefined;
             return;
         }
@@ -222,7 +246,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // STEP 4: Cross-reference with Git
         const git = await getInitializedGitApi();
         if (!git) {
-            store.banner = 'Unable to initialize Git.'; // No GitExtension or GitExtension API.
+            updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
             store.analysisInfo = undefined;
             return;
         }
@@ -236,12 +260,19 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return commits.some(commit => analysis.commit_sha === commit.hash);
         });
 
+        if (analysisInfo) {
+            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
+            analysisInfo.commitsAgo = commitsAgo;
+        }
+
+        return analysisInfo;
+    }
+
+    function updateAnalysisInfo(analysisInfo: AnalysisInfo | undefined): void {
         // If `analysisInfo` is undefined at this point, then...
         // a) the intersection is outside of the page size
         // b) other?
         if (analysisInfo) {
-            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
-            analysisInfo.commitsAgo = commitsAgo;
             if (store.analysisInfo?.id !== analysisInfo?.id) {
                 store.analysisInfo = analysisInfo;
                 // Banner will be updated during fetchAnalysis()
@@ -256,7 +287,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             if (store.analysisInfo !== undefined) {
                 store.analysisInfo = undefined;
             }
-            store.banner = `This commit ${store.commitHash.slice(0, 7)} has not been scanned.`;
+            store.banner = `This branch has not been scanned.`;
         }
     }
 
@@ -321,5 +352,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
     // TODO: Block re-entrancy.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
-    observe(store, 'remoteAnalysisInfoUpdated', () => updateAnalysisInfo());
+    observe(store, 'remoteAnalysisInfoUpdated', async () => {
+        const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+        updateAnalysisInfo(analysisInfo);
+    });
 }
