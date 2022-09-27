@@ -111,7 +111,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             if (choice === 'Never') {
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Yes') {
-                const promptForNextTime = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
+                const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 });
                     await onBranchChanged(repo, gitHeadPath, store, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
@@ -122,13 +122,13 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                         await panel.show();
                         updateAnalysisInfo(analysisInfo);
                         beginWatch();
-                        return false;
-                    } else {
                         return true;
+                    } else {
+                        return false;
                     }
                 });
 
-                if (promptForNextTime) {
+                if (!analysisFound) {
                     const choiceNextTime = await window.showInformationMessage(
                         'No results found. Ask again next time? This can be changed in the settings.',
                         'Yes', 'No',
