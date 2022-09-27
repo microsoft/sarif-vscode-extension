@@ -55,9 +55,9 @@
                         "prompt"
                     ],
                     "enumDescriptions": [
-                        "If do not anticipate having or using GitHub code scanning results, this will save compute and network resources.",
+                        "If you do not anticipate having or using GitHub code scanning results, this will save compute and network resources.",
                         "",
-                        "On, but with an introductory explanation and a way to opt-out."
+                        "Intended for first-time users."
                     ],
                     "default": "prompt"
                 },
