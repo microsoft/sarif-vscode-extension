@@ -57,22 +57,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
     }));
 
-    /*
-        Determined (via experiments) that is not possible to discern between default and unset.
-        This is even when using `inspect()`.
-
-        If equal to default (false or unset):
-        {
-            defaultValue: false
-            key: ...
-        }
-
-        If not equal to default (true):
-        {
-            defaultValue: false
-            globalValue: true
-        }
-    */
+    // See configurations comments at the bottom of this file.
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
 
@@ -359,3 +344,21 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         updateAnalysisInfo(analysisInfo);
     });
 }
+
+/*
+    Regarding workspace.getConfiguration():
+    Determined (via experiments) that is not possible to discern between default and unset.
+    This is even when using `inspect()`.
+
+    If equal to default (false or unset):
+    {
+        defaultValue: false
+        key: ...
+    }
+
+    If not equal to default (true):
+    {
+        defaultValue: false
+        globalValue: true
+    }
+*/
