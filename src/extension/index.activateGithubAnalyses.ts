@@ -113,7 +113,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             } else if (choice === 'Yes') {
                 const promptForNextTime = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 });
-                    await onGitChanged(repo, gitHeadPath, store, true);
+                    await onBranchChanged(repo, gitHeadPath, store, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
                         progress.report({ message, increment: 20 });
                     });
@@ -143,7 +143,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // We preemptively show the panel (even before the result as fetched)
             // so that the banner is visible.
             await panel.show();
-            await onGitChanged(repo, gitHeadPath, store);
+            await onBranchChanged(repo, gitHeadPath, store);
             beginWatch();
         }
 
@@ -152,12 +152,12 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
             watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-                onGitChanged(repo, gitHeadPath, store);
+                onBranchChanged(repo, gitHeadPath, store);
             });
         }
     })();
 
-    async function onGitChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
+    async function onBranchChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
