@@ -15,7 +15,7 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
-import { sendGithubConfig, sendGithubEligibility, sendGithubIntroductionChoice } from './telemetry';
+import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
 
 // Subset of the GitHub API.
 export interface AnalysisInfo {
@@ -107,7 +107,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
                 'Yes', 'Not now', 'Never',
             );
-            sendGithubIntroductionChoice(choice);
+            sendGithubPromptChoice(choice);
             if (choice === 'Never') {
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Yes') {
@@ -127,13 +127,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 });
 
                 if (!analysisFound) {
-                    const choiceNextTime = await window.showInformationMessage(
+                    const choiceTryAgain = await window.showInformationMessage(
                         'No results found. Ask again next time? This can be changed in the settings.',
                         'Yes', 'No',
                     );
-                    if (choiceNextTime === 'No') {
+                    sendGithubAnalysisFound(`Not Found: ${choiceTryAgain ?? 'undefined'}`);
+                    if (choiceTryAgain === 'No') {
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
                     }
+                } else {
+                    sendGithubAnalysisFound('Found');
                 }
             }
         } else {

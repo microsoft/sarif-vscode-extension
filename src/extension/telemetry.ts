@@ -23,8 +23,12 @@ export function sendGithubEligibility(eligibility: string) {
     reporter?.sendTelemetryEvent('githubEligibility', { eligibility });
 }
 
-export function sendGithubIntroductionChoice(choice: string | undefined) {
-    reporter?.sendTelemetryEvent('githubIntroductionChoice', { choice: choice ?? 'undefined' });
+export function sendGithubPromptChoice(choice: string | undefined) {
+    reporter?.sendTelemetryEvent('githubPromptChoice', { choice: choice ?? 'undefined' });
+}
+
+export function sendGithubAnalysisFound(value: string) {
+    reporter?.sendTelemetryEvent('githubAnalysisFound', { choice: value });
 }
 
 export function sendGithubConfig(value: string) {
