@@ -90,12 +90,12 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (connectToGithubCodeScanning === 'prompt') {
             const choice = await window.showInformationMessage(
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
-                'Yes', 'Not now', 'Never',
+                'Connect', 'Not now', 'Never',
             );
             sendGithubPromptChoice(choice);
             if (choice === 'Never') {
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
-            } else if (choice === 'Yes') {
+            } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onBranchChanged(repo, gitHeadPath, store, true);
