@@ -52,14 +52,14 @@
                     "enum": [
                         "off",
                         "on",
-                        "onWithIntroduction"
+                        "prompt"
                     ],
                     "enumDescriptions": [
                         "If do not anticipate having or using GitHub code scanning results, this will save compute and network resources.",
                         "",
                         "On, but with an introductory explanation and a way to opt-out."
                     ],
-                    "default": "onWithIntroduction"
+                    "default": "prompt"
                 },
                 "sarif-viewer.updateChannel": {
                     "description": "Specifies the type of updates the extension receives.",

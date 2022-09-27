@@ -48,7 +48,7 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-export type ConnectToGithubCodeScanning = 'off' | 'on' | 'onWithIntroduction'
+export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
@@ -102,7 +102,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         sendGithubEligibility('Eligible');
 
-        if (connectToGithubCodeScanning === 'onWithIntroduction') {
+        if (connectToGithubCodeScanning === 'prompt') {
             const choice = await window.showInformationMessage(
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
                 'Yes', 'Not now', 'Never',
