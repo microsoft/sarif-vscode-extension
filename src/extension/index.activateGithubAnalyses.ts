@@ -48,6 +48,12 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
+// In the case of sub-modules, pick the correct repo (the root).
+export function getPrimaryRepository(git: API): Repository | undefined {
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+    return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];
+}
+
 export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
@@ -70,7 +76,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const git = await getInitializedGitApi();
         if (!git) return sendGithubEligibility('No Git api');
 
-        const repo = git.repositories[0];
+        const repo = getPrimaryRepository(git);
         if (!repo) return sendGithubEligibility('No Git repository');
 
         const origin = await repo.getConfig('remote.origin.url');
@@ -106,7 +112,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                         await panel.show();
                         updateAnalysisInfo(analysisInfo);
-                        beginWatch();
+                        beginWatch(repo);
                     }
                     return !!analysisInfo;
                 });
@@ -130,10 +136,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // so that the banner is visible.
             await panel.show();
             await onBranchChanged(repo, gitHeadPath, store);
-            beginWatch();
+            beginWatch(repo);
         }
 
-        function beginWatch() {
+        function beginWatch(repo: Repository) {
             const watcher = watch([
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
@@ -239,8 +245,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
 
         // Find the intersection.
-        const repo = git.repositories[0];
-        const commits = await repo.log({});
+        const repo = getPrimaryRepository(git);
+        const commits = await repo?.log({}) ?? [];
         const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
         outputChannel.appendLine(`Commits:\n${commitsString}\n`);
         const analysisInfo = analyses.find(analysis => {
