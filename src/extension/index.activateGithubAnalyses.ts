@@ -112,7 +112,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Yes') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
-                    progress.report({ increment: 20 });
+                    progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onBranchChanged(repo, gitHeadPath, store, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
                         progress.report({ message, increment: 20 });
@@ -122,10 +122,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                         await panel.show();
                         updateAnalysisInfo(analysisInfo);
                         beginWatch();
-                        return true;
-                    } else {
-                        return false;
                     }
+                    return !!analysisInfo;
                 });
 
                 if (!analysisFound) {
@@ -191,6 +189,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const branchName = store.branch;
         let analysesResponse: Response | undefined;
         try {
+            // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
             analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
                 headers: {
                     authorization: `Bearer ${accessToken}`,
