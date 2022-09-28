@@ -27,7 +27,7 @@ export class Store {
 
     public branch = ''
     public commitHash = ''
-    @observable analysisInfo: AnalysisInfo | undefined
+    @observable.shallow analysisInfo: AnalysisInfo | undefined
     @observable remoteAnalysisInfoUpdated = 0 // A version number as a substitute for a value-less observable.
 
     constructor() {

@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch, { Response} from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, commands, Disposable, extensions, OutputChannel, window, workspace } from 'vscode';
+import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -15,7 +15,7 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
-import { sendGithubConfig, sendGithubEligibility, sendGithubIntroductionChoice } from './telemetry';
+import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
 
 // Subset of the GitHub API.
 export interface AnalysisInfo {
@@ -48,7 +48,13 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-export type ConnectToGithubCodeScanning = 'off' | 'on' | 'onWithIntroduction'
+// In the case of sub-modules, pick the correct repo (the root).
+export function getPrimaryRepository(git: API): Repository | undefined {
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+    return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];
+}
+
+export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
@@ -57,22 +63,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
     }));
 
-    /*
-        Determined (via experiments) that is not possible to discern between default and unset.
-        This is even when using `inspect()`.
-
-        If equal to default (false or unset):
-        {
-            defaultValue: false
-            key: ...
-        }
-
-        If not equal to default (true):
-        {
-            defaultValue: false
-            globalValue: true
-        }
-    */
+    // See configurations comments at the bottom of this file.
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
 
@@ -85,7 +76,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const git = await getInitializedGitApi();
         if (!git) return sendGithubEligibility('No Git api');
 
-        const repo = git.repositories[0];
+        const repo = getPrimaryRepository(git);
         if (!repo) return sendGithubEligibility('No Git repository');
 
         const origin = await repo.getConfig('remote.origin.url');
@@ -102,41 +93,63 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         sendGithubEligibility('Eligible');
 
-        // At this point all the local requirements have been satisfied.
-        // We preemptively show the panel (even before the result as fetched)
-        // so that the banner is visible.
-        await panel.show();
+        if (connectToGithubCodeScanning === 'prompt') {
+            const choice = await window.showInformationMessage(
+                'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
+                'Connect', 'Not now', 'Never',
+            );
+            sendGithubPromptChoice(choice);
+            if (choice === 'Never') {
+                workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
+            } else if (choice === 'Connect') {
+                const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
+                    progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
+                    await onBranchChanged(repo, gitHeadPath, store, true);
+                    const analysisInfo = await fetchAnalysisInfo(message => {
+                        progress.report({ message, increment: 20 });
+                    });
+                    if (analysisInfo) {
+                        workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
+                        await panel.show();
+                        updateAnalysisInfo(analysisInfo);
+                        beginWatch(repo);
+                    }
+                    return !!analysisInfo;
+                });
 
-        if (connectToGithubCodeScanning === 'onWithIntroduction') {
-            // This information message runs in parallel with loading, so we wrap it with an async function.
-            (async () => {
-                const choice = await window.showInformationMessage(
-                    'Any repository with a GitHub origin may have code scanning results. The Sarif Viewer is connecting to GitHub and will display any results.',
-                    'Keep', 'Disable', 'Settings...',
-                );
-                sendGithubIntroductionChoice(choice);
-                if (choice === 'Keep') {
-                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
+                if (!analysisFound) {
+                    const choiceTryAgain = await window.showInformationMessage(
+                        'No results found. Ask again next time? This can be changed in the settings.',
+                        'Yes', 'No',
+                    );
+                    sendGithubAnalysisFound(`Not Found: ${choiceTryAgain ?? 'undefined'}`);
+                    if (choiceTryAgain === 'No') {
+                        workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
+                    }
+                } else {
+                    sendGithubAnalysisFound('Found');
                 }
-                if (choice === 'Disable') {
-                    workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
-                }
-                if (choice === 'Settings...') {
-                    commands.executeCommand( 'workbench.action.openSettings', 'sarif-viewer.connectToGithubCodeScanning');
-                }
-            })();
+            }
+        } else {
+            // At this point all the local requirements have been satisfied.
+            // We preemptively show the panel (even before the result as fetched)
+            // so that the banner is visible.
+            await panel.show();
+            await onBranchChanged(repo, gitHeadPath, store);
+            beginWatch(repo);
         }
 
-        await onGitChanged(repo, gitHeadPath, store);
-        const watcher = watch([
-            `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
-        ], { ignoreInitial: true });
-        watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-            onGitChanged(repo, gitHeadPath, store);
-        });
+        function beginWatch(repo: Repository) {
+            const watcher = watch([
+                `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
+            ], { ignoreInitial: true });
+            watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
+                onBranchChanged(repo, gitHeadPath, store);
+            });
+        }
     })();
 
-    async function onGitChanged(repo: Repository, gitHeadPath: string, store: Store) {
+    async function onBranchChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
@@ -148,23 +161,29 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
-        await updateAnalysisInfo();
+        if (!skipAnalysisInfo) {
+            const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+            updateAnalysisInfo(analysisInfo);
+        }
     }
 
-    async function updateAnalysisInfo(): Promise<void> {
-        store.banner = 'Checking GitHub Advanced Security...';
+    async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfo | undefined> {
+        updateMessage('Checking GitHub Advanced Security...');
 
+        // STEP 1: Auth
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
-            store.banner = 'Unable to authenticate.';
+            updateMessage('Unable to authenticate.');
             store.analysisInfo = undefined;
             return;
         }
 
+        // STEP 2: Fetch
         const branchName = store.branch;
         let analysesResponse: Response | undefined;
         try {
+            // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
             analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
                 headers: {
                     authorization: `Bearer ${accessToken}`,
@@ -178,18 +197,19 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             //     "errno": "ENOTFOUND",
             //     "code": "ENOTFOUND"
             // }
-            store.banner = 'Network error. Refresh to try again.';
+            updateMessage('Network error. Refresh to try again.');
         }
         if (!analysesResponse) {
             store.analysisInfo = undefined;
             return;
         }
         if (analysesResponse.status === 403) {
-            store.banner = 'GitHub Advanced Security is not enabled for this repository.';
+            updateMessage('GitHub Advanced Security is not enabled for this repository.');
             store.analysisInfo = undefined;
             return;
         }
 
+        // STEP 3: Parse
         const anyResponse = await analysesResponse.json();
         if (anyResponse.message) {
             // Sample message response:
@@ -198,7 +218,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
             // }
             const messageResponse = anyResponse as { message: string, documentation_url: string };
-            store.banner = messageResponse.message;
+            updateMessage(messageResponse.message);
             store.analysisInfo = undefined;
             return;
         }
@@ -209,43 +229,58 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // a) analysis is not enabled for repo or branch.
         // b) analysis is enabled, but pending first-ever run.
         if (!analyses.length) {
-            store.banner = 'Refresh to check for more current results.';
+            updateMessage('Refresh to check for more current results.');
             store.analysisInfo = undefined;
             return;
         }
         const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
+        // STEP 4: Cross-reference with Git
         const git = await getInitializedGitApi();
         if (!git) {
-            store.banner = 'Unable to initialize Git.'; // No GitExtension or GitExtension API.
+            updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
             store.analysisInfo = undefined;
             return;
         }
 
         // Find the intersection.
-        const repo = git.repositories[0];
-        const commits = await repo.log({});
+        const repo = getPrimaryRepository(git);
+        const commits = await repo?.log({}) ?? [];
         const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
         outputChannel.appendLine(`Commits:\n${commitsString}\n`);
         const analysisInfo = analyses.find(analysis => {
             return commits.some(commit => analysis.commit_sha === commit.hash);
         });
 
+        if (analysisInfo) {
+            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
+            analysisInfo.commitsAgo = commitsAgo;
+        }
+
+        return analysisInfo;
+    }
+
+    function updateAnalysisInfo(analysisInfo: AnalysisInfo | undefined): void {
         // If `analysisInfo` is undefined at this point, then...
         // a) the intersection is outside of the page size
         // b) other?
         if (analysisInfo) {
-            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
-            analysisInfo.commitsAgo = commitsAgo;
+            if (store.analysisInfo?.id !== analysisInfo?.id) {
+                store.analysisInfo = analysisInfo;
+                // Banner will be updated during fetchAnalysis()
+            } else {
+                setBannerResultsUpdated(analysisInfo, 'unchanged');
+            }
         } else {
-            store.banner = '';
-        }
-
-        if (store.analysisInfo?.id !== analysisInfo?.id) {
-            store.analysisInfo = analysisInfo;
-        } else {
-            setBannerResultsUpdated(analysisInfo, 'unchanged');
+            // In the first page analyses, but none that match this commit.
+            // Possibilities:
+            // a) User checked-out a really old commit.
+            // b) Not all branches are scanned.
+            if (store.analysisInfo !== undefined) {
+                store.analysisInfo = undefined;
+            }
+            store.banner = `This branch has not been scanned.`;
         }
     }
 
@@ -310,5 +345,26 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
     // TODO: Block re-entrancy.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
-    observe(store, 'remoteAnalysisInfoUpdated', () => updateAnalysisInfo());
+    observe(store, 'remoteAnalysisInfoUpdated', async () => {
+        const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+        updateAnalysisInfo(analysisInfo);
+    });
 }
+
+/*
+    Regarding workspace.getConfiguration():
+    Determined (via experiments) that is not possible to discern between default and unset.
+    This is even when using `inspect()`.
+
+    If equal to default (false or unset):
+    {
+        defaultValue: false
+        key: ...
+    }
+
+    If not equal to default (true):
+    {
+        defaultValue: false
+        globalValue: true
+    }
+*/
