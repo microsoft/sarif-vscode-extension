@@ -303,7 +303,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     });
                     const logText = await analysisResponse.text();
                     // Useful for saving/examining fetched logs:
-                    // (await import('fs')).writeFileSync(`${primaryWorkspaceFolderUriString}/ignore/sarif-testing/${analysisInfo.id}.sarif`, logText);
+                    // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
                     const log = JSON.parse(logText) as Log;
                     log._text = logText;
                     log._uri = uri;
