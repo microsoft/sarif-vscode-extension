@@ -102,6 +102,9 @@ export async function activate(context: ExtensionContext) {
         },
     };
 
+    // By convention, auto-open any logs in the `./.sarif` folder.
+    api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
+
     // During development, use the following line to auto-load a log.
     // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
 

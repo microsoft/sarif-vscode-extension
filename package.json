@@ -27,7 +27,8 @@
         "onLanguage:json",
         "onCommand:sarif.showPanel",
         "onCommand:sarif.clearState",
-        "workspaceContains:.git"
+        "workspaceContains:.git",
+        "workspaceContains:.sarif"
     ],
     "extensionDependencies": [
         "vscode.git"
