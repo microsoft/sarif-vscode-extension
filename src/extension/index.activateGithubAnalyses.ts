@@ -48,7 +48,7 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
     });
 }
 
-// In the case of sub-modules, pick the correct repo (the root).
+// In the case of sub-modules, pick the root repo.
 export function getPrimaryRepository(git: API): Repository | undefined {
     const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
     return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];

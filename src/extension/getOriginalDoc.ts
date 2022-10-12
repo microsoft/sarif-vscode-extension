@@ -2,8 +2,20 @@
 // Licensed under the MIT License.
 
 import { EndOfLine, Uri } from 'vscode';
+import { API, Repository } from './git';
 import { AnalysisInfo, getInitializedGitApi, getPrimaryRepository } from './index.activateGithubAnalyses';
 import { StringTextDocument } from './stringTextDocument';
+
+// If a uri belongs to a sub-module, we will not have the commit-info to make use of the repo.
+// Thus we act like the repo doesn't exist (which causes downstream code to bypass anti-drifting).
+export function getRepositoryForUri(git: API, uri: string): Repository | undefined {
+    const primaryRepo = getPrimaryRepository(git);
+    const submoduleRepos = git.repositories
+        .filter(repo => repo.rootUri.toString() !== primaryRepo?.rootUri.toString());
+    const uriIsInSubmodule = submoduleRepos.some(repo => uri.startsWith(repo.rootUri.toString()));
+    if (uriIsInSubmodule) return undefined;
+    return  primaryRepo;
+}
 
 // Used to force the original doc line endings to match the current doc.
 function coerceLineEndings(text: string, eol: EndOfLine) {
@@ -23,7 +35,8 @@ export async function getOriginalDoc(
     const git = await getInitializedGitApi();
     if (!git) return undefined;
 
-    const repo = getPrimaryRepository(git);
+    const repo = getRepositoryForUri(git, currentDoc.uri.toString());
+
     if (!repo) return undefined;
 
     const scannedFile = await repo.show(analysisInfo.commit_sha, currentDoc.uri.fsPath);
