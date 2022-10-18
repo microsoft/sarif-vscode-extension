@@ -18,9 +18,14 @@ function splitUri(uri: string | undefined) {
     return [`${scheme}://${authority}`, ...path.slice(1).split('/')]; // By spec first '/' always exists, thus safe to slice(1).
 }
 
+// Returns the distinct file name, instead of `true`, becuase in some cases the file name is used.
+async function workspaceHasDistinctFilename(filename: string): Promise<string | undefined> {
+    const matches = await workspace.findFiles(`**/${filename}`); // Is `.git` folder excluded?
+    return matches.length === 1 ? matches[0].toString() : undefined;
+}
+
 export class UriRebaser {
     constructor(
-        private readonly distinctLocalNames: Map<string, string>,
         private readonly store: Pick<Store, 'distinctArtifactNames'>) {
     }
 
@@ -47,7 +52,7 @@ export class UriRebaser {
     // Notes:
     // If 2 logs have the same uri, then likely the same (unless the uri is super short)
     // If 2 logs don't have the same uri, they can still potentially be the same match
-    public translateLocalToArtifact(localUri: string): string { // Future: Ret undefined when certain.
+    public async translateLocalToArtifact(localUri: string): Promise<string> { // Future: Ret undefined when certain.
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
             const { file } = platformUriNormalize(localUri);
@@ -56,7 +61,7 @@ export class UriRebaser {
             // but obviously can't always be true.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
             const noWorkspace = !workspace.workspaceFolders?.length;
-            if ((noWorkspace || this.distinctLocalNames.has(file))
+            if ((noWorkspace || await workspaceHasDistinctFilename(file))
                 && this.store.distinctArtifactNames.has(file)) {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
@@ -104,8 +109,9 @@ export class UriRebaser {
 
             // Distinct Project Items
             const {file} = artifactUri;
-            if (this.distinctLocalNames.has(file) && this.store.distinctArtifactNames.has(file)) {
-                const localUri = this.distinctLocalNames.get(file)!; // Not undefined due to surrounding if.
+            const distinctFilename = await workspaceHasDistinctFilename(file);
+            if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
+                const localUri = distinctFilename;
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(splitUri(artifactUri), splitUri(localUri));
                 return localUri;

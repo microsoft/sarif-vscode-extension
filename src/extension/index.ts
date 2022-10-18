@@ -4,14 +4,12 @@
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
-import { mapDistinct } from '../shared';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
 import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateDecorations } from './index.activateDecorations';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
-import platformUriNormalize from './platformUriNormalize';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { activateSarifStatusBarItem } from './statusBarItem';
@@ -42,19 +40,7 @@ export async function activate(context: ExtensionContext) {
     const store = new Store();
 
     // Basing
-    //
-    // `findFiles` performance assuming '**':
-    //     files     ms
-    //     1000      200ms
-    //     4000      200-500ms
-    //     8000      500-600ms
-    //     20000     600ms
-    //     1 of 20K  100ms (Only 1 file matches, but 20K need to be searched)
-    //     Note: `File: Exclude` setting is respected.
-    //     Hardware: 2020 MacBook Pro i7
-    const urisNonSarif = await workspace.findFiles('**', '.sarif', 10000); // Ignore folders?
-    const fileAndUris = urisNonSarif.map(uri => [platformUriNormalize(uri.path).file, uri.toString(true)]) as [string, string][];
-    const baser = new UriRebaser(mapDistinct(fileAndUris), store);
+    const baser = new UriRebaser(store);
 
     // Panel
     const panel = new Panel(context, baser, store);
@@ -120,11 +106,11 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
 
-        const artifactUri = (() => {
+        const artifactUri = await (async () => {
             if (doc.uri.scheme === 'sarif') {
                 return doc.uri.toString();
             }
-            return baser.translateLocalToArtifact(doc.uri.toString());
+            return await baser.translateLocalToArtifact(doc.uri.toString());
         })();
         const severities = {
             error: DiagnosticSeverity.Error,
