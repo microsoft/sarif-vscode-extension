@@ -52,7 +52,7 @@ export async function activate(context: ExtensionContext) {
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
-    activateSelectionSync(disposables, panel);
+    activateSelectionSync(disposables, store, panel);
     activateGithubAnalyses(disposables, store, panel, outputChannel);
     activateFixes(disposables, store, baser);
 
@@ -197,8 +197,10 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
 }
 
 // Syncronize selection between editor and panel.
-function activateSelectionSync(disposables: Disposable[], panel: Panel) {
+function activateSelectionSync(disposables: Disposable[], store: Store, panel: Panel) {
     disposables.push(window.onDidChangeTextEditorSelection(({ selections, textEditor }) => {
+        if (store.disableSelectionSync) return; // See `panel.selectLocal` for details.
+
         // Anti-feedback-loop. Prevent panel-originated changes from echoing back to the panel.
         if (window.activeTextEditor !== textEditor) return;
 

@@ -25,6 +25,7 @@ export class Store {
         return mapDistinct(fileAndUris);
     }
 
+    public disableSelectionSync = false;
     public branch = ''
     public commitHash = ''
     @observable.shallow analysisInfo: AnalysisInfo | undefined

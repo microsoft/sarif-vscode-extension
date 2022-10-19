@@ -21,7 +21,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'disableSelectionSync' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -180,7 +180,15 @@ export class Panel {
         }
 
         const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true));
+
+        // `disableSelectionSync` prevents a selection sync feedback loop in cases where:
+        // 1) `showTextDocument` creates a new editor (where no editor was already open).
+        // 2) The selection is restored, and starts one "thread" of selection sync.
+        // 3) Then `revealRange` (see below) will start another "thread" of seletion sync.
+        // 4) The rapid succession causes a "reverberation" where the selection gets stuck jumping between both results.
+        this.store.disableSelectionSync = true;
         const editor = await window.showTextDocument(currentDoc, ViewColumn.One, true);
+        this.store.disableSelectionSync = false;
 
         if (region === undefined) return;
 
