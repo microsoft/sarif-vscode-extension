@@ -80,7 +80,19 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         if (!repo) return sendGithubEligibility('No Git repository');
 
         const origin = await repo.getConfig('remote.origin.url');
-        const [, user, repoName] = origin.match(/https:\/\/github.com\/([^/]+)\/([^/]+)/) ?? [];
+
+        const [, user, repoName] = (() => {
+            // Example: https:/github.com/user/repoName.git
+            const matchHTTPS = origin.match(/https:\/\/github\.com\/([^/]+)\/([^/]+)/);
+            if (matchHTTPS) return matchHTTPS;
+
+            // Example: git@github.com:user/repoName.git
+            const matchSSH = origin.match(/git@github\.com:([^/]+)\/([^/]+)/);
+            if (matchSSH) return matchSSH;
+
+            return [];
+        })();
+
         if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
