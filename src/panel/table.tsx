@@ -83,7 +83,11 @@ interface TableProps<T, G> {
                         }
                         if (row instanceof RowItem) {
                             // Must evaluate isLineThrough outside of <TableItem /> so the function component knows to update.
-                            return <TableItem key={row.key} isLineThrough={store.isLineThrough(row.item)} isSelected={isSelected} item={row} gridTemplateColumns={this.gridTemplateColumns} />;
+                            return <TableItem key={row.key}
+                                isLineThrough={store.isLineThrough(row.item)}
+                                isSelected={isSelected}
+                                item={row}
+                                gridTemplateColumns={this.gridTemplateColumns} />;
                         }
                         return undefined; // Closed system: No other types expected.
                     })}

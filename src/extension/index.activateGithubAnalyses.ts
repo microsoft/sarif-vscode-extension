@@ -5,7 +5,7 @@
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
-import fetch, { Response} from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
