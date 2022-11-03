@@ -6,8 +6,10 @@ import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
-import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateDecorations } from './index.activateDecorations';
+import { activateFixes } from './index.activateFixes';
+import { activateGithubAnalyses } from './index.activateGithubAnalyses';
+import { activateGithubCommands } from './index.activateGithubCommands';
 import { loadLogs } from './loadLogs';
 import { Panel } from './panel';
 import { driftedRegionToSelection } from './regionToSelection';
@@ -17,7 +19,6 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
-import { activateFixes } from './index.activateFixes';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -54,6 +55,7 @@ export async function activate(context: ExtensionContext) {
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, store, panel);
     activateGithubAnalyses(disposables, store, panel, outputChannel);
+    activateGithubCommands(disposables, store, outputChannel);
     activateFixes(disposables, store, baser);
 
     // Check for Updates
