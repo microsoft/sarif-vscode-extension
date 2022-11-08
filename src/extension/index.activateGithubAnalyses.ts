@@ -25,7 +25,7 @@ export interface AnalysisInfo {
     commitsAgo: number; // Not part of the API. We added this.
 }
 
-let currentLogUri: string | undefined = undefined;
+let currentLogUris: string[] | undefined = undefined;
 
 export async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
@@ -328,14 +328,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 }
             })();
 
-        if (currentLogUri) {
-            store.logs.removeFirst(log => log._uri === currentLogUri);
-            currentLogUri = undefined;
+        if (currentLogUris) {
+            for (const currentLogUri of currentLogUris) {
+                store.logs.removeFirst(log => log._uri === currentLogUri);
+            }
+            currentLogUris = undefined;
         }
 
         if (log) {
             store.logs.push(log);
-            currentLogUri = log._uri;
+            currentLogUris = [log._uri];
         }
 
         panel.show();
