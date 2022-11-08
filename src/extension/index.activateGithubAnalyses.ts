@@ -23,6 +23,8 @@ export interface AnalysisInfo {
     commit_sha: string;
     created_at: string;
     commitsAgo: number; // Not part of the API. We added this.
+    tool: { name: string };
+    results_count: number;
 }
 
 let currentLogUris: string[] | undefined = undefined;
@@ -245,7 +247,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             store.analysisInfo = undefined;
             return;
         }
-        const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
+        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
         // STEP 4: Cross-reference with Git
