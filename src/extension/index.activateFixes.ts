@@ -52,7 +52,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
 
                         const localUri = await baser.translateArtifactToLocal(artifactUri);
                         const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
-                        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+                        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
                         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
                         for (const replacement of artifactChange.replacements) {

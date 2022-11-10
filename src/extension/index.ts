@@ -133,7 +133,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         }
 
         const currentDoc = doc; // Alias for juxtaposition.
-        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
         const diags = matchingResults

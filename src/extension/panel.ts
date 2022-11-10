@@ -192,7 +192,7 @@ export class Panel {
 
         if (region === undefined) return;
 
-        const originalDoc = await getOriginalDoc(this.store.analysisInfo, currentDoc);
+        const originalDoc = await getOriginalDoc(this.store.analysisInfo?.commit_sha, currentDoc);
         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
         editor.selection = driftedRegionToSelection(diffBlocks, currentDoc, region, originalDoc);
