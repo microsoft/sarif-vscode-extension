@@ -196,8 +196,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const { accessToken } = session;
         if (!accessToken) {
             updateMessage('Unable to authenticate.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // STEP 2: Fetch
@@ -221,13 +220,11 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             updateMessage('Network error. Refresh to try again.');
         }
         if (!analysesResponse) {
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
         if (analysesResponse.status === 403) {
             updateMessage('GitHub Advanced Security is not enabled for this repository.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // STEP 3: Parse
@@ -240,8 +237,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // }
             const messageResponse = anyResponse as { message: string, documentation_url: string };
             updateMessage(messageResponse.message);
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         const analyses = anyResponse as AnalysisInfo[];
@@ -251,8 +247,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // b) analysis is enabled, but pending first-ever run.
         if (!analyses.length) {
             updateMessage('Refresh to check for more current results.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
         const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
@@ -261,8 +256,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const git = await getInitializedGitApi();
         if (!git) {
             updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // Find the intersection.
