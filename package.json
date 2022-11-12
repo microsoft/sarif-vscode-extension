@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.1",
+    "version": "3.3.2",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -21,7 +21,7 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.57.0"
+        "vscode": "^1.72.0"
     },
     "activationEvents": [
         "onLanguage:json",
@@ -101,8 +101,39 @@
                 "command": "sarif.toggleDrift",
                 "category": "SARIF",
                 "title": "Toggle Drift"
+            },
+            {
+                "command": "sarif.alertDismissFalsePositive",
+                "category": "SARIF",
+                "title": "Dismiss - False Positive"
+            },
+            {
+                "command": "sarif.alertDismissUsedInTests",
+                "category": "SARIF",
+                "title": "Dismiss - Used in Tests"
+            },
+            {
+                "command": "sarif.alertDismissWontFix",
+                "category": "SARIF",
+                "title": "Dismiss - Won't Fix"
             }
-        ]
+        ],
+        "menus": {
+            "webview/context": [
+                {
+                    "command": "sarif.alertDismissFalsePositive",
+                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                },
+                {
+                    "command": "sarif.alertDismissUsedInTests",
+                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                },
+                {
+                    "command": "sarif.alertDismissWontFix",
+                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                }
+            ]
+        }
     },
     "scripts": {
         "prestart": "npm install",

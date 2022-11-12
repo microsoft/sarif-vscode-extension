@@ -6,7 +6,7 @@ import { Log } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
-import { AnalysisInfo } from './index.activateGithubAnalyses';
+import { AnalysisInfosForCommit } from './index.activateGithubAnalyses';
 
 export class Store {
     static globalState: Memento
@@ -28,7 +28,7 @@ export class Store {
     public disableSelectionSync = false;
     public branch = ''
     public commitHash = ''
-    @observable.shallow analysisInfo: AnalysisInfo | undefined
+    @observable.shallow analysisInfo: AnalysisInfosForCommit | undefined
     @observable remoteAnalysisInfoUpdated = 0 // A version number as a substitute for a value-less observable.
 
     constructor() {

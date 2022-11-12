@@ -60,7 +60,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
             // Thus we are not concerned with clearing any previously rendered decorations.
             return;
         }
-        const result = findResult(store.logs,JSON.parse(resultId) as ResultId);
+        const result = findResult(store.logs, JSON.parse(resultId) as ResultId);
         if (!result) {
             // Only in rare cases does `findResult` fail to resolve a `resultId` into a `result`.
             // Such as if a log were closed after an `activeResultId` was set.
@@ -78,7 +78,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                 return docUriString === artifactUriString;
             });
 
-            const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+            const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
             const ranges = locationsInDoc.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
             editor.setDecorations(decorationTypeHighlight, ranges);

@@ -123,4 +123,8 @@ export class TableStore<T, G> {
     isLineThrough(_item: T): boolean {
         return false;
     }
+
+    menuContext(_item: T): Record<string, string> | undefined {
+        return undefined;
+    }
 }

@@ -5,7 +5,7 @@
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
-import fetch, { Response} from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
@@ -18,14 +18,23 @@ import { Store } from './store';
 import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
 
 // Subset of the GitHub API.
-export interface AnalysisInfo {
+interface AnalysisInfo {
     id: number;
     commit_sha: string;
     created_at: string;
-    commitsAgo: number; // Not part of the API. We added this.
+    tool: { name: string };
+    results_count: number;
 }
 
-let currentLogUri: string | undefined = undefined;
+// A concise representation of AnalysisInfo[] aligned by commit.
+export interface AnalysisInfosForCommit {
+    ids: number[];
+    commit_sha: string; // All analyses of this group, by definition, have the same commit.
+    created_at: string; // The latest `created_at` of the group.
+    commitsAgo: number;
+}
+
+let currentLogUris: string[] | undefined = undefined;
 
 export async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
@@ -179,7 +188,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
     }
 
-    async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfo | undefined> {
+    async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
         updateMessage('Checking GitHub Advanced Security...');
 
         // STEP 1: Auth
@@ -187,8 +196,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const { accessToken } = session;
         if (!accessToken) {
             updateMessage('Unable to authenticate.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // STEP 2: Fetch
@@ -212,13 +220,11 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             updateMessage('Network error. Refresh to try again.');
         }
         if (!analysesResponse) {
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
         if (analysesResponse.status === 403) {
             updateMessage('GitHub Advanced Security is not enabled for this repository.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // STEP 3: Parse
@@ -231,8 +237,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // }
             const messageResponse = anyResponse as { message: string, documentation_url: string };
             updateMessage(messageResponse.message);
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         const analyses = anyResponse as AnalysisInfo[];
@@ -242,18 +247,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         // b) analysis is enabled, but pending first-ever run.
         if (!analyses.length) {
             updateMessage('Refresh to check for more current results.');
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
-        const analysesString = analyses.map(({ created_at, commit_sha, id }) => `${created_at} ${commit_sha} ${id}`).join('\n');
+        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
         // STEP 4: Cross-reference with Git
         const git = await getInitializedGitApi();
         if (!git) {
             updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
-            store.analysisInfo = undefined;
-            return;
+            return undefined;
         }
 
         // Find the intersection.
@@ -261,24 +264,43 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const commits = await repo?.log({}) ?? [];
         const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
         outputChannel.appendLine(`Commits:\n${commitsString}\n`);
-        const analysisInfo = analyses.find(analysis => {
+        const intersectingCommit = analyses.find(analysis => {
             return commits.some(commit => analysis.commit_sha === commit.hash);
-        });
+        })?.commit_sha;
 
-        if (analysisInfo) {
-            const commitsAgo = commits.findIndex(commit => commit.hash === analysisInfo.commit_sha);
-            analysisInfo.commitsAgo = commitsAgo;
+        if (!intersectingCommit) {
+            return undefined;
         }
 
-        return analysisInfo;
+        // GitHub sorts analyses by most recent first.
+        const toolsSeen = new Set<string>();
+        const analysisInfos = analyses.filter(analysis => {
+            if (analysis.commit_sha !== intersectingCommit) return false;
+
+            // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
+            if (toolsSeen.has(analysis.tool.name)) return false;
+
+            toolsSeen.add(analysis.tool.name);
+            return true;
+        });
+        if (!analysisInfos.length) {
+            return undefined;
+        }
+
+        return {
+            ids: analysisInfos.map(info => info.id),
+            commit_sha: intersectingCommit,
+            created_at: analysisInfos?.[0].created_at, // `analysisInfos` is already ordered by most recent first.
+            commitsAgo: commits.findIndex(commit => commit.hash === intersectingCommit),
+        };
     }
 
-    function updateAnalysisInfo(analysisInfo: AnalysisInfo | undefined): void {
+    function updateAnalysisInfo(analysisInfo: AnalysisInfosForCommit | undefined): void {
         // If `analysisInfo` is undefined at this point, then...
         // a) the intersection is outside of the page size
         // b) other?
         if (analysisInfo) {
-            if (store.analysisInfo?.id !== analysisInfo?.id) {
+            if (JSON.stringify(store.analysisInfo?.ids) !== JSON.stringify(analysisInfo.ids)) { // Lazy array comparison technique.
                 store.analysisInfo = analysisInfo;
                 // Banner will be updated during fetchAnalysis()
             } else {
@@ -296,46 +318,52 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
     }
 
-    async function fetchAnalysis(analysisInfo: AnalysisInfo | undefined): Promise<void> {
+    async function fetchAnalysis(analysisInfo: AnalysisInfosForCommit | undefined): Promise<void> {
         isSpinning.set(true);
 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
-        const log = !analysisInfo?.id
+        const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
             ? undefined
             : await (async () => {
                 try {
-                    const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisInfo.id}`;
-                    const analysisResponse = await fetch(uri, {
-                        headers: {
-                            accept: 'application/sarif+json',
-                            authorization: `Bearer ${accessToken}`,
-                        },
-                    });
-                    const logText = await analysisResponse.text();
-                    // Useful for saving/examining fetched logs:
-                    // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
-                    const log = JSON.parse(logText) as Log;
-                    log._text = logText;
-                    log._uri = uri;
-                    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
-                    augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
-                    return log;
+                    const logs = [] as Log[];
+                    for (const analysisId of analysisInfo.ids) {
+                        const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
+                        const analysisResponse = await fetch(uri, {
+                            headers: {
+                                accept: 'application/sarif+json',
+                                authorization: `Bearer ${accessToken}`,
+                            },
+                        });
+                        const logText = await analysisResponse.text();
+                        // Useful for saving/examining fetched logs:
+                        // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
+                        const log = JSON.parse(logText) as Log;
+                        log._text = logText;
+                        log._uri = uri;
+                        const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+                        augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+                        logs.push(log);
+                    }
+                    return logs;
                 } catch (error) {
                     outputChannel.append(`Error in fetchAnalysis: ${error}\n`);
                     return undefined;
                 }
             })();
 
-        if (currentLogUri) {
-            store.logs.removeFirst(log => log._uri === currentLogUri);
-            currentLogUri = undefined;
+        if (currentLogUris) {
+            for (const currentLogUri of currentLogUris) {
+                store.logs.removeFirst(log => log._uri === currentLogUri);
+            }
+            currentLogUris = undefined;
         }
 
-        if (log) {
-            store.logs.push(log);
-            currentLogUri = log._uri;
+        if (logs) {
+            store.logs.push(...logs);
+            currentLogUris = logs.map(log => log._uri);
         }
 
         panel.show();
@@ -344,7 +372,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         setBannerResultsUpdated(analysisInfo);
     }
 
-    function setBannerResultsUpdated(analysisInfo: AnalysisInfo | undefined, verb: 'updated' | 'unchanged' = 'updated') {
+    function setBannerResultsUpdated(analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
         if (!analysisInfo) return;
 
         const messageWarnStale = analysisInfo.commit_sha !== store.commitHash

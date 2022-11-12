@@ -79,4 +79,11 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
     public isLineThrough(result: Result): boolean {
         return this.resultsSource.resultsFixed.includes(JSON.stringify(result._id));
     }
+
+    public menuContext(result: Result): Record<string, string> | undefined {
+        // If no alertNumber, then don't show the context menu (which contains the Dismiss Alert commands).
+        if (!result.properties?.['github/alertNumber']) return undefined;
+
+        return { resultId: JSON.stringify(result._id) };
+    }
 }

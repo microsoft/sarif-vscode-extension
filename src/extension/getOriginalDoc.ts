@@ -3,7 +3,7 @@
 
 import { EndOfLine, Uri } from 'vscode';
 import { API, Repository } from './git';
-import { AnalysisInfo, getInitializedGitApi, getPrimaryRepository } from './index.activateGithubAnalyses';
+import { getInitializedGitApi, getPrimaryRepository } from './index.activateGithubAnalyses';
 import { StringTextDocument } from './stringTextDocument';
 
 // If a uri belongs to a sub-module, we will not have the commit-info to make use of the repo.
@@ -26,11 +26,11 @@ function coerceLineEndings(text: string, eol: EndOfLine) {
 
 // TODO: Consider caching the retval.
 export async function getOriginalDoc(
-    analysisInfo: AnalysisInfo | undefined,
+    commitSha: string | undefined,
     currentDoc: { uri: Uri, eol: EndOfLine })
     : Promise<StringTextDocument | undefined> {
 
-    if (!analysisInfo) return undefined;
+    if (!commitSha) return undefined;
 
     const git = await getInitializedGitApi();
     if (!git) return undefined;
@@ -39,6 +39,6 @@ export async function getOriginalDoc(
 
     if (!repo) return undefined;
 
-    const scannedFile = await repo.show(analysisInfo.commit_sha, currentDoc.uri.fsPath);
+    const scannedFile = await repo.show(commitSha, currentDoc.uri.fsPath);
     return new StringTextDocument(coerceLineEndings(scannedFile, currentDoc.eol));
 }

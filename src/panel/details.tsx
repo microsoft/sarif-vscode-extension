@@ -15,6 +15,12 @@ import './index.scss';
 import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
+// ReactMarkdown blocks `vscode:` uri's by default. This is a workaround.
+function uriTransformer(uri: string) {
+    if (uri.startsWith('vscode:')) return uri;
+    return ReactMarkdown.uriTransformer(uri);
+}
+
 type TabName = 'Info' | 'Analysis Steps';
 
 interface DetailsProps { result: Result, resultsFixed: string[], height: IObservableValue<number> }
@@ -38,7 +44,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
             const desc = result?._rule?.fullDescription ?? result?._rule?.shortDescription;
             if (!desc) return '—';
             return desc.markdown
-                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} />
+                ? <ReactMarkdown className="svMarkDown" source={desc.markdown} transformLinkUri={uriTransformer} />
                 : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
@@ -58,7 +64,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                         </div>}
                         <div className="svDetailsMessage">
                             {result._markdown
-                                ? <ReactMarkdown className="svMarkDown" source={result._markdown} />
+                                ? <ReactMarkdown className="svMarkDown" source={result._markdown} transformLinkUri={uriTransformer} />
                                 : renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</div>
                         <div className="svDetailsGrid">
                             <span>Rule Id</span>			{helpUri ? <a href={helpUri} target="_blank" rel="noopener noreferrer">{result.ruleId}</a> : <span>{result.ruleId}</span>}

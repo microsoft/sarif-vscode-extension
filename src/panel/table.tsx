@@ -28,10 +28,11 @@ interface TableProps<T, G> {
         ].join(' ');
     }
 
-    private TableItem = memo<{ isLineThrough: boolean, isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string }>(props => {
+    private TableItem = memo<{ isLineThrough: boolean, isSelected: boolean, item: RowItem<T>, gridTemplateColumns: string, menuContext: Record<string, string> | undefined }>(props => {
         const { columns, store, renderIconName, renderCell } = this.props;
-        const { isLineThrough, isSelected, item, gridTemplateColumns } = props;
+        const { isLineThrough, isSelected, item, gridTemplateColumns, menuContext } = props;
         return <div className={css('svTableRow', 'svTableRowItem', isLineThrough && 'svLineThrough', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
+            data-vscode-context={JSON.stringify({ webviewSection: 'tableRow', ...menuContext })}
             ref={ele => { // TODO: ForwardRef for Group
                 if (!isSelected || !ele) return;
                 setTimeout(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' })); // requestAnimationFrame not working.
@@ -55,7 +56,7 @@ interface TableProps<T, G> {
         const {rows, selection} = store;
         return !rows.length
             ? children // Zero data.
-            : <div className="svTable">
+            : <div className="svTable" data-vscode-context='{"preventDefaultContextMenuItems": true}'>
                 <div className="svTableHeader" style={{ gridTemplateColumns: this.gridTemplateColumns }}>
                     <div></div>
                     {columns.map(col => <div key={col.name} tabIndex={0} className="svTableCell"
@@ -83,7 +84,12 @@ interface TableProps<T, G> {
                         }
                         if (row instanceof RowItem) {
                             // Must evaluate isLineThrough outside of <TableItem /> so the function component knows to update.
-                            return <TableItem key={row.key} isLineThrough={store.isLineThrough(row.item)} isSelected={isSelected} item={row} gridTemplateColumns={this.gridTemplateColumns} />;
+                            return <TableItem key={row.key}
+                                isLineThrough={store.isLineThrough(row.item)}
+                                isSelected={isSelected}
+                                item={row}
+                                gridTemplateColumns={this.gridTemplateColumns}
+                                menuContext={store.menuContext(row.item)} />;
                         }
                         return undefined; // Closed system: No other types expected.
                     })}

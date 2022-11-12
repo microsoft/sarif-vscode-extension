@@ -30,11 +30,18 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
 
                 return [
                     new ResultQuickFix(diagnostic, result), // Mark as fixed
-                    ...result.fixes?.map(fix => new ResultQuickFix(diagnostic, result, fix)) ?? []
+                    ...result.fixes?.map(fix => new ResultQuickFix(diagnostic, result, fix)) ?? [],
+                    ...result.properties?.['github/alertNumber'] === undefined ? [] : [ // Assumes only GitHub will use `github/alertNumber`.
+                        new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissFalsePositive', 'False Positive'),
+                        new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissUsedInTests', 'Used in Tests'),
+                        new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissWontFix', 'Won\'t Fix'),
+                    ],
                 ];
             },
             async resolveCodeAction(codeAction: ResultQuickFix) {
-                const { result, fix } = codeAction;
+                const { result, fix, command } = codeAction;
+
+                if (command) return; // VS Code will execute the command on our behalf.
 
                 if (fix) {
                     const edit = new WorkspaceEdit();
@@ -45,7 +52,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
 
                         const localUri = await baser.translateArtifactToLocal(artifactUri);
                         const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
-                        const originalDoc = await getOriginalDoc(store.analysisInfo, currentDoc);
+                        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
                         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
                         for (const replacement of artifactChange.replacements) {
@@ -75,5 +82,17 @@ class ResultQuickFix extends CodeAction {
         // If no `fix` then intent is 'Mark as fixed'.
         super(fix ? (fix.description?.text ?? '?') : 'Mark as fixed', CodeActionKind.QuickFix);
         this.diagnostics = [diagnostic]; // Note: VSCode does not use this to clear the diagnostic.
+    }
+}
+
+class DismissCodeAction extends CodeAction {
+    constructor(diagnostic: Diagnostic, result: Result, command: string, reasonText: string) {
+        super(`Dismiss - ${reasonText}`, CodeActionKind.Empty);
+        this.diagnostics = [diagnostic]; // Note: VSCode does not use this to clear the diagnostic.
+        this.command = {
+            title: '', // Leaving empty as it is seemingly not used (yet required).
+            command,
+            arguments: [{ resultId: JSON.stringify(result._id) }],
+        };
     }
 }
