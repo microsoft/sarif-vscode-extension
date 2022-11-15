@@ -21,7 +21,7 @@ export function activateDiagnostics(disposables: Disposable[], store: Store, bas
         if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
 
-        const artifactUri = await (async () => {
+        const localUri = await (async () => {
             if (doc.uri.scheme === 'sarif') {
                 return doc.uri.toString();
             }
@@ -33,8 +33,8 @@ export function activateDiagnostics(disposables: Disposable[], store: Store, bas
         } as Record<string, DiagnosticSeverity>;
         const matchingResults = store.results
             .filter(result => {
-                const uri = result._uriContents ?? result._uri;
-                return uri === artifactUri;
+                const artifactUri = result._uriContents ?? result._uri;
+                return artifactUri === localUri;
             });
 
         const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString() ?? 'file://';
