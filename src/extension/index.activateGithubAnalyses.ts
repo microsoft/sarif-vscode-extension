@@ -272,6 +272,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return undefined;
         }
 
+        // STEP 5: Filter out duplicate tools.
         // GitHub sorts analyses by most recent first.
         const toolsSeen = new Set<string>();
         const analysisInfos = analyses.filter(analysis => {
