@@ -15,9 +15,11 @@ import './index.scss';
 import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
-// ReactMarkdown blocks `vscode:` uri's by default. This is a workaround.
+// ReactMarkdown blocks `vscode:` and `command:` URIs by default. This is a workaround.
+// vscode scheme: https://code.visualstudio.com/api/references/vscode-api#window.registerUriHandler
+// command scheme: https://code.visualstudio.com/api/extension-guides/command#command-uris
 function uriTransformer(uri: string) {
-    if (uri.startsWith('vscode:')) return uri;
+    if (uri.startsWith('vscode:') || uri.startsWith('command:')) return uri;
     return ReactMarkdown.uriTransformer(uri);
 }
 
