@@ -125,7 +125,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
-                    await onBranchChanged(repo, gitHeadPath, store, true);
+                    await onRefsHeadsChanged(repo, gitHeadPath, store, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
                         progress.report({ message, increment: 20 });
                     });
@@ -156,7 +156,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // We preemptively show the panel (even before the result as fetched)
             // so that the banner is visible.
             await panel.show();
-            await onBranchChanged(repo, gitHeadPath, store);
+            await onRefsHeadsChanged(repo, gitHeadPath, store);
             beginWatch(repo);
         }
 
@@ -165,12 +165,12 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
             watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-                onBranchChanged(repo, gitHeadPath, store);
+                onRefsHeadsChanged(repo, gitHeadPath, store);
             });
         }
     })();
 
-    async function onBranchChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
+    async function onRefsHeadsChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
