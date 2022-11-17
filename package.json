@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.2",
+    "version": "3.3.3",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
