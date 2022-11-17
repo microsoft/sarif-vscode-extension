@@ -52,6 +52,7 @@ export class Panel {
         const {webview} = this.panel = window.createWebviewPanel(
             'sarif', `${this.title}s`, { preserveFocus: true, viewColumn: ViewColumn.Two }, // ViewColumn.Besides steals focus regardless of preserveFocus.
             {
+                enableCommandUris: true,
                 enableScripts: true,
                 localResourceRoots: [Uri.file('/'), ...'abcdefghijklmnopqrstuvwxyz'.split('').map(c => Uri.file(`${c}:`))],
                 retainContextWhenHidden: true,
