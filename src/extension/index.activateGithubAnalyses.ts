@@ -36,6 +36,8 @@ export interface AnalysisInfosForCommit {
 
 let currentLogUris: string[] | undefined = undefined;
 
+let output: OutputChannel | undefined;
+
 export async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
         const gitExtension = extensions.getExtension<GitExtension>('vscode.git')?.exports;
@@ -66,6 +68,8 @@ export function getPrimaryRepository(git: API): Repository | undefined {
 export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
+    output = outputChannel;
+
     disposables.push(workspace.onDidChangeConfiguration(e => {
         if (!e.affectsConfiguration('sarif-viewer.connectToGithubCodeScanning')) return;
         const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
@@ -236,7 +240,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 return undefined;
             }
             const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
-            outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
+            output?.appendLine(`Analyses:\n${analysesString}\n`);
 
             // STEP 4: Cross-reference with Git
             const git = await getInitializedGitApi();
@@ -249,7 +253,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             const repo = getPrimaryRepository(git);
             const commits = await repo?.log({}) ?? [];
             const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
-            outputChannel.appendLine(`Commits:\n${commitsString}\n`);
+            output?.appendLine(`Commits:\n${commitsString}\n`);
             const intersectingCommit = analyses.find(analysis => {
                 return commits.some(commit => analysis.commit_sha === commit.hash);
             })?.commit_sha;
@@ -346,7 +350,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     }
                     return logs;
                 } catch (error) {
-                    outputChannel.append(`Error in fetchAnalysis: ${error}\n`);
+                    output?.append(`Error in fetchAnalysis: ${error}\n`);
                     return undefined;
                 }
             })();
