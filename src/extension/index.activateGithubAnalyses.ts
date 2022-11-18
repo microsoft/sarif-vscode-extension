@@ -130,7 +130,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onRefsHeadsChanged(repo, gitHeadPath, store, true);
-                    const analysisInfo = await fetchAnalysisInfo(message => {
+                    const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => {
                         progress.report({ message, increment: 20 });
                     });
                     if (analysisInfo) {
@@ -187,112 +187,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
         if (!skipAnalysisInfo) {
-            const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+            const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
             updateAnalysisInfo(analysisInfo);
-        }
-    }
-
-    async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
-        try {
-            updateMessage('Checking GitHub Advanced Security...');
-
-            // STEP 1: Auth
-            const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
-            const { accessToken } = session;
-            if (!accessToken) {
-                updateMessage('Unable to authenticate.');
-                return undefined;
-            }
-
-            // STEP 2: Fetch
-            // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
-            const analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${store.branch}`, {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            if (analysesResponse.status === 403) {
-                updateMessage('GitHub Advanced Security is not enabled for this repository.');
-                return undefined;
-            }
-
-            // STEP 3: Parse
-            const anyResponse = await analysesResponse.json();
-            if (anyResponse.message) {
-                // Sample message response:
-                // {
-                //     "message": "You are not authorized to read code scanning alerts.",
-                //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
-                // }
-                const messageResponse = anyResponse as { message: string, documentation_url: string };
-                updateMessage(messageResponse.message);
-                return undefined;
-            }
-
-            const analyses = anyResponse as AnalysisInfo[];
-
-            // Possibilities:
-            // a) analysis is not enabled for repo or branch.
-            // b) analysis is enabled, but pending first-ever run.
-            if (!analyses.length) {
-                updateMessage('Refresh to check for more current results.');
-                return undefined;
-            }
-            const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
-            output?.appendLine(`Analyses:\n${analysesString}\n`);
-
-            // STEP 4: Cross-reference with Git
-            const git = await getInitializedGitApi();
-            if (!git) {
-                updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
-                return undefined;
-            }
-
-            // Find the intersection.
-            const repo = getPrimaryRepository(git);
-            const commits = await repo?.log({}) ?? [];
-            const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
-            output?.appendLine(`Commits:\n${commitsString}\n`);
-            const intersectingCommit = analyses.find(analysis => {
-                return commits.some(commit => analysis.commit_sha === commit.hash);
-            })?.commit_sha;
-
-            if (!intersectingCommit) {
-                return undefined;
-            }
-
-            // STEP 5: Filter out duplicate tools.
-            // GitHub sorts analyses by most recent first.
-            const toolsSeen = new Set<string>();
-            const analysisInfos = analyses.filter(analysis => {
-                if (analysis.commit_sha !== intersectingCommit) return false;
-
-                // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
-                if (toolsSeen.has(analysis.tool.name)) return false;
-
-                toolsSeen.add(analysis.tool.name);
-                return true;
-            });
-            if (!analysisInfos.length) {
-                return undefined;
-            }
-
-            return {
-                ids: analysisInfos.map(info => info.id),
-                commit_sha: intersectingCommit,
-                created_at: analysisInfos?.[0].created_at, // `analysisInfos` is already ordered by most recent first.
-                commitsAgo: commits.findIndex(commit => commit.hash === intersectingCommit),
-            };
-
-        } catch (error) {
-            if (error instanceof FetchError) {
-                // Expected if the network is disabled.
-                // error.name: FetchError
-                // error.message: request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com
-                updateMessage('Network error. Refresh to try again.');
-            }
-            return undefined;
         }
     }
 
@@ -387,7 +283,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     // TODO: Block re-entrancy.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
-        const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
+        const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
         updateAnalysisInfo(analysisInfo);
     });
 }
@@ -409,3 +305,106 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         globalValue: true
     }
 */
+
+async function fetchAnalysisInfo(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
+    try {
+        updateMessage('Checking GitHub Advanced Security...');
+
+        // STEP 1: Auth
+        const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+        const { accessToken } = session;
+        if (!accessToken) {
+            updateMessage('Unable to authenticate.');
+            return undefined;
+        }
+
+        // STEP 2: Fetch
+        // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
+        const analysesResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/code-scanning/analyses?ref=refs/heads/${branch}`, {
+            headers: {
+                authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        if (analysesResponse.status === 403) {
+            updateMessage('GitHub Advanced Security is not enabled for this repository.');
+            return undefined;
+        }
+
+        // STEP 3: Parse
+        const anyResponse = await analysesResponse.json();
+        if (anyResponse.message) {
+            // Sample message response:
+            // {
+            //     "message": "You are not authorized to read code scanning alerts.",
+            //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
+            // }
+            const messageResponse = anyResponse as { message: string, documentation_url: string };
+            updateMessage(messageResponse.message);
+            return undefined;
+        }
+
+        const analyses = anyResponse as AnalysisInfo[];
+
+        // Possibilities:
+        // a) analysis is not enabled for repo or branch.
+        // b) analysis is enabled, but pending first-ever run.
+        if (!analyses.length) {
+            updateMessage('Refresh to check for more current results.');
+            return undefined;
+        }
+        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
+        output?.appendLine(`Analyses:\n${analysesString}\n`);
+
+        // STEP 4: Cross-reference with Git
+        const git = await getInitializedGitApi();
+        if (!git) {
+            updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
+            return undefined;
+        }
+
+        // Find the intersection.
+        const commits = await getPrimaryRepository(git)?.log({}) ?? [];
+        const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
+        output?.appendLine(`Commits:\n${commitsString}\n`);
+        const intersectingCommit = analyses.find(analysis => {
+            return commits.some(commit => analysis.commit_sha === commit.hash);
+        })?.commit_sha;
+
+        if (!intersectingCommit) {
+            return undefined;
+        }
+
+        // STEP 5: Filter out duplicate tools.
+        // GitHub sorts analyses by most recent first.
+        const toolsSeen = new Set<string>();
+        const analysisInfos = analyses.filter(analysis => {
+            if (analysis.commit_sha !== intersectingCommit) return false;
+
+            // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
+            if (toolsSeen.has(analysis.tool.name)) return false;
+
+            toolsSeen.add(analysis.tool.name);
+            return true;
+        });
+        if (!analysisInfos.length) {
+            return undefined;
+        }
+
+        return {
+            ids: analysisInfos.map(info => info.id),
+            commit_sha: intersectingCommit,
+            created_at: analysisInfos?.[0].created_at, // `analysisInfos` is already ordered by most recent first.
+            commitsAgo: commits.findIndex(commit => commit.hash === intersectingCommit),
+        };
+
+    } catch (error) {
+        if (error instanceof FetchError) {
+            // Expected if the network is disabled.
+            // error.name: FetchError
+            // error.message: request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com
+            updateMessage('Network error. Refresh to try again.');
+        }
+        return undefined;
+    }
+}
