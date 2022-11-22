@@ -9,7 +9,6 @@ import fetch, { FetchError } from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
-import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
@@ -306,7 +305,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     }
 */
 
-async function fetchAnalysisInfo(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
+export async function fetchAnalysisInfo(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
     try {
         updateMessage('Checking GitHub Advanced Security...');
 
@@ -372,6 +371,7 @@ async function fetchAnalysisInfo(owner: string, repo: string, branch: string, up
         })?.commit_sha;
 
         if (!intersectingCommit) {
+            updateMessage('No intersecting commit.');
             return undefined;
         }
 
