@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
@@ -67,14 +68,26 @@ export async function activate(context: ExtensionContext) {
         update();
     }
 
+    // For now, we keep file watch functionality limited to the API.
+    // After we're sure it's working well, consider also enabling it for files opened manually.
+    const watcher = watch([], {
+        ignoreInitial: true
+    }).on('change', async path => {
+        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+        store.logs.push(...await loadLogs([Uri.file(path)]));
+    });
+    disposables.push(new Disposable(() => watcher.close()));
+
     // API
     const api = {
         async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+            watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
             if (cancellationToken?.isCancellationRequested) return;
             if (store.results.length) panel.show();
         },
         async closeLogs(logs: Uri[]) {
+            watcher.unwatch(logs.map(log => log.fsPath));
             for (const uri of logs) {
                 store.logs.removeFirst(log => log._uri === uri.toString());
             }
