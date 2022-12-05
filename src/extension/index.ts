@@ -75,6 +75,8 @@ export async function activate(context: ExtensionContext) {
     }).on('change', async path => {
         store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
         store.logs.push(...await loadLogs([Uri.file(path)]));
+    }).on('unlink', path => {
+        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
     });
     disposables.push(new Disposable(() => watcher.close()));
 
