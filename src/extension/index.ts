@@ -95,6 +95,7 @@ export async function activate(context: ExtensionContext) {
             }
         },
         async closeAllLogs() {
+            watcher.unwatch('**/*');
             store.logs.splice(0);
         },
         get uriBases() {
