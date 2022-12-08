@@ -200,13 +200,13 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
             if (contents?.rendered?.text) return contents?.rendered?.text;
             if (contents?.text) return contents?.text;
             if (contents?.binary) {
-                const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g) ?? [];
-                return lines.reduce((sum, line, i) => {
+                const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g);
+                return lines?.reduce((sum, line, i) => {
                     const lineNo = ((i + 128) * 16).toString(16).toUpperCase().padStart(8, '0');
                     // eslint-disable-next-line no-control-regex
                     const preview = Buffer.from(line, 'hex').toString('utf8').replace(/(\x09|\x0A|\x0B|\x0C|\x0D|\x1B)/g, '?');
                     return `${sum}${lineNo}  ${line.toUpperCase().match(/.{1,2}/g)?.join(' ')}  ${preview}\n`;
-                }, '');
+                }, '') ?? '';
             }
             token.isCancellationRequested = true;
             return '';
