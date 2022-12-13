@@ -32,7 +32,7 @@ interface TableProps<T, G> {
         const { columns, store, renderIconName, renderCell } = this.props;
         const { isLineThrough, isSelected, item, gridTemplateColumns, menuContext } = props;
         return <div className={css('svTableRow', 'svTableRowItem', isLineThrough && 'svLineThrough', isSelected && 'svItemSelected')} style={{ gridTemplateColumns }}
-            data-vscode-context={JSON.stringify({ webviewSection: 'tableRow', ...menuContext })}
+            data-vscode-context={JSON.stringify(menuContext)}
             ref={ele => { // TODO: ForwardRef for Group
                 if (!isSelected || !ele) return;
                 setTimeout(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' })); // requestAnimationFrame not working.
