@@ -70,6 +70,13 @@ export async function activate(context: ExtensionContext) {
 
     // For now, we keep file watch functionality limited to the API.
     // After we're sure it's working well, consider also enabling it for files opened manually.
+    // FIXME: Possible race condition if a file is changed multiple times in quick succession.
+    // 1. First change event fires (denoted as [1]).
+    // 2. [1] Log is removed from the store.
+    // 3. Second change event fires (denoted as [2]).
+    // 4. [2] Log is removed from the store (returns false as it's already been removed).
+    // 5. [1] Log is re-loaded and added to the store.
+    // 6. [2] Log is re-loaded and added (again!) to the store.
     const watcher = watch([], {
         ignoreInitial: true
     }).on('change', async path => {
