@@ -26,14 +26,24 @@ interface ResultTableProps<G> {
 @observer export class ResultTable<G> extends PureComponent<ResultTableProps<G>> {
     private renderCell = (column: Column<Result>, result: Result) => {
         const customRenderers = {
-            'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
-            'Line':     result => <span>{result._region?.startLine ?? '—'}</span>,
-            'Message':  result => <span>{renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</span>,
-            'Rule':     result => <>
+            'File':       result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
+            'Line : Col': result => <span>{lineColRenderer(result)}</span>,
+            'Message':    result => <span>{renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</span>,
+            'Rule':       result => <>
                 <span>{result._rule?.name ?? '—'}</span>
                 <span className="svSecondary">{result.ruleId}</span>
             </>,
         } as Record<string, (result: Result) => ReactNode>;
+        const lineColRenderer = (result: Result) => {
+            if (!result._region?.startLine)
+            {
+                return '-';
+            } else {
+                return result._region?.startColumn
+                  ? result._region.startLine + ' : ' + result._region?.startColumn
+                  : result._region?.startLine.toString();
+            }
+        };
         const defaultRenderer = (result: Result) => {
             const capitalize = (str: string) => `${str[0].toUpperCase()}${str.slice(1)}`;
             return <span>{capitalize(column.toString(result))}</span>;

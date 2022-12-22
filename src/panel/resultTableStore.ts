@@ -28,7 +28,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 
     // Columns
     private columnsPermanent = [
-        new Column<Result>('Line', 50, result => result._region?.startLine?.toString() ?? '—', result => result._region?.startLine ?? 0),
+        new Column<Result>('Line : Col', 100, result => this.makeLineColValue(result), result => this.makeSortValue(result)),
         new Column<Result>('File', 250, result => result._relativeUri ?? ''),
         new Column<Result>('Message', 300, result => result._message ?? ''),
     ]
@@ -74,6 +74,23 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
                 return isMatch(field, filterKeywords);
             });
         };
+    }
+
+    private makeLineColValue(result: Result): string {
+        if (!result._region?.startLine)
+        {
+            return '-';
+        } else {
+            return result._region?.startColumn
+              ? result._region.startLine + ' : ' + result._region.startColumn
+              : result._region.startLine.toString();
+        }
+    }
+
+    private makeSortValue(result: Result): number {
+        const line = result._region?.startLine ?? 0;
+        const col = result._region?.startColumn ?? 0;
+        return line * 10000000 + col;
     }
 
     public isLineThrough(result: Result): boolean {
