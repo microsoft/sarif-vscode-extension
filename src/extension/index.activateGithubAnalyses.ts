@@ -128,7 +128,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
-                    await onRefsHeadsChanged(repo, gitHeadPath, store, true);
+                    await onRefsHeadsChanged(repo, gitHeadPath, store);
                     const analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => {
                         progress.report({ message, increment: 20 });
                     });
@@ -160,6 +160,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // so that the banner is visible.
             await panel.show();
             await onRefsHeadsChanged(repo, gitHeadPath, store);
+            store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
             beginWatch(repo);
         }
 
@@ -167,13 +168,14 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             const watcher = watch([
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
-            watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-                onRefsHeadsChanged(repo, gitHeadPath, store);
+            watcher.on('all', async (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
+                await onRefsHeadsChanged(repo, gitHeadPath, store);
+                store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
             });
         }
     })();
 
-    async function onRefsHeadsChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
+    async function onRefsHeadsChanged(repo: Repository, gitHeadPath: string, store: Store) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
@@ -185,9 +187,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
-        if (!skipAnalysisInfo) {
-            store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
-        }
     }
 
     // TODO: Block re-entrancy.
