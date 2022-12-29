@@ -109,7 +109,7 @@ export async function update() {
             if (!isUpdateEnabled()) return false;
             await commands.executeCommand('workbench.extensions.installExtension', Uri.file(vsixFile));
             const response = await window.showInformationMessage(
-                `A new version of the SARIF Viewer (${release.tag_name}) has been installed. Reload to take affect.`,
+                `A new version of the SARIF Viewer (${release.tag_name}) has been installed. Reload to take effect.`,
                 'Reload now'
             );
             if (response) {

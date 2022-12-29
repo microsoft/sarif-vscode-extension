@@ -30,7 +30,7 @@ export async function activate(context: ExtensionContext) {
 
     const disposables = context.subscriptions;
 
-    const outputChannel = window.createOutputChannel('Sarif Viewer');
+    const outputChannel = window.createOutputChannel('SARIF Viewer');
     disposables.push(outputChannel);
 
     Store.globalState = context.globalState;
