@@ -167,8 +167,8 @@ describe('decodeFileUri', () => {
         const originalUriString = 'file:///c%3A/Users/muraina/sarif-tutorials/samples/3-Beyond-basics/Results_2.sarif';
         assert.strictEqual(decodeFileUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
     });
-    it(`does not affect 'non-file' uri schemes`, () => {
-        assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com'), 'https://programmers.stackexchange.com');
+    it(`returns just the authority for 'https' schemes`, () => {
+        assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com'), 'programmers.stackexchange.com');
     });
 });
 

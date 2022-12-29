@@ -40,11 +40,25 @@ export const mockVscodeTestFacing = {
 
 export const mockVscode = {
     // Extension-facing
+    CodeAction: class {
+        constructor() {}
+    },
+    CodeActionKind: {
+        Empty: 0,
+        QuickFix: 1,
+    },
     commands: {
         registerCommand: () => {},
     },
     Diagnostic: class {
         constructor(readonly range: Range, readonly message: string, readonly severity?: DiagnosticSeverity) {}
+    },
+    extensions: {
+        getExtension: () => ({
+            getAPI: () => ({
+                onDidChangeState: () => undefined
+            })
+        })
     },
     languages: {
         createDiagnosticCollection: () => {},
@@ -54,11 +68,19 @@ export const mockVscode = {
     Selection: class {
         constructor(readonly a: number, readonly b: number, readonly c: number, readonly d: number) {}
     },
+    StatusBarAlignment: {
+        Left: 1,
+        Right: 2,
+    },
     TextEditorRevealType: { InCenterIfOutsideViewport: 2 },
     ThemeColor: class {},
     Uri,
     ViewColumn: { Two: 2 },
     window: {
+        createOutputChannel: () => ({}),
+        createStatusBarItem: () => ({
+            show: () => {}
+        }),
         createTextEditorDecorationType: () => {},
         createWebviewPanel: () => {
             const defaultState = {
@@ -90,6 +112,7 @@ export const mockVscode = {
             };
         },
         onDidChangeTextEditorSelection: () => {},
+        onDidChangeVisibleTextEditors: () => {},
         showErrorMessage: (message: any) => console.error(`showErrorMessage: '${message}'`),
         showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
         showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult!.map(path => ({ path })),
@@ -110,6 +133,7 @@ export const mockVscode = {
         onDidChangeConfiguration: () => {},
         getConfiguration: () => new Map(),
         onDidOpenTextDocument: () => {},
+        onDidChangeTextDocument: () => {},
         onDidCloseTextDocument: () => {},
         fs: {
             stat: async (uri: Uri) => {
