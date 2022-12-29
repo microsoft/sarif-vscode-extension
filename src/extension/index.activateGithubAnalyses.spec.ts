@@ -73,54 +73,54 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
     });
 }
 
-describe('fetchAnalysisInfo', () => {
+describe('fetchAnalysisInfos', () => {
     it('handles GHAS not enabled', async () => {
-        const { fetchAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(403);
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'GitHub Advanced Security is not enabled for this repository.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles GHAS message', async () => {
-        const { fetchAnalysisInfo } = proxyquireActivateGithubAnalyses({ message: 'You are not authorized to read code scanning alerts.' });
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses({ message: 'You are not authorized to read code scanning alerts.' });
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'You are not authorized to read code scanning alerts.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles analyses.length zero', async () => {
-        const { fetchAnalysisInfo } = proxyquireActivateGithubAnalyses([]);
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses([]);
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'Refresh to check for more current results.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles no intersecting commit', async () => {
-        const { fetchAnalysisInfo } = proxyquireActivateGithubAnalyses(
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(
             [ analysisInfoCodeQL1 ],
             ['f1f734698cd27d602d45a49cc8b755cc19b5ca1c'],
         );
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'No intersecting commit.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles no duplicate tools (also the common case)', async () => {
-        const { fetchAnalysisInfo } = proxyquireActivateGithubAnalyses(
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(
             [ analysisInfoCodeQL1, analysisInfoCodeQL2, analysisInfoESLint1, analysisInfoESLint2 ],
             ['f1f734698cd27d602d45a49cc8b755cc19b5ca1c', '7bd21f58079a6b35ccdba51a491f2362c204a165'],
         );
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'Checking GitHub Advanced Security...');
         assert.strictEqual(info.ids.length, 2);
     });

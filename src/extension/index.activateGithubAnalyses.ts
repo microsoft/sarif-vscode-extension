@@ -129,7 +129,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onRefsHeadsChanged(repo, gitHeadPath, store, true);
-                    const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => {
+                    const analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => {
                         progress.report({ message, increment: 20 });
                     });
                     if (analysisInfo) {
@@ -186,7 +186,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
         if (!skipAnalysisInfo) {
-            store.analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
+            store.analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
         }
     }
 
@@ -194,11 +194,11 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     interceptAnalysisInfo(store);
     observe(store, 'analysisInfo', () => fetchAnalysis(store, config, panel));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
-        store.analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
+        store.analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
     });
 }
 
-export async function fetchAnalysisInfo(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
+export async function fetchAnalysisInfos(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
     try {
         updateMessage('Checking GitHub Advanced Security...');
 
