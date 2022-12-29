@@ -6,6 +6,7 @@ import { Result } from 'sarif';
 import { Visibility } from '../shared';
 import { IndexStore } from './indexStore';
 import { Column, Row, TableStore } from './tableStore';
+import { renderRegionLocationText } from '../extension/regionLocationText';
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
     constructor(
@@ -28,7 +29,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 
     // Columns
     private columnsPermanent = [
-        new Column<Result>('Line : Col', 100, result => this.makeLineColValue(result), result => this.makeSortValue(result)),
+        new Column<Result>('Start : End', 100, result => renderRegionLocationText(result._region), result => this.makeSortValue(result)),
         new Column<Result>('File', 250, result => result._relativeUri ?? ''),
         new Column<Result>('Message', 300, result => result._message ?? ''),
     ]
@@ -76,21 +77,24 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
         };
     }
 
-    private makeLineColValue(result: Result): string {
-        if (!result._region?.startLine)
-        {
-            return '-';
-        } else {
-            return result._region?.startColumn
-              ? result._region.startLine + ' : ' + result._region.startColumn
-              : result._region.startLine.toString();
-        }
-    }
-
     private makeSortValue(result: Result): number {
-        const line = result._region?.startLine ?? 0;
-        const col = result._region?.startColumn ?? 0;
-        return line * 10000000 + col;
+        if (!result._region) { return 0; }
+
+        if (result._region.startLine !== undefined) {
+            const line = result._region.startLine ?? 0;
+            const col = result._region.startColumn ?? 0;
+            return line * 10000000 + col;
+        }
+
+        if (result._region.charOffset !== undefined) {
+            return result._region.charOffset * 10000000;
+        }
+
+        if (result._region.byteOffset !== undefined) {
+            return result._region.byteOffset * 10000000;
+        }
+
+        return 0;
     }
 
     public isLineThrough(result: Result): boolean {

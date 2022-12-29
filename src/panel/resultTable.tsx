@@ -9,6 +9,7 @@ import { renderMessageTextWithEmbeddedLinks } from './widgets';
 import { ResultTableStore } from './resultTableStore';
 import { Table } from './table';
 import { Column } from './tableStore';
+import { renderRegionLocationText } from '../extension/regionLocationText';
 
 const levelToIcon = {
     error: 'error',
@@ -27,22 +28,15 @@ interface ResultTableProps<G> {
     private renderCell = (column: Column<Result>, result: Result) => {
         const customRenderers = {
             'File':       result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
-            'Line : Col': result => <span>{lineColRenderer(result)}</span>,
+            'Start : End': result => <span>{regionRenderer(result)}</span>,
             'Message':    result => <span>{renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</span>,
             'Rule':       result => <>
                 <span>{result._rule?.name ?? '—'}</span>
                 <span className="svSecondary">{result.ruleId}</span>
             </>,
         } as Record<string, (result: Result) => ReactNode>;
-        const lineColRenderer = (result: Result) => {
-            if (!result._region?.startLine)
-            {
-                return '-';
-            } else {
-                return result._region?.startColumn
-                  ? result._region.startLine + ' : ' + result._region?.startColumn
-                  : result._region?.startLine.toString();
-            }
+        const regionRenderer = (result: Result) => {
+            return renderRegionLocationText(result._region);
         };
         const defaultRenderer = (result: Result) => {
             const capitalize = (str: string) => `${str[0].toUpperCase()}${str.slice(1)}`;

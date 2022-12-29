@@ -20,16 +20,16 @@ describe('ResultTableStore', () => {
 
     it('creates different visible columns based on Group Name provided', () => {
         const resultTableStore = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
-        assert.deepStrictEqual(resultTableStore.columns.map((col) => col.name), ['Line', 'File', 'Message', 'Baseline', 'Suppression', 'Rule']);
+        assert.deepStrictEqual(resultTableStore.columns.map((col) => col.name), ['Start : End', 'File', 'Message', 'Baseline', 'Suppression', 'Rule']);
 
         const resultTableStore1 = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
-        assert.deepStrictEqual(resultTableStore1.visibleColumns.map((col) => col.name), ['Line', 'Message']);
+        assert.deepStrictEqual(resultTableStore1.visibleColumns.map((col) => col.name), ['Start : End', 'Message']);
 
-        const resultTableStore2 = new ResultTableStore('Line', result => result._region?.startLine ?? 0, resultsSource, filtersSource, selection);
+        const resultTableStore2 = new ResultTableStore('Start : End', result => result._region?.startLine ?? 0, resultsSource, filtersSource, selection);
         assert.deepStrictEqual(resultTableStore2.visibleColumns.map((col) => col.name), ['File', 'Message']);
 
         const resultTableStore3 = new ResultTableStore('Message', result => result._message, resultsSource, filtersSource, selection);
-        assert.deepStrictEqual(resultTableStore3.visibleColumns.map((col) => col.name), ['Line', 'File']);
+        assert.deepStrictEqual(resultTableStore3.visibleColumns.map((col) => col.name), ['Start : End', 'File']);
     });
 
     it.skip('groups the rows and rowItems based the grouping logic applied on resultsSource', () => {
