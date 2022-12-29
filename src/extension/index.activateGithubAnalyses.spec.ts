@@ -3,8 +3,11 @@
 /* eslint-disable filenames/match-regex */
 
 import assert from 'assert';
+import { observable } from 'mobx';
 import { FetchError } from 'node-fetch';
 import proxyquire from 'proxyquire';
+import { ReportingDescriptor } from 'sarif';
+import { Store } from './store';
 
 proxyquire.noCallThru();
 
@@ -32,7 +35,6 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
             return nodeFetch;
         })(),
         'vscode': {
-            '@global': true,
             '@noCallThru': true,
             authentication: {
                 getSession: () => ({ accessToken: 'anyValue' }),
@@ -55,7 +57,19 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
                     }
                 }),
             }
-        }
+        },
+        './loadLogs': {
+            driverlessRules: new Map<string, ReportingDescriptor>(),
+        },
+        './statusBarItem': {
+            isSpinning: observable.box(false),
+        },
+        './telemetry': {
+            sendGithubConfig: () => {},
+            sendGithubEligibility: () => {},
+            sendGithubPromptChoice: () => {},
+            sendGithubAnalysisFound: () => {},
+        },
     });
 }
 
@@ -109,5 +123,42 @@ describe('fetchAnalysisInfo', () => {
         const info = await fetchAnalysisInfo('owner', 'repo', 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'Checking GitHub Advanced Security...');
         assert.strictEqual(info.ids.length, 2);
+    });
+});
+
+describe('interceptStore', () => {
+    const analysisInfo = {
+        'ids': [
+            54017899,
+            51696264
+        ],
+        'commit_sha': '7bd21f58079a6b35ccdba51a491f2362c204a165',
+        'created_at': '2022-12-02T11:43:59Z',
+        'commitsAgo': 0
+    };
+
+    it('Reports updated', async () => {
+        const store = new Store();
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        interceptAnalysisInfo(store);
+        store.analysisInfo = analysisInfo;
+        assert.strictEqual(store.banner, 'Updating...');
+    });
+
+    it('Reports unchanged', async () => {
+        const store = new Store();
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        interceptAnalysisInfo(store);
+        store.analysisInfo = analysisInfo;
+        store.analysisInfo = analysisInfo;
+        assert.strictEqual(store.banner, 'Results unchanged for current commit . The most recent scan was 0 commit(s) ago on 12/2/2022, 3:43:59 AM. Refresh to check for more current results.');
+    });
+
+    it('Reports not scanned', async () => {
+        const store = new Store();
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        interceptAnalysisInfo(store);
+        store.analysisInfo = undefined;
+        assert.strictEqual(store.banner, 'This branch has not been scanned.');
     });
 });

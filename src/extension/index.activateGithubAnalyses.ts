@@ -4,7 +4,7 @@
 
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
-import { observe } from 'mobx';
+import { intercept, IValueWillChange, observe } from 'mobx';
 import fetch, { FetchError } from 'node-fetch';
 import { Log } from 'sarif';
 import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
@@ -135,7 +135,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     if (analysisInfo) {
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                         await panel.show();
-                        updateAnalysisInfo(analysisInfo);
+                        store.analysisInfo = analysisInfo;
                         beginWatch(repo);
                     }
                     return !!analysisInfo;
@@ -186,31 +186,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
         if (!skipAnalysisInfo) {
-            const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
-            updateAnalysisInfo(analysisInfo);
-        }
-    }
-
-    function updateAnalysisInfo(analysisInfo: AnalysisInfosForCommit | undefined): void {
-        // If `analysisInfo` is undefined at this point, then...
-        // a) the intersection is outside of the page size
-        // b) other?
-        if (analysisInfo) {
-            if (JSON.stringify(store.analysisInfo?.ids) !== JSON.stringify(analysisInfo.ids)) { // Lazy array comparison technique.
-                store.analysisInfo = analysisInfo;
-                // Banner will be updated during fetchAnalysis()
-            } else {
-                setBannerResultsUpdated(analysisInfo, 'unchanged');
-            }
-        } else {
-            // In the first page analyses, but none that match this commit.
-            // Possibilities:
-            // a) User checked-out a really old commit.
-            // b) Not all branches are scanned.
-            if (store.analysisInfo !== undefined) {
-                store.analysisInfo = undefined;
-            }
-            store.banner = `This branch has not been scanned.`;
+            store.analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
         }
     }
 
@@ -265,25 +241,14 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         panel.show();
         isSpinning.set(false);
 
-        setBannerResultsUpdated(analysisInfo);
-    }
-
-    function setBannerResultsUpdated(analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
-        if (!analysisInfo) return;
-
-        const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
-            ? ` The most recent scan was ${analysisInfo.commitsAgo} commit(s) ago` +
-            ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
-            ` Refresh to check for more current results.`
-            : '';
-        store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
+        setBannerResultsUpdated(store, analysisInfo);
     }
 
     // TODO: Block re-entrancy.
+    interceptAnalysisInfo(store);
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
-        const analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
-        updateAnalysisInfo(analysisInfo);
+        store.analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
     });
 }
 
@@ -407,4 +372,45 @@ export async function fetchAnalysisInfo(owner: string, repo: string, branch: str
         }
         return undefined;
     }
+}
+
+function setBannerResultsUpdated(store: Store, analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
+    if (!analysisInfo) return;
+
+    const messageWarnStale = analysisInfo.commit_sha !== store.commitHash
+        ? ` The most recent scan was ${analysisInfo.commitsAgo} commit(s) ago` +
+        ` on ${new Date(analysisInfo.created_at).toLocaleString()}.` +
+        ` Refresh to check for more current results.`
+        : '';
+    store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
+}
+
+export function interceptAnalysisInfo(store: Store) {
+    intercept(store, 'analysisInfo', (change: IValueWillChange<AnalysisInfosForCommit | undefined>) => {
+        const newAnalysisInfo = change.newValue;
+
+        // If `analysisInfo` is undefined at this point, then...
+        // a) the intersection is outside of the page size
+        // b) other?
+        if (newAnalysisInfo) {
+            if (JSON.stringify(store.analysisInfo?.ids) !== JSON.stringify(newAnalysisInfo.ids)) { // Lazy array comparison technique.
+                store.banner = 'Updating...'; // fetchAnalysis() will call setBannerResultsUpdated()
+                return change; // allow change
+            } else {
+                setBannerResultsUpdated(store, newAnalysisInfo, 'unchanged');
+                return null; // block the change
+            }
+        } else {
+            // In the first page analyses, but none that match this commit.
+            // Possibilities:
+            // a) User checked-out a really old commit.
+            // b) Not all branches are scanned.
+            store.banner = `This branch has not been scanned.`;
+            if (store.analysisInfo !== undefined) {
+                return change; // allow change
+            } else {
+                return null; // block change
+            }
+        }
+    });
 }
