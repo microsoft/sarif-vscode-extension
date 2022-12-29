@@ -190,63 +190,9 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
     }
 
-    async function fetchAnalysis(analysisInfo: AnalysisInfosForCommit | undefined): Promise<void> {
-        isSpinning.set(true);
-
-        const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
-        const { accessToken } = session; // Assume non-null as we already called it recently.
-
-        const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
-            ? undefined
-            : await (async () => {
-                try {
-                    const logs = [] as Log[];
-                    for (const analysisId of analysisInfo.ids) {
-                        const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
-                        const analysisResponse = await fetch(uri, {
-                            headers: {
-                                accept: 'application/sarif+json',
-                                authorization: `Bearer ${accessToken}`,
-                            },
-                        });
-                        const logText = await analysisResponse.text();
-                        // Useful for saving/examining fetched logs:
-                        // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
-                        const log = JSON.parse(logText) as Log;
-                        log._text = logText;
-                        log._uri = uri;
-                        const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
-                        augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
-                        logs.push(log);
-                    }
-                    return logs;
-                } catch (error) {
-                    output?.append(`Error in fetchAnalysis: ${error}\n`);
-                    return undefined;
-                }
-            })();
-
-        if (currentLogUris) {
-            for (const currentLogUri of currentLogUris) {
-                store.logs.removeFirst(log => log._uri === currentLogUri);
-            }
-            currentLogUris = undefined;
-        }
-
-        if (logs) {
-            store.logs.push(...logs);
-            currentLogUris = logs.map(log => log._uri);
-        }
-
-        panel.show();
-        isSpinning.set(false);
-
-        setBannerResultsUpdated(store, analysisInfo);
-    }
-
     // TODO: Block re-entrancy.
     interceptAnalysisInfo(store);
-    observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
+    observe(store, 'analysisInfo', () => fetchAnalysis(store, config, panel));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
         store.analysisInfo = await fetchAnalysisInfo(config.user, config.repoName, store.branch, message => store.banner = message);
     });
@@ -395,6 +341,61 @@ export function interceptAnalysisInfo(store: Store) {
             }
         }
     });
+}
+
+async function fetchAnalysis(store: Store, config: { user: string, repoName: string }, panel: Panel): Promise<void> {
+    isSpinning.set(true);
+
+    const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+    const { accessToken } = session; // Assume non-null as we already called it recently.
+
+    const analysisInfo = store.analysisInfo;
+    const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
+        ? undefined
+        : await (async () => {
+            try {
+                const logs = [] as Log[];
+                for (const analysisId of analysisInfo.ids) {
+                    const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
+                    const analysisResponse = await fetch(uri, {
+                        headers: {
+                            accept: 'application/sarif+json',
+                            authorization: `Bearer ${accessToken}`,
+                        },
+                    });
+                    const logText = await analysisResponse.text();
+                    // Useful for saving/examining fetched logs:
+                    // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
+                    const log = JSON.parse(logText) as Log;
+                    log._text = logText;
+                    log._uri = uri;
+                    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+                    augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+                    logs.push(log);
+                }
+                return logs;
+            } catch (error) {
+                output?.append(`Error in fetchAnalysis: ${error}\n`);
+                return undefined;
+            }
+        })();
+
+    if (currentLogUris) {
+        for (const currentLogUri of currentLogUris) {
+            store.logs.removeFirst(log => log._uri === currentLogUri);
+        }
+        currentLogUris = undefined;
+    }
+
+    if (logs) {
+        store.logs.push(...logs);
+        currentLogUris = logs.map(log => log._uri);
+    }
+
+    panel.show();
+    isSpinning.set(false);
+
+    setBannerResultsUpdated(store, analysisInfo);
 }
 
 /*
