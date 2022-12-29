@@ -252,24 +252,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     });
 }
 
-/*
-    Regarding workspace.getConfiguration():
-    Determined (via experiments) that is not possible to discern between default and unset.
-    This is even when using `inspect()`.
-
-    If equal to default (false or unset):
-    {
-        defaultValue: false
-        key: ...
-    }
-
-    If not equal to default (true):
-    {
-        defaultValue: false
-        globalValue: true
-    }
-*/
-
 export async function fetchAnalysisInfo(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
     try {
         updateMessage('Checking GitHub Advanced Security...');
@@ -414,3 +396,21 @@ export function interceptAnalysisInfo(store: Store) {
         }
     });
 }
+
+/*
+    Regarding workspace.getConfiguration():
+    Determined (via experiments) that is not possible to discern between default and unset.
+    This is even when using `inspect()`.
+
+    If equal to default (false or unset):
+    {
+        defaultValue: false
+        key: ...
+    }
+
+    If not equal to default (true):
+    {
+        defaultValue: false
+        globalValue: true
+    }
+*/
