@@ -141,7 +141,7 @@ describe('interceptStore', () => {
         const store = new Store();
         const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
         interceptAnalysisInfo(store);
-        store.analysisInfo = analysisInfo;
+        store.analysisInfos = analysisInfo;
         assert.strictEqual(store.banner, 'Updating...');
     });
 
@@ -149,8 +149,8 @@ describe('interceptStore', () => {
         const store = new Store();
         const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
         interceptAnalysisInfo(store);
-        store.analysisInfo = analysisInfo;
-        store.analysisInfo = analysisInfo;
+        store.analysisInfos = analysisInfo;
+        store.analysisInfos = analysisInfo;
         assert.strictEqual(store.banner, 'Results unchanged for current commit . The most recent scan was 0 commit(s) ago on 12/2/2022, 3:43:59 AM. Refresh to check for more current results.');
     });
 
@@ -158,7 +158,7 @@ describe('interceptStore', () => {
         const store = new Store();
         const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
         interceptAnalysisInfo(store);
-        store.analysisInfo = undefined;
+        store.analysisInfos = undefined;
         assert.strictEqual(store.banner, 'This branch has not been scanned.');
     });
 });

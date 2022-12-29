@@ -78,7 +78,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                 return docUriString === artifactUriString;
             });
 
-            const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
+            const originalDoc = await getOriginalDoc(store.analysisInfos?.commit_sha, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
             const ranges = locationsInDoc.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
             editor.setDecorations(decorationTypeHighlight, ranges);

@@ -135,7 +135,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     if (analysisInfo) {
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                         await panel.show();
-                        store.analysisInfo = analysisInfo;
+                        store.analysisInfos = analysisInfo;
                         beginWatch(repo);
                     }
                     return !!analysisInfo;
@@ -186,15 +186,15 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
         if (!skipAnalysisInfo) {
-            store.analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+            store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
         }
     }
 
     // TODO: Block re-entrancy.
     interceptAnalysisInfo(store);
-    observe(store, 'analysisInfo', () => fetchAnalysis(store, config, panel));
+    observe(store, 'analysisInfos', () => fetchAnalysis(store, config, panel));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
-        store.analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+        store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
     });
 }
 
@@ -314,14 +314,14 @@ function setBannerResultsUpdated(store: Store, analysisInfo: AnalysisInfosForCom
 }
 
 export function interceptAnalysisInfo(store: Store) {
-    intercept(store, 'analysisInfo', (change: IValueWillChange<AnalysisInfosForCommit | undefined>) => {
+    intercept(store, 'analysisInfos', (change: IValueWillChange<AnalysisInfosForCommit | undefined>) => {
         const newAnalysisInfo = change.newValue;
 
         // If `analysisInfo` is undefined at this point, then...
         // a) the intersection is outside of the page size
         // b) other?
         if (newAnalysisInfo) {
-            if (JSON.stringify(store.analysisInfo?.ids) !== JSON.stringify(newAnalysisInfo.ids)) { // Lazy array comparison technique.
+            if (JSON.stringify(store.analysisInfos?.ids) !== JSON.stringify(newAnalysisInfo.ids)) { // Lazy array comparison technique.
                 store.banner = 'Updating...'; // fetchAnalysis() will call setBannerResultsUpdated()
                 return change; // allow change
             } else {
@@ -334,7 +334,7 @@ export function interceptAnalysisInfo(store: Store) {
             // a) User checked-out a really old commit.
             // b) Not all branches are scanned.
             store.banner = `This branch has not been scanned.`;
-            if (store.analysisInfo !== undefined) {
+            if (store.analysisInfos !== undefined) {
                 return change; // allow change
             } else {
                 return null; // block change
@@ -349,7 +349,7 @@ async function fetchAnalysis(store: Store, config: { user: string, repoName: str
     const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
     const { accessToken } = session; // Assume non-null as we already called it recently.
 
-    const analysisInfo = store.analysisInfo;
+    const analysisInfo = store.analysisInfos;
     const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
         ? undefined
         : await (async () => {

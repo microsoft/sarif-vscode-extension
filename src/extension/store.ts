@@ -28,7 +28,7 @@ export class Store {
     public disableSelectionSync = false;
     public branch = ''
     public commitHash = ''
-    @observable.shallow analysisInfo: AnalysisInfosForCommit | undefined
+    @observable.shallow analysisInfos: AnalysisInfosForCommit | undefined
     @observable remoteAnalysisInfoUpdated = 0 // A version number as a substitute for a value-less observable.
 
     constructor() {
