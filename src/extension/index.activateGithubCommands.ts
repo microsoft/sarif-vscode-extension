@@ -28,7 +28,7 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
         // Sample: https://api.github.com/repos/microsoft/binskim/code-scanning/alerts/74
         const response = await callGithubRepos(`${ownerAndRepo}/alerts/${alertNumber}`, {
             state: 'dismissed',
-            dismissed_reason: reason
+            dismissed_reason: reason,
         });
 
         if (!response) {
@@ -62,7 +62,7 @@ async function callGithubRepos(api: string, body: Record<string, string> | undef
         return await fetch(`https://api.github.com/repos/${api}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             method: 'PATCH',
             body: body && JSON.stringify(body),

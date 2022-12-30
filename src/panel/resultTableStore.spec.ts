@@ -18,7 +18,7 @@ describe('ResultTableStore', () => {
     const filtersSource = {
         keywords: '',
         filtersRow: filtersRow,
-        filtersColumn: filtersColumn
+        filtersColumn: filtersColumn,
     };
 
     it('creates different visible columns based on Group Name provided', () => {

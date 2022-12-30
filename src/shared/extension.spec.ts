@@ -35,20 +35,20 @@ describe('Extension', () => {
         const logs = [
             { '_uri': 'uri1' },
             { '_uri': 'uri2' },
-            { '_uri': 'uri2' }
+            { '_uri': 'uri2' },
         ];
         it('removes the first occurrence of matching', () => {
             assert.deepStrictEqual(logs.removeFirst(log => log._uri === 'uri2'), {'_uri': 'uri2'});
             assert.deepStrictEqual(logs.map(log => log),[
                 {'_uri': 'uri1'},
-                {'_uri': 'uri2'}
+                {'_uri': 'uri2'},
             ]);
         });
         it('returns false no element match', () => {
             assert.strictEqual(logs.removeFirst(log => log._uri === 'uri5'), false);
             assert.deepStrictEqual(logs.map(log => log), [
                 {'_uri': 'uri1'},
-                {'_uri': 'uri2'}
+                {'_uri': 'uri2'},
             ]);
         });
         it('returns false when tries to remove from empty array', () => {

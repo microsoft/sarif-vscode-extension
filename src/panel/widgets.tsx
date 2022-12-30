@@ -234,13 +234,13 @@ export class ResizeHandle extends Component<{ size: IObservableValue<number>, ho
                 position: 'absolute', zIndex: 1,
                 cursor: 'col-resize',
                 right: -10, width: 20,
-                top: 0, bottom: 0
+                top: 0, bottom: 0,
             }
             : {
                 position: 'absolute', zIndex: 1,
                 cursor: 'row-resize',
                 bottom: -10, height: 20,
-                left: 0, right: 0
+                left: 0, right: 0,
             };
 
         return <div onMouseDown={this.onMouseDown} style={style}

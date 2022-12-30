@@ -55,7 +55,7 @@ export class Panel {
                 enableScripts: true,
                 localResourceRoots: [Uri.file('/'), ...'abcdefghijklmnopqrstuvwxyz'.split('').map(c => Uri.file(`${c}:`))],
                 retainContextWhenHidden: true,
-            }
+            },
         );
         this.panel.onDidDispose(() => this.panel = null);
 
@@ -166,7 +166,7 @@ export class Panel {
                     break;
                 }
                 default:
-                    throw new Error(`Unhandled command: ${message.command}`,);
+                    throw new Error(`Unhandled command: ${message.command}`);
             }
         }, undefined, context.subscriptions);
     }

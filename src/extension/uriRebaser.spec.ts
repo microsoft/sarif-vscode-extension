@@ -18,7 +18,7 @@ describe('baser', () => {
     it('Array.commonLength', () => {
         const commonLength = Array.commonLength(
             ['a', 'b', 'c'],
-            ['a', 'b', 'd']
+            ['a', 'b', 'd'],
         );
         assert.strictEqual(commonLength, 2);
     });
@@ -42,7 +42,7 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [artifactUri.file, artifactUri],
         ]);
 
         // Need to restructure product+test to better simulate the calculation distinctLocalNames.
@@ -65,7 +65,7 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [artifactUri.file, artifactUri],
         ]);
         const rebaser = new UriRebaser({ distinctArtifactNames });
         assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), localUri);
@@ -87,7 +87,7 @@ describe('baser', () => {
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
         const distinctArtifactNames = new Map([
-            ['file1.txt', artifactUri]
+            ['file1.txt', artifactUri],
         ]);
         const rebaser = new UriRebaser({ distinctArtifactNames });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
@@ -152,7 +152,7 @@ describe('baser', () => {
         });
         const pairs = [...UriRebaser.commonIndices(
             ['a', 'b', 'c'],
-            ['x', 'b', 'y', 'c', 'z', 'b']
+            ['x', 'b', 'y', 'c', 'z', 'b'],
         )];
         assert.deepStrictEqual(pairs, [[ 1, 1 ], [ 1, 5 ], [ 2, 3 ]]);
     });

@@ -71,7 +71,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
             },
         },
         {
-            providedCodeActionKinds: [CodeActionKind.QuickFix]
+            providedCodeActionKinds: [CodeActionKind.QuickFix],
         },
     ));
 }

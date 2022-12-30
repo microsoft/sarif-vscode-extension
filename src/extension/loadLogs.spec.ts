@@ -93,7 +93,7 @@ describe('loadLogs', () => {
         const runs = [{
             results: [{
                 suppressions: [{
-                    state: 'accepted'
+                    state: 'accepted',
                 }],
             }],
         }];

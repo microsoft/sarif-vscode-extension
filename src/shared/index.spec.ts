@@ -11,21 +11,21 @@ describe('augmentLog', () => {
         version: '2.1.0',
         runs: [{
             tool: {
-                driver: { name: 'Driver' }
+                driver: { name: 'Driver' },
             },
             results: [{
                 message: {
-                    text: 'Message 1'
+                    text: 'Message 1',
                 },
                 locations: [{
                     physicalLocation: {
                         artifactLocation: {
                             uri: '/folder/file.txt',
-                        }
-                    }
-                }]
-            }]
-        }]
+                        },
+                    },
+                }],
+            }],
+        }],
     } as Log;
     const result = log.runs![0].results![0];
     // Helper to visualize: console.log(JSON.stringify(result, null, '    '))
@@ -41,11 +41,11 @@ describe('augmentLog', () => {
         result.locations![0].physicalLocation!.artifactLocation!.index = 0;
         log.runs[0].artifacts = [{
             location: {
-                uri: '/folder/file.txt'
+                uri: '/folder/file.txt',
             },
             contents: {
-                text: 'abcdef'
-            }
+                text: 'abcdef',
+            },
         }];
 
         augmentLog(log);
@@ -54,10 +54,10 @@ describe('augmentLog', () => {
 
     it('is able to reuse driverless rule instances across runs', () => {
         const placeholderTool = {
-            driver: { name: 'Driver' }
+            driver: { name: 'Driver' },
         };
         const placeholderMessage = {
-            text: 'Message 1'
+            text: 'Message 1',
         };
         const run0result = {
             message: placeholderMessage,
@@ -71,13 +71,13 @@ describe('augmentLog', () => {
             runs: [
                 {
                     tool: placeholderTool,
-                    results: [run0result]
+                    results: [run0result],
                 },
                 {
                     tool: placeholderTool,
-                    results: [run1result]
-                }
-            ]
+                    results: [run1result],
+                },
+            ],
         } as Log;
 
         augmentLog(log, new Map<string, ReportingDescriptor>());
@@ -88,31 +88,31 @@ describe('augmentLog', () => {
 describe('effectiveLevel', () => {
     it(`treats non-'fail' results appropriately`, () => {
         let result = {
-            kind: 'informational'
+            kind: 'informational',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
 
         result = {
-            kind: 'notApplicable'
+            kind: 'notApplicable',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
 
         result = {
-            kind: 'pass'
+            kind: 'pass',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'note');
 
         result = {
-            kind: 'open'
+            kind: 'open',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'warning');
 
         result = {
-            kind: 'review'
+            kind: 'review',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'warning');
@@ -121,7 +121,7 @@ describe('effectiveLevel', () => {
     it (`treats 'fail' according to 'level'`, () => {
         const result = {
             kind: 'fail',
-            level: 'error'
+            level: 'error',
         } as Result;
 
         assert.strictEqual(effectiveLevel(result), 'error');
@@ -134,21 +134,21 @@ describe('effectiveLevel', () => {
                     rules: [
                         {
                             defaultConfiguration: {
-                                level: 'error'
-                            }
-                        }
-                    ]
-                }
+                                level: 'error',
+                            },
+                        },
+                    ],
+                },
             },
             results: [
                 {
-                    kind: 'fail'
+                    kind: 'fail',
                     // 'level' not specified.
                 },
                 {
                     // Neither 'kind' nor 'level' specified.
-                }
-            ]
+                },
+            ],
         } as Run;
 
         // Hook up each result to its rule.

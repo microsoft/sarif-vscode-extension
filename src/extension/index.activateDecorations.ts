@@ -20,7 +20,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
     const activeResultId = observable.box<string | undefined>();
 
     const decorationTypeCallout = window.createTextEditorDecorationType({
-        after: { color: new ThemeColor('problemsWarningIcon.foreground') }
+        after: { color: new ThemeColor('problemsWarningIcon.foreground') },
     });
     const decorationTypeHighlight = window.createTextEditorDecorationType({
         border: '1px',
@@ -45,7 +45,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
             // then manually figuring with diagnostics are at the caret. However `languages.registerCodeActionsProvider`
             // provides the diagnostics for free. The only odd part is that we always return [] when `provideCodeActions` is called.
             return [];
-        }
+        },
     }));
 
     // Update decorations on:
@@ -101,7 +101,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
                 const decorCallouts = rangesEnd.map((range, i) => ({
                     range,
                     hoverMessage: messages[i],
-                    renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
+                    renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}` } }, // ←
                 }));
                 editor.setDecorations(decorationTypeCallout, decorCallouts);
             }

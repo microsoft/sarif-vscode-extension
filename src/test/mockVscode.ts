@@ -19,7 +19,7 @@ global.vscode = {
     postMessage: async (message: any) => {
         // console.log(`wv2ex message: ${JSON.stringify(message)}`)
         await mockVscodeTestFacing.panel_onDidReceiveMessage?.(message);
-    }
+    },
 };
 
 export const mockVscodeTestFacing = {
@@ -56,9 +56,9 @@ export const mockVscode = {
     extensions: {
         getExtension: () => ({
             getAPI: () => ({
-                onDidChangeState: () => undefined
-            })
-        })
+                onDidChangeState: () => undefined,
+            }),
+        }),
     },
     languages: {
         createDiagnosticCollection: () => {},
@@ -79,7 +79,7 @@ export const mockVscode = {
     window: {
         createOutputChannel: () => ({}),
         createStatusBarItem: () => ({
-            show: () => {}
+            show: () => {},
         }),
         createTextEditorDecorationType: () => {},
         createWebviewPanel: () => {
@@ -94,7 +94,7 @@ export const mockVscode = {
                 const spliceLogsData = {
                     command: 'spliceLogs',
                     removed: [],
-                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }]
+                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }],
                 };
                 await mockVscodeTestFacing.store.onMessage({ data: spliceLogsData } as any);
             })();
@@ -127,7 +127,7 @@ export const mockVscode = {
             return editor;
         },
         visibleTextEditors: [],
-        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} })
+        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} }),
     },
     workspace: {
         onDidChangeConfiguration: () => {},
@@ -150,13 +150,13 @@ export const mockVscode = {
                         end: { line: 0, character: 2 },
                     },
                     firstNonWhitespaceCharacterIndex: 1,
-                })
+                }),
             };
         },
         findFiles: (include: string, _exclude?: string) => {
             if (include === '.sarif/**/*.sarif') {
                 return [
-                    Uri.parse('file:///.sarif/test.sarif')
+                    Uri.parse('file:///.sarif/test.sarif'),
                 ];
             }
             return [];

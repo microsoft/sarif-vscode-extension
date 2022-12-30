@@ -43,7 +43,7 @@ function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
     if (charOffset !== undefined) {
         return new Selection(
             doc.positionAt(charOffset),
-            doc.positionAt(charOffset + (region.charLength ?? 0))
+            doc.positionAt(charOffset + (region.charLength ?? 0)),
         );
     }
 
@@ -65,10 +65,10 @@ export function driftedRegionToSelection(diffBlocks: Change[], currentDoc: TextD
     return drift === undefined
         ? new Selection(
             currentDoc.positionAt(0),
-            currentDoc.positionAt(0)
+            currentDoc.positionAt(0),
         )
         : new Selection(
             currentDoc.positionAt(originalDoc.offsetAt(originalRange.start) + drift),
-            currentDoc.positionAt(originalDoc.offsetAt(originalRange.end)   + drift)
+            currentDoc.positionAt(originalDoc.offsetAt(originalRange.end)   + drift),
         );
 }

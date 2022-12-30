@@ -50,13 +50,13 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
                             repositories: [
                                 {
                                     rootUri: workspaceUri,
-                                    log: () => gitLog.map(hash => ({ hash }))
-                                }
-                            ]
-                        })
-                    }
+                                    log: () => gitLog.map(hash => ({ hash })),
+                                },
+                            ],
+                        }),
+                    },
                 }),
-            }
+            },
         },
         './loadLogs': {
             driverlessRules: new Map<string, ReportingDescriptor>(),
@@ -130,11 +130,11 @@ describe('interceptStore', () => {
     const analysisInfo = {
         'ids': [
             54017899,
-            51696264
+            51696264,
         ],
         'commit_sha': '7bd21f58079a6b35ccdba51a491f2362c204a165',
         'created_at': '2022-12-02T11:43:59Z',
-        'commitsAgo': 0
+        'commitsAgo': 0,
     };
 
     it('Reports updated', async () => {

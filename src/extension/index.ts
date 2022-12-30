@@ -133,7 +133,7 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
             }
             token.isCancellationRequested = true;
             return '';
-        }
+        },
     }));
 }
 

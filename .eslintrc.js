@@ -16,6 +16,13 @@ module.exports = {
                 "no-var": ERROR,
                 "prefer-const": ERROR,
 
+                "comma-dangle": [ERROR, {
+                    "arrays": "always-multiline",
+                    "objects": "always-multiline",
+                    "imports": "always-multiline",
+                    "exports": "always-multiline",
+                    "functions": "always-multiline", // Not includeded in the single-line config option.
+                }],
                 "eqeqeq": ERROR,
                 "filenames/match-regex": [ERROR, "^([a-z0-9]+)([A-Z][a-z0-9]+)*(\.(config|d|layouts|spec))?$"],
                 "header/header": [ERROR, "line", [

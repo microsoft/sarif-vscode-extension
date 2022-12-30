@@ -21,13 +21,13 @@ describe('activate', () => {
         const { activate } = proxyquire('.', {
             'chokidar': {
                 '@global': true,
-                watch: () => ({ on: () => {} })
+                watch: () => ({ on: () => {} }),
             },
             'fs': {
                 '@global': true,
                 readFileSync: () => {
                     return mockLogString;
-                }
+                },
             },
             'vscode': {
                 '@global': true,

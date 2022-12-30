@@ -44,10 +44,10 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
         const {filtersColumn} = this.filtersSource;
         const optionalColumnNames = Object.entries(filtersColumn.Columns)
             .filter(([_, state]) => state)
-            .map(([name, ]) => name);
+            .map(([name]) => name);
         return [
             ...this.columnsPermanent.filter(col => col.name !== this.groupName),
-            ...this.columnsOptional.filter(col => optionalColumnNames.includes(col.name))
+            ...this.columnsOptional.filter(col => optionalColumnNames.includes(col.name)),
         ];
     }
 
@@ -56,7 +56,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
         const {columns} = this;
         const mapToList = (record: Record<string, Visibility>) => Object.entries(record)
             .filter(([, value]) => value)
-            .map(([label,]) => label.toLowerCase());
+            .map(([label]) => label.toLowerCase());
 
         const levels = mapToList(filtersRow.Level);
         const baselines = mapToList(filtersRow.Baseline);
