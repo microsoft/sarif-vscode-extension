@@ -9,7 +9,7 @@ import * as React from 'react';
 import { Component, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Location, Result, StackFrame, ThreadFlowLocation } from 'sarif';
-import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
+import { parseArtifactLocation, parseLocation, toDisplayUri } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
@@ -86,7 +86,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                                                     </a>;
                                                                 }) ?? <span>—</span>}
                                                             </span>
-                            <span>Log</span>				<a href="#" title={decodeFileUri(result._log._uri)}
+                            <span>Log</span>				<a href="#" title={toDisplayUri(result._log._uri)}
                                                                 onClick={e => {
                                                                     e.preventDefault(); // Cancel # nav.
                                                                     postSelectLog(result);

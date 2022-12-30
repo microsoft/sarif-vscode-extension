@@ -215,7 +215,8 @@ export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, any
     return [uri, uriContents];
 }
 
-export function decodeFileUri(uriString: string) {
+// Renders a uri string, to a more common-accepted readable form.
+export function toDisplayUri(uriString: string) {
     const uri = URI.parse(uriString, false);
     if (uri.scheme === 'file') {
         return uri.fsPath;

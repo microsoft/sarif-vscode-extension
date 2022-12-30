@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { Log, ReportingDescriptor, Result, Run } from 'sarif';
-import { augmentLog, decodeFileUri, effectiveLevel } from '.';
+import { augmentLog, toDisplayUri, effectiveLevel } from '.';
 import './extension';
 
 describe('augmentLog', () => {
@@ -161,14 +161,14 @@ describe('effectiveLevel', () => {
     });
 });
 
-describe('decodeFileUri', () => {
+describe('toDisplayUri', () => {
     // Skipping while we fix this test for non-Win32 users.
     it.skip(`decodes the 'file' uri schemes`, () => {
         const originalUriString = 'file:///c%3A/Users/muraina/sarif-tutorials/samples/3-Beyond-basics/Results_2.sarif';
-        assert.strictEqual(decodeFileUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
+        assert.strictEqual(toDisplayUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
     });
     it(`returns just the authority for 'https' schemes`, () => {
-        assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com'), 'programmers.stackexchange.com');
+        assert.strictEqual(toDisplayUri('https://programmers.stackexchange.com'), 'programmers.stackexchange.com');
     });
 });
 
