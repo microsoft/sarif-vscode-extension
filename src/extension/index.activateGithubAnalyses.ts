@@ -129,16 +129,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onRefsHeadsChanged(repo, gitHeadPath, store);
-                    const analysisInfo = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => {
+                    const analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => {
                         progress.report({ message, increment: 20 });
                     });
-                    if (analysisInfo) {
+                    if (analysisInfos) {
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                         await panel.show();
-                        store.analysisInfos = analysisInfo;
+                        store.analysisInfos = analysisInfos;
                         beginWatch(repo);
                     }
-                    return !!analysisInfo;
+                    return !!analysisInfos;
                 });
 
                 if (!analysisFound) {
