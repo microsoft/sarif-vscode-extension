@@ -79,11 +79,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
 
-    const config = {
-        user: '',
-        repoName: '',
-    };
-
     (async () => {
         const git = await getInitializedGitApi();
         if (!git) return sendGithubEligibility('No Git api');
@@ -106,8 +101,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         })();
 
         if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
-        config.user = user;
-        config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
+        const config = {
+            user,
+            repoName: repoName.replace('.git', ''), // A repoName may optionally end with '.git'. Normalize it out.,
+        };
 
         // proccess.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
@@ -135,6 +132,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     if (analysisInfos) {
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'on');
                         await panel.show();
+                        beginReactions();
                         store.analysisInfos = analysisInfos;
                         beginWatch(repo);
                     }
@@ -160,8 +158,18 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             // so that the banner is visible.
             await panel.show();
             await onRefsHeadsChanged(repo, gitHeadPath, store);
+            beginReactions();
             store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
             beginWatch(repo);
+        }
+
+        function beginReactions() {
+            // TODO: Block re-entrancy.
+            interceptAnalysisInfo(store);
+            observe(store, 'analysisInfos', () => fetchAnalysis(store, config, panel));
+            observe(store, 'remoteAnalysisInfoUpdated', async () => {
+                store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+            });
         }
 
         function beginWatch(repo: Repository) {
@@ -188,13 +196,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.branch = branchName;
         store.commitHash = commitLocal.hash;
     }
-
-    // TODO: Block re-entrancy.
-    interceptAnalysisInfo(store);
-    observe(store, 'analysisInfos', () => fetchAnalysis(store, config, panel));
-    observe(store, 'remoteAnalysisInfoUpdated', async () => {
-        store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
-    });
 }
 
 export async function fetchAnalysisInfos(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
