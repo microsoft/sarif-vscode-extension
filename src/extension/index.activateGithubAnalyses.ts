@@ -5,25 +5,16 @@
 import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { intercept, IValueWillChange, observe } from 'mobx';
-import fetch, { FetchError } from 'node-fetch';
 import { Log } from 'sarif';
-import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
+import { Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
+import { AnalysisProviderGithub } from './analysisProviderGithub';
 import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
 import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
-
-// Subset of the GitHub API.
-interface AnalysisInfo {
-    id: number;
-    commit_sha: string;
-    created_at: string;
-    tool: { name: string };
-    results_count: number;
-}
 
 // A concise representation of AnalysisInfo[] aligned by commit.
 export interface AnalysisInfosForCommit {
@@ -101,10 +92,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         })();
 
         if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
-        const config = {
+        const provider = new AnalysisProviderGithub(
             user,
-            repoName: repoName.replace('.git', ''), // A repoName may optionally end with '.git'. Normalize it out.,
-        };
+            repoName.replace('.git', ''), // A repoName may optionally end with '.git'. Normalize it out.
+        );
 
         // proccess.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
@@ -126,7 +117,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onRefsHeadsChanged(repo, gitHeadPath, store);
-                    const analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => {
+                    const analysisInfos = await fetchAnalysisInfos(provider, store.branch, message => {
                         progress.report({ message, increment: 20 });
                     });
                     if (analysisInfos) {
@@ -159,16 +150,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             await panel.show();
             await onRefsHeadsChanged(repo, gitHeadPath, store);
             beginReactions();
-            store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+            store.analysisInfos = await fetchAnalysisInfos(provider, store.branch, message => store.banner = message);
             beginWatch(repo);
         }
 
         function beginReactions() {
             // TODO: Block re-entrancy.
             interceptAnalysisInfo(store);
-            observe(store, 'analysisInfos', () => fetchAnalysis(store, config, panel));
+            observe(store, 'analysisInfos', () => fetchAnalysis(store, provider, panel));
             observe(store, 'remoteAnalysisInfoUpdated', async () => {
-                store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+                store.analysisInfos = await fetchAnalysisInfos(provider, store.branch, message => store.banner = message);
             });
         }
 
@@ -178,7 +169,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             ], { ignoreInitial: true });
             watcher.on('all', async (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
                 await onRefsHeadsChanged(repo, gitHeadPath, store);
-                store.analysisInfos = await fetchAnalysisInfos(config.user, config.repoName, store.branch, message => store.banner = message);
+                store.analysisInfos = await fetchAnalysisInfos(provider, store.branch, message => store.banner = message);
             });
         }
     })();
@@ -198,108 +189,54 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     }
 }
 
-export async function fetchAnalysisInfos(owner: string, repo: string, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
-    try {
-        updateMessage('Checking GitHub Advanced Security...');
+export async function fetchAnalysisInfos(provider: AnalysisProviderGithub, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
+    const analyses = await provider.fetchAnalysisInfos(branch, updateMessage, output);
+    if (!analyses) {
+        return undefined; // Error messaging should have been handled by provider already.
+    }
 
-        // STEP 1: Auth
-        const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
-        const { accessToken } = session;
-        if (!accessToken) {
-            updateMessage('Unable to authenticate.');
-            return undefined;
-        }
-
-        // STEP 2: Fetch
-        // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
-        const analysesResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/code-scanning/analyses?ref=refs/heads/${branch}`, {
-            headers: {
-                authorization: `Bearer ${accessToken}`,
-            },
-        });
-
-        if (analysesResponse.status === 403) {
-            updateMessage('GitHub Advanced Security is not enabled for this repository.');
-            return undefined;
-        }
-
-        // STEP 3: Parse
-        const anyResponse = await analysesResponse.json();
-        if (anyResponse.message) {
-            // Sample message response:
-            // {
-            //     "message": "You are not authorized to read code scanning alerts.",
-            //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
-            // }
-            const messageResponse = anyResponse as { message: string, documentation_url: string };
-            updateMessage(messageResponse.message);
-            return undefined;
-        }
-
-        const analyses = anyResponse as AnalysisInfo[];
-
-        // Possibilities:
-        // a) analysis is not enabled for repo or branch.
-        // b) analysis is enabled, but pending first-ever run.
-        if (!analyses.length) {
-            updateMessage('Refresh to check for more current results.');
-            return undefined;
-        }
-        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
-        output?.appendLine(`Analyses:\n${analysesString}\n`);
-
-        // STEP 4: Cross-reference with Git
-        const git = await getInitializedGitApi();
-        if (!git) {
-            updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
-            return undefined;
-        }
-
-        // Find the intersection.
-        const commits = await getPrimaryRepository(git)?.log({}) ?? [];
-        const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
-        output?.appendLine(`Commits:\n${commitsString}\n`);
-        const intersectingCommit = analyses.find(analysis => {
-            return commits.some(commit => analysis.commit_sha === commit.hash);
-        })?.commit_sha;
-
-        if (!intersectingCommit) {
-            updateMessage('No intersecting commit.');
-            return undefined;
-        }
-
-        // STEP 5: Filter out duplicate tools.
-        // GitHub sorts analyses by most recent first.
-        const toolsSeen = new Set<string>();
-        const analysisInfos = analyses.filter(analysis => {
-            if (analysis.commit_sha !== intersectingCommit) return false;
-
-            // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
-            if (toolsSeen.has(analysis.tool.name)) return false;
-
-            toolsSeen.add(analysis.tool.name);
-            return true;
-        });
-        if (!analysisInfos.length) {
-            return undefined;
-        }
-
-        return {
-            ids: analysisInfos.map(info => info.id),
-            commit_sha: intersectingCommit,
-            created_at: analysisInfos?.[0].created_at, // `analysisInfos` is already ordered by most recent first.
-            commitsAgo: commits.findIndex(commit => commit.hash === intersectingCommit),
-        };
-
-    } catch (error) {
-        if (error instanceof FetchError) {
-            // Expected if the network is disabled.
-            // error.name: FetchError
-            // error.message: request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com
-            updateMessage('Network error. Refresh to try again.');
-        }
+    // Cross-reference with Git
+    const git = await getInitializedGitApi();
+    if (!git) {
+        updateMessage('Unable to initialize Git.'); // No GitExtension or GitExtension API.
         return undefined;
     }
+
+    // Find the intersection.
+    const commits = await getPrimaryRepository(git)?.log({}) ?? [];
+    const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
+    output?.appendLine(`Commits:\n${commitsString}\n`);
+    const intersectingCommit = analyses.find(analysis => {
+        return commits.some(commit => analysis.commit_sha === commit.hash);
+    })?.commit_sha;
+
+    if (!intersectingCommit) {
+        updateMessage('No intersecting commit.');
+        return undefined;
+    }
+
+    // Filter out duplicate tools.
+    // GitHub sorts analyses by most recent first.
+    const toolsSeen = new Set<string>();
+    const analysisInfos = analyses.filter(analysis => {
+        if (analysis.commit_sha !== intersectingCommit) return false;
+
+        // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
+        if (toolsSeen.has(analysis.tool.name)) return false;
+
+        toolsSeen.add(analysis.tool.name);
+        return true;
+    });
+    if (!analysisInfos.length) {
+        return undefined;
+    }
+
+    return {
+        ids: analysisInfos.map(info => info.id),
+        commit_sha: intersectingCommit,
+        created_at: analysisInfos?.[0].created_at, // `analysisInfos` is already ordered by most recent first.
+        commitsAgo: commits.findIndex(commit => commit.hash === intersectingCommit),
+    };
 }
 
 function setBannerResultsUpdated(store: Store, analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
@@ -343,37 +280,25 @@ export function interceptAnalysisInfo(store: Store) {
     });
 }
 
-async function fetchAnalysis(store: Store, config: { user: string, repoName: string }, panel: Panel): Promise<void> {
+async function fetchAnalysis(store: Store, provider: AnalysisProviderGithub, panel: Panel): Promise<void> {
     isSpinning.set(true);
-
-    const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
-    const { accessToken } = session; // Assume non-null as we already called it recently.
 
     const analysisInfo = store.analysisInfos;
     const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
         ? undefined
         : await (async () => {
             try {
-                const logs = [] as Log[];
-                for (const analysisId of analysisInfo.ids) {
-                    const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
-                    const analysisResponse = await fetch(uri, {
-                        headers: {
-                            accept: 'application/sarif+json',
-                            authorization: `Bearer ${accessToken}`,
-                        },
-                    });
-                    const logText = await analysisResponse.text();
+                const logInfos = await provider.fetchAnalysis(analysisInfo.ids);
+                return logInfos.map(logInfo => {
                     // Useful for saving/examining fetched logs:
-                    // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
-                    const log = JSON.parse(logText) as Log;
-                    log._text = logText;
-                    log._uri = uri;
+                    // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${logInfo.analysisId}.sarif`, logInfo.text);
+                    const log = JSON.parse(logInfo.text) as Log;
+                    log._text = logInfo.text;
+                    log._uri = logInfo.uri;
                     const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
                     augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
-                    logs.push(log);
-                }
-                return logs;
+                    return log;
+                });
             } catch (error) {
                 output?.append(`Error in fetchAnalysis: ${error}\n`);
                 return undefined;

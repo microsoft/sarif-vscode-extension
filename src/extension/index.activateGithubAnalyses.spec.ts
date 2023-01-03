@@ -19,26 +19,10 @@ const analysisInfoESLint1 = { id: 2, tool: { name: 'ESLint' }, commit_sha, creat
 const analysisInfoESLint2 = { id: 3, tool: { name: 'ESLint' }, commit_sha, created_at };
 
 const workspaceUri = '';
-function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, gitLog: string[] = []) {
+function proxyquireActivateGithubAnalyses(gitLog: string[] = []) {
     return proxyquire('./index.activateGithubAnalyses', {
-        'node-fetch': (() => {
-            const nodeFetch = async (/* url: string */) => {
-                if (typeof mockFetchResult === 'number') {
-                    return { status: mockFetchResult };
-                }
-                return {
-                    status: 200,
-                    json: async () => mockFetchResult,
-                };
-            };
-            nodeFetch.FetchError = FetchError;
-            return nodeFetch;
-        })(),
         'vscode': {
             '@noCallThru': true,
-            authentication: {
-                getSession: () => ({ accessToken: 'anyValue' }),
-            },
             workspace: {
                 workspaceFolders: [{ uri: workspaceUri }],
             },
@@ -58,6 +42,7 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
                 }),
             },
         },
+        './analysisProviderGithub': {},
         './loadLogs': {
             driverlessRules: new Map<string, ReportingDescriptor>(),
         },
@@ -73,54 +58,88 @@ function proxyquireActivateGithubAnalyses(mockFetchResult: number | unknown, git
     });
 }
 
+function proxyquireAnalysisProviderGithub(mockFetchResult: number | unknown) {
+    return proxyquire('./analysisProviderGithub', {
+        'node-fetch': (() => {
+            const nodeFetch = async (/* url: string */) => {
+                if (typeof mockFetchResult === 'number') {
+                    return { status: mockFetchResult };
+                }
+                return {
+                    status: 200,
+                    json: async () => mockFetchResult,
+                };
+            };
+            nodeFetch.FetchError = FetchError;
+            return nodeFetch;
+        })(),
+        'vscode': {
+            '@noCallThru': true,
+            authentication: {
+                getSession: () => ({ accessToken: 'anyValue' }),
+            },
+        },
+    });
+}
+
 describe('fetchAnalysisInfos', () => {
     it('handles GHAS not enabled', async () => {
-        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(403);
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses();
+        const { AnalysisProviderGithub } = proxyquireAnalysisProviderGithub(403);
+        const provider = new AnalysisProviderGithub('user', 'repoName');
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos(provider, 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'GitHub Advanced Security is not enabled for this repository.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles GHAS message', async () => {
-        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses({ message: 'You are not authorized to read code scanning alerts.' });
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses();
+        const { AnalysisProviderGithub } = proxyquireAnalysisProviderGithub({ message: 'You are not authorized to read code scanning alerts.' });
+        const provider = new AnalysisProviderGithub('user', 'repoName');
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos(provider, 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'You are not authorized to read code scanning alerts.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles analyses.length zero', async () => {
-        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses([]);
+        const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses();
+        const { AnalysisProviderGithub } = proxyquireAnalysisProviderGithub([]);
+        const provider = new AnalysisProviderGithub('user', 'repoName');
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos(provider, 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'Refresh to check for more current results.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles no intersecting commit', async () => {
         const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(
-            [ analysisInfoCodeQL1 ],
             ['f1f734698cd27d602d45a49cc8b755cc19b5ca1c'],
         );
+        const { AnalysisProviderGithub } = proxyquireAnalysisProviderGithub([ analysisInfoCodeQL1 ]);
+        const provider = new AnalysisProviderGithub('user', 'repoName');
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos(provider, 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'No intersecting commit.');
         assert.strictEqual(info, undefined);
     });
 
     it('handles no duplicate tools (also the common case)', async () => {
         const { fetchAnalysisInfos } = proxyquireActivateGithubAnalyses(
-            [ analysisInfoCodeQL1, analysisInfoCodeQL2, analysisInfoESLint1, analysisInfoESLint2 ],
             ['f1f734698cd27d602d45a49cc8b755cc19b5ca1c', '7bd21f58079a6b35ccdba51a491f2362c204a165'],
         );
+        const { AnalysisProviderGithub } = proxyquireAnalysisProviderGithub(
+            [ analysisInfoCodeQL1, analysisInfoCodeQL2, analysisInfoESLint1, analysisInfoESLint2 ],
+        );
+        const provider = new AnalysisProviderGithub('user', 'repoName');
 
         let lastMessage = '';
-        const info = await fetchAnalysisInfos('owner', 'repo', 'main', (message: string) => lastMessage = message);
+        const info = await fetchAnalysisInfos(provider, 'main', (message: string) => lastMessage = message);
         assert.strictEqual(lastMessage, 'Checking GitHub Advanced Security...');
         assert.strictEqual(info.ids.length, 2);
     });
@@ -139,7 +158,7 @@ describe('interceptStore', () => {
 
     it('Reports updated', async () => {
         const store = new Store();
-        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses();
         interceptAnalysisInfo(store);
         store.analysisInfos = analysisInfo;
         assert.strictEqual(store.banner, 'Updating...');
@@ -147,7 +166,7 @@ describe('interceptStore', () => {
 
     it('Reports unchanged', async () => {
         const store = new Store();
-        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses();
         interceptAnalysisInfo(store);
         store.analysisInfos = analysisInfo;
         store.analysisInfos = analysisInfo;
@@ -156,7 +175,7 @@ describe('interceptStore', () => {
 
     it('Reports not scanned', async () => {
         const store = new Store();
-        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses(403);
+        const { interceptAnalysisInfo } = proxyquireActivateGithubAnalyses();
         interceptAnalysisInfo(store);
         store.analysisInfos = undefined;
         assert.strictEqual(store.banner, 'This branch has not been scanned.');
