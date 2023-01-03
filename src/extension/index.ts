@@ -9,6 +9,7 @@ import { activateFixes } from './index.activateFixes';
 import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateGithubCommands } from './index.activateGithubCommands';
 import { loadLogs } from './loadLogs';
+import { outputChannel } from './outputChannel';
 import { Panel } from './panel';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { activateSarifStatusBarItem } from './statusBarItem';
@@ -26,8 +27,6 @@ export async function activate(context: ExtensionContext) {
     if (!isDebugOrTestMode) Telemetry.activate();
 
     const disposables = context.subscriptions;
-
-    const outputChannel = window.createOutputChannel('Sarif Viewer');
     disposables.push(outputChannel);
 
     Store.globalState = context.globalState;
@@ -46,13 +45,13 @@ export async function activate(context: ExtensionContext) {
 
     // General Activation
     activateSarifStatusBarItem(disposables);
-    activateDiagnostics(disposables, store, baser, outputChannel);
+    activateDiagnostics(disposables, store, baser);
     activateWatchDocuments(disposables, store, panel);
     activateDecorations(disposables, store);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, store, panel);
-    activateGithubAnalyses(disposables, store, panel, outputChannel);
-    activateGithubCommands(disposables, store, outputChannel);
+    activateGithubAnalyses(disposables, store, panel);
+    activateGithubCommands(disposables, store);
     activateFixes(disposables, store, baser);
 
     // Check for Updates

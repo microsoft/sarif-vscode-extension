@@ -6,11 +6,12 @@ import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { intercept, IValueWillChange, observe } from 'mobx';
 import { Log } from 'sarif';
-import { Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
+import { Disposable, extensions, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import { AnalysisProviderGithub } from './analysisProviderGithub';
 import { API, GitExtension, Repository } from './git';
 import { driverlessRules } from './loadLogs';
+import { outputChannel } from './outputChannel';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
@@ -25,8 +26,6 @@ export interface AnalysisInfosForCommit {
 }
 
 let currentLogUris: string[] | undefined = undefined;
-
-let output: OutputChannel | undefined;
 
 export async function getInitializedGitApi(): Promise<API | undefined> {
     return new Promise(resolve => {
@@ -57,9 +56,7 @@ export function getPrimaryRepository(git: API): Repository | undefined {
 
 export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
-export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
-    output = outputChannel;
-
+export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
         if (!e.affectsConfiguration('sarif-viewer.connectToGithubCodeScanning')) return;
         const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
@@ -190,7 +187,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 }
 
 export async function fetchAnalysisInfos(provider: AnalysisProviderGithub, branch: string, updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
-    const analyses = await provider.fetchAnalysisInfos(branch, updateMessage, output);
+    const analyses = await provider.fetchAnalysisInfos(branch, updateMessage);
     if (!analyses) {
         return undefined; // Error messaging should have been handled by provider already.
     }
@@ -205,7 +202,7 @@ export async function fetchAnalysisInfos(provider: AnalysisProviderGithub, branc
     // Find the intersection.
     const commits = await getPrimaryRepository(git)?.log({}) ?? [];
     const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
-    output?.appendLine(`Commits:\n${commitsString}\n`);
+    outputChannel.appendLine(`Commits:\n${commitsString}\n`);
     const intersectingCommit = analyses.find(analysis => {
         return commits.some(commit => analysis.commit_sha === commit.hash);
     })?.commit_sha;
@@ -300,7 +297,7 @@ async function fetchAnalysis(store: Store, provider: AnalysisProviderGithub, pan
                     return log;
                 });
             } catch (error) {
-                output?.append(`Error in fetchAnalysis: ${error}\n`);
+                outputChannel.append(`Error in fetchAnalysis: ${error}\n`);
                 return undefined;
             }
         })();

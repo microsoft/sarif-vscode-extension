@@ -3,14 +3,15 @@
 /* eslint-disable filenames/match-regex */
 
 import fetch, { Response } from 'node-fetch';
-import { authentication, commands, Disposable, OutputChannel } from 'vscode';
+import { authentication, commands, Disposable } from 'vscode';
 import { findResult, ResultId } from '../shared';
+import { outputChannel } from './outputChannel';
 import { Store } from './store';
 
 // As defined by https://docs.github.com/en/rest/code-scanning#update-a-code-scanning-alert
 type DismissedReason = 'false positive' | 'won\'t fix' | 'used in tests'
 
-export function activateGithubCommands(disposables: Disposable[], store: Store, outputChannel: OutputChannel) {
+export function activateGithubCommands(disposables: Disposable[], store: Store) {
     // Unfortunately, `resultId` is wrapped with a `context` object as a result of how VS Code Webview context menus work.
     async function dismissAlert(context: { resultId: string }, reason: DismissedReason) {
         const { resultId } = context;

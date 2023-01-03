@@ -46,6 +46,11 @@ function proxyquireActivateGithubAnalyses(gitLog: string[] = []) {
         './loadLogs': {
             driverlessRules: new Map<string, ReportingDescriptor>(),
         },
+        './outputChannel': {
+            outputChannel: {
+                appendLine: () => {},
+            },
+        },
         './statusBarItem': {
             isSpinning: observable.box(false),
         },
@@ -77,6 +82,11 @@ function proxyquireAnalysisProviderGithub(mockFetchResult: number | unknown) {
             '@noCallThru': true,
             authentication: {
                 getSession: () => ({ accessToken: 'anyValue' }),
+            },
+        },
+        './outputChannel': {
+            outputChannel: {
+                appendLine: () => {},
             },
         },
     });

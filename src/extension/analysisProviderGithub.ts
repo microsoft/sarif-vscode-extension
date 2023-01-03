@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 import fetch, { FetchError } from 'node-fetch';
-import { authentication, OutputChannel } from 'vscode';
+import { authentication } from 'vscode';
+import { outputChannel } from './outputChannel';
 
 type LogInfo = { analysisId: number, uri: string, text: string };
 
@@ -20,8 +21,7 @@ export class AnalysisProviderGithub {
 
     async fetchAnalysisInfos(
         branch: string,
-        updateMessage: (message: string) => void,
-        output: OutputChannel | undefined)
+        updateMessage: (message: string) => void)
         : Promise<AnalysisInfo[] | undefined> {
 
         try {
@@ -71,7 +71,7 @@ export class AnalysisProviderGithub {
                 return undefined;
             }
             const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
-            output?.appendLine(`Analyses:\n${analysesString}\n`);
+            outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
             return analyses;
         } catch (error) {

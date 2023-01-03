@@ -4,15 +4,16 @@
 
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
-import { DiagnosticSeverity, Disposable, languages, OutputChannel, TextDocument, workspace } from 'vscode';
+import { DiagnosticSeverity, Disposable, languages, TextDocument, workspace } from 'vscode';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
+import { outputChannel } from './outputChannel';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
 
-export function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser, outputChannel: OutputChannel) {
+export function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser) {
     const diagsAll = languages.createDiagnosticCollection('SARIF');
     disposables.push(diagsAll);
     const setDiags = async (doc: TextDocument) => {
