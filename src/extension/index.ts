@@ -9,7 +9,7 @@ import { activateFixes } from './index.activateFixes';
 import { activateGithubAnalyses } from './index.activateGithubAnalyses';
 import { activateGithubCommands } from './index.activateGithubCommands';
 import { loadLogs } from './loadLogs';
-import { outputChannel } from './outputChannel';
+// import { outputChannel } from './outputChannel';
 import { Panel } from './panel';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { activateSarifStatusBarItem } from './statusBarItem';
@@ -27,7 +27,7 @@ export async function activate(context: ExtensionContext) {
     if (!isDebugOrTestMode) Telemetry.activate();
 
     const disposables = context.subscriptions;
-    disposables.push(outputChannel);
+    // disposables.push(outputChannel); // Should be able to dispose here, but causes a hang during load.
 
     Store.globalState = context.globalState;
     disposables.push(commands.registerCommand('sarif.clearState', () => {
