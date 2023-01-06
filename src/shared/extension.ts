@@ -34,14 +34,14 @@ Object.defineProperty(Array, 'commonLength', {
         // eslint-disable-next-line no-empty
         for (; a[i] === b[i] && i < a.length && i < b.length; i++) {}
         return i;
-    }
+    },
 });
 
 !Array.prototype.hasOwnProperty('last') &&
 Object.defineProperty(Array.prototype, 'last', {
     get: function() {
         return this[this.length - 1];
-    }
+    },
 });
 
 !Array.prototype.hasOwnProperty('removeFirst') &&
@@ -49,7 +49,7 @@ Object.defineProperty(Array.prototype, 'removeFirst', {
     value: function(predicate: (item: any) => boolean) { // Unable to express (item: T) so using (item: any).
         const i = this.findIndex(predicate);
         return i >= 0 && this.splice(i, 1).pop();
-    }
+    },
 });
 
 Array.prototype.sortBy = function<T>(selector: Selector<T>, descending = false) {
@@ -68,12 +68,12 @@ Array.prototype.sortBy = function<T>(selector: Selector<T>, descending = false) 
 Object.defineProperty(String.prototype, 'file', {
     get: function() {
         return this.substring(this.lastIndexOf('/') + 1, this.length);
-    }
+    },
 });
 
 !String.prototype.hasOwnProperty('path') &&
 Object.defineProperty(String.prototype, 'path', {
     get: function() {
         return this.substring(0, this.lastIndexOf('/')).replace(/^\//g, '');
-    }
+    },
 });

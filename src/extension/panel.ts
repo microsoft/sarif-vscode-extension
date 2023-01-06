@@ -21,7 +21,7 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'disableSelectionSync' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
+        readonly store: Pick<Store, 'analysisInfos' | 'banner' | 'disableSelectionSync' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -56,7 +56,7 @@ export class Panel {
                 enableScripts: true,
                 localResourceRoots: [Uri.file('/'), ...'abcdefghijklmnopqrstuvwxyz'.split('').map(c => Uri.file(`${c}:`))],
                 retainContextWhenHidden: true,
-            }
+            },
         );
         this.panel.onDidDispose(() => this.panel = null);
 
@@ -167,7 +167,7 @@ export class Panel {
                     break;
                 }
                 default:
-                    throw new Error(`Unhandled command: ${message.command}`,);
+                    throw new Error(`Unhandled command: ${message.command}`);
             }
         }, undefined, context.subscriptions);
     }
@@ -193,7 +193,7 @@ export class Panel {
 
         if (region === undefined) return;
 
-        const originalDoc = await getOriginalDoc(this.store.analysisInfo?.commit_sha, currentDoc);
+        const originalDoc = await getOriginalDoc(this.store.analysisInfos?.commit_sha, currentDoc);
         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
         editor.selection = driftedRegionToSelection(diffBlocks, currentDoc, region, originalDoc);

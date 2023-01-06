@@ -48,7 +48,7 @@ function getHttpsProxyAgent() {
         port: port && +port,
         host: host,
         auth: auth,
-        secureProxy: workspace.getConfiguration().get('http.proxyStrictSSL', true)
+        secureProxy: workspace.getConfiguration().get('http.proxyStrictSSL', true),
     });
 }
 
@@ -110,7 +110,7 @@ export async function update() {
             await commands.executeCommand('workbench.extensions.installExtension', Uri.file(vsixFile));
             const response = await window.showInformationMessage(
                 `A new version of the SARIF Viewer (${release.tag_name}) has been installed. Reload to take affect.`,
-                'Reload now'
+                'Reload now',
             );
             if (response) {
                 await commands.executeCommand('workbench.action.reloadWindow');

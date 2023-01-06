@@ -104,7 +104,7 @@ interface TableProps<T, G> {
         const handlers = {
             ArrowUp: () => selection.set(rows[index - 1] ?? rows[index] ?? rows[0]),
             ArrowDown: () => selection.set(rows[index + 1] ?? rows[index]),
-            Escape: () => selection.set(undefined)
+            Escape: () => selection.set(undefined),
         } as Record<string, () => void>;
         const handler = handlers[e.key];
         if (handler) {

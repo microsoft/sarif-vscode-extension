@@ -10,12 +10,15 @@ import assert from 'assert';
 import { Result } from 'sarif';
 
 describe('ResultTableStore', () => {
-    const resultsSource = { results: log.runs![0].results! };
+    const resultsSource = {
+        results: log.runs![0].results!,
+        resultsFixed: [],
+    };
     const selection = observable.box<Row | undefined>(undefined);
     const filtersSource = {
         keywords: '',
         filtersRow: filtersRow,
-        filtersColumn: filtersColumn
+        filtersColumn: filtersColumn,
     };
 
     it('creates different visible columns based on Group Name provided', () => {

@@ -19,11 +19,15 @@ const proxyquire = require('proxyquire').noCallThru();
 describe('activate', () => {
     before(async () => {
         const { activate } = proxyquire('.', {
+            'chokidar': {
+                '@global': true,
+                watch: () => ({ on: () => {} }),
+            },
             'fs': {
                 '@global': true,
                 readFileSync: () => {
                     return mockLogString;
-                }
+                },
             },
             'vscode': {
                 '@global': true,
@@ -45,16 +49,16 @@ describe('activate', () => {
         });
         const result = mockVscodeTestFacing.store!.results[0]!;
         await postSelectArtifact(result, result.locations![0].physicalLocation);
-        assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
+        assert.deepStrictEqual(mockVscodeTestFacing.events.splice(0), [
             'showTextDocument file:///folder/file.txt',
-            `selection 0 1 0 ${Number.MAX_SAFE_INTEGER}`, // 1 = mock firstNonWhitespaceCharacterIndex.
+            `selection 0 1 0 2`, // 1 = mock firstNonWhitespaceCharacterIndex, 2 = mock line end.
         ]);
     });
 
     it('can postSelectLog', async () => {
         const result = mockVscodeTestFacing.store!.results[0];
         await postSelectLog(result);
-        assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
+        assert.deepStrictEqual(mockVscodeTestFacing.events.splice(0), [
             'showTextDocument file:///.sarif/test.sarif',
             'selection 9 7 25 8', // Location in mockLogString.
         ]);

@@ -18,7 +18,7 @@ describe('baser', () => {
     it('Array.commonLength', () => {
         const commonLength = Array.commonLength(
             ['a', 'b', 'c'],
-            ['a', 'b', 'd']
+            ['a', 'b', 'd'],
         );
         assert.strictEqual(commonLength, 2);
     });
@@ -42,12 +42,12 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [artifactUri.file, artifactUri],
         ]);
 
         // Need to restructure product+test to better simulate the calculation distinctLocalNames.
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames });
-        assert.strictEqual(rebaser.translateLocalToArtifact(localUri), artifactUri);
+        const rebaser = new UriRebaser({ distinctArtifactNames });
+        assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), artifactUri);
     });
 
     it('translates uris - local -> artifact - case-sensitive file system', async () => {
@@ -65,10 +65,10 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [artifactUri.file, artifactUri],
         ]);
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames });
-        assert.strictEqual(rebaser.translateLocalToArtifact(localUri), localUri);
+        const rebaser = new UriRebaser({ distinctArtifactNames });
+        assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), localUri);
     });
 
     it('Distinct 1', async () => {
@@ -78,6 +78,7 @@ describe('baser', () => {
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 workspace: {
+                    findFiles: () => [Uri.file('projects/project/file1.txt')],
                     textDocuments: [],
                 },
                 Uri,
@@ -85,13 +86,10 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
-        const distinctLocalNames = new Map([
-            ['file1.txt', localUri]
-        ]);
         const distinctArtifactNames = new Map([
-            ['file1.txt', artifactUri]
+            ['file1.txt', artifactUri],
         ]);
-        const rebaser = new UriRebaser(distinctLocalNames, { distinctArtifactNames });
+        const rebaser = new UriRebaser({ distinctArtifactNames });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri); // Should also match file1?
     });
@@ -108,6 +106,7 @@ describe('baser', () => {
                     showOpenDialog: async () => [Uri.parse(localUri)],
                 },
                 workspace: {
+                    findFiles: () => [],
                     textDocuments: [],
                 },
                 Uri,
@@ -115,7 +114,7 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
@@ -132,6 +131,7 @@ describe('baser', () => {
                     showOpenDialog: async () => [Uri.parse(localUri)],
                 },
                 workspace: {
+                    findFiles: () => [],
                     textDocuments: [],
                 },
                 Uri,
@@ -139,7 +139,7 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifact);
         assert.strictEqual(rebasedArtifactUri, localUri);
     });
@@ -152,7 +152,7 @@ describe('baser', () => {
         });
         const pairs = [...UriRebaser.commonIndices(
             ['a', 'b', 'c'],
-            ['x', 'b', 'y', 'c', 'z', 'b']
+            ['x', 'b', 'y', 'c', 'z', 'b'],
         )];
         assert.deepStrictEqual(pairs, [[ 1, 1 ], [ 1, 5 ], [ 2, 3 ]]);
     });
@@ -166,6 +166,7 @@ describe('baser', () => {
                     showInformationMessage: async (_message: string) => undefined,
                 },
                 workspace: {
+                    findFiles: () => [],
                     textDocuments: [],
                 },
                 Uri,
@@ -173,7 +174,7 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (_uri: string) => false,
         });
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, '');
     });
@@ -194,7 +195,7 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
         rebaser.uriBases = [uriBase];
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);
@@ -216,7 +217,7 @@ describe('baser', () => {
             './platformUriNormalize': platformUriNormalize,
             './uriExists': (uri: string) => uri.toString() === localUri,
         });
-        const rebaser = new UriRebaser(new Map(), { distinctArtifactNames: new Map() });
+        const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
         rebaser.uriBases = [uriBase];
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri, localUri);

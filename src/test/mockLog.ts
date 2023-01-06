@@ -7,11 +7,11 @@ export const log = {
     version: '2.1.0',
     runs: [{
         tool: {
-            driver: { name: 'Driver' }
+            driver: { name: 'Driver' },
         },
         results: [{
             message: {
-                text: 'Message 1'
+                text: 'Message 1',
             },
             locations: [{
                 physicalLocation: {
@@ -21,8 +21,8 @@ export const log = {
                     region: {
                         startLine: 1,
                     },
-                }
-            }]
-        }]
-    }]
+                },
+            }],
+        }],
+    }],
 } as Log;

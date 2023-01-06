@@ -12,7 +12,7 @@ import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
 
-export function activateFixes(disposables: Disposable[], store: Pick<Store, 'analysisInfo' | 'resultsFixed'>, baser: UriRebaser) {
+export function activateFixes(disposables: Disposable[], store: Pick<Store, 'analysisInfos' | 'resultsFixed'>, baser: UriRebaser) {
     disposables.push(languages.registerCodeActionsProvider('*',
         {
             provideCodeActions(_doc, _range, context) {
@@ -46,13 +46,13 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 if (fix) {
                     const edit = new WorkspaceEdit();
                     for (const artifactChange of fix.artifactChanges) {
-                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation);
+                        const [uri] = parseArtifactLocation(result, artifactChange.artifactLocation);
                         const artifactUri = uri;
                         if (!artifactUri) continue;
 
                         const localUri = await baser.translateArtifactToLocal(artifactUri);
                         const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
-                        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
+                        const originalDoc = await getOriginalDoc(store.analysisInfos?.commit_sha, currentDoc);
                         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
                         for (const replacement of artifactChange.replacements) {
@@ -71,7 +71,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
             },
         },
         {
-            providedCodeActionKinds: [CodeActionKind.QuickFix]
+            providedCodeActionKinds: [CodeActionKind.QuickFix],
         },
     ));
 }

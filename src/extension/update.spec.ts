@@ -22,34 +22,34 @@ const releases = [
                 'content_type': 'application/vsix',
                 'state': 'uploaded',
                 'size': 112615432,
-                'browser_download_url': 'https://github.com/microsoft/sarif-vscode-extension/releases/download/v3.2020.430009-insiders/MS-SarifVSCode.sarif-viewer.vsix'
-            }
-        ]
+                'browser_download_url': 'https://github.com/microsoft/sarif-vscode-extension/releases/download/v3.2020.430009-insiders/MS-SarifVSCode.sarif-viewer.vsix',
+            },
+        ],
     },
     {
         'tag_name': 'v3.0.0', // installedVersion
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25973815/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25973815/assets',
     },
     {
         'tag_name': 'v3.0.0-0',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25964127/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/25964127/assets',
     },
     {
         'tag_name': 'v2.15.0',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/19035869/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/19035869/assets',
     },
     {
         'tag_name': 'v2.0.1',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/11127038/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/11127038/assets',
     },
     {
         'tag_name': 'v2.0.0',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/11125442/assets'
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/11125442/assets',
     },
     {
         'tag_name': 'v1.0.0',
-        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/10719743/assets'
-    }
+        'assets_url': 'https://api.github.com/repos/microsoft/sarif-vscode-extension/releases/10719743/assets',
+    },
 ];
 
 const makeStubs = () => ({
@@ -57,16 +57,16 @@ const makeStubs = () => ({
         https: {
             get: (
                 _options: Record<string, unknown>,
-                callback?: (res: any) => void
+                callback?: (res: any) => void,
             ) => {
                 const listeners = {} as Record<string, any>;
                 callback?.({
                     statusCode: 200,
                     pipe: () => undefined,
-                    on: (event: string, listener: any) => listeners[event] = listener
+                    on: (event: string, listener: any) => listeners[event] = listener,
                 });
                 listeners['end']?.();
-            }
+            },
         },
     },
     'node-fetch': async (url: string) => {
@@ -76,19 +76,19 @@ const makeStubs = () => ({
     },
     'vscode': {
         commands: {
-            executeCommand: fake() // (command: string, ...rest: any[]) => undefined
+            executeCommand: fake(), // (command: string, ...rest: any[]) => undefined
         },
         extensions: {
-            getExtension: () => ({ packageJSON: { version: '3.0.0' } })
+            getExtension: () => ({ packageJSON: { version: '3.0.0' } }),
         },
         Uri: {
-            file: (path: string) => ({ path })
+            file: (path: string) => ({ path }),
         },
         window: {
-            showInformationMessage: async (_msg: string, ...items: string[]) => items[0]
+            showInformationMessage: async (_msg: string, ...items: string[]) => items[0],
         },
         workspace: {
-            getConfiguration: () => ({ get: () => 'Insiders' })
+            getConfiguration: () => ({ get: () => 'Insiders' }),
         },
     },
 });
@@ -143,7 +143,7 @@ describe('update', () => {
         const stubs = makeStubs();
         stubs['node-fetch'] = async () => ({
             status: 403,
-            statusText: 'rate limit exceeded'
+            statusText: 'rate limit exceeded',
         } as any);
         const { update } = proxyquire('./update', stubs);
         assert.strictEqual(await update(), false);
@@ -153,7 +153,7 @@ describe('update', () => {
         const stubs = makeStubs();
         stubs['follow-redirects'].https.get = (
             _options: Record<string, unknown>,
-            callback?: (res: any) => void
+            callback?: (res: any) => void,
         ) => {
             callback?.({ statusCode: 403 });
         };
@@ -164,7 +164,7 @@ describe('update', () => {
     it('gracefully handles download failure', async () => {
         const stubs = makeStubs();
         stubs['follow-redirects'].https.get = () => ({
-            on: (_event: 'error', listener: any) => listener()
+            on: (_event: 'error', listener: any) => listener(),
         });
         const { update } = proxyquire('./update', stubs);
         assert.strictEqual(await update(), false);

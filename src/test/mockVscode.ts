@@ -19,7 +19,7 @@ global.vscode = {
     postMessage: async (message: any) => {
         // console.log(`wv2ex message: ${JSON.stringify(message)}`)
         await mockVscodeTestFacing.panel_onDidReceiveMessage?.(message);
-    }
+    },
 };
 
 export const mockVscodeTestFacing = {
@@ -40,11 +40,25 @@ export const mockVscodeTestFacing = {
 
 export const mockVscode = {
     // Extension-facing
+    CodeAction: class {
+        constructor() {}
+    },
+    CodeActionKind: {
+        Empty: 0,
+        QuickFix: 1,
+    },
     commands: {
         registerCommand: () => {},
     },
     Diagnostic: class {
         constructor(readonly range: Range, readonly message: string, readonly severity?: DiagnosticSeverity) {}
+    },
+    extensions: {
+        getExtension: () => ({
+            getAPI: () => ({
+                onDidChangeState: () => undefined,
+            }),
+        }),
     },
     languages: {
         createDiagnosticCollection: () => {},
@@ -54,11 +68,19 @@ export const mockVscode = {
     Selection: class {
         constructor(readonly a: number, readonly b: number, readonly c: number, readonly d: number) {}
     },
+    StatusBarAlignment: {
+        Left: 1,
+        Right: 2,
+    },
     TextEditorRevealType: { InCenterIfOutsideViewport: 2 },
     ThemeColor: class {},
     Uri,
     ViewColumn: { Two: 2 },
     window: {
+        createOutputChannel: () => ({}),
+        createStatusBarItem: () => ({
+            show: () => {},
+        }),
         createTextEditorDecorationType: () => {},
         createWebviewPanel: () => {
             const defaultState = {
@@ -72,7 +94,7 @@ export const mockVscode = {
                 const spliceLogsData = {
                     command: 'spliceLogs',
                     removed: [],
-                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }]
+                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }],
                 };
                 await mockVscodeTestFacing.store.onMessage({ data: spliceLogsData } as any);
             })();
@@ -90,6 +112,7 @@ export const mockVscode = {
             };
         },
         onDidChangeTextEditorSelection: () => {},
+        onDidChangeVisibleTextEditors: () => {},
         showErrorMessage: (message: any) => console.error(`showErrorMessage: '${message}'`),
         showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
         showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult!.map(path => ({ path })),
@@ -104,12 +127,13 @@ export const mockVscode = {
             return editor;
         },
         visibleTextEditors: [],
-        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} })
+        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} }),
     },
     workspace: {
         onDidChangeConfiguration: () => {},
         getConfiguration: () => new Map(),
         onDidOpenTextDocument: () => {},
+        onDidChangeTextDocument: () => {},
         onDidCloseTextDocument: () => {},
         fs: {
             stat: async (uri: Uri) => {
@@ -126,13 +150,13 @@ export const mockVscode = {
                         end: { line: 0, character: 2 },
                     },
                     firstNonWhitespaceCharacterIndex: 1,
-                })
+                }),
             };
         },
         findFiles: (include: string, _exclude?: string) => {
             if (include === '.sarif/**/*.sarif') {
                 return [
-                    Uri.parse('file:///.sarif/test.sarif')
+                    Uri.parse('file:///.sarif/test.sarif'),
                 ];
             }
             return [];
