@@ -1,11 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Uri, window, workspace } from 'vscode';
+import { Uri, window, workspace, ConfigurationTarget } from 'vscode';
 import '../shared/extension';
 import platformUriNormalize from './platformUriNormalize';
 import { Store } from './store';
 import uriExists from './uriExists';
+import { VersionControlDetails } from 'sarif';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import fetch from 'node-fetch';
 
 /**
  * Splits a URI into path segments. Scheme+authority considered a "segment" for practical purposes.
@@ -72,8 +77,11 @@ export class UriRebaser {
         return this.validatedUrisLocalToArtifact.get(localUri) ?? localUri;
     }
 
+    private extensionName = 'sarif-viewer'
+    private trustedSourceSitesConfigSection = 'trustedSourceSites';
+    private trustedSites = workspace.getConfiguration(this.extensionName).get<string[]>(this.trustedSourceSitesConfigSection, []);
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
-    public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
+    public async translateArtifactToLocal(artifactUri: string, versionControlProvenance?: VersionControlDetails[]) { // Retval is validated.
         if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
         const validateUri = async () => {
             // Cache
@@ -131,6 +139,75 @@ export class UriRebaser {
 
         let validatedUri = await validateUri();
         if (!validatedUri && !this.activeInfoMessages.has(artifactUri)) {
+            // download from internet by changeset
+            if (versionControlProvenance !== undefined) {
+                let url = new URL(`${versionControlProvenance[0].repositoryUri}/${versionControlProvenance[0].revisionId}/${artifactUri.startsWith('file://') ? artifactUri.substring(7) : artifactUri}`);
+                if (url.hostname === 'github.com') {
+                    url.hostname = 'raw.githubusercontent.com';
+                }
+
+                // check for path traversal
+                const root = os.tmpdir().endsWith(path.sep) ? os.tmpdir() : `${os.tmpdir()}${path.sep}`;
+                let fileName = path.join(root, url.pathname).normalize();
+                if (!fileName.startsWith(root))
+                    return '';
+
+                if (await uriExists(fileName))
+                    return `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+
+                if (url.protocol === 'https:') {
+                    let choice: string | undefined = 'Yes';
+                    // check if user marked this site as trusted to download always
+                    if (!this.trustedSites.includes(url.hostname)) {
+                        this.activeInfoMessages.add(artifactUri);
+                        choice = await window.showInformationMessage(
+                            `Do you want to download the source file from this location?\n${url}`,
+                            'Yes',
+                            'No',
+                            `Always from ${url.hostname}`
+                        );
+                        this.activeInfoMessages.delete(artifactUri);
+                    }
+                    // save the user preference to settings
+                    if (choice === `Always from ${url.hostname}`) {
+                        this.trustedSites.push(url.hostname);
+                        workspace.getConfiguration(this.extensionName)
+                                 .update(this.trustedSourceSitesConfigSection, this.trustedSites, ConfigurationTarget.Global);
+                    }
+                    // download the file
+                    if (choice === 'Yes' || choice === `Always from ${url.hostname}`) {
+                        const mkdirRecursive = async (dir: string) => {
+                            return new Promise((resolve, reject) => {
+                              fs.mkdir(dir, { recursive: true }, (error) => {
+                                if (error) {
+                                  reject(error);
+                                } else {
+                                  resolve(undefined);
+                                }
+                              });
+                            });
+                          }
+
+                        try {
+                            const response = await fetch(url);
+                            const buffer = await response.buffer();
+                            const dir = path.dirname(fileName);
+                            await mkdirRecursive(dir);
+                            await fs.promises.writeFile(fileName, buffer);
+
+                            const partsOld = splitUri(artifactUri);
+                            const partsNew = splitUri(`file:\/\/${fileName.replace(/\\/g, '/')}`);
+                            this.updateBases(partsOld, partsNew);
+                            return `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+                        }
+                        catch (error : any) {
+                            await window.showErrorMessage(error.toString());
+                            // continue with file open dialog
+                        }
+                    }
+                }
+            }
+
             this.activeInfoMessages.add(artifactUri);
             const choice = await window.showInformationMessage(`Unable to find '${artifactUri.file}'`, 'Locate...');
             this.activeInfoMessages.delete(artifactUri);
