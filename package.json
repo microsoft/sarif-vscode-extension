@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.3",
+    "version": "3.3.4",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -122,15 +122,15 @@
             "webview/context": [
                 {
                     "command": "sarif.alertDismissFalsePositive",
-                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                    "when": "webviewId == 'sarif' && webviewSection == 'isGithubAlert'"
                 },
                 {
                     "command": "sarif.alertDismissUsedInTests",
-                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                    "when": "webviewId == 'sarif' && webviewSection == 'isGithubAlert'"
                 },
                 {
                     "command": "sarif.alertDismissWontFix",
-                    "when": "webviewId == 'sarif' && webviewSection == 'tableRow'"
+                    "when": "webviewId == 'sarif' && webviewSection == 'isGithubAlert'"
                 }
             ]
         }
