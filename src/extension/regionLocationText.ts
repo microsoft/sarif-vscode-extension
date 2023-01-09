@@ -11,6 +11,7 @@ export function renderRegionLocationText(region: Region | undefined) {
     const endValues = [ startColumn ?? 1, charLength, byteLength ];
     let start, end;
 
+    // Find the first valid start value from the prioritized list.
     for (var i = 0; i < startValues.length; i++) {
         if (startValues[i] !== undefined) {
             start = startValues[i];
