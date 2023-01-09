@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
@@ -67,19 +68,41 @@ export async function activate(context: ExtensionContext) {
         update();
     }
 
+    // For now, we keep file watch functionality limited to the API.
+    // After we're sure it's working well, consider also enabling it for files opened manually.
+    // FIXME: Possible race condition if a file is changed multiple times in quick succession.
+    // 1. First change event fires (denoted as [1]).
+    // 2. [1] Log is removed from the store.
+    // 3. Second change event fires (denoted as [2]).
+    // 4. [2] Log is removed from the store (returns false as it's already been removed).
+    // 5. [1] Log is re-loaded and added to the store.
+    // 6. [2] Log is re-loaded and added (again!) to the store.
+    const watcher = watch([], {
+        ignoreInitial: true
+    }).on('change', async path => {
+        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+        store.logs.push(...await loadLogs([Uri.file(path)]));
+    }).on('unlink', path => {
+        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+    });
+    disposables.push(new Disposable(async () => await watcher.close()));
+
     // API
     const api = {
         async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+            watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
             if (cancellationToken?.isCancellationRequested) return;
             if (store.results.length) panel.show();
         },
         async closeLogs(logs: Uri[]) {
+            watcher.unwatch(logs.map(log => log.fsPath));
             for (const uri of logs) {
                 store.logs.removeFirst(log => log._uri === uri.toString());
             }
         },
         async closeAllLogs() {
+            watcher.unwatch('**/*');
             store.logs.splice(0);
         },
         get uriBases() {
@@ -184,13 +207,13 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
             if (contents?.rendered?.text) return contents?.rendered?.text;
             if (contents?.text) return contents?.text;
             if (contents?.binary) {
-                const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g) ?? [];
-                return lines.reduce((sum, line, i) => {
+                const lines = Buffer.from(contents?.binary, 'base64').toString('hex').match(/.{1,32}/g);
+                return lines?.reduce((sum, line, i) => {
                     const lineNo = ((i + 128) * 16).toString(16).toUpperCase().padStart(8, '0');
                     // eslint-disable-next-line no-control-regex
                     const preview = Buffer.from(line, 'hex').toString('utf8').replace(/(\x09|\x0A|\x0B|\x0C|\x0D|\x1B)/g, '?');
                     return `${sum}${lineNo}  ${line.toUpperCase().match(/.{1,2}/g)?.join(' ')}  ${preview}\n`;
-                }, '');
+                }, '') ?? '';
             }
             token.isCancellationRequested = true;
             return '';
