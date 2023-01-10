@@ -112,9 +112,6 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 if (matchHTTPS) return matchHTTPS;
 
                 // Example: git@github.com:user/repoName.git
-
-                // using gitHubCodeScanningEndpoint to match the endpoint used by the GitHub Code Scanning API
-
                 const matchSSH = origin.match(new RegExp(`git@${endpoint.replace('https://', '')}:([^/]+)/([^/]+)`));
                 if (matchSSH) return matchSSH;
             }
