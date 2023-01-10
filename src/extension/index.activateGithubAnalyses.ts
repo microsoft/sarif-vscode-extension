@@ -15,7 +15,7 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
-import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
+import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound, sendGithubEndpointChanged } from './telemetry';
 
 // Subset of the GitHub API.
 interface AnalysisInfo {
@@ -65,8 +65,14 @@ export function getPrimaryRepository(git: API): Repository | undefined {
 
 export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
 
+export type GitHubCodeScanningEndpoint = 'https://api.github.com';
+
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('sarif-viewer.githubCodeScanningEndpoint')) {
+            const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint');
+            sendGithubEndpointChanged(gitHubCodeScanningEndpoint === 'https://api.github.com' ? 'default' : 'true');
+        }
         if (!e.affectsConfiguration('sarif-viewer.connectToGithubCodeScanning')) return;
         const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
         sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
@@ -75,6 +81,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     // See configurations comments at the bottom of this file.
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
+
+    const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
 
     const config = {
         user: '',
@@ -92,12 +100,24 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         const [, user, repoName] = (() => {
             // Example: https:/github.com/user/repoName.git
-            const matchHTTPS = origin.match(/https:\/\/github\.com\/([^/]+)\/([^/]+)/);
-            if (matchHTTPS) return matchHTTPS;
 
-            // Example: git@github.com:user/repoName.git
-            const matchSSH = origin.match(/git@github\.com:([^/]+)\/([^/]+)/);
-            if (matchSSH) return matchSSH;
+            // Try githubCodeScanningEndpoint first, then try it without a "api." prefix.
+            // This is to support GitHub Enterprise Server, which may have a different endpoint.
+
+            const endpoints = [gitHubCodeScanningEndpoint, gitHubCodeScanningEndpoint.replace('api.', '')];
+
+            for (const endpoint of endpoints) {
+                // using gitHubCodeScanningEndpoint to match the endpoint used by the GitHub Code Scanning API
+                const matchHTTPS = origin.match(new RegExp(`${endpoint}/([^/]+)/([^/]+)`));
+                if (matchHTTPS) return matchHTTPS;
+
+                // Example: git@github.com:user/repoName.git
+
+                // using gitHubCodeScanningEndpoint to match the endpoint used by the GitHub Code Scanning API
+
+                const matchSSH = origin.match(new RegExp(`git@${endpoint.replace('https://', '')}:([^/]+)/([^/]+)`));
+                if (matchSSH) return matchSSH;
+            }
 
             return [];
         })();
@@ -106,7 +126,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
 
-        // proccess.cwd() returns '/'
+        // process.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
         if (!workspacePath) return sendGithubEligibility('No workspace');
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
@@ -191,6 +211,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     async function fetchAnalysisInfo(updateMessage: (message: string) => void): Promise<AnalysisInfosForCommit | undefined> {
         updateMessage('Checking GitHub Advanced Security...');
 
+        const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
+
         // STEP 1: Auth
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
@@ -204,7 +226,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         let analysesResponse: Response | undefined;
         try {
             // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
-            analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
+            analysesResponse = await fetch(`${gitHubCodeScanningEndpoint}/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
                 headers: {
                     authorization: `Bearer ${accessToken}`,
                 },
@@ -321,6 +343,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     async function fetchAnalysis(analysisInfo: AnalysisInfosForCommit | undefined): Promise<void> {
         isSpinning.set(true);
 
+        const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
+
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
@@ -330,7 +354,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 try {
                     const logs = [] as Log[];
                     for (const analysisId of analysisInfo.ids) {
-                        const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
+                        const uri = `${gitHubCodeScanningEndpoint}/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
                         const analysisResponse = await fetch(uri, {
                             headers: {
                                 accept: 'application/sarif+json',

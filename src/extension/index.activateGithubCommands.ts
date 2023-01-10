@@ -3,8 +3,9 @@
 /* eslint-disable filenames/match-regex */
 
 import fetch, { Response } from 'node-fetch';
-import { authentication, commands, Disposable, OutputChannel } from 'vscode';
+import { authentication, commands, Disposable, OutputChannel, workspace } from 'vscode';
 import { findResult, ResultId } from '../shared';
+import { GitHubCodeScanningEndpoint } from './index.activateGithubAnalyses';
 import { Store } from './store';
 
 // As defined by https://docs.github.com/en/rest/code-scanning#update-a-code-scanning-alert
@@ -21,7 +22,10 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
         const alertNumber = result.properties?.['github/alertNumber'];
         if (!logUri || alertNumber === undefined) return;
 
-        const [, ownerAndRepo] = logUri.match(/https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+\/code-scanning)\/analyses\/\d+/) ?? [];
+        const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint');
+
+        const [, ownerAndRepo] = logUri.match(new RegExp(`^${gitHubCodeScanningEndpoint}/repos/([^/]+/[^/]+/code-scanning)/analyses/\\d+$`)) ?? [];
+
         if (!ownerAndRepo) return;
 
         // API: https://docs.github.com/en/rest/code-scanning#update-a-code-scanning-alert
@@ -32,7 +36,7 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
         });
 
         if (!response) {
-            outputChannel.appendLine('No reponse');
+            outputChannel.appendLine('No response');
             return;
         }
 
@@ -53,13 +57,16 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
 
 // `api` does not include leading slash.
 async function callGithubRepos(api: string, body: Record<string, string> | undefined): Promise<Response | undefined> {
+    const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
+
     const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+
     const { accessToken } = session;
     if (!accessToken) return undefined;
 
     try {
         // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
-        return await fetch(`https://api.github.com/repos/${api}`, {
+        return await fetch(`${gitHubCodeScanningEndpoint}/repos/${api}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'

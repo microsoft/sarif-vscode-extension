@@ -47,6 +47,11 @@
                     "type": "boolean",
                     "default": true
                 },
+                "sarif-viewer.githubCodeScanningEndpoint": {
+                    "description": "The GitHub Endpoint to connect to for code scanning results. This can be modified to connect to GitHub Enterprise instances.",
+                    "type": "string",
+                    "default": "https://api.github.com"
+                },
                 "sarif-viewer.connectToGithubCodeScanning": {
                     "description": "Connect to GitHub and display any code scanning results. Setting takes effect on editor restart.",
                     "type": "string",

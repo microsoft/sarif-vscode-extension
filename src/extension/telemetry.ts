@@ -34,3 +34,7 @@ export function sendGithubAnalysisFound(value: string) {
 export function sendGithubConfig(value: string) {
     reporter?.sendTelemetryEvent('githubConfig', { value });
 }
+
+export function sendGithubEndpointChanged(value: string) {
+    reporter?.sendTelemetryEvent('githubEndpointChanged', { value });
+}
