@@ -214,7 +214,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
 
         // STEP 1: Auth
-        const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+        const session = await authentication.getSession(gitHubCodeScanningEndpoint === 'https://api.github.com' ? 'github' : 'github-enterprise', ['security_events'], { createIfNone: true });
         const { accessToken } = session;
         if (!accessToken) {
             updateMessage('Unable to authenticate.');
@@ -345,7 +345,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
 
-        const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+        const session = await authentication.getSession(gitHubCodeScanningEndpoint === 'https://api.github.com' ? 'github' : 'github-enterprise', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
         const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.

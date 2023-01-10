@@ -59,7 +59,7 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
 async function callGithubRepos(api: string, body: Record<string, string> | undefined): Promise<Response | undefined> {
     const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
 
-    const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
+    const session = await authentication.getSession(gitHubCodeScanningEndpoint === 'https://api.github.com' ? 'github' : 'github-enterprise', ['security_events'], { createIfNone: true });
 
     const { accessToken } = session;
     if (!accessToken) return undefined;
