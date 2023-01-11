@@ -9,7 +9,7 @@ import { renderMessageTextWithEmbeddedLinks } from './widgets';
 import { ResultTableStore } from './resultTableStore';
 import { Table } from './table';
 import { Column } from './tableStore';
-import { renderRegionLocationText } from '../extension/regionLocationText';
+import { renderRegionLocationText } from './regionLocationText';
 
 const levelToIcon = {
     error: 'error',
