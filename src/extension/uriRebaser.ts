@@ -148,12 +148,14 @@ export class UriRebaser {
 
                 // check for path traversal
                 const root = os.tmpdir().endsWith(path.sep) ? os.tmpdir() : `${os.tmpdir()}${path.sep}`;
-                let fileName = path.join(root, url.pathname).normalize();
+                const fileName = path.join(root, url.pathname).normalize();
                 if (!fileName.startsWith(root))
                     return '';
 
-                if (await uriExists(fileName))
-                    return `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+                const fileUrl = `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+                // check if the file was already downloaded
+                if (await uriExists(fileUrl))
+                    return fileUrl;
 
                 if (url.protocol === 'https:') {
                     let choice: string | undefined = 'Yes';
@@ -198,7 +200,7 @@ export class UriRebaser {
                             const partsOld = splitUri(artifactUri);
                             const partsNew = splitUri(`file:\/\/${fileName.replace(/\\/g, '/')}`);
                             this.updateBases(partsOld, partsNew);
-                            return `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+                            return fileUrl;
                         }
                         catch (error : any) {
                             await window.showErrorMessage(error.toString());
