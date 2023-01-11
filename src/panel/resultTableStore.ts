@@ -6,7 +6,7 @@ import { Result } from 'sarif';
 import { Visibility } from '../shared';
 import { IndexStore } from './indexStore';
 import { Column, Row, TableStore } from './tableStore';
-import { renderRegionLocationText } from '../extension/regionLocationText';
+import { renderRegionLocationText } from './regionLocationText';
 
 export class ResultTableStore<G> extends TableStore<Result, G> {
     constructor(
