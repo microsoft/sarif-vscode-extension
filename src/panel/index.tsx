@@ -16,6 +16,7 @@ import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
 import { decodeFileUri } from '../shared';
+import { downloadLog } from '../extension/loadLogs';
 
 export { React };
 export * as ReactDOM from 'react-dom';
@@ -29,6 +30,7 @@ export { DetailsLayouts } from './details.layouts';
     render() {
         const {store} = this.props;
         const {banner} = store;
+        const inputRef = React.createRef<HTMLInputElement>();
 
         const bannerElement = banner && <div className="svBanner">
             <Icon name="info" />
@@ -107,6 +109,14 @@ export { DetailsLayouts } from './details.layouts';
                                         onClick={() => vscode.postMessage({ command: 'closeLog', uri: log._uri })} />
                                 </div>;
                             })}
+                        </div>
+                    </Tab>
+                    <Tab name={store.tabs[3]}>
+                        <div className="svDownloadPane">
+                            <input type="text" className="svTextInput" ref={inputRef} value={'https://sarif.file.core.windows.net/sarif-testdata/ghazdo.codeql.sarif'} />
+                            <div className="svButton" onClick={() => downloadLog(inputRef.current?.value)}>
+                                Download log
+                            </div>
                         </div>
                     </Tab>
                 </TabPanel>

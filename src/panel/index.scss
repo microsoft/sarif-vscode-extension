@@ -167,6 +167,16 @@ mark {
     }
 }
 
+.svDownloadPane {
+    display: inline-flex;
+    gap: 6px;
+    margin: 20px;
+}
+
+.svTextInput {
+    width: 500px;
+}
+
 .svResizer {
     flex: 0 0 auto;
     background-color: var(--vscode-editorGroup-border);

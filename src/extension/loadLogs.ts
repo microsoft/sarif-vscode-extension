@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 /// <reference path="jsonSourceMap.d.ts" />
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { Log, ReportingDescriptor } from 'sarif';
 import { eq, gt, lt } from 'semver';
 import { Uri, window, workspace } from 'vscode';
@@ -53,6 +53,16 @@ export async function loadLogs(uris: Uri[], token?: { isCancellationRequested: b
         window.showWarningMessage('Some log versions are newer than this extension.');
     }
     return logsSupported;
+}
+        
+export async function downloadLog(url: string | undefined) {
+    if (url) {
+        const response = await fetch(url);
+
+        if (response.status === 200) {
+            writeFileSync(`${vscode.workspace.workspaceFolders?.[0]?.uri.fsPath}/.sarif/${url.substring(url.lastIndexOf('/')+1)}`, response.json());
+        }
+    }
 }
 
 export function normalizeSchema(schema: string): string {
