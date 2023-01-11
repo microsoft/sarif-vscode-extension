@@ -13,6 +13,10 @@ import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import fetch from 'node-fetch';
+import { tmpNameSync } from 'tmp';
+import { promisify } from 'util';
+import { pipeline } from 'stream';
 
 export class Panel {
     private title = 'SARIF Result'
@@ -112,6 +116,25 @@ export class Panel {
                     });
                     if (!uris) return;
                     store.logs.push(...await loadLogs(uris));
+                    break;
+                }
+                case 'downloadLog': {
+                    if (message.url) {
+                        try {
+                            const response = await fetch(message.url, {
+                                headers: { 'User-Agent': 'microsoft.sarif-viewer' },
+                            });
+                            
+                            if (response.ok) {
+                                const streamPipeline = promisify(pipeline);
+                                const tempFilePath = tmpNameSync({ postfix: '.sarif' });
+                                await streamPipeline(response.body, fs.createWriteStream(tempFilePath));
+                                store.logs.push(...await loadLogs([Uri.file(tempFilePath)]));
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }
                     break;
                 }
                 case 'closeLog': {

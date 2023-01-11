@@ -16,7 +16,6 @@ import { ResultTable } from './resultTable';
 import { RowItem } from './tableStore';
 import { Checkrow, Icon, Popover, ResizeHandle, Tab, TabPanel } from './widgets';
 import { decodeFileUri } from '../shared';
-import { downloadLog } from '../extension/loadLogs';
 
 export { React };
 export * as ReactDOM from 'react-dom';
@@ -113,8 +112,8 @@ export { DetailsLayouts } from './details.layouts';
                     </Tab>
                     <Tab name={store.tabs[3]}>
                         <div className="svDownloadPane">
-                            <input type="text" className="svTextInput" ref={inputRef} value={'https://sarif.file.core.windows.net/sarif-testdata/ghazdo.codeql.sarif'} />
-                            <div className="svButton" onClick={() => downloadLog(inputRef.current?.value)}>
+                            <input type="text" className="svTextInput" ref={inputRef} value={'https://sarifpublic.blob.core.windows.net/test-data/ghazdo.codeql.sarif'} />
+                            <div className="svButton" onClick={() => vscode.postMessage({ command: 'downloadLog', url: inputRef.current?.value })}>
                                 Download log
                             </div>
                         </div>
