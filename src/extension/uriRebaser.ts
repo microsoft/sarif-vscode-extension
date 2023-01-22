@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Uri, window, workspace } from 'vscode';
+import { FileType, Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import platformUriNormalize from './platformUriNormalize';
 import { Store } from './store';
@@ -75,6 +75,26 @@ export class UriRebaser {
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
     public async translateArtifactToLocal(artifactUri: string) { // Retval is validated.
         if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
+        const recursiveMapping = async (maximumRecursionDepth:number, tempBase: string, artifactUri:string ): Promise<string[]> => {
+            if (maximumRecursionDepth == 0) {
+                return [];
+            } else {
+                let returnList = [] as string[];
+                let tempLocalUri = tempBase + "/" +splitUri(artifactUri).slice(1).join('/');
+                if (await uriExists(tempLocalUri)) {
+                    returnList.push(tempLocalUri);
+                    return returnList; // premature return to reduce time execution, comment this line to receive all qualified URIs 
+                }
+                for (const [name, type] of await workspace.fs.readDirectory(Uri.parse(tempBase))) {
+                    if (type == FileType.Directory){
+                        const subLstReturn = await recursiveMapping(maximumRecursionDepth-1, tempBase + "/" + name, artifactUri);
+                        returnList = returnList.concat(subLstReturn);
+                        if (returnList.length) return returnList; // premature return to reduce time execution, comment this line to receive all qualified URIs 
+                    }
+                }
+                return returnList;
+            }
+        }
         const validateUri = async () => {
             // Cache
             if (this.validatedUrisArtifactToLocal.has(artifactUri))
@@ -107,6 +127,20 @@ export class UriRebaser {
                 if (localUri) return localUri;
             }
 
+            // Distinct Project Items v2
+            /*
+                Instead of stored amount of distinctLocalNames and distinctArtifactNames in pre-active stage,
+                We can directly try to directly map the artifactUri to localUri with the workspace Uri base
+            */
+            if (workspace.workspaceFolders?.[0]?.uri) {
+                const localUri = [...splitUri(workspace.workspaceFolders[0].uri.toString()), ...splitUri(artifactUri).slice(1)].join('/');
+                if (await uriExists(localUri)){
+                    this.updateValidatedUris(artifactUri, localUri);
+                    this.updateBases(splitUri(artifactUri), splitUri(localUri)); 
+                    return localUri;                   
+                }
+            }     
+
             // Distinct Project Items
             const {file} = artifactUri;
             const distinctFilename = await workspaceHasDistinctFilename(file);
@@ -124,6 +158,21 @@ export class UriRebaser {
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(splitUri(artifactUri), splitUri(localUri));
                 return localUri;
+            }
+
+            // Recursive map uri base
+            if (workspace.workspaceFolders?.[0]?.uri) {
+                const maximumRecursionDepthConfigSection = 'maximumRecursionDepth';
+                const extensionName = 'sarif-viewer';
+                const defaultMaximumRecursionDepth = 1;
+                const maximumRecursionDepth = workspace.getConfiguration(extensionName).get<number>(maximumRecursionDepthConfigSection, defaultMaximumRecursionDepth);
+                const lstLocalUri = await recursiveMapping(maximumRecursionDepth, workspace.workspaceFolders?.[0]?.uri.toString(), artifactUri);
+                if (lstLocalUri.length) {
+                    const localUri = lstLocalUri[0];
+                    this.updateValidatedUris(artifactUri, localUri);
+                    this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                    return localUri;
+                }
             }
 
             return ''; // Signals inability to rebase.
