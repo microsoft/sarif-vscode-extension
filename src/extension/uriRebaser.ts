@@ -141,7 +141,7 @@ export class UriRebaser {
         if (!validatedUri && !this.activeInfoMessages.has(artifactUri)) {
             // download from internet by changeset
             if (versionControlProvenance !== undefined) {
-                let url = new URL(`${versionControlProvenance[0].repositoryUri}/${versionControlProvenance[0].revisionId}/${artifactUri.startsWith('file://') ? artifactUri.substring(7) : artifactUri}`);
+                const url = new URL(`${versionControlProvenance[0].repositoryUri}/${versionControlProvenance[0].revisionId}/${artifactUri.startsWith('file://') ? artifactUri.substring(7) : artifactUri}`);
                 if (url.hostname === 'github.com') {
                     url.hostname = 'raw.githubusercontent.com';
                 }
@@ -152,7 +152,7 @@ export class UriRebaser {
                 if (!fileName.startsWith(root))
                     return '';
 
-                const fileUrl = `file:\/\/\/${fileName.replace(/\\/g, '/')}`;
+                const fileUrl = `file:///${fileName.replace(/\\/g, '/')}`;
                 // check if the file was already downloaded
                 if (await uriExists(fileUrl))
                     return fileUrl;
@@ -174,21 +174,21 @@ export class UriRebaser {
                     if (choice === `Always from ${url.hostname}`) {
                         this.trustedSites.push(url.hostname);
                         workspace.getConfiguration(this.extensionName)
-                                 .update(this.trustedSourceSitesConfigSection, this.trustedSites, ConfigurationTarget.Global);
+                            .update(this.trustedSourceSitesConfigSection, this.trustedSites, ConfigurationTarget.Global);
                     }
                     // download the file
                     if (choice === 'Yes' || choice === `Always from ${url.hostname}`) {
                         const mkdirRecursive = async (dir: string) => {
                             return new Promise((resolve, reject) => {
-                              fs.mkdir(dir, { recursive: true }, (error) => {
-                                if (error) {
-                                  reject(error);
-                                } else {
-                                  resolve(undefined);
-                                }
-                              });
+                                fs.mkdir(dir, { recursive: true }, (error) => {
+                                    if (error) {
+                                        reject(error);
+                                    } else {
+                                        resolve(undefined);
+                                    }
+                                });
                             });
-                          }
+                        };
 
                         try {
                             const response = await fetch(url);
@@ -198,11 +198,11 @@ export class UriRebaser {
                             await fs.promises.writeFile(fileName, buffer);
 
                             const partsOld = splitUri(artifactUri);
-                            const partsNew = splitUri(`file:\/\/${fileName.replace(/\\/g, '/')}`);
+                            const partsNew = splitUri(`file://${fileName.replace(/\\/g, '/')}`);
                             this.updateBases(partsOld, partsNew);
                             return fileUrl;
                         }
-                        catch (error : any) {
+                        catch (error: any) {
                             await window.showErrorMessage(error.toString());
                             // continue with file open dialog
                         }
