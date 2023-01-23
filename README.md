@@ -1,5 +1,5 @@
-[![](https://vsmarketplacebadge.apphb.com/version-short/MS-SarifVSCode.sarif-viewer.svg)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
-[![](https://vsmarketplacebadge.apphb.com/downloads-short/MS-SarifVSCode.sarif-viewer.svg)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
+[![](https://vsmarketplacebadge.apphb.com/version-short/MS-SarifVSCode.sarif-viewer.png)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
+[![](https://vsmarketplacebadge.apphb.com/downloads-short/MS-SarifVSCode.sarif-viewer.png)](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer)
 
 # SARIF Viewer for Visual Studio Code
 
