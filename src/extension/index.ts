@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
@@ -20,106 +21,116 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
+import { UriHandler } from '../uriHandler/uriHandler';
 
-export async function activate(context: ExtensionContext) {
-    // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
-    const isDebugOrTestMode =
-        process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
-        || process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
+export class Extension {
+    public static extensionContext: vscode.ExtensionContext;
 
-    if (!isDebugOrTestMode) Telemetry.activate();
+    public static async activate(context: vscode.ExtensionContext): Promise<any> {
+        this.extensionContext = context;
+        // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
+        const isDebugOrTestMode =
+            process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
+            || process.execArgv.some(arg => /^--(debug|debug-brk|inspect|inspect-brk)=?/.test(arg)); // Test
 
-    const disposables = context.subscriptions;
+        if (!isDebugOrTestMode) Telemetry.activate();
 
-    const outputChannel = window.createOutputChannel('Sarif Viewer');
-    disposables.push(outputChannel);
+        const disposables = context.subscriptions;
 
-    Store.globalState = context.globalState;
-    disposables.push(commands.registerCommand('sarif.clearState', () => {
-        context.globalState.update('view', undefined);
-        commands.executeCommand('workbench.action.reloadWindow');
-    }));
-    const store = new Store();
+        const outputChannel = window.createOutputChannel('Sarif Viewer');
+        disposables.push(outputChannel);
 
-    // Basing
-    const baser = new UriRebaser(store);
-
-    // Panel
-    const panel = new Panel(context, baser, store);
-    disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
-
-    // General Activation
-    activateSarifStatusBarItem(disposables);
-    activateDiagnostics(disposables, store, baser, outputChannel);
-    activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store);
-    activateVirtualDocuments(disposables, store);
-    activateSelectionSync(disposables, store, panel);
-    activateGithubAnalyses(disposables, store, panel, outputChannel);
-    activateGithubCommands(disposables, store, outputChannel);
-    activateFixes(disposables, store, baser);
-
-    // Check for Updates
-    if (!isDebugOrTestMode) {
-        disposables.push(workspace.onDidChangeConfiguration(event => {
-            if (!event.affectsConfiguration(updateChannelConfigSection)) return;
-            update();
+        Store.globalState = context.globalState;
+        disposables.push(commands.registerCommand('sarif.clearState', () => {
+            context.globalState.update('view', undefined);
+            commands.executeCommand('workbench.action.reloadWindow');
         }));
-        update();
+        const store = new Store();
+
+        // Basing
+        const baser = new UriRebaser(store);
+
+        // Uri Handler
+        const uriHandler = new UriHandler();
+        context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
+
+        // Panel
+        const panel = new Panel(context, baser, store);
+        disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
+
+        // General Activation
+        activateSarifStatusBarItem(disposables);
+        activateDiagnostics(disposables, store, baser, outputChannel);
+        activateWatchDocuments(disposables, store, panel);
+        activateDecorations(disposables, store);
+        activateVirtualDocuments(disposables, store);
+        activateSelectionSync(disposables, store, panel);
+        activateGithubAnalyses(disposables, store, panel, outputChannel);
+        activateGithubCommands(disposables, store, outputChannel);
+        activateFixes(disposables, store, baser);
+
+        // Check for Updates
+        if (!isDebugOrTestMode) {
+            disposables.push(workspace.onDidChangeConfiguration(event => {
+                if (!event.affectsConfiguration(updateChannelConfigSection)) return;
+                update();
+            }));
+            update();
+        }
+
+        // For now, we keep file watch functionality limited to the API.
+        // After we're sure it's working well, consider also enabling it for files opened manually.
+        // FIXME: Possible race condition if a file is changed multiple times in quick succession.
+        // 1. First change event fires (denoted as [1]).
+        // 2. [1] Log is removed from the store.
+        // 3. Second change event fires (denoted as [2]).
+        // 4. [2] Log is removed from the store (returns false as it's already been removed).
+        // 5. [1] Log is re-loaded and added to the store.
+        // 6. [2] Log is re-loaded and added (again!) to the store.
+        const watcher = watch([], {
+            ignoreInitial: true
+        }).on('change', async path => {
+            store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+            store.logs.push(...await loadLogs([Uri.file(path)]));
+        }).on('unlink', path => {
+            store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+        });
+        disposables.push(new Disposable(async () => await watcher.close()));
+
+        // API
+        const api = {
+            async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+                watcher.add(logs.map(log => log.fsPath));
+                store.logs.push(...await loadLogs(logs, cancellationToken));
+                if (cancellationToken?.isCancellationRequested) return;
+                if (store.results.length) panel.show();
+            },
+            async closeLogs(logs: Uri[]) {
+                watcher.unwatch(logs.map(log => log.fsPath));
+                for (const uri of logs) {
+                    store.logs.removeFirst(log => log._uri === uri.toString());
+                }
+            },
+            async closeAllLogs() {
+                watcher.unwatch('**/*');
+                store.logs.splice(0);
+            },
+            get uriBases() {
+                return baser.uriBases.map(uri => Uri.file(uri)) as ReadonlyArray<Uri>;
+            },
+            set uriBases(values) {
+                baser.uriBases = values.map(uri => uri.toString());
+            },
+        };
+
+        // By convention, auto-open any logs in the `./.sarif` folder.
+        api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
+
+        // During development, use the following line to auto-load a log.
+        // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
+
+        return api;
     }
-
-    // For now, we keep file watch functionality limited to the API.
-    // After we're sure it's working well, consider also enabling it for files opened manually.
-    // FIXME: Possible race condition if a file is changed multiple times in quick succession.
-    // 1. First change event fires (denoted as [1]).
-    // 2. [1] Log is removed from the store.
-    // 3. Second change event fires (denoted as [2]).
-    // 4. [2] Log is removed from the store (returns false as it's already been removed).
-    // 5. [1] Log is re-loaded and added to the store.
-    // 6. [2] Log is re-loaded and added (again!) to the store.
-    const watcher = watch([], {
-        ignoreInitial: true
-    }).on('change', async path => {
-        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
-        store.logs.push(...await loadLogs([Uri.file(path)]));
-    }).on('unlink', path => {
-        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
-    });
-    disposables.push(new Disposable(async () => await watcher.close()));
-
-    // API
-    const api = {
-        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
-            watcher.add(logs.map(log => log.fsPath));
-            store.logs.push(...await loadLogs(logs, cancellationToken));
-            if (cancellationToken?.isCancellationRequested) return;
-            if (store.results.length) panel.show();
-        },
-        async closeLogs(logs: Uri[]) {
-            watcher.unwatch(logs.map(log => log.fsPath));
-            for (const uri of logs) {
-                store.logs.removeFirst(log => log._uri === uri.toString());
-            }
-        },
-        async closeAllLogs() {
-            watcher.unwatch('**/*');
-            store.logs.splice(0);
-        },
-        get uriBases() {
-            return baser.uriBases.map(uri => Uri.file(uri)) as ReadonlyArray<Uri>;
-        },
-        set uriBases(values) {
-            baser.uriBases = values.map(uri => uri.toString());
-        },
-    };
-
-    // By convention, auto-open any logs in the `./.sarif` folder.
-    api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
-
-    // During development, use the following line to auto-load a log.
-    // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
-
-    return api;
 }
 
 function activateDiagnostics(disposables: Disposable[], store: Store, baser: UriRebaser, outputChannel: OutputChannel) {
@@ -242,6 +253,11 @@ function activateSelectionSync(disposables: Disposable[], store: Store, panel: P
 
         panel.select(result);
     }));
+}
+
+
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    await Extension.activate(context);
 }
 
 export function deactivate() {
