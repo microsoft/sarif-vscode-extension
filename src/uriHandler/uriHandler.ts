@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import { UriHandlerUtilities } from './uriHandlerUtilities';
 
-import { UriAction, UriMetadata } from './uriHandlerInterfaces';
+import { UriAction } from './uriHandlerInterfaces';
 import { Extension } from '../extension';
 
 /**

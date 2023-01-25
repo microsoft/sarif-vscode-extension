@@ -10,7 +10,7 @@ import { RepoMappingMetadata, UriAction } from './uriHandlerInterfaces';
 
 import { Extension } from '../extension';
 import { UriHandler } from './uriHandler';
-import { Utilities } from '../utilities/utilities';
+import { FileUtilities } from '../utilities/fileUtilities';
 
 /**
  * Extension URI handler helper utilities.
@@ -72,7 +72,7 @@ export class UriHandlerUtilities {
         }
 
         // Check if repo is in the drive of the opened VSCode workspace (wherever the user is currently working).
-        const workspaceDriveRootPath: string | undefined = Utilities.getWorkspaceFolder()?.substring(0, 3);
+        const workspaceDriveRootPath: string | undefined = FileUtilities.getWorkspaceFolder()?.substring(0, 3);
         if (workspaceDriveRootPath && fs.existsSync(workspaceDriveRootPath)) {
             repoMatches = UriHandlerUtilities.findGitRepoInPath(repoName, workspaceDriveRootPath, 0, repoMatches);
             if (repoMatches.length > 0) {
@@ -134,7 +134,7 @@ export class UriHandlerUtilities {
         }
 
         try {
-            fs.readdirSync(dirPath, { withFileTypes: true}).filter((dirent) =>
+            fs.readdirSync(dirPath, { withFileTypes: true }).filter((dirent) =>
                 dirent.isDirectory()).
                 forEach((childDir) => {
                     const childDirPath = path.join(dirPath, childDir.name);
@@ -163,7 +163,7 @@ export class UriHandlerUtilities {
         // Prompt user to select the correct repo clone.
         const repoMatchesQuickPickItems: vscode.QuickPickItem[] = [];
         for (const repoMatch of repoMatches) {
-            repoMatchesQuickPickItems.push({label: repoMatch});
+            repoMatchesQuickPickItems.push({ label: repoMatch });
         }
 
         // Show quick pick item asking for user to select tool to run.

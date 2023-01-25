@@ -23,5 +23,6 @@
         "rloc",
         "tfloc",
         "vsix"
-    ]
+    ],
+    "sarif-viewer.connectToGithubCodeScanning": "off"
 }
