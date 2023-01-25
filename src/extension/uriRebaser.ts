@@ -159,6 +159,7 @@ export class UriRebaser {
 
                 if (url.protocol === 'https:') {
                     let choice: string | undefined = 'Yes';
+                    const alwaysMsg = `Always from ${url.hostname}`;
                     // check if user marked this site as trusted to download always
                     if (!this.trustedSites.includes(url.hostname)) {
                         this.activeInfoMessages.add(artifactUri);
@@ -166,21 +167,21 @@ export class UriRebaser {
                             `Do you want to download the source file from this location?\n${url}`,
                             'Yes',
                             'No',
-                            `Always from ${url.hostname}`
+                            alwaysMsg
                         );
                         this.activeInfoMessages.delete(artifactUri);
                     }
                     // save the user preference to settings
-                    if (choice === `Always from ${url.hostname}`) {
+                    if (choice === alwaysMsg) {
                         this.trustedSites.push(url.hostname);
                         workspace.getConfiguration(this.extensionName)
                             .update(this.trustedSourceSitesConfigSection, this.trustedSites, ConfigurationTarget.Global);
                     }
                     // download the file
-                    if (choice === 'Yes' || choice === `Always from ${url.hostname}`) {
+                    if (choice === 'Yes' || choice === alwaysMsg) {
                         const mkdirRecursive = async (dir: string) => {
                             return new Promise((resolve, reject) => {
-                                fs.mkdir(dir, { recursive: true }, (error) => {
+                                fs.mkdir(dir, { recursive: true }, (error: any) => {
                                     if (error) {
                                         reject(error);
                                     } else {
