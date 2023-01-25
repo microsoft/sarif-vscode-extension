@@ -42,9 +42,9 @@ export class UriHandler implements vscode.UriHandler {
         // eslint-disable-next-line no-param-reassign
         uri = vscode.Uri.parse(uri.toString().replace('#', ''));
 
-        let message = 'LSP Handled a Uri!';
+        let message = 'SARIF extension Handled a Uri!';
         if (uri.query) {
-            message += ` LSP It came with this query: ${uri.query}`;
+            message += ` It came with this query: ${uri.query}`;
         }
         vscode.window.showInformationMessage(message);
 
