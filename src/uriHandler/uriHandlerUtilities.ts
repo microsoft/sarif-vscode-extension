@@ -6,7 +6,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { RepoMappingMetadata, UriAction } from './uriHandlerInterfaces';
+import { RepoMappingMetadata } from './uriHandlerInterfaces';
 
 import { Extension } from '../extension';
 import { UriHandler } from './uriHandler';
@@ -197,22 +197,10 @@ export class UriHandlerUtilities {
         repoName: string,
         repoUri: vscode.Uri,
         title: string | undefined,
-        commentThreadBody: string | undefined,
-        commentThreadLabel: string | undefined,
-        commentThreadName: string | undefined,
-        openFileLineNumber: number | undefined,
-        openFileRelativePath: string | undefined,
-        operationId: string,
-        action: UriAction
+        operationId: string
     ): Promise<void> {
 
         const repoMappingMetadata: RepoMappingMetadata = {
-            action,
-            commentThreadBody,
-            commentThreadLabel,
-            commentThreadName,
-            openFileLineNumber,
-            openFileRelativePath,
             operationId,
             repoPath: repoUri.fsPath,
             title

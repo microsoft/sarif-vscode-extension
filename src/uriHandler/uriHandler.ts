@@ -5,7 +5,6 @@
 import * as vscode from 'vscode';
 import { UriHandlerUtilities } from './uriHandlerUtilities';
 
-import { UriAction } from './uriHandlerInterfaces';
 import { Extension } from '../extension';
 
 /**
@@ -68,13 +67,7 @@ export class UriHandler implements vscode.UriHandler {
                 repoName,
                 vscode.Uri.file('C:\\GH\\ADO\\1ES.SecMon.UAR'),
                 undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                'uriMetadata.operationId',
-                UriAction.RunOpenFile
+                'uriMetadata.operationId'
             );
             await vscode.commands.executeCommand('vscode.openFolder', repoUri);
         }
