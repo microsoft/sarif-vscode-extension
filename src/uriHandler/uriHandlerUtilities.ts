@@ -6,11 +6,14 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { AdoAuthenticationHandler, getConnection } from '../auth/authenticationHandler';
 import { RepoMappingMetadata } from './uriHandlerInterfaces';
 
 import { Extension } from '../extension';
 import { UriHandler } from './uriHandler';
 import { FileUtilities } from '../utilities/fileUtilities';
+
+import axios from 'axios';
 
 /**
  * Extension URI handler helper utilities.
@@ -234,5 +237,130 @@ export class UriHandlerUtilities {
                 repoMappingMetadata
             );
         }
+    }
+
+    /**
+     * Clones a repository given an ADO organization, project, and repo name.
+     * @param {string} repoName The name of the repository to open.
+     * @param {string | undefined} organization The ADO organization name.
+     * @param {string | undefined} project The ADO project id.
+     * @returns {Promise<vscode.Uri | undefined>} The selected repository path or undefined.
+     */
+    /* eslint-disable sort-keys */
+    public static async cloneRepo(repoName: string, organization: string | undefined, project: string | undefined): Promise<vscode.Uri | undefined> {
+        // cloneRepoStarted
+
+        if (!organization) {
+            // cloneRepoQueryOrganization null
+
+            const accessToken: string | undefined = await AdoAuthenticationHandler.getAccessToken();
+            if (!accessToken) {
+                // cloneRepoNoAccessToken
+                return undefined;
+            }
+
+            // The next two prompts use raw Promises so that we show a loading UI while we perform the network requests.
+
+            // Documented at https://learn.microsoft.com/en-us/rest/api/azure/devops/account/accounts/list.
+            // Unfortunately, azure-devops-node-api doesn't expose it: https://github.com/microsoft/azure-devops-node-api/issues/522.
+            const organizationsPromise = axios.get<{ AccountName: string }[]>('https://app.vssps.visualstudio.com/_apis/accounts', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }).then((organizations) =>
+                organizations.data.
+                    map((org) =>
+                        org.AccountName).
+                    filter((name): name is string =>
+                        name !== undefined).
+                    // eslint-disable-next-line id-length
+                    sort((a, b) =>
+                        a.toLowerCase().localeCompare(b.toLowerCase())));
+
+            // eslint-disable-next-line no-param-reassign
+            organization = await vscode.window.showQuickPick(organizationsPromise, {
+                placeHolder: 'Select Azure DevOps organization',
+                title: `Clone ${repoName}`
+            });
+
+            if (!organization) {
+                // cloneRepoNoOrganization
+                return undefined;
+            }
+
+            // cloneRepoGotOrganization
+        }
+
+        if (!project) {
+            // cloneRepoQueryProject
+
+            const projectsPromise = getConnection(organization).then((webApi) =>
+                webApi.getCoreApi()).
+                then((coreApi) =>
+                    coreApi.getProjects()).
+                then((projects) =>
+                    projects.
+                        map((proj) =>
+                            proj.name).
+                        filter((name): name is string =>
+                            name !== undefined).
+                        // eslint-disable-next-line id-length
+                        sort((a, b) =>
+                            a.toLowerCase().localeCompare(b.toLowerCase())));
+
+            // eslint-disable-next-line no-param-reassign
+            project = await vscode.window.showQuickPick(projectsPromise, {
+                placeHolder: 'Select project',
+                title: `Clone ${repoName}`
+            });
+
+            if (!project) {
+                // cloneRepoNoProject
+                return undefined;
+            }
+
+            // cloneRepoGotProject
+        }
+
+        // Looking at the parent of the current folder is a pretty good indication of where we should offer to clone.
+        const defaultUri = vscode.workspace.workspaceFolders
+            ? vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, '..')
+            : vscode.Uri.file(os.homedir());
+        const clonePath = await vscode.window.showOpenDialog({
+            canSelectFolders: true,
+            canSelectMany: false,
+            defaultUri,
+            openLabel: 'Select Clone Destination',
+            title: `Choose a folder to clone ${repoName} into`
+        });
+        if (!clonePath) {
+            // cloneRepoNoClonePath
+            return undefined;
+        }
+
+        // cloneRepoGotClonePath
+
+        await vscode.commands.executeCommand(
+            'git.clone',
+            `https://dev.azure.com/${organization}/${project}/_git/${repoName}`,
+            clonePath[0].fsPath
+        );
+
+        // cloneRepoFinished
+
+        return vscode.Uri.joinPath(clonePath[0], repoName);
+    }
+    /* eslint-enable sort-keys */
+
+    /**
+     * Opens a repo in a new window.
+     * @param {string} repoName The repository name.
+     * @param {vscode.Uri} repoUri The repository URI path.
+     * @param {string} operationId UUID for URI-triggered run (currently only for S360, should eventually support OneClick as well.)
+     * @returns {Promise<void>} A promise indicating completion.
+     */
+    public static async openRepo(repoName: string, repoUri: vscode.Uri, operationId: string): Promise<void> {
+        await vscode.commands.executeCommand('vscode.openFolder', repoUri, { forceNewWindow: false });
+        // folderOpenedFromUri
     }
 }

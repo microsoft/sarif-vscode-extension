@@ -22,12 +22,17 @@ import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
 import { UriHandler } from '../uriHandler/uriHandler';
+import { UriHelpViewUtilities } from '../uriHandler/uriHelpViewUtilities';
 
 export class Extension {
     public static extensionContext: vscode.ExtensionContext;
 
     public static async activate(context: vscode.ExtensionContext): Promise<any> {
         this.extensionContext = context;
+        context.subscriptions.push(vscode.commands.registerCommand('sarif.chooseRepositoryFolderFromUriHelpView', UriHelpViewUtilities.chooseRepositoryFolderFromUriHelpView));
+        context.subscriptions.push(vscode.commands.registerCommand('sarif.cloneRepo', UriHelpViewUtilities.cloneRepositoryFromUriHelpView));
+        context.subscriptions.push(vscode.commands.registerCommand('sarif.dismissUriHelpView', UriHelpViewUtilities.dismissUriHelpView));
+
         // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
         const isDebugOrTestMode =
             process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug

@@ -6,6 +6,8 @@ import * as vscode from 'vscode';
 import { UriHandlerUtilities } from './uriHandlerUtilities';
 
 import { Extension } from '../extension';
+import { UriHelpViewUtilities } from './uriHelpViewUtilities';
+import { UriMetadata } from './uriHandlerInterfaces';
 
 /**
  * Extension URI handler.
@@ -57,7 +59,7 @@ export class UriHandler implements vscode.UriHandler {
         }
 
         // clear for testing if it can find in local path when mapping does not exists
-        await Extension.extensionContext.globalState.update(repoName.toLowerCase(), undefined);
+        // await Extension.extensionContext.globalState.update(repoName.toLowerCase(), undefined);
 
         const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.tryGetRepoMapping(repoName);
 
@@ -65,11 +67,36 @@ export class UriHandler implements vscode.UriHandler {
             // Save Repo Mapping
             await UriHandlerUtilities.saveRepoMapping(
                 repoName,
-                vscode.Uri.file('C:\\GH\\ADO\\1ES.SecMon.UAR'),
+                repoUri,
                 undefined,
                 'uriMetadata.operationId'
             );
             await vscode.commands.executeCommand('vscode.openFolder', repoUri);
+        }
+        else {
+            await UriHelpViewUtilities.showUriHelpView(true);
+            const cgUriMetadata: UriMetadata = {
+                operationId: 'uriMetadata.operationId',
+                organization: 'undefined',
+                project: 'undefined',
+                repoName: repositoryName ?? 'undefined',
+                title: 'undefined'
+            };
+            await Extension.extensionContext.globalState.update(
+                UriHandler.uriMetadataKey,
+                cgUriMetadata
+            );
+            // const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.cloneRepo(
+            //     repoName,
+            //     'mseng',
+            //     '1ES'
+            // );
+
+            // await vscode.commands.executeCommand(
+            //     'git.clone',
+            //     `https://github.com/shaopeng-gh/BinBuild`,
+            //     'C:\\GH'
+            // );
         }
     }
 }
