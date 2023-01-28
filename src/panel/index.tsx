@@ -29,7 +29,9 @@ export { DetailsLayouts } from './details.layouts';
     render() {
         const {store} = this.props;
         const {banner} = store;
-        const inputRef = React.createRef<HTMLInputElement>();
+        const inputArtifactRef = React.createRef<HTMLInputElement>();
+        const inputClientIdRef = React.createRef<HTMLInputElement>();
+        const inputTenantIdRef = React.createRef<HTMLInputElement>();
 
         const bannerElement = banner && <div className="svBanner">
             <Icon name="info" />
@@ -111,10 +113,20 @@ export { DetailsLayouts } from './details.layouts';
                         </div>
                     </Tab>
                     <Tab name={store.tabs[3]}>
-                        <div className="svDownloadPane">
-                            <input type="text" className="svTextInput" ref={inputRef} value={'https://sarifpublic.blob.core.windows.net/test-data/ghazdo.codeql.sarif'} />
-                            <div className="svButton" onClick={() => vscode.postMessage({ command: 'downloadLog', url: inputRef.current?.value })}>
-                                Download log
+                        <div className="svDownloadContainer">
+                            <div className="label">Client ID</div>
+                            <div><input type="text" className="svTextInput" ref={inputClientIdRef} /></div>
+                            <div className="label">Tenant ID <span className="note">(leave blank for multi-tenant apps)</span></div>
+                            <div><input type="text" className="svTextInput" ref={inputTenantIdRef} /></div>
+                            <div className="label">Build URL</div>
+                            <div><input type="text" className="svTextInput" ref={inputArtifactRef} /></div>
+                            <div>
+                                <div className="svNowrapButton" onClick={() => vscode.postMessage({ command: 'downloadArtifact',
+                                                                                              clientId: inputClientIdRef.current?.value,
+                                                                                              tenantId: inputTenantIdRef.current?.value,
+                                                                                              url: inputArtifactRef.current?.value })}>
+                                    Download artifact
+                                </div>
                             </div>
                         </div>
                     </Tab>

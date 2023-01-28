@@ -36,7 +36,7 @@
     "main": "./out/context.js",
     "contributes": {
         "configuration": {
-            "title": "Sarif Viewer",
+            "title": "SARIF Viewer",
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
@@ -161,6 +161,7 @@
         "@types/semver": "7.1.0",
         "@types/sinon": "9.0.4",
         "@types/tmp": "0.1.0",
+        "@types/unzipper": "^0.10.5",
         "@types/url-join": "4.0.0",
         "@types/vscode": "1.57",
         "@typescript-eslint/eslint-plugin": "3.1.0",
@@ -202,6 +203,7 @@
         "react-markdown": "^5.0.3",
         "semver": "7.3.2",
         "tmp": "0.1.0",
+        "unzipper": "^0.10.11",
         "url-join": "4.0.1",
         "vscode-codicons": "0.0.2",
         "vscode-extension-telemetry": "0.1.6",

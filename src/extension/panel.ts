@@ -6,17 +6,18 @@ import * as fs from 'fs';
 import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Region, Result } from 'sarif';
-import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
+import { authentication, commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
 import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
-import fetch from 'node-fetch';
+import fetch, { Headers } from 'node-fetch';
 import { tmpNameSync } from 'tmp';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
+import * as unzipper from 'unzipper';
 
 export class Panel {
     private title = 'SARIF Result'
@@ -72,6 +73,27 @@ export class Panel {
             filtersColumn,
         };
 
+        async function downloadFile(url: string, filePath: string, accessToken?: string | undefined): Promise<boolean> {
+            try {
+                const headers = new Headers();
+                headers.set('User-Agent', 'microsoft.sarif-viewer');
+                if (accessToken) {
+                    headers.set('Authorization', `Bearer ${accessToken}`);
+                }
+                const response = await fetch(url, { headers: headers });
+                
+                if (response.ok) {
+                    const streamPipeline = promisify(pipeline);
+                    await streamPipeline(response.body, fs.createWriteStream(filePath));
+                    return true;
+                }
+            } catch (error) {
+                console.error(error);
+            }
+
+            return false;
+        }
+
         // JSON.stringify emits double quotes. To not conflict, certain attribute values use single quotes.
         webview.html = `<!DOCTYPE html>
             <html lang="en">
@@ -118,21 +140,46 @@ export class Panel {
                     store.logs.push(...await loadLogs(uris));
                     break;
                 }
+                case 'downloadArtifact': {
+                    if (message.clientId && message.url) {
+                        const session = await authentication.getSession('microsoft', [
+                            `VSCODE_CLIENT_ID:${message.clientId}`,
+                            `VSCODE_TENANT:${message.tenantId !== '' ? message.tenantId : 'common'}`, // Tenant ID for single-tenant, 'common' for multi-tenant
+                            'offline_access', // Required for the refresh token.
+                            '499b84ac-1321-427f-aa17-267ca6975798/user_impersonation' // Constant value to target Azure DevOps. Do not change!
+                            ], { createIfNone: true });
+
+                        if (session) {
+                            const matches = message.url.match(/(?<baseUrl>https:\/\/dev\.azure\.com\/[a-zA-Z\d-]+\/[a-zA-Z\d-]+\/)_build\/results\?buildId=(?<buildId>\d+)(&|$)/);
+                            if (matches && matches.groups.baseUrl && matches.groups.buildId) {
+                                // Construct the artifact endpoint URL
+                                const url = matches.groups.baseUrl + `_apis/build/builds/${matches.groups.buildId}/artifacts?artifactName=CodeAnalysisLogs&api-version=7.0&%24format=zip`;
+                                const tempZipFilePath = tmpNameSync({ postfix: '.zip' });
+
+                                if (await downloadFile(url, tempZipFilePath, session.accessToken)) {
+                                    fs.createReadStream(tempZipFilePath)
+                                        .pipe(unzipper.Parse())
+                                        .on('entry', (entry) => {              
+                                            if (entry.path.match(/.+\.sarif$/)) {  
+                                                const tempLogFilePath = tmpNameSync({ postfix: '.sarif' });                            
+                                                entry
+                                                    .pipe(fs.createWriteStream(tempLogFilePath)
+                                                    .on('close', async () => {
+                                                        store.logs.push(...await loadLogs([Uri.file(tempLogFilePath)]));
+                                                    }));
+                                            }
+                                        });
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
                 case 'downloadLog': {
                     if (message.url) {
-                        try {
-                            const response = await fetch(message.url, {
-                                headers: { 'User-Agent': 'microsoft.sarif-viewer' },
-                            });
-                            
-                            if (response.ok) {
-                                const streamPipeline = promisify(pipeline);
-                                const tempFilePath = tmpNameSync({ postfix: '.sarif' });
-                                await streamPipeline(response.body, fs.createWriteStream(tempFilePath));
-                                store.logs.push(...await loadLogs([Uri.file(tempFilePath)]));
-                            }
-                        } catch (error) {
-                            console.error(error);
+                        const tempFilePath = tmpNameSync({ postfix: '.sarif' });
+                        if (await downloadFile(message.url, tempFilePath)) {
+                            store.logs.push(...await loadLogs([Uri.file(tempFilePath)]));
                         }
                     }
                     break;

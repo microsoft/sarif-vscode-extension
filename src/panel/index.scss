@@ -82,6 +82,12 @@ mark {
     cursor: pointer;
 }
 
+.svNowrapButton {
+    @extend .svButton;
+    display: inline;
+    white-space: nowrap;
+}
+
 .svListPane {
     flex: 1 1 auto;
     display: flex;
@@ -167,10 +173,22 @@ mark {
     }
 }
 
-.svDownloadPane {
-    display: inline-flex;
-    gap: 6px;
-    margin: 20px;
+.svDownloadContainer {
+    margin: 30px;
+}
+
+.svDownloadContainer input {
+    margin-bottom: 20px;
+    margin-top: 8px;
+}
+
+.svDownloadContainer .label {
+    font-weight: 600;
+}
+
+.svDownloadContainer .note {
+    font-style: italic;
+    font-weight: 200;
 }
 
 .svTextInput {
