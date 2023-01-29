@@ -1,6 +1,6 @@
 {
     "name": "sarif-viewer",
-    "displayName": "Sarif Viewer",
+    "displayName": "SARIF Viewer",
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
