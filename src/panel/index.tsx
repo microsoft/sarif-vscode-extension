@@ -24,6 +24,8 @@ export { DetailsLayouts } from './details.layouts';
 
 @observer export class Index extends Component<{ store: IndexStore }> {
     private showFilterPopup = observable.box(false)
+    private showClientIdPopup = observable.box(false)
+    private showTenantIdPopup = observable.box(false)
     private detailsPaneHeight = observable.box(300)
 
     render() {
@@ -53,7 +55,7 @@ export { DetailsLayouts } from './details.layouts';
         }
 
         const {logs, keywords} = store;
-        const {showFilterPopup, detailsPaneHeight} = this;
+        const {showFilterPopup, showClientIdPopup, showTenantIdPopup, detailsPaneHeight} = this;
         const activeTableStore = store.selectedTab.get().store;
         const allCollapsed = activeTableStore?.groupsFilteredSorted.every(group => !group.expanded) ?? false;
         const selectedRow = store.selection.get();
@@ -114,12 +116,24 @@ export { DetailsLayouts } from './details.layouts';
                     </Tab>
                     <Tab name={store.tabs[3]}>
                         <div className="svDownloadContainer">
-                            <div className="label">Client ID</div>
-                            <div><input type="text" className="svTextInput" ref={inputClientIdRef} /></div>
-                            <div className="label">Tenant ID <span className="note">(leave blank for multi-tenant apps)</span></div>
-                            <div><input type="text" className="svTextInput" ref={inputTenantIdRef} /></div>
-                            <div className="label">Build URL</div>
-                            <div><input type="text" className="svTextInput" ref={inputArtifactRef} /></div>
+                            <div className="label">
+                                <div>Client ID</div> <Icon name="info" onMouseDown={e => e.stopPropagation()} onClick={() => showClientIdPopup.set(!showClientIdPopup.get())} />
+                            </div>
+                            <div>
+                                <input type="text" className="svTextInput" ref={inputClientIdRef} />
+                            </div>
+                            <div className="label">
+                                <div>Tenant ID</div> <Icon name="info" onMouseDown={e => e.stopPropagation()} onClick={() => showTenantIdPopup.set(!showTenantIdPopup.get())} /> <span className="note">(leave blank for multi-tenant apps)</span>
+                            </div>
+                            <div>
+                                <input type="text" className="svTextInput" ref={inputTenantIdRef} />
+                            </div>
+                            <div className="label">
+                                <div>Build URL</div>
+                            </div>
+                            <div>
+                                <input type="text" className="svTextInput" ref={inputArtifactRef} />
+                            </div>
                             <div>
                                 <div className="svNowrapButton" onClick={() => vscode.postMessage({ command: 'downloadArtifact',
                                                                                               clientId: inputClientIdRef.current?.value,
@@ -128,7 +142,7 @@ export { DetailsLayouts } from './details.layouts';
                                     Download artifact
                                 </div>
                             </div>
-                        </div>
+                        </div>                        
                     </Tab>
                 </TabPanel>
             </div>
@@ -146,6 +160,20 @@ export { DetailsLayouts } from './details.layouts';
                     <div className="svPopoverTitle">{name}</div>
                     {Object.keys(state).map(name => <Checkrow key={name} label={name} state={state} />)}
                 </Fragment>)}
+            </Popover>
+            <Popover show={showClientIdPopup} style={{ top: 65, left: 110 }}>
+                <div className="infoPopover">
+                    The client ID is your AAD's ID, sometimes called the app ID. You can find it in the Azure portal by selecting your app
+                    in <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">App registrations</a>,
+                    then copying the <em>Application (client) ID</em> GUID.
+                </div>
+            </Popover>
+            <Popover show={showTenantIdPopup} style={{ top: 132, left: 116 }}>
+                <div className="infoPopover">
+                    The tenant ID is the Azure Active Directory ID of your organization. You can find it in the Azure portal by selecting your app
+                    in <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">App registrations</a>,
+                    then copying the <em>Directory (tenant) ID</em> GUID.
+                </div>
             </Popover>
         </FilterKeywordContext.Provider>;
     }

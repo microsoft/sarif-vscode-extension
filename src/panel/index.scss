@@ -184,11 +184,29 @@ mark {
 
 .svDownloadContainer .label {
     font-weight: 600;
+
+    div {
+        display: inline;
+    }
+
+    .codicon {
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    * {
+        line-height: unset;
+        vertical-align: middle;
+    }
 }
 
 .svDownloadContainer .note {
     font-style: italic;
     font-weight: 200;
+}
+
+.infoPopover {
+    width: 400px;
 }
 
 .svTextInput {
