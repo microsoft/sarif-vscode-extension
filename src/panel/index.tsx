@@ -31,7 +31,7 @@ export { DetailsLayouts } from './details.layouts';
     render() {
         const {store} = this.props;
         const {banner} = store;
-        const inputArtifactRef = React.createRef<HTMLInputElement>();
+        const inputBuildUrlRef = React.createRef<HTMLInputElement>();
         const inputClientIdRef = React.createRef<HTMLInputElement>();
         const inputTenantIdRef = React.createRef<HTMLInputElement>();
 
@@ -120,25 +120,29 @@ export { DetailsLayouts } from './details.layouts';
                                 <div>Client ID</div> <Icon name="info" onMouseDown={e => e.stopPropagation()} onClick={() => showClientIdPopup.set(!showClientIdPopup.get())} />
                             </div>
                             <div>
-                                <input type="text" className="svTextInput" ref={inputClientIdRef} />
+                                <input type="text" className="svTextInput" ref={inputClientIdRef} defaultValue={localStorage.getItem('artifact-ado-client') ?? ''} />
                             </div>
                             <div className="label">
                                 <div>Tenant ID</div> <Icon name="info" onMouseDown={e => e.stopPropagation()} onClick={() => showTenantIdPopup.set(!showTenantIdPopup.get())} /> <span className="note">(leave blank for multi-tenant apps)</span>
                             </div>
                             <div>
-                                <input type="text" className="svTextInput" ref={inputTenantIdRef} />
+                                <input type="text" className="svTextInput" ref={inputTenantIdRef} defaultValue={localStorage.getItem('artifact-ado-tenant') ?? ''} />
                             </div>
                             <div className="label">
                                 <div>Build URL</div>
                             </div>
                             <div>
-                                <input type="text" className="svTextInput" ref={inputArtifactRef} />
+                                <input type="text" className="svTextInput" ref={inputBuildUrlRef} />
                             </div>
                             <div>
-                                <div className="svNowrapButton" onClick={() => vscode.postMessage({ command: 'downloadArtifact',
-                                                                                              clientId: inputClientIdRef.current?.value,
-                                                                                              tenantId: inputTenantIdRef.current?.value,
-                                                                                              url: inputArtifactRef.current?.value })}>
+                                <div className="svNowrapButton" onClick={() => {
+                                    vscode.postMessage({ command: 'downloadArtifact',
+                                                         clientId: inputClientIdRef.current?.value,
+                                                         tenantId: inputTenantIdRef.current?.value,
+                                                         url: inputBuildUrlRef.current?.value });
+                                    localStorage.setItem('artifact-ado-client', inputClientIdRef.current?.value ?? '');
+                                    localStorage.setItem('artifact-ado-tenant', inputTenantIdRef.current?.value ?? '');
+                                }}>
                                     Download artifact
                                 </div>
                             </div>
