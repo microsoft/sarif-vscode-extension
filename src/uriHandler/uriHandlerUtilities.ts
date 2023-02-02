@@ -14,6 +14,7 @@ import { UriHandler } from './uriHandler';
 import { FileUtilities } from '../utilities/fileUtilities';
 
 import axios from 'axios';
+import { Uri } from 'vscode';
 
 /**
  * Extension URI handler helper utilities.
@@ -247,7 +248,7 @@ export class UriHandlerUtilities {
      * @returns {Promise<vscode.Uri | undefined>} The selected repository path or undefined.
      */
     /* eslint-disable sort-keys */
-    public static async cloneRepo(repoName: string, organization: string | undefined, project: string | undefined): Promise<vscode.Uri | undefined> {
+    public static async cloneRepo(repoUri: Uri, repoName: string, organization: string | undefined, project: string | undefined): Promise<vscode.Uri | undefined> {
         // cloneRepoStarted
 
         if (!organization) {
@@ -342,7 +343,8 @@ export class UriHandlerUtilities {
 
         await vscode.commands.executeCommand(
             'git.clone',
-            `https://dev.azure.com/${organization}/${project}/_git/${repoName}`,
+            repoUri.toString(),
+            // `https://dev.azure.com/${organization}/${project}/_git/${repoName}`,
             clonePath[0].fsPath
         );
 

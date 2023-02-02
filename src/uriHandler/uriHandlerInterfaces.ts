@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { Uri } from 'vscode';
+
 /**
 * Base type for URI metadata passed between windows.
 */
@@ -25,6 +27,11 @@ export type UriMetadata = ({
      * The repository name.
      */
     repoName: string;
+
+    /**
+     * The repository uri.
+     */
+    repoUri: Uri;
 
 }) & ({
 

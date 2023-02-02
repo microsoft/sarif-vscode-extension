@@ -8,6 +8,7 @@ import { UriHandlerUtilities } from './uriHandlerUtilities';
 import { Extension } from '../extension';
 import { UriHelpViewUtilities } from './uriHelpViewUtilities';
 import { UriMetadata } from './uriHandlerInterfaces';
+import { Uri } from 'vscode';
 
 /**
  * Extension URI handler.
@@ -51,15 +52,29 @@ export class UriHandler implements vscode.UriHandler {
         vscode.window.showInformationMessage(message);
 
         const searchParams: URLSearchParams = new URLSearchParams(uri.query);
-        const repositoryName = searchParams.get('repoName');
-        const repoName: string | null = repositoryName ?? uri.path.substring(1);
-        if (!repoName) {
+
+        const repositoryUriString = searchParams.get('repoUri');
+        const repositoryUri: Uri | null = vscode.Uri.parse(repositoryUriString!);
+        if (!repositoryUri) {
             // noRepoNameProvidedDuringUriAttempt
             return;
         }
 
+        const repoName = repositoryUri.path.split('/').last;
+
+        // const searchParams2: URLSearchParams = new URLSearchParams(repositoryUri.path);
+        // const repoName = searchParams.get()
+
+        // const repositoryName = searchParams.get('repoName');
+        // const repoName: string | null = repositoryName ?? uri.path.substring(1);
+        // if (!repoName) {
+        //     // noRepoNameProvidedDuringUriAttempt
+        //     return;
+        // }
+
         // clear for testing if it can find in local path when mapping does not exists
         // await Extension.extensionContext.globalState.update(repoName.toLowerCase(), undefined);
+
 
         const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.tryGetRepoMapping(repoName);
 
@@ -79,7 +94,8 @@ export class UriHandler implements vscode.UriHandler {
                 operationId: 'uriMetadata.operationId',
                 organization: 'undefined',
                 project: 'undefined',
-                repoName: repositoryName ?? 'undefined',
+                repoName: repoName ?? 'undefined',
+                repoUri: repositoryUri,
                 title: 'undefined'
             };
             await Extension.extensionContext.globalState.update(

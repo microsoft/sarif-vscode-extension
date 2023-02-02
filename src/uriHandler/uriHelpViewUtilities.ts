@@ -48,6 +48,7 @@ export class UriHelpViewUtilities {
         // If we successfully cloned the repo, continue the URI flow.
         // Otherwise, display a notification indicating clone was unsuccessful.
         const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.cloneRepo(
+            uriMetadata.repoUri,
             uriMetadata.repoName,
             uriMetadata.organization,
             uriMetadata.project
