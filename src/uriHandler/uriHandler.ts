@@ -3,12 +3,14 @@
 
 // import * as path from 'path';
 import * as vscode from 'vscode';
+import * as os from 'os';
 import { UriHandlerUtilities } from './uriHandlerUtilities';
 
 import { Extension } from '../extension';
 import { UriHelpViewUtilities } from './uriHelpViewUtilities';
 import { UriMetadata } from './uriHandlerInterfaces';
 import { Uri } from 'vscode';
+import { FileUtilities } from '../utilities/fileUtilities';
 
 /**
  * Extension URI handler.
@@ -54,6 +56,7 @@ export class UriHandler implements vscode.UriHandler {
         const searchParams: URLSearchParams = new URLSearchParams(uri.query);
 
         const repositoryUriString = searchParams.get('repoUri');
+        const sarifUriString = searchParams.get('sarifUri');
         const repositoryUri: Uri | null = vscode.Uri.parse(repositoryUriString!);
         if (!repositoryUri) {
             // noRepoNameProvidedDuringUriAttempt
@@ -75,44 +78,8 @@ export class UriHandler implements vscode.UriHandler {
         // clear for testing if it can find in local path when mapping does not exists
         // await Extension.extensionContext.globalState.update(repoName.toLowerCase(), undefined);
 
-
-        const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.tryGetRepoMapping(repoName);
-
-        if (repoUri) {
-            // Save Repo Mapping
-            await UriHandlerUtilities.saveRepoMapping(
-                repoName,
-                repoUri,
-                undefined,
-                'uriMetadata.operationId'
-            );
-            await vscode.commands.executeCommand('vscode.openFolder', repoUri);
-        }
-        else {
-            await UriHelpViewUtilities.showUriHelpView(true);
-            const cgUriMetadata: UriMetadata = {
-                operationId: 'uriMetadata.operationId',
-                organization: 'undefined',
-                project: 'undefined',
-                repoName: repoName ?? 'undefined',
-                repoUri: repositoryUri,
-                title: 'undefined'
-            };
-            await Extension.extensionContext.globalState.update(
-                UriHandler.uriMetadataKey,
-                cgUriMetadata
-            );
-            // const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.cloneRepo(
-            //     repoName,
-            //     'mseng',
-            //     '1ES'
-            // );
-
-            // await vscode.commands.executeCommand(
-            //     'git.clone',
-            //     `https://github.com/shaopeng-gh/BinBuild`,
-            //     'C:\\GH'
-            // );
-        }
+        // FileUtilities.validateAndSaveFIle(sarifUriString!, os.tmpdir(), repoName, repositoryUri);
+        FileUtilities.loadRepo(sarifUriString!, os.tmpdir(), repoName, repositoryUri);
+        // FileUtilities.validateAndSaveFIle('https://raw.githubusercontent.com/shaopeng-gh/sarifhost/main/1ES.SecMon.UAR.sarif', os.tmpdir());
     }
 }

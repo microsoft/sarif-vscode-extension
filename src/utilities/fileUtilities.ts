@@ -4,6 +4,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as http from 'http';
+import * as https from 'https';
+import * as url from 'url';
+import { UriHandlerUtilities } from '../uriHandler/uriHandlerUtilities';
+import { UriHelpViewUtilities } from '../uriHandler/uriHelpViewUtilities';
+import { Extension } from '../extension';
+import { UriHandler } from '../uriHandler/uriHandler';
+import { UriMetadata } from '../uriHandler/uriHandlerInterfaces';
 
 /**
  * Extension utilities.
@@ -60,5 +68,125 @@ export class FileUtilities {
         }
 
         return arrayOfFiles;
+    }
+
+    // public static async validateAndSaveFIle (fileURL: string, dest: string, cb = null) {
+    //     const fileName = fileURL;
+
+    //     let analysesResponse: Response | undefined;
+    //     try {
+    //         // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
+    //         analysesResponse = await fetch(fileURL);
+    //     } catch (error) {
+    //         // Expected error value if the network is disabled.
+    //         // {
+    //         //     "message": "request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com",
+    //         //     "type": "system",
+    //         //     "errno": "ENOTFOUND",
+    //         //     "code": "ENOTFOUND"
+    //         // }
+    //         // updateMessage('Network error. Refresh to try again.');
+    //     }
+    //     if (!analysesResponse) {
+    //         return undefined;
+    //     }
+    //     if (analysesResponse.status === 403) {
+    //         return undefined;
+    //     }
+
+    // }
+
+    public static validateAndSaveFIle(fileURL: string, dest: string, repoName: string, repositoryUri: vscode.Uri) {
+        const timeout = 10000,
+            urlParsed = url.parse(fileURL),
+            uri = urlParsed!.pathname!.split('/');
+        let req,
+            filename = (uri[uri.length - 1].match(/(\w*\.?-?)+/))![0];
+
+        if (urlParsed.protocol === null) {
+            fileURL = 'http://' + fileURL;
+        }
+
+        // eslint-disable-next-line prefer-const
+        req = (urlParsed.protocol === 'https:') ? https : http;
+
+        const request = req.get(fileURL, function (response) {
+
+            // Make sure extension is present (mostly for images)
+            if (filename.indexOf('.') < 0) {
+                const contentType = response.headers['content-type'];
+                filename += `.${contentType!.split('/')[1]}`;
+            }
+            const destUri = vscode.Uri.file(dest);
+            const targetPath = vscode.Uri.joinPath(destUri, filename);
+
+            if (response.statusCode === 200) {
+                const file = fs.createWriteStream(targetPath.fsPath);
+                response.pipe(file);
+                vscode.commands.executeCommand('vscode.open', targetPath);
+                // api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
+                // vscode.commands.executeCommand('sarif.loadFile', targetPath);
+
+                // FileUtilities.loadRepo(fileURL, dest, repoName, repositoryUri);
+
+            } else {
+                vscode.window.showErrorMessage(`Downloading ${fileURL} failed`);
+            }
+
+            response.on('end', function () {
+                vscode.window.showInformationMessage(`File "${filename}" downloaded successfully.`);
+            });
+
+            request.setTimeout(timeout, function () {
+                request.abort();
+            });
+
+        }).on('error', function (e) {
+            vscode.window.showErrorMessage(`Downloading ${fileURL} failed! Please make sure URL is valid.`);
+        });
+    }
+
+    public static async loadRepo(fileURL: string, dest: string, repoName: string, repositoryUri: vscode.Uri) {
+        const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.tryGetRepoMapping(repoName);
+
+        if (repoUri) {
+            // Save Repo Mapping
+            await UriHandlerUtilities.saveRepoMapping(
+                repoName,
+                repoUri,
+                undefined,
+                'uriMetadata.operationId'
+            );
+            // await vscode.commands.executeCommand('vscode.openFolder', repoUri);
+            // await vscode.workspace.updateWorkspaceFolders(0, 0, { uri: repoUri });
+            await UriHandlerUtilities.openRepo(repoName, repoUri, 'uriMetadata.operationId');
+        }
+        else {
+            await UriHelpViewUtilities.showUriHelpView(true);
+            const cgUriMetadata: UriMetadata = {
+                operationId: 'uriMetadata.operationId',
+                organization: 'undefined',
+                project: 'undefined',
+                repoName: repoName ?? 'undefined',
+                repoUri: repositoryUri,
+                title: 'undefined'
+            };
+            await Extension.extensionContext.globalState.update(
+                UriHandler.uriMetadataKey,
+                cgUriMetadata
+            );
+            // const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.cloneRepo(
+            //     repoName,
+            //     'mseng',
+            //     '1ES'
+            // );
+
+            // await vscode.commands.executeCommand(
+            //     'git.clone',
+            //     `https://github.com/shaopeng-gh/BinBuild`,
+            //     'C:\\GH'
+            // );
+        }
+        FileUtilities.validateAndSaveFIle(fileURL, dest, repoName, repositoryUri);
     }
 }

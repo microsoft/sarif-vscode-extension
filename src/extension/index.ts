@@ -134,6 +134,9 @@ export class Extension {
         // During development, use the following line to auto-load a log.
         // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
 
+
+        // disposables.push(commands.registerCommand('sarif.loadFile', async (filePath : vscode.Uri) => api.openLogs([filePath], {})));
+
         return api;
     }
 }

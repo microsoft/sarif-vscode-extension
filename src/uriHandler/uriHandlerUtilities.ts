@@ -362,7 +362,8 @@ export class UriHandlerUtilities {
      * @returns {Promise<void>} A promise indicating completion.
      */
     public static async openRepo(repoName: string, repoUri: vscode.Uri, operationId: string): Promise<void> {
-        await vscode.commands.executeCommand('vscode.openFolder', repoUri, { forceNewWindow: false });
+        // await vscode.commands.executeCommand('vscode.openFolder', repoUri, { forceNewWindow: false });
+        await vscode.workspace.updateWorkspaceFolders(0, 0, { uri: repoUri });
         // folderOpenedFromUri
     }
 }
