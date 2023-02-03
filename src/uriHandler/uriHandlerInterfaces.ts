@@ -33,6 +33,11 @@ export type UriMetadata = ({
      */
     repoUri: Uri;
 
+    /**
+     * The Sarif uri string.
+     */
+    sarifUri: string;
+
 }) & ({
 
     /**

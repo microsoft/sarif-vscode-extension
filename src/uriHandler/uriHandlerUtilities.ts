@@ -248,7 +248,7 @@ export class UriHandlerUtilities {
      * @returns {Promise<vscode.Uri | undefined>} The selected repository path or undefined.
      */
     /* eslint-disable sort-keys */
-    public static async cloneRepo(repoUri: Uri, repoName: string, organization: string | undefined, project: string | undefined): Promise<vscode.Uri | undefined> {
+    public static async cloneRepo(sarifUri: string, repoUri: Uri, repoName: string, organization: string | undefined, project: string | undefined): Promise<vscode.Uri | undefined> {
         // cloneRepoStarted
 
         if (!organization) {
@@ -341,12 +341,19 @@ export class UriHandlerUtilities {
 
         // cloneRepoGotClonePath
 
-        await vscode.commands.executeCommand(
+        vscode.commands.executeCommand(
             'git.clone',
             repoUri.toString(),
             // `https://dev.azure.com/${organization}/${project}/_git/${repoName}`,
             clonePath[0].fsPath
         );
+
+        const repoRoot =vscode.Uri.joinPath(clonePath[0], repoName);
+        while (!fs.existsSync(repoRoot.fsPath)) {
+            await UriHandlerUtilities.delay(500);
+        }
+
+        await FileUtilities.validateAndSaveFile2(sarifUri, repoRoot);
 
         // cloneRepoFinished
 
@@ -361,9 +368,14 @@ export class UriHandlerUtilities {
      * @param {string} operationId UUID for URI-triggered run (currently only for S360, should eventually support OneClick as well.)
      * @returns {Promise<void>} A promise indicating completion.
      */
-    public static async openRepo(repoName: string, repoUri: vscode.Uri, operationId: string): Promise<void> {
+    public static async openRepo(fileURL: string, repoName: string, repoUri: vscode.Uri, operationId: string): Promise<void> {
         // await vscode.commands.executeCommand('vscode.openFolder', repoUri, { forceNewWindow: false });
+        await FileUtilities.validateAndSaveFile2(fileURL, repoUri);
         await vscode.workspace.updateWorkspaceFolders(0, 0, { uri: repoUri });
         // folderOpenedFromUri
+    }
+
+    public static delay(ms: number) {
+        return new Promise( resolve => setTimeout(resolve, ms) );
     }
 }

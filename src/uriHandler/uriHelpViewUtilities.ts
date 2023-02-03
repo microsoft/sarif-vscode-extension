@@ -48,6 +48,7 @@ export class UriHelpViewUtilities {
         // If we successfully cloned the repo, continue the URI flow.
         // Otherwise, display a notification indicating clone was unsuccessful.
         const repoUri: vscode.Uri | undefined = await UriHandlerUtilities.cloneRepo(
+            uriMetadata.sarifUri,
             uriMetadata.repoUri,
             uriMetadata.repoName,
             uriMetadata.organization,
@@ -118,7 +119,7 @@ export class UriHelpViewUtilities {
             uriMetadata.operationId
         );
 
-        await UriHandlerUtilities.openRepo(uriMetadata.repoName, repoUri, uriMetadata.operationId);
+        await UriHandlerUtilities.openRepo(uriMetadata.sarifUri, uriMetadata.repoName, repoUri, uriMetadata.operationId);
 
         await UriHelpViewUtilities.showUriHelpView(false);
     }

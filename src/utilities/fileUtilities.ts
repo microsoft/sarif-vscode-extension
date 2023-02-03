@@ -12,6 +12,7 @@ import { UriHelpViewUtilities } from '../uriHandler/uriHelpViewUtilities';
 import { Extension } from '../extension';
 import { UriHandler } from '../uriHandler/uriHandler';
 import { UriMetadata } from '../uriHandler/uriHandlerInterfaces';
+import fetch, { Response } from 'node-fetch';
 
 /**
  * Extension utilities.
@@ -96,6 +97,28 @@ export class FileUtilities {
 
     // }
 
+    public static async validateAndSaveFile2(fileURL: string, dest: vscode.Uri) {
+        const releasesResponse = await fetch(fileURL);
+        if (releasesResponse.status !== 200) return false;
+        // const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
+        const urlParsed = url.parse(fileURL);
+        const uri = urlParsed!.pathname!.split('/');
+        const filename = (uri[uri.length - 1].match(/(\w*\.?-?)+/))![0];
+        // const workspaceSarifUri = vscode.Uri.joinPath(workspaceUri!, '.sarif', filename);
+        const workspaceSarifUri = vscode.Uri.joinPath(dest, '.sarif', filename);
+        FileUtilities.ensureDirectoryExistence(workspaceSarifUri.fsPath);
+        const file = fs.createWriteStream(workspaceSarifUri.fsPath);
+
+        await new Promise((resolve, reject) => {
+            releasesResponse.body.pipe(file);
+            releasesResponse.body.on('error', reject);
+            file.on('finish', resolve);
+        });
+
+        return true;
+    }
+
+
     public static validateAndSaveFIle(fileURL: string, dest: string, repoName: string, repositoryUri: vscode.Uri) {
         const timeout = 10000,
             urlParsed = url.parse(fileURL),
@@ -121,9 +144,16 @@ export class FileUtilities {
             const targetPath = vscode.Uri.joinPath(destUri, filename);
 
             if (response.statusCode === 200) {
-                const file = fs.createWriteStream(targetPath.fsPath);
+                // const file = fs.createWriteStream(targetPath.fsPath);
+                // response.pipe(file);
+                // vscode.commands.executeCommand('vscode.open', targetPath);
+
+                const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
+                const workspaceSarifUri = vscode.Uri.joinPath(workspaceUri!, '.sarif', filename);
+                FileUtilities.ensureDirectoryExistence(workspaceSarifUri.fsPath);
+                const file = fs.createWriteStream(workspaceSarifUri.fsPath);
                 response.pipe(file);
-                vscode.commands.executeCommand('vscode.open', targetPath);
+
                 // api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
                 // vscode.commands.executeCommand('sarif.loadFile', targetPath);
 
@@ -159,7 +189,7 @@ export class FileUtilities {
             );
             // await vscode.commands.executeCommand('vscode.openFolder', repoUri);
             // await vscode.workspace.updateWorkspaceFolders(0, 0, { uri: repoUri });
-            await UriHandlerUtilities.openRepo(repoName, repoUri, 'uriMetadata.operationId');
+            await UriHandlerUtilities.openRepo(fileURL, repoName, repoUri, 'uriMetadata.operationId');
         }
         else {
             await UriHelpViewUtilities.showUriHelpView(true);
@@ -169,6 +199,7 @@ export class FileUtilities {
                 project: 'undefined',
                 repoName: repoName ?? 'undefined',
                 repoUri: repositoryUri,
+                sarifUri: fileURL,
                 title: 'undefined'
             };
             await Extension.extensionContext.globalState.update(
@@ -187,6 +218,15 @@ export class FileUtilities {
             //     'C:\\GH'
             // );
         }
-        FileUtilities.validateAndSaveFIle(fileURL, dest, repoName, repositoryUri);
+        // FileUtilities.validateAndSaveFIle(fileURL, dest, repoName, repositoryUri);
+    }
+
+    public static ensureDirectoryExistence(filePath: string) {
+        const dirname = path.dirname(filePath);
+        if (fs.existsSync(dirname)) {
+            return;
+        }
+        FileUtilities.ensureDirectoryExistence(dirname);
+        fs.mkdirSync(dirname);
     }
 }
