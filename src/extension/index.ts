@@ -35,6 +35,7 @@ export async function activate(context: ExtensionContext) {
     disposables.push(outputChannel);
 
     Store.globalState = context.globalState;
+    Store.globalState.update('enableDriftTracking', false);
     disposables.push(commands.registerCommand('sarif.clearState', () => {
         context.globalState.update('view', undefined);
         commands.executeCommand('workbench.action.reloadWindow');

@@ -6,6 +6,7 @@ import { Region } from 'sarif';
 import { Selection } from 'vscode';
 import '../shared/extension';
 import { measureDrift } from './measureDrift';
+import { Store } from './store';
 import { TextDocumentLike } from './stringTextDocument';
 
 function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
@@ -51,8 +52,8 @@ function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
 }
 
 export function driftedRegionToSelection(diffBlocks: Change[], currentDoc: TextDocumentLike, region: Region | undefined, originalDoc?: TextDocumentLike) {
-    // If there is no originalDoc, the best we can do is hope no drift has occured since the scan.
-    if (originalDoc === undefined) return regionToSelection(currentDoc, region);
+    // If there is no originalDoc, the best we can do is hope no drift has occurred since the scan.
+    if (originalDoc === undefined || Store.globalState.get('enableDriftTracking') === false) return regionToSelection(currentDoc, region);
 
     const originalRange = regionToSelection(originalDoc, region);
     if (originalRange.isReversed) console.warn('REVERSED');

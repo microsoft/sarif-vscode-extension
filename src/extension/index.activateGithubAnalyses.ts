@@ -72,6 +72,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
     }));
 
+    Store.globalState.update('enableDriftTracking', false);
+
     // See configurations comments at the bottom of this file.
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
@@ -123,6 +125,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             if (choice === 'Never') {
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Connect') {
+                Store.globalState.update('enableDriftTracking', true);
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
                     await onBranchChanged(repo, gitHeadPath, store, true);
@@ -145,6 +148,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     );
                     sendGithubAnalysisFound(`Not Found: ${choiceTryAgain ?? 'undefined'}`);
                     if (choiceTryAgain === 'No') {
+                        Store.globalState.update('enableDriftTracking', false);
                         workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
                     }
                 } else {
