@@ -108,7 +108,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
 
-        // proccess.cwd() returns '/'
+        // process.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
         if (!workspacePath) return sendGithubEligibility('No workspace');
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
@@ -387,7 +387,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
     }
 
-    // TODO: Block re-entrancy.
+    // TODO: Block re-entrance.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
         const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
