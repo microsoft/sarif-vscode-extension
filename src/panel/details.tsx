@@ -172,16 +172,16 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                 </>;
                             };
 
-                            return this.stacks.map(stack => {
+                            return this.stacks.map((stack, key) => {
                                 const stackFrames = stack.frames;
 
-                                const selection = observable.box<Location | undefined>(undefined, { deep: false });
+                                const selection = observable.box<StackFrame | undefined>(undefined, { deep: false });
                                 selection.observe(change => {
-                                    const location = change.newValue;
-                                    postSelectArtifact(result, location?.physicalLocation);
+                                    const frame = change.newValue;
+                                    postSelectArtifact(result, frame?.location?.physicalLocation);
                                 });
                                 if (stack.message?.text) {
-                                    return <div className="svStack">
+                                    return <div key={key} className="svStack">
                                         <div className="svStacksMessage">
                                             {stack?.message?.text}
                                         </div>
