@@ -162,7 +162,7 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
     const logUri = log._uri;
     const [uri, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation, overrideUriBase);
     const region = ploc?.region;
-    await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, region });
+    await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, region, id: result._id });
 }
 
 export async function postSelectLog(result: Result) {
