@@ -191,7 +191,7 @@ export class Panel {
         // `disableSelectionSync` prevents a selection sync feedback loop in cases where:
         // 1) `showTextDocument` creates a new editor (where no editor was already open).
         // 2) The selection is restored, and starts one "thread" of selection sync.
-        // 3) Then `revealRange` (see below) will start another "thread" of seletion sync.
+        // 3) Then `revealRange` (see below) will start another "thread" of selection sync.
         // 4) The rapid succession causes a "reverberation" where the selection gets stuck jumping between both results.
         this.store.disableSelectionSync = true;
         const editor = await window.showTextDocument(currentDoc, ViewColumn.One, true);
@@ -209,6 +209,14 @@ export class Panel {
     public select(result: Result) {
         if (!result?._id) return; // Reduce Panel selection flicker.
         this.panel?.webview.postMessage({ command: 'select', id: result?._id });
+    }
+
+    public selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
+        const log = this.store.logs.find(log => log._uri === uri.toString());
+        const result = log?.runs[runIndex]?.results?[resultIndex];
+        if (!result) return;
+
+        this.select(result);
     }
 
     private createSpliceLogsMessage(removed: Log[], added: Log[]) {
