@@ -213,7 +213,7 @@ export class Panel {
 
     public selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
         const log = this.store.logs.find(log => log._uri === uri.toString());
-        const result = log?.runs[runIndex]?.results?[resultIndex];
+        const result = log?.runs?.[runIndex]?.results?.[resultIndex];
         if (!result) return;
 
         this.select(result);

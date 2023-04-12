@@ -11,5 +11,6 @@ export interface Api {
     openLogs(logs: Uri[]): Promise<void>;
     closeLogs(logs: Uri[]): Promise<void>;
     closeAllLogs(): Promise<void>;
+    selectByIndex(uri: Uri, runIndex: number, resultIndex: number): Promise<void>;
     uriBases: ReadonlyArray<Uri>;
 }
