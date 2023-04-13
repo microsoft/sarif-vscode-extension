@@ -105,6 +105,9 @@ export async function activate(context: ExtensionContext) {
             watcher.unwatch('**/*');
             store.logs.splice(0);
         },
+        async selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
+            panel.selectByIndex(uri, runIndex, resultIndex);
+        },
         get uriBases() {
             return baser.uriBases.map(uri => Uri.file(uri)) as ReadonlyArray<Uri>;
         },
