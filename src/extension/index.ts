@@ -91,7 +91,7 @@ export async function activate(context: ExtensionContext) {
     const api = {
         async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
             watcher.add(logs.map(log => log.fsPath));
-            store.logs.push(...await loadLogs(logs, cancellationToken));
+            store.logs.push(...await loadLogs(logs, cancellationToken)); // starts chain reaction
             if (cancellationToken?.isCancellationRequested) return;
             if (store.results.length) panel.show();
         },
@@ -172,14 +172,14 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
                 );
             });
 
-        diagsAll.set(doc.uri, diags);
+        diagsAll.set(doc.uri, diags); // Give diags to VSCode
     };
     workspace.textDocuments.forEach(setDiags);
     disposables.push(workspace.onDidOpenTextDocument(setDiags));
     disposables.push(workspace.onDidCloseTextDocument(doc => diagsAll.delete(doc.uri))); // Spurious *.git deletes don't hurt.
     disposables.push(workspace.onDidChangeTextDocument(({ document }) => setDiags(document))); // TODO: Consider updating the regions independently of the list of diagnostics.
 
-    const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags));
+    const disposerStore = observe(store, 'results', () => workspace.textDocuments.forEach(setDiags)); // should call setdiags for each log
     disposables.push({ dispose: disposerStore });
 }
 
@@ -224,7 +224,7 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
     }));
 }
 
-// Syncronize selection between editor and panel.
+// Synchronize selection between editor and panel.
 function activateSelectionSync(disposables: Disposable[], store: Store, panel: Panel) {
     disposables.push(window.onDidChangeTextEditorSelection(({ selections, textEditor }) => {
         if (store.disableSelectionSync) return; // See `panel.selectLocal` for details.

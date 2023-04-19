@@ -152,7 +152,7 @@ export async function postLoad() {
 export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation, overrideUriBase?: string) {
     // If this panel is not active, then any selection change did not originate from (a user's action) here.
     // It must have originated from (a user's action in) the editor, which then sent a message here.
-    // If that is the case, don't send another 'select' message back. This would cause selection unstability.
+    // If that is the case, don't send another 'select' message back. This would cause selection instability.
     // The most common example is when the caret is moving, a selection-sync feedback loop will cause a range to
     // be selected in editor outside of the user's intent.
     if (!isActive()) return;
