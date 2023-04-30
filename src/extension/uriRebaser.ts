@@ -23,11 +23,42 @@ function splitUri(uri: string | undefined) {
     return [`${scheme}://${authority}`, ...path.slice(1).split('/')]; // By spec first '/' always exists, thus safe to slice(1).
 }
 
-// Returns the distinct file name, instead of `true`, becuase in some cases the file name is used.
+const workspaceDistinctFilenameCache: Map<string, string | undefined> = new Map();
+
 async function workspaceHasDistinctFilename(filename: string): Promise<string | undefined> {
+    if (workspaceDistinctFilenameCache.has(filename)) {
+        return workspaceDistinctFilenameCache.get(filename);
+    }
     const matches = await workspace.findFiles(`**/${filename}`); // Is `.git` folder excluded?
-    return matches.length === 1 ? matches[0].toString() : undefined;
+    const result = matches.length === 1 ? matches[0].toString() : undefined;
+
+    workspaceDistinctFilenameCache.set(filename, result);
+    return result;
 }
+
+workspace.onDidCreateFiles(async (event) => {
+    for (const file of event.files) {
+        const filename = path.basename(file.path);
+        workspaceDistinctFilenameCache.delete(filename);
+    }
+});
+
+workspace.onDidRenameFiles(async (event) => {
+    for (const file of event.files) {
+        const oldFilename = path.basename(file.oldUri.path);
+        const newFilename = path.basename(file.newUri.path);
+        if (oldFilename !== newFilename) {
+            workspaceDistinctFilenameCache.delete(oldFilename);
+        }
+    }
+});
+
+workspace.onDidDeleteFiles(async (event) => {
+    for (const file of event.files) {
+        const filename = path.basename(file.path);
+        workspaceDistinctFilenameCache.delete(filename);
+    }
+});
 
 export class UriRebaser {
     constructor(
