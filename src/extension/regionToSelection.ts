@@ -51,7 +51,7 @@ function regionToSelection(doc: TextDocumentLike, region: Region | undefined) {
 }
 
 export function driftedRegionToSelection(diffBlocks: Change[], currentDoc: TextDocumentLike, region: Region | undefined, originalDoc?: TextDocumentLike) {
-    // If there is no originalDoc, the best we can do is hope no drift has occured since the scan.
+    // If there is no originalDoc, the best we can do is hope no drift has occurred since the scan.
     if (originalDoc === undefined) return regionToSelection(currentDoc, region);
 
     const originalRange = regionToSelection(originalDoc, region);

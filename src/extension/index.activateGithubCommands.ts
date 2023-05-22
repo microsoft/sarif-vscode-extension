@@ -32,7 +32,7 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
         });
 
         if (!response) {
-            outputChannel.appendLine('No reponse');
+            outputChannel.appendLine('No response');
             return;
         }
 
