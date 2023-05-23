@@ -124,7 +124,7 @@ export class Panel {
                 }
                 case 'select': {
                     const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
-                    const [_, runIndex, resultIndex] = message.id as ResultId;
+                    const [_, runIndex] = message.id as ResultId;
 
                     const log = store.logs.find(log => log._uri === logUri);
                     if (!log) return;

@@ -23,6 +23,7 @@ import { UriRebaser } from './uriRebaser';
 import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
+import { getAuthorizationToken } from '../shared/authenticationManager';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -74,45 +75,44 @@ export async function activate(context: ExtensionContext) {
             //const accessToken = credentials2.getToken();
             //const sessions = AuthenticationManager.getSessions();
 
-            const session = await authentication.getSession(
-                'microsoft',
-                [
-                    'offline_access', // Necessary for refresh token
-                    'vso.advsec' // Advanced Security Read scope
-                ],
-                { createIfNone: true }
-            );
+            //const session = await authentication.getSession(
+            //    'microsoft',
+            //    [
+            //        'VSCODE_CLIENT_ID:dde281b2-f277-479b-9c1c-2e84bd84092f',
+            //        'VSCODE_TENANT:common',
+            //        'offline_access', // Necessary for refresh token
+            //        'vso.advsec', // Advanced Security Read scope
+            //    ],
+            //    { createIfNone: true }
+            //);
 
-            if (session) {
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept': 'application/sarif+json',
-                        'Authorization': `Bearer ${session.accessToken}`,
-                        'User-Agent': 'MS-SarifVSCode.sarif-viewer'
-                    },
-                    method: 'GET'
-                });
+            const token = await getAuthorizationToken();
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/sarif+json',
+                    'Authorization': token.header,
+                    'User-Agent': 'MS-SarifVSCode.sarif-viewer',
+                },
+                method: 'GET'
+            });
 
-                if (response.ok) {
-                    // Save the log to a new temp file.
-                    const filePath = `${os.tmpdir}\\${(new Date()).getTime() * -1}.sarif`;
+            if (response.ok) {
+                // Save the log to a new temp file.
+                const filePath = `${os.tmpdir}\\${(new Date()).getTime() * -1}.sarif`;
 
-                    try {
-                        const buffer = await response.buffer();
-                        await fs.promises.writeFile(filePath, buffer);
-                    } catch (error) {
-                        outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
-                    }
-
-                    // Load the log into the Viewer.
-                    const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
-                    store.logs.push(...await loadLogs([Uri.file(fileUrl)]));
-                    if (store.results.length) panel.show();
-                } else {
-                    outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
+                try {
+                    const buffer = await response.buffer();
+                    await fs.promises.writeFile(filePath, buffer);
+                } catch (error) {
+                    outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
                 }
+
+                // Load the log into the Viewer.
+                const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+                store.logs.push(...await loadLogs([Uri.file(fileUrl)]));
+                if (store.results.length) panel.show();
             } else {
-                outputChannel.appendLine(`***Failed to get session in loadAlertSarif\n***URL: ${url.toString()}\n`);
+                outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
             }
         } catch (error) {
             outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
