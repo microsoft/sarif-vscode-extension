@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import { Credentials } from './credentials';
 import { getUserEmailFromJwt } from './jwtUtilities';
 
-const sarifViewClientId = '496719b1-dc2e-4adb-9d15-48372642ccfb';
+const sarifViewClientId = 'dde281b2-f277-479b-9c1c-2e84bd84092f';
 const microsoftTenantId = '72f988bf-86f1-41af-91ab-2d7cd011db47';
 
 interface IAuthenticationHandler {

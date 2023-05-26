@@ -1,11 +1,10 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All Rights Reserved.
- * --------------------------------------------------------------------------------------------*/
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 
 import * as vscode from 'vscode';
 import { AuthenticationHandler } from './authenticationHandler';
-import { WaveAnalysisExtensionTelemetry } from '../telemetry/waveAnalysisExtensionTelemetry';
-import { startFloatingPromise } from '../utilities/promiseHelpers';
+import { startFloatingPromise } from './promiseHelpers';
 
 /**
  * Uses VSCode's authentication provider model to sign users into Microsoft.
@@ -21,7 +20,7 @@ export class Credentials implements vscode.Disposable {
 
     private scopes: string[];
 
-    public static signInMessage: string = 'In order to use WAVE Analysis, you must sign in';
+    public static signInMessage = 'In order to use the SARIF Viewer, you must sign in';
 
     public static signInMessageItem: vscode.MessageItem = {
         title: 'Sign In'
@@ -73,15 +72,15 @@ export class Credentials implements vscode.Disposable {
             const session: vscode.AuthenticationSession | undefined = await vscode.authentication.getSession(
                 this.providerId,
                 this.scopes,
-                { silent: true }
+                //{ silent: true }
             );
 
             return session;
         } catch (error) {
-            WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
-                providerId: this.providerId,
-                tag: 'errorOccurredDuringGetSessionSilent'
-            });
+            //WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
+            //    providerId: this.providerId,
+            //    tag: 'errorOccurredDuringGetSessionSilent'
+            //});
         }
 
         return undefined;
@@ -98,10 +97,10 @@ export class Credentials implements vscode.Disposable {
                 return this.runSignInFlow();
             }
         } catch (error) {
-            WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
-                providerId: this.providerId,
-                tag: 'errorOccurredDuringGetSessionInteractive'
-            });
+            //WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
+            //    providerId: this.providerId,
+            //    tag: 'errorOccurredDuringGetSessionInteractive'
+            //});
         }
 
         return undefined;
@@ -124,10 +123,10 @@ export class Credentials implements vscode.Disposable {
             return session;
         } catch (error) {
             startFloatingPromise(vscode.window.showInformationMessage('Error signing into Azure DevOps, please try again'), 'No need to wait on the UI.');
-            WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
-                providerId: this.providerId,
-                tag: 'errorOccurredDuringRunSignInFlow'
-            });
+            //WaveAnalysisExtensionTelemetry.telemetry.reportException(error as Error, {
+            //    providerId: this.providerId,
+            //    tag: 'errorOccurredDuringRunSignInFlow'
+            //});
         }
 
         return undefined;
