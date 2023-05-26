@@ -24,6 +24,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import { getAuthorizationToken } from '../shared/authenticationManager';
+import { AdoAuthenticationHandler, AuthenticationHandler } from '../shared/authentication/authenticationHandler';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -86,11 +87,14 @@ export async function activate(context: ExtensionContext) {
             //    { createIfNone: true }
             //);
 
-            const token = await getAuthorizationToken();
+            //const token = await getAuthorizationToken();
+
+            const authToken = AdoAuthenticationHandler.getAccessToken();
+
             const response = await fetch(url, {
                 headers: {
                     'Accept': 'application/sarif+json',
-                    'Authorization': token.header,
+                    'Authorization': `Bearer ${authToken}`,
                     'User-Agent': 'MS-SarifVSCode.sarif-viewer',
                 },
                 method: 'GET'
