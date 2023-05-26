@@ -4,7 +4,7 @@
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
-import { authentication, CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
+import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
 import { activateDecorations } from './index.activateDecorations';
@@ -23,8 +23,7 @@ import { UriRebaser } from './uriRebaser';
 import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
-import { getAuthorizationToken } from '../shared/authenticationManager';
-import { AdoAuthenticationHandler, AuthenticationHandler } from '../shared/authentication/authenticationHandler';
+import { AdoAuthenticationHandler } from '../shared/authentication/authenticationHandler';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -89,7 +88,7 @@ export async function activate(context: ExtensionContext) {
 
             //const token = await getAuthorizationToken();
 
-            const authToken = AdoAuthenticationHandler.getAccessToken();
+            const authToken = await AdoAuthenticationHandler.getAccessToken();
 
             const response = await fetch(url, {
                 headers: {
@@ -102,7 +101,7 @@ export async function activate(context: ExtensionContext) {
 
             if (response.ok) {
                 // Save the log to a new temp file.
-                const filePath = `${os.tmpdir}\\${(new Date()).getTime() * -1}.sarif`;
+                const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
 
                 try {
                     const buffer = await response.buffer();
@@ -112,8 +111,7 @@ export async function activate(context: ExtensionContext) {
                 }
 
                 // Load the log into the Viewer.
-                const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
-                store.logs.push(...await loadLogs([Uri.file(fileUrl)]));
+                store.logs.push(...await loadLogs([Uri.file(filePath)]));
                 if (store.results.length) panel.show();
             } else {
                 outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
