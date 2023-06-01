@@ -123,7 +123,7 @@ export async function activate(context: ExtensionContext) {
         return undefined;
     }
 
-    await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=640F9FED-276A-4863-B18A-96F170A78A6E&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
+    await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=ProjektEins&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
 
     // General Activation
     activateSarifStatusBarItem(disposables);
