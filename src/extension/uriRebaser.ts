@@ -113,56 +113,73 @@ export class UriRebaser {
     private trustedSites = workspace.getConfiguration(this.extensionName).get<string[]>(this.trustedSourceSitesConfigSection, []);
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
     public async translateArtifactToLocal(artifactUri: string, versionControlProvenance?: VersionControlDetails[]) { // Retval is validated.
-        if (Uri.parse(artifactUri, true).scheme === 'sarif') return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
+        if (artifactUri.startsWith('sarif://')) return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
+
         const validateUri = async () => {
             // Cache
-            if (this.validatedUrisArtifactToLocal.has(artifactUri))
-                return this.validatedUrisArtifactToLocal.get(artifactUri)!;
+            const artifact = this.validatedUrisArtifactToLocal.get(artifactUri);
+            if (artifact)
+                return artifact;
 
-            // File System Exist
-            if (await uriExists(artifactUri))
-                return artifactUri;
+            const rxUriScheme = /^([^:/?#]+?):/;
+            const isRelative = !rxUriScheme.test(artifactUri);
+            if (isRelative) {
+                { // API-injected uriBases
+                    for (const uriBase of this.uriBases) {
+                        let localUri: string;
+                        try {
+                            localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
+                        } catch {
+                            localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
+                        }
 
-            // File System Exist with Workspace prefixed
-            const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
-            if (workspaceUri) {
-                const workspaceArtifactUri = `${workspaceUri}/${artifactUri.replace('file:///', '')}`;
-                if (await uriExists(workspaceArtifactUri))
-                    return workspaceArtifactUri;
-            }
+                        if (await uriExists(localUri))
+                            return localUri;
+                    }
+                }
 
-            // Known Bases
-            for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
-                if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
-                const localUri = artifactUri.replace(artifactBase, localBase);
-                if (await uriExists(localUri)) {
+                // File System Exist with Workspace prefixed
+                const workspaceUri = workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
+                if (workspaceUri) {
+                    const workspaceArtifactUri = Uri.joinPath(workspaceUri, artifactUri).toString();
+                    if (await uriExists(workspaceArtifactUri))
+                        return workspaceArtifactUri;
+                }
+
+                artifactUri = Uri.file(artifactUri).toString();
+
+                // Known Bases
+                for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
+                    if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
+                    const localUri = artifactUri.replace(artifactBase, localBase);
+                    if (await uriExists(localUri)) {
+                        this.updateValidatedUris(artifactUri, localUri);
+                        return localUri;
+                    }
+                }
+
+                // Distinct Project Items
+                const {file} = artifactUri;
+                const distinctFilename = await workspaceHasDistinctFilename(file);
+                if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
+                    const localUri = distinctFilename;
                     this.updateValidatedUris(artifactUri, localUri);
+                    this.updateBases(splitUri(artifactUri), splitUri(localUri));
                     return localUri;
                 }
-            }
 
-            { // API-injected baseUris
-                const localUri = await this.tryUriBases(artifactUri);
-                if (localUri) return localUri;
-            }
-
-            // Distinct Project Items
-            const {file} = artifactUri;
-            const distinctFilename = await workspaceHasDistinctFilename(file);
-            if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
-                const localUri = distinctFilename;
-                this.updateValidatedUris(artifactUri, localUri);
-                this.updateBases(splitUri(artifactUri), splitUri(localUri));
-                return localUri;
-            }
-
-            // Open Docs
-            for (const doc of workspace.textDocuments) {
-                const localUri = doc.uri.toString();
-                if (localUri.file !== artifactUri.file) continue;
-                this.updateValidatedUris(artifactUri, localUri);
-                this.updateBases(splitUri(artifactUri), splitUri(localUri));
-                return localUri;
+                // Open Docs
+                for (const doc of workspace.textDocuments) {
+                    const localUri = doc.uri.toString();
+                    if (localUri.file !== artifactUri.file) continue;
+                    this.updateValidatedUris(artifactUri, localUri);
+                    this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                    return localUri;
+                }
+            } else {
+                // File System Exist
+                if (await uriExists(artifactUri))
+                    return artifactUri;
             }
 
             return ''; // Signals inability to rebase.

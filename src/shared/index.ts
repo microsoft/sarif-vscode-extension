@@ -183,27 +183,27 @@ export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, any
     const runArt = result._run.artifacts?.[anyArtLoc.index ?? -1];
     const runArtLoc = runArt?.location;
     const runArtCon = runArt?.contents;
-    let uri = anyArtLoc.uri ?? runArtLoc?.uri ?? ''; // If index (§3.4.5) is absent, uri SHALL be present.
+    const uri = anyArtLoc.uri ?? runArtLoc?.uri ?? ''; // If index (§3.4.5) is absent, uri SHALL be present.
 
     // Currently not supported: recursive resolution of uriBaseId.
     // Note: While an uriBase often results in an absolute URI, there is no guarantee.
     // Note: While an uriBase often represents the project root, there is no guarantee.
-    const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
-    if (uriBaseId) {
-        const uriBase
-            =  overrideUriBase // Typically the workspaceUri, which takes precedence.
-            ?? result._run.originalUriBaseIds?.[uriBaseId]?.uri
-            ?? '';
-        uri = urlJoin(uriBase, uri);
-    }
+    // const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
+    // if (uriBaseId) {
+    //     const uriBase
+    //         =  overrideUriBase // Typically the workspaceUri, which takes precedence.
+    //         ?? result._run.originalUriBaseIds?.[uriBaseId]?.uri
+    //         ?? '';
+    //     uri = urlJoin(uriBase, uri);
+    // }
 
-    // Determine if `uri` absolute or relative. Using scheme as an approximation.
-    const rxUriScheme = /^([^:/?#]+?):/;
-    const isRelative = !rxUriScheme.test(uri);
-    if (isRelative) {
-        uri = urlJoin(overrideUriBase ?? 'file://', uri);
-        // After this point, the URI must be absolute.
-    }
+    // // Determine if `uri` absolute or relative. Using scheme as an approximation.
+    // const rxUriScheme = /^([^:/?#]+?):/;
+    // const isRelative = !rxUriScheme.test(uri);
+    // if (isRelative) {
+    //     uri = urlJoin(overrideUriBase ?? 'file://', uri);
+    //     // After this point, the URI must be absolute.
+    // }
 
     // A shorter more transparent URI format would be:
     // `sarif://${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`
