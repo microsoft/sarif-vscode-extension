@@ -56,7 +56,7 @@ export class IndexStore {
             const selectedRow = this.selection.get();
             const result = selectedRow instanceof RowItem && selectedRow.item;
             if (!result?._uri) return; // Bail on no result or location-less result.
-            postSelectArtifact(result, result.locations?.[0]?.physicalLocation, workspaceUri);
+            postSelectArtifact(result, result.locations?.[0]?.physicalLocation);
         });
     }
 
@@ -149,7 +149,7 @@ export async function postLoad() {
     await vscode.postMessage({ command: 'load' });
 }
 
-export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation, overrideUriBase?: string) {
+export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation) {
     // If this panel is not active, then any selection change did not originate from (a user's action) here.
     // It must have originated from (a user's action in) the editor, which then sent a message here.
     // If that is the case, don't send another 'select' message back. This would cause selection unstability.
@@ -160,7 +160,7 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
     if (!ploc) return;
     const log = result._log;
     const logUri = log._uri;
-    const [uri, uriBase, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation, overrideUriBase);
+    const [uri, uriBase, uriContent] = parseArtifactLocation(result, ploc?.artifactLocation);
     const region = ploc?.region;
     await vscode.postMessage({ command: 'select', logUri, uri: uriContent ?? uri, uriBase, region, id: result._id });
 }

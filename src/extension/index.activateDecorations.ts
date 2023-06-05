@@ -5,7 +5,7 @@
 import { diffChars } from 'diff';
 import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
-import { Disposable, languages, Range, ThemeColor, window, workspace } from 'vscode';
+import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
 import { findResult, parseArtifactLocation, ResultId } from '../shared';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
@@ -73,8 +73,7 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
 
             const docUriString = currentDoc.uri.toString();
             const locationsInDoc = locations.filter(tfl => {
-                const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation, workspaceUri);
+                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
                 return docUriString === artifactUriString;
             });
 

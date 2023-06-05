@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 import { ArtifactLocation, Location, Log, ReportingDescriptor, Result } from 'sarif';
-import urlJoin from 'url-join';
 import { URI } from 'vscode-uri';
 
 type JsonLocation = { line: number, column: number } // Unused: pos
@@ -98,7 +97,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             result._id = [log._uri, runIndex, resultIndex];
 
             const ploc = result.locations?.[0]?.physicalLocation;
-            const [uri, _, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation, workspaceUri);
+            const [uri, _, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation);
             result._uri = uri;
             result._uriContents = uriContents;
             result._relativeUri = result._uri?.replace(workspaceUri ?? '' , '') ?? ''; // For grouping, Empty works more predictably than undefined
@@ -170,15 +169,15 @@ Run.artifacts: Art[]
    location: ArtLoc
    contents: ArtCon
 */
-export function parseLocation(result: Result, loc?: Location, overrideUriBase?: string) {
+export function parseLocation(result: Result, loc?: Location) {
     const message = loc?.message?.text;
-    const [uri, _, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation, overrideUriBase);
+    const [uri, _, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };
 }
 
 // Improve: `result` purely used for `_run.artifacts`.
-export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, anyArtLoc: ArtifactLocation | undefined, overrideUriBase?: string) {
+export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, anyArtLoc: ArtifactLocation | undefined) {
     if (!anyArtLoc) return [undefined, undefined, undefined];
     const runArt = result._run.artifacts?.[anyArtLoc.index ?? -1];
     const runArtLoc = runArt?.location;
