@@ -124,28 +124,30 @@ export class UriRebaser {
             const rxUriScheme = /^([^:/?#]+?):/;
             const isRelative = !rxUriScheme.test(artifactUri);
             if (isRelative) {
-                { // API-injected uriBases
-                    for (const uriBase of this.uriBases) {
-                        let localUri: string;
-                        try {
-                            localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
-                        } catch {
-                            localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
-                        }
+                // API-injected uriBases
+                for (const uriBase of this.uriBases) {
+                    let localUri: string;
+                    try {
+                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
+                    } catch {
+                        // No URI scheme; assume the base is a file.
+                        localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
+                    }
 
-                        if (await uriExists(localUri)) {
-                            this.updateValidatedUris(artifactUri, localUri);
-                            return localUri;
-                        }
+                    if (await uriExists(localUri)) {
+                        this.updateValidatedUris(artifactUri, localUri);
+                        return localUri;
                     }
                 }
 
                 // File System Exist with Workspace prefixed
                 const workspaceUri = workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
                 if (workspaceUri) {
-                    const workspaceArtifactUri = Uri.joinPath(workspaceUri, artifactUri).toString();
-                    if (await uriExists(workspaceArtifactUri))
-                        return workspaceArtifactUri;
+                    const localUri = Uri.joinPath(workspaceUri, artifactUri).toString();
+                    if (await uriExists(localUri)) {
+                        this.updateValidatedUris(artifactUri, localUri);
+                        return localUri;
+                    }
                 }
 
                 artifactUri = Uri.file(artifactUri).toString();
