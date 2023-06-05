@@ -133,8 +133,10 @@ export class UriRebaser {
                             localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
                         }
 
-                        if (await uriExists(localUri))
+                        if (await uriExists(localUri)) {
+                            this.updateValidatedUris(artifactUri, localUri);
                             return localUri;
+                        }
                     }
                 }
 
