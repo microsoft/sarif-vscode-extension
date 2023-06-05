@@ -98,7 +98,7 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             result._id = [log._uri, runIndex, resultIndex];
 
             const ploc = result.locations?.[0]?.physicalLocation;
-            const [uri, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation, workspaceUri);
+            const [uri, _, uriContents] = parseArtifactLocation(result, ploc?.artifactLocation, workspaceUri);
             result._uri = uri;
             result._uriContents = uriContents;
             result._relativeUri = result._uri?.replace(workspaceUri ?? '' , '') ?? ''; // For grouping, Empty works more predictably than undefined
@@ -172,14 +172,14 @@ Run.artifacts: Art[]
 */
 export function parseLocation(result: Result, loc?: Location, overrideUriBase?: string) {
     const message = loc?.message?.text;
-    const [uri, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation, overrideUriBase);
+    const [uri, _, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation, overrideUriBase);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };
 }
 
 // Improve: `result` purely used for `_run.artifacts`.
 export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, anyArtLoc: ArtifactLocation | undefined, overrideUriBase?: string) {
-    if (!anyArtLoc) return [undefined, undefined];
+    if (!anyArtLoc) return [undefined, undefined, undefined];
     const runArt = result._run.artifacts?.[anyArtLoc.index ?? -1];
     const runArtLoc = runArt?.location;
     const runArtCon = runArt?.contents;
@@ -188,22 +188,8 @@ export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, any
     // Currently not supported: recursive resolution of uriBaseId.
     // Note: While an uriBase often results in an absolute URI, there is no guarantee.
     // Note: While an uriBase often represents the project root, there is no guarantee.
-    // const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
-    // if (uriBaseId) {
-    //     const uriBase
-    //         =  overrideUriBase // Typically the workspaceUri, which takes precedence.
-    //         ?? result._run.originalUriBaseIds?.[uriBaseId]?.uri
-    //         ?? '';
-    //     uri = urlJoin(uriBase, uri);
-    // }
-
-    // // Determine if `uri` absolute or relative. Using scheme as an approximation.
-    // const rxUriScheme = /^([^:/?#]+?):/;
-    // const isRelative = !rxUriScheme.test(uri);
-    // if (isRelative) {
-    //     uri = urlJoin(overrideUriBase ?? 'file://', uri);
-    //     // After this point, the URI must be absolute.
-    // }
+    const uriBaseId = anyArtLoc.uriBaseId ?? runArtLoc?.uriBaseId;
+    const uriBase = uriBaseId ? result._run.originalUriBaseIds?.[uriBaseId]?.uri : undefined;
 
     // A shorter more transparent URI format would be:
     // `sarif://${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`
@@ -212,7 +198,7 @@ export function parseArtifactLocation(result: Pick<Result, '_log' | '_run'>, any
     const uriContents = runArtCon?.text || runArtCon?.binary
         ? encodeURI(`sarif:${encodeURIComponent(result._log._uri)}/${result._run._index}/${anyArtLoc.index}/${uri?.file ?? 'Untitled'}`)
         : undefined;
-    return [uri, uriContents];
+    return [uri, uriBase, uriContents];
 }
 
 export function decodeFileUri(uriString: string) {

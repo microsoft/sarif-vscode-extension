@@ -46,11 +46,11 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 if (fix) {
                     const edit = new WorkspaceEdit();
                     for (const artifactChange of fix.artifactChanges) {
-                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation);
+                        const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
                         const artifactUri = uri;
                         if (!artifactUri) continue;
 
-                        const localUri = await baser.translateArtifactToLocal(artifactUri);
+                        const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
                         const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
                         const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
                         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];

@@ -123,14 +123,14 @@ export class Panel {
                     break;
                 }
                 case 'select': {
-                    const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
-                    const [_, runIndex, resultIndex] = message.id as ResultId;
+                    const {logUri, uri, uriBase, region} = message as { logUri: string, uri: string, uriBase: string | undefined, region: Region};
+                    const [_, runIndex] = message.id as ResultId;
 
                     const log = store.logs.find(log => log._uri === logUri);
                     if (!log) return;
 
                     const versionControlProvenance = log.runs[runIndex].versionControlProvenance;
-                    const validatedUri = await basing.translateArtifactToLocal(uri, versionControlProvenance);
+                    const validatedUri = await basing.translateArtifactToLocal(uri, uriBase, versionControlProvenance);
                     if (!validatedUri) return;
                     await this.selectLocal(logUri, validatedUri, region);
                     break;

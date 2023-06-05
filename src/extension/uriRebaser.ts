@@ -112,7 +112,7 @@ export class UriRebaser {
     private trustedSourceSitesConfigSection = 'trustedSourceSites';
     private trustedSites = workspace.getConfiguration(this.extensionName).get<string[]>(this.trustedSourceSitesConfigSection, []);
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
-    public async translateArtifactToLocal(artifactUri: string, versionControlProvenance?: VersionControlDetails[]) { // Retval is validated.
+    public async translateArtifactToLocal(artifactUri: string, uriBase: string | undefined, versionControlProvenance?: VersionControlDetails[]) { // Retval is validated.
         if (artifactUri.startsWith('sarif://')) return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
 
         const validateUri = async () => {
@@ -179,6 +179,22 @@ export class UriRebaser {
                     this.updateValidatedUris(artifactUri, localUri);
                     this.updateBases(splitUri(artifactUri), splitUri(localUri));
                     return localUri;
+                }
+
+                // SARIF-provided uriBase
+                if (uriBase) {
+                    let localUri: string;
+                    try {
+                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
+                    } catch {
+                        // No URI scheme; assume the base is a file.
+                        localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
+                    }
+
+                    if (await uriExists(localUri)) {
+                        this.updateValidatedUris(artifactUri, localUri);
+                        return localUri;
+                    }
                 }
             } else {
                 // File System Exist
