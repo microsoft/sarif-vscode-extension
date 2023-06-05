@@ -133,6 +133,8 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.fileName.endsWith('.git')) return;
         if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
+        if (doc.uri.scheme === 'comment') return; // Represents a comment thread (from the VS Code Comments API)
+        if (doc.uri.scheme === 'vscode-terminal') return; // Represents a terminal (either integrated or from the VS Code Terminal API)
 
         const artifactUri = await (async () => {
             if (doc.uri.scheme === 'sarif') {
