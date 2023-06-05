@@ -12,9 +12,10 @@ import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
+import { UriRebaser } from './uriRebaser';
 
 // Decorations are for Analysis Steps.
-export function activateDecorations(disposables: Disposable[], store: Store) {
+export function activateDecorations(disposables: Disposable[], store: Store, baser: UriRebaser) {
     // Navigating away from a diagnostic/result will not clear the `activeResultId`.
     // This keeps the decorations "pinned" while users navigate the thread flow steps.
     const activeResultId = observable.box<string | undefined>();
@@ -72,9 +73,9 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
             const docUriString = currentDoc.uri.toString();
-            const locationsInDoc = locations.filter(tfl => {
+            const locationsInDoc = locations.filter(async tfl => {
                 const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
-                return docUriString === artifactUriString;
+                return await baser.translateLocalToArtifact(docUriString) === artifactUriString;
             });
 
             const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);

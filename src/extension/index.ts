@@ -52,7 +52,7 @@ export async function activate(context: ExtensionContext) {
     activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser, outputChannel);
     activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store);
+    activateDecorations(disposables, store, baser);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, store, panel);
     activateGithubAnalyses(disposables, store, panel, outputChannel);
