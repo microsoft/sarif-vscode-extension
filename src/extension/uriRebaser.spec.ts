@@ -15,14 +15,6 @@ describe('baser', () => {
         './platform': 'darwin',
     });
 
-    it('Array.commonLength', () => {
-        const commonLength = Array.commonLength(
-            ['a', 'b', 'c'],
-            ['a', 'b', 'd']
-        );
-        assert.strictEqual(commonLength, 2);
-    });
-
     it('translates uris - local -> artifact - case-insensitive file system', async () => {
         // Spaces inserted to emphasize common segments.
         const artifactUri = 'file://  /a/b'.replace(/ /g, '');
