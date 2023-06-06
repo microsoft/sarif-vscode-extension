@@ -143,35 +143,6 @@ export class UriRebaser {
                     }
                 }
 
-                // Known Bases
-                for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
-                    if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
-                    const localUri = artifactUri.replace(artifactBase, localBase);
-                    if (await uriExists(localUri)) {
-                        this.updateValidatedUris(artifactUri, localUri);
-                        return localUri;
-                    }
-                }
-
-                // Distinct Project Items
-                const {file} = artifactUri;
-                const distinctFilename = await workspaceHasDistinctFilename(file);
-                if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
-                    const localUri = distinctFilename;
-                    this.updateValidatedUris(artifactUri, localUri);
-                    this.updateBases(artifactUri, localUri);
-                    return localUri;
-                }
-
-                // Open Docs
-                for (const doc of workspace.textDocuments) {
-                    const localUri = doc.uri.toString();
-                    if (localUri.file !== artifactUri.file) continue;
-                    this.updateValidatedUris(artifactUri, localUri);
-                    this.updateBases(artifactUri, localUri);
-                    return localUri;
-                }
-
                 // SARIF-provided uriBase
                 if (uriBase) {
                     let localUri: string;
@@ -189,8 +160,41 @@ export class UriRebaser {
                 }
             } else {
                 // File System Exist
-                if (await uriExists(artifactUri))
+                if (!isRelative && await uriExists(artifactUri)) {
+                    this.updateValidatedUris(artifactUri, artifactUri);
                     return artifactUri;
+                }
+            }
+
+            // These strategies make sense regardless if the URI is relative or absolute
+
+            // Known Bases
+            for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
+                if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
+                const localUri = artifactUri.replace(artifactBase, localBase);
+                if (await uriExists(localUri)) {
+                    this.updateValidatedUris(artifactUri, localUri);
+                    return localUri;
+                }
+            }
+
+            // Distinct Project Items
+            const {file} = artifactUri;
+            const distinctFilename = await workspaceHasDistinctFilename(file);
+            if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
+                const localUri = distinctFilename;
+                this.updateValidatedUris(artifactUri, localUri);
+                this.updateBases(artifactUri, localUri);
+                return localUri;
+            }
+
+            // Open Docs
+            for (const doc of workspace.textDocuments) {
+                const localUri = doc.uri.toString();
+                if (localUri.file !== artifactUri.file) continue;
+                this.updateValidatedUris(artifactUri, localUri);
+                this.updateBases(artifactUri, localUri);
+                return localUri;
             }
 
             return ''; // Signals inability to rebase.
