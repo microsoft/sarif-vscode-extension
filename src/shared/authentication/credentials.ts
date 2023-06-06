@@ -29,7 +29,7 @@ export class Credentials implements vscode.Disposable {
     public constructor(providerId: string, scopes: string[], signInMessage?: string) {
         this.providerId = providerId;
 
-        // This is poorly documented, but it 'offline_access' appears to be needed in order for vscode to utlize refresh token pattern
+        // This is poorly documented, but it 'offline_access' appears to be needed in order for vscode to utilize the refresh token pattern
         this.scopes = [
             ...scopes,
             'offline_access'

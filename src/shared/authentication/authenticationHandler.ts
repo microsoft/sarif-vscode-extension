@@ -6,7 +6,8 @@ import { Credentials } from './credentials';
 import { getUserEmailFromJwt } from './jwtUtilities';
 
 //const sarifViewClientId = 'dde281b2-f277-479b-9c1c-2e84bd84092f';
-const sarifViewClientId = '496719b1-dc2e-4adb-9d15-48372642ccfb';
+//const sarifViewerClientId = '496719b1-dc2e-4adb-9d15-48372642ccfb';
+const sarifViewerClientId = 'b86035bd-b0d6-48e8-aa8e-ac09b247525b';
 const microsoftTenantId = '72f988bf-86f1-41af-91ab-2d7cd011db47';
 
 interface IAuthenticationHandler {
@@ -146,7 +147,7 @@ export class AuthenticationHandler implements IAuthenticationHandler {
 export const AdoAuthenticationHandler: AuthenticationHandler = new AuthenticationHandler(
     'microsoft',
     [
-        `VSCODE_CLIENT_ID:${sarifViewClientId}`,
+        `VSCODE_CLIENT_ID:${sarifViewerClientId}`,
         `VSCODE_TENANT:${microsoftTenantId}`,
         //'VSCODE_TENANT:common',
         '499b84ac-1321-427f-aa17-267ca6975798/.default'

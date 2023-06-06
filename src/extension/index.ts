@@ -24,6 +24,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import { AdoAuthenticationHandler } from '../shared/authentication/authenticationHandler';
+import { createServer } from 'http';
+//import { meter } from 'stream-meter';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -123,7 +125,28 @@ export async function activate(context: ExtensionContext) {
         return undefined;
     }
 
-    await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=ProjektEins&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
+    //await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=ProjektEins&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
+
+    const port = 4169;
+    createServer((request, response) => {
+        outputChannel.appendLine(`${request.method} request received for ${request.url}}`);
+        if (request.method === 'POST') {
+            const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
+            const stream = request
+                //.pipe(meter(1024 * 1024)) // Cap at 1 MB
+                .pipe(fs.createWriteStream(filePath));
+            stream.on('finish', async () => {
+                store.logs.push(...await loadLogs([Uri.file(filePath)]));
+                if (store.results.length) panel.show();
+            });
+
+            response.statusCode = 200;
+            response.end();
+
+        }
+    }).listen(port, () => {
+        outputChannel.appendLine(`Server running at http://localhost:${port}`);
+    });
 
     // General Activation
     activateSarifStatusBarItem(disposables);
