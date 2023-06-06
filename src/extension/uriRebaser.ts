@@ -244,7 +244,7 @@ export class UriRebaser {
                     if (choice === 'Yes' || choice === alwaysMsg) {
                         const mkdirRecursive = async (dir: string) => {
                             return new Promise((resolve, reject) => {
-                                fs.mkdir(dir, { recursive: true }, (error: any) => {
+                                fs.mkdir(dir, { recursive: true }, (error) => {
                                     if (error) {
                                         reject(error);
                                     } else {
