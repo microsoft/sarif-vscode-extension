@@ -227,6 +227,9 @@ export class Panel {
                     await Store.globalState.update('view', Object.assign(oldState, JSON.parse(state)));
                     break;
                 }
+                case 'showPanel': {
+                    panel.show();
+                }
                 case 'refresh': {
                     await store.remoteAnalysisInfoUpdated++;
                     break;

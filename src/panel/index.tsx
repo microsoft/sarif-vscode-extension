@@ -50,6 +50,9 @@ export { DetailsLayouts } from './details.layouts';
                     <div className="svButton" onClick={() => vscode.postMessage({ command: 'open' })}>
                         Open SARIF log
                     </div>
+                    <div className="svButton" onClick={() => vscode.postMessage({ command: 'showPanel' })}>
+                        Show SARIF Viewer
+                    </div>
                 </div>
             </>;
         }
