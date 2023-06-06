@@ -12,17 +12,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 
-/**
- * Splits a URI into path segments. Scheme+authority considered a "segment" for practical purposes.
- * Query and fragment are current ignored until we have a concrete use case.
- * @param uri - An absolute URI.
- */
-function splitUri(uri: string | undefined) {
-    if (uri === undefined) return [];
-    const { scheme, authority, path } = Uri.parse(uri, true);
-    return [`${scheme}://${authority}`, ...path.slice(1).split('/')]; // By spec first '/' always exists, thus safe to slice(1).
-}
-
 const workspaceDistinctFilenameCache: Map<string, string | undefined> = new Map();
 
 async function workspaceHasDistinctFilename(filename: string): Promise<string | undefined> {
@@ -66,11 +55,15 @@ export class UriRebaser {
     }
 
     private basesArtifactToLocal = new Map<string, string>() // <artifactUri, localUri>
-    private updateBases(artifact: string[], local: string[]) {
-        const i = Array.commonLength(artifact.slice().reverse(), local.slice().reverse());
-        this.basesArtifactToLocal.set(
-            artifact.slice(0, -i).join('/'),
-            local.slice(0, -i).join('/'));
+    private updateBases(artifact: string, local: string) {
+        let commonLength = 0;
+        while (
+            commonLength < artifact.length &&
+            commonLength < local.length &&
+            artifact[artifact.length - commonLength - 1] === local[local.length - commonLength - 1]) {
+            commonLength++;
+        }
+        this.basesArtifactToLocal.set(artifact.slice(0, -commonLength), local.slice(0, -commonLength));
     }
 
     private validatedUrisArtifactToLocal = new Map<string, string>()
@@ -102,7 +95,7 @@ export class UriRebaser {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
                 this.updateValidatedUris(artifactUri, localUri);
-                this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                this.updateBases(artifactUri, localUri);
             }
         }
         return this.validatedUrisLocalToArtifact.get(localUri) ?? localUri;
@@ -150,8 +143,6 @@ export class UriRebaser {
                     }
                 }
 
-                artifactUri = Uri.file(artifactUri).toString();
-
                 // Known Bases
                 for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                     if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
@@ -168,7 +159,7 @@ export class UriRebaser {
                 if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
                     const localUri = distinctFilename;
                     this.updateValidatedUris(artifactUri, localUri);
-                    this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                    this.updateBases(artifactUri, localUri);
                     return localUri;
                 }
 
@@ -177,7 +168,7 @@ export class UriRebaser {
                     const localUri = doc.uri.toString();
                     if (localUri.file !== artifactUri.file) continue;
                     this.updateValidatedUris(artifactUri, localUri);
-                    this.updateBases(splitUri(artifactUri), splitUri(localUri));
+                    this.updateBases(artifactUri, localUri);
                     return localUri;
                 }
 
@@ -266,9 +257,7 @@ export class UriRebaser {
                             await mkdirRecursive(dir);
                             await fs.promises.writeFile(fileName, buffer);
 
-                            const partsOld = splitUri(artifactUri);
-                            const partsNew = splitUri(`file://${fileName.replace(/\\/g, '/')}`);
-                            this.updateBases(partsOld, partsNew);
+                            this.updateBases(artifactUri, `file://${fileName.replace(/\\/g, '/')}`);
                             return fileUrl;
                         }
                         catch (error: any) {
@@ -291,41 +280,19 @@ export class UriRebaser {
                 });
                 if (!files?.length) return ''; // User cancelled.
 
-                const partsOld = splitUri(artifactUri);
-                const partsNew = splitUri(files[0].toString());
-                if (partsOld.last !== partsNew.last) {
-                    void window.showErrorMessage(`File names must match: "${partsOld.last}" and "${partsNew.last}"`);
+                this.updateBases(artifactUri, files[0].toString());
+
+                const artifactFile = artifactUri.file;
+                const localFile = files[0].toString().file;
+                if (artifactFile !== localFile) {
+                    void window.showErrorMessage(`File names must match: "${artifactFile}" and "${localFile}"`);
                     return '';
                 }
-                this.updateBases(partsOld, partsNew);
             }
             validatedUri = await validateUri(); // Try again
         }
         return validatedUri;
     }
 
-    public static *commonIndices<T>(a: T[], b: T[]) { // Add comparator?
-        for (const [aIndex, aPart] of a.entries()) {
-            for (const [bIndex, bPart] of b.entries()) {
-                if (aPart === bPart) yield [aIndex, bIndex];
-            }
-        }
-    }
-
     public uriBases = [] as string[]
-    private async tryUriBases(artifactUri: string) {
-        const artifactParts = splitUri(artifactUri);
-        for (const localUriBase of this.uriBases) {
-            const localParts = splitUri(localUriBase);
-            for (const [artifactIndex, localIndex] of UriRebaser.commonIndices(artifactParts, localParts)) {
-                const rebased = [...localParts.slice(0, localIndex), ...artifactParts.slice(artifactIndex)].join('/');
-                if (await uriExists(rebased)) {
-                    this.updateValidatedUris(artifactUri, localUriBase);
-                    this.updateBases(artifactParts, localParts);
-                    return rebased;
-                }
-            }
-        }
-        return undefined;
-    }
 }
