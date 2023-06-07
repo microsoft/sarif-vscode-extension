@@ -159,10 +159,19 @@ export class UriRebaser {
                     }
                 }
             } else {
+                let localUri: string;
+                try {
+                    // file:///c:/whatever
+                    localUri = Uri.parse(artifactUri).toString();
+                } catch {
+                    // c:/whatever
+                    localUri = Uri.file(artifactUri).toString();
+                }
+
                 // File System Exist
-                if (!isRelative && await uriExists(artifactUri)) {
-                    this.updateValidatedUris(artifactUri, artifactUri);
-                    return artifactUri;
+                if (await uriExists(localUri)) {
+                    this.updateValidatedUris(artifactUri, localUri);
+                    return localUri;
                 }
             }
 
