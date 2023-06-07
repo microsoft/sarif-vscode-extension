@@ -140,7 +140,7 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
             if (doc.uri.scheme === 'sarif') {
                 return doc.uri.toString();
             }
-            return await baser.translateLocalToArtifact(doc.uri.toString());
+            return baser.translateLocalToArtifact(doc.uri);
         })();
         const severities = {
             error: DiagnosticSeverity.Error,

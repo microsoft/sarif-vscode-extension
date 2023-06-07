@@ -4,7 +4,7 @@
 
 import { diffChars } from 'diff';
 import { Fix, Result } from 'sarif';
-import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, Uri, workspace, WorkspaceEdit } from 'vscode';
+import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, workspace, WorkspaceEdit } from 'vscode';
 import { parseArtifactLocation } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
@@ -51,13 +51,15 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                         if (!artifactUri) continue;
 
                         const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
-                        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
+                        if (!localUri) continue;
+
+                        const currentDoc = await workspace.openTextDocument(localUri);
                         const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
                         const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
 
                         for (const replacement of artifactChange.replacements) {
                             edit.replace(
-                                Uri.parse(localUri),
+                                localUri,
                                 driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
                                 replacement.insertedContent?.text ?? '',
                             );

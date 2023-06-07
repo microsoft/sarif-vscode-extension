@@ -12,17 +12,21 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 
-const workspaceDistinctFilenameCache: Map<string, string | undefined> = new Map();
+const workspaceDistinctFilenameCache: Map<string, Uri | undefined> = new Map();
 
-async function workspaceHasDistinctFilename(filename: string): Promise<string | undefined> {
-    if (workspaceDistinctFilenameCache.has(filename)) {
-        return workspaceDistinctFilenameCache.get(filename);
+async function workspaceHasDistinctFilename(filename: string): Promise<Uri | undefined> {
+    const distinctFileName = workspaceDistinctFilenameCache.get(filename);
+    if (distinctFileName !== undefined) {
+        return distinctFileName;
     }
-    const matches = await workspace.findFiles(`**/${filename}`); // Is `.git` folder excluded?
-    const result = matches.length === 1 ? matches[0].toString() : undefined;
 
-    workspaceDistinctFilenameCache.set(filename, result);
-    return result;
+    const matches = await workspace.findFiles(`**/${filename}`); // Is `.git` folder excluded?
+    if (matches.length === 1) {
+        workspaceDistinctFilenameCache.set(filename, matches[0]);
+        return matches[0];
+    }
+
+    return undefined;
 }
 
 workspace.onDidCreateFiles(async (event) => {
@@ -55,20 +59,21 @@ export class UriRebaser {
     }
 
     private basesArtifactToLocal = new Map<string, string>() // <artifactUri, localUri>
-    private updateBases(artifact: string, local: string) {
+    private updateBases(artifact: string, local: Uri) {
+        const localPath = local.toString();
         let commonLength = 0;
         while (
             commonLength < artifact.length &&
-            commonLength < local.length &&
-            artifact[artifact.length - commonLength - 1] === local[local.length - commonLength - 1]) {
+            commonLength < localPath.length &&
+            artifact[artifact.length - commonLength - 1] === localPath[localPath.length - commonLength - 1]) {
             commonLength++;
         }
-        this.basesArtifactToLocal.set(artifact.slice(0, -commonLength), local.slice(0, -commonLength));
+        this.basesArtifactToLocal.set(artifact.slice(0, -commonLength), localPath.slice(0, -commonLength));
     }
 
-    private validatedUrisArtifactToLocal = new Map<string, string>()
-    private validatedUrisLocalToArtifact = new Map<string, string>()
-    private updateValidatedUris(artifact: string, local: string) {
+    private validatedUrisArtifactToLocal = new Map<string, Uri>()
+    private validatedUrisLocalToArtifact = new Map<Uri, string>()
+    private updateValidatedUris(artifact: string, local: Uri) {
         this.validatedUrisArtifactToLocal.set(artifact, local);
         this.validatedUrisLocalToArtifact.set(local, artifact);
     }
@@ -81,10 +86,10 @@ export class UriRebaser {
     // Notes:
     // If 2 logs have the same uri, then likely the same (unless the uri is super short)
     // If 2 logs don't have the same uri, they can still potentially be the same match
-    public async translateLocalToArtifact(localUri: string): Promise<string> { // Future: Ret undefined when certain.
+    public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> { // Future: Ret undefined when certain.
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
-            const { file } = platformUriNormalize(localUri);
+            const { file } = platformUriNormalize(localUri).toString();
 
             // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
             // but obviously can't always be true.
@@ -98,17 +103,18 @@ export class UriRebaser {
                 this.updateBases(artifactUri, localUri);
             }
         }
-        return this.validatedUrisLocalToArtifact.get(localUri) ?? localUri;
+        return this.validatedUrisLocalToArtifact.get(localUri);
     }
 
     private extensionName = 'sarif-viewer'
     private trustedSourceSitesConfigSection = 'trustedSourceSites';
     private trustedSites = workspace.getConfiguration(this.extensionName).get<string[]>(this.trustedSourceSitesConfigSection, []);
     private activeInfoMessages = new Set<string>() // Prevent repeat message animations when arrowing through many results with the same uri.
-    public async translateArtifactToLocal(artifactUri: string, uriBase: string | undefined, versionControlProvenance?: VersionControlDetails[]) { // Retval is validated.
-        if (artifactUri.startsWith('sarif://')) return artifactUri; // Sarif-scheme URIs are owned/created by us, so we know they exist.
+    public async translateArtifactToLocal(artifactUri: string, uriBase: string | undefined, versionControlProvenance?: VersionControlDetails[]): Promise<Uri | undefined> { // Retval is validated.
+        // Sarif-scheme URIs are owned/created by us, so we know they exist.
+        if (artifactUri.startsWith('sarif://')) return Uri.parse(artifactUri, true);
 
-        const validateUri = async () => {
+        const validateUri = async (): Promise<Uri | undefined> => {
             // Cache
             const artifact = this.validatedUrisArtifactToLocal.get(artifactUri);
             if (artifact)
@@ -119,12 +125,12 @@ export class UriRebaser {
             if (isRelative) {
                 // API-injected uriBases
                 for (const uriBase of this.uriBases) {
-                    let localUri: string;
+                    let localUri: Uri;
                     try {
-                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
+                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
                     } catch {
                         // No URI scheme; assume the base is a file.
-                        localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
+                        localUri = Uri.file(path.join(uriBase, artifactUri));
                     }
 
                     if (await uriExists(localUri)) {
@@ -136,7 +142,7 @@ export class UriRebaser {
                 // File System Exist with Workspace prefixed
                 const workspaceUri = workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
                 if (workspaceUri) {
-                    const localUri = Uri.joinPath(workspaceUri, artifactUri).toString();
+                    const localUri = Uri.joinPath(workspaceUri, artifactUri);
                     if (await uriExists(localUri)) {
                         this.updateValidatedUris(artifactUri, localUri);
                         return localUri;
@@ -145,12 +151,12 @@ export class UriRebaser {
 
                 // SARIF-provided uriBase
                 if (uriBase) {
-                    let localUri: string;
+                    let localUri: Uri;
                     try {
-                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri).toString();
+                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
                     } catch {
                         // No URI scheme; assume the base is a file.
-                        localUri = Uri.file(path.join(uriBase, artifactUri)).toString();
+                        localUri = Uri.file(path.join(uriBase, artifactUri));
                     }
 
                     if (await uriExists(localUri)) {
@@ -159,13 +165,13 @@ export class UriRebaser {
                     }
                 }
             } else {
-                let localUri: string;
+                let localUri: Uri;
                 try {
                     // file:///c:/whatever
-                    localUri = Uri.parse(artifactUri).toString();
+                    localUri = Uri.parse(artifactUri);
                 } catch {
                     // c:/whatever
-                    localUri = Uri.file(artifactUri).toString();
+                    localUri = Uri.file(artifactUri);
                 }
 
                 // File System Exist
@@ -180,7 +186,7 @@ export class UriRebaser {
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                 if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
-                const localUri = artifactUri.replace(artifactBase, localBase);
+                const localUri = Uri.parse(artifactUri.replace(artifactBase, localBase), true);
                 if (await uriExists(localUri)) {
                     this.updateValidatedUris(artifactUri, localUri);
                     return localUri;
@@ -199,14 +205,14 @@ export class UriRebaser {
 
             // Open Docs
             for (const doc of workspace.textDocuments) {
-                const localUri = doc.uri.toString();
-                if (localUri.file !== artifactUri.file) continue;
+                const localUri = doc.uri;
+                if (localUri.toString().file !== artifactUri.file) continue;
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(artifactUri, localUri);
                 return localUri;
             }
 
-            return ''; // Signals inability to rebase.
+            return undefined; // Signals inability to rebase.
         };
 
         let validatedUri = await validateUri();
@@ -222,9 +228,9 @@ export class UriRebaser {
                 const root = os.tmpdir().endsWith(path.sep) ? os.tmpdir() : `${os.tmpdir()}${path.sep}`;
                 const fileName = path.join(root, url.pathname).normalize();
                 if (!fileName.startsWith(root))
-                    return '';
+                    return undefined;
 
-                const fileUrl = `file:///${fileName.replace(/\\/g, '/')}`;
+                const fileUrl = Uri.file(fileName);
                 // check if the file was already downloaded
                 if (await uriExists(fileUrl))
                     return fileUrl;
@@ -270,7 +276,7 @@ export class UriRebaser {
                             await mkdirRecursive(dir);
                             await fs.promises.writeFile(fileName, buffer);
 
-                            this.updateBases(artifactUri, `file://${fileName.replace(/\\/g, '/')}`);
+                            this.updateBases(artifactUri, fileUrl);
                             return fileUrl;
                         }
                         catch (error: any) {
@@ -291,15 +297,15 @@ export class UriRebaser {
                     filters: { 'Matching file' : [extension] },
                     // Consider allowing folders.
                 });
-                if (!files?.length) return ''; // User cancelled.
+                if (!files?.length) return undefined; // User cancelled.
 
-                this.updateBases(artifactUri, files[0].toString());
+                this.updateBases(artifactUri, files[0]);
 
                 const artifactFile = artifactUri.file;
                 const localFile = files[0].toString().file;
                 if (artifactFile !== localFile) {
                     void window.showErrorMessage(`File names must match: "${artifactFile}" and "${localFile}"`);
-                    return '';
+                    return undefined;
                 }
             }
             validatedUri = await validateUri(); // Try again
