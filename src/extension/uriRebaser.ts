@@ -86,7 +86,7 @@ export class UriRebaser {
     // Notes:
     // If 2 logs have the same uri, then likely the same (unless the uri is super short)
     // If 2 logs don't have the same uri, they can still potentially be the same match
-    public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> { // Future: Ret undefined when certain.
+    public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> {
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri)) {
             const { file } = platformUriNormalize(localUri).toString();
