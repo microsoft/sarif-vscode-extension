@@ -123,7 +123,9 @@ export class UriRebaser {
             const rxUriScheme = /^([^:/?#]+?):/;
             const isRelative = !rxUriScheme.test(artifactUri);
             if (isRelative) {
-                // API-injected uriBases
+                // §3.4.4:
+                // If the end user has configured the SARIF consumer with a value for the uriBaseId...
+                // then the consumer SHALL use the configured value
                 for (const uriBase of this.uriBases) {
                     let localUri: Uri;
                     try {
@@ -139,17 +141,8 @@ export class UriRebaser {
                     }
                 }
 
-                // File System Exist with Workspace prefixed
-                const workspaceUri = workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
-                if (workspaceUri) {
-                    const localUri = Uri.joinPath(workspaceUri, artifactUri);
-                    if (await uriExists(localUri)) {
-                        this.updateValidatedUris(artifactUri, localUri);
-                        return localUri;
-                    }
-                }
-
-                // SARIF-provided uriBase
+                // If uriBaseId is not yet resolved and theRun.originalUriBaseIds (§3.14.14) is present,
+                // the consumer SHALL attempt to resolve the uriBaseId from the information in originalUriBaseIds
                 if (uriBase) {
                     let localUri: Uri;
                     try {
@@ -159,6 +152,19 @@ export class UriRebaser {
                         localUri = Uri.file(path.join(uriBase, artifactUri));
                     }
 
+                    if (await uriExists(localUri)) {
+                        this.updateValidatedUris(artifactUri, localUri);
+                        return localUri;
+                    }
+                }
+
+                // If uriBaseId is not yet resolved,
+                // the consumer MAY use other information or heuristics to locate the artifact.
+
+                // File System Exist with Workspace prefixed
+                const workspaceUri = workspace.workspaceFolders?.[0]?.uri; // TODO: Handle multiple workspaces.
+                if (workspaceUri) {
+                    const localUri = Uri.joinPath(workspaceUri, artifactUri);
                     if (await uriExists(localUri)) {
                         this.updateValidatedUris(artifactUri, localUri);
                         return localUri;
