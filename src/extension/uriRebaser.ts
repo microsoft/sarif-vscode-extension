@@ -127,14 +127,7 @@ export class UriRebaser {
                 // If the end user has configured the SARIF consumer with a value for the uriBaseId...
                 // then the consumer SHALL use the configured value
                 for (const uriBase of this.uriBases) {
-                    let localUri: Uri;
-                    try {
-                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
-                    } catch {
-                        // No URI scheme; assume the base is a file.
-                        localUri = Uri.file(path.join(uriBase, artifactUri));
-                    }
-
+                    const localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
                     if (await uriExists(localUri)) {
                         this.updateValidatedUris(artifactUri, localUri);
                         return localUri;
@@ -144,14 +137,7 @@ export class UriRebaser {
                 // If uriBaseId is not yet resolved and theRun.originalUriBaseIds (§3.14.14) is present,
                 // the consumer SHALL attempt to resolve the uriBaseId from the information in originalUriBaseIds
                 if (uriBase) {
-                    let localUri: Uri;
-                    try {
-                        localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
-                    } catch {
-                        // No URI scheme; assume the base is a file.
-                        localUri = Uri.file(path.join(uriBase, artifactUri));
-                    }
-
+                    const localUri = Uri.joinPath(Uri.parse(uriBase, true), artifactUri);
                     if (await uriExists(localUri)) {
                         this.updateValidatedUris(artifactUri, localUri);
                         return localUri;
@@ -171,16 +157,8 @@ export class UriRebaser {
                     }
                 }
             } else {
-                let localUri: Uri;
-                try {
-                    // file:///c:/whatever
-                    localUri = Uri.parse(artifactUri);
-                } catch {
-                    // c:/whatever
-                    localUri = Uri.file(artifactUri);
-                }
-
                 // File System Exist
+                const localUri = Uri.parse(artifactUri);
                 if (await uriExists(localUri)) {
                     this.updateValidatedUris(artifactUri, localUri);
                     return localUri;
