@@ -72,10 +72,12 @@ export class UriRebaser {
     }
 
     private validatedUrisArtifactToLocal = new Map<string, Uri>()
-    private validatedUrisLocalToArtifact = new Map<Uri, string>()
+    private validatedUrisLocalToArtifact = new Map<string, string>()
     private updateValidatedUris(artifact: string, local: Uri) {
         this.validatedUrisArtifactToLocal.set(artifact, local);
-        this.validatedUrisLocalToArtifact.set(local, artifact);
+
+        // Maps use reference equality so we can't use Uri objects as keys.
+        this.validatedUrisLocalToArtifact.set(local.toString(), artifact);
     }
 
     // Other possibilities:
@@ -88,7 +90,7 @@ export class UriRebaser {
     // If 2 logs don't have the same uri, they can still potentially be the same match
     public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> {
         // Need to refresh on uri map update.
-        if (!this.validatedUrisLocalToArtifact.has(localUri)) {
+        if (!this.validatedUrisLocalToArtifact.has(localUri.toString())) {
             const { file } = platformUriNormalize(localUri).toString();
 
             // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
@@ -103,7 +105,7 @@ export class UriRebaser {
                 this.updateBases(artifactUri, localUri);
             }
         }
-        return this.validatedUrisLocalToArtifact.get(localUri);
+        return this.validatedUrisLocalToArtifact.get(localUri.toString());
     }
 
     private extensionName = 'sarif-viewer'
