@@ -90,12 +90,15 @@ export async function activate(context: ExtensionContext) {
 
             //const token = await getAuthorizationToken();
 
-            const authToken = await AdoAuthenticationHandler.getAccessToken();
+            //const authToken = await AdoAuthenticationHandler.getAccessToken();
+
+            const session = await vscode.authentication.getSession('microsoft', ['vso.advsec'], { createIfNone: true });
+            const accessToken = session?.accessToken;
 
             const response = await fetch(url, {
                 headers: {
                     'Accept': 'application/sarif+json',
-                    'Authorization': `Bearer ${authToken}`,
+                    'Authorization': `Bearer ${accessToken}`,
                     'User-Agent': 'MS-SarifVSCode.sarif-viewer',
                 },
                 method: 'GET'
@@ -126,7 +129,7 @@ export async function activate(context: ExtensionContext) {
     }
 
     //await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=ProjektEins&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
-
+    /*
     const port = 4169;
     createServer((request, response) => {
         outputChannel.appendLine(`${request.method} request received for ${request.url}}`);
@@ -147,7 +150,7 @@ export async function activate(context: ExtensionContext) {
     }).listen(port, () => {
         outputChannel.appendLine(`Server running at http://localhost:${port}`);
     });
-
+*/
     // General Activation
     activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser, outputChannel);
