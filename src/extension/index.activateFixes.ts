@@ -46,7 +46,8 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 if (fix) {
                     const edit = new WorkspaceEdit();
                     for (const artifactChange of fix.artifactChanges) {
-                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation);
+                        const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
+                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation, workspaceUri);
                         const artifactUri = uri;
                         if (!artifactUri) continue;
 
