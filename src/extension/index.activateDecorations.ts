@@ -31,13 +31,13 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
     // On selection change, set the `activeResultId`.
     disposables.push(languages.registerCodeActionsProvider('*', {
         provideCodeActions: (_doc, _range, context) => {
-            if (context.only) return;
+            if (context.only) return undefined;
 
             const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
-            if (!diagnostic) return;
+            if (!diagnostic) return undefined;
 
             const result = diagnostic?.result;
-            if (!result) return; // Don't clear the decorations. See `activeResultId` comments.
+            if (!result) return undefined; // Don't clear the decorations. See `activeResultId` comments.
 
             activeResultId.set(JSON.stringify(result._id)); // Stringify for comparability.
 

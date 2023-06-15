@@ -14,8 +14,14 @@ declare global {
         indexOf(searchElement: T | undefined, fromIndex?: number | undefined): number;
     }
 
-    const acquireVsCodeApi: any; // VS Code does not provide type info.
-    const vscode: any; // VS Code does not provide type info.
+    interface VsCodeApi {
+        /**
+         * Post message back to vscode extension.
+         */
+        postMessage(msg: any): void;
+    }
+
+    const vscode: VsCodeApi;
 
     namespace NodeJS {
         interface Global {

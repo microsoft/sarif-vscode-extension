@@ -261,7 +261,7 @@ export function renderMessageTextWithEmbeddedLinks(text: string, result: Result,
                 .split(/(\[[^\]]*\]\([^)]+\))/g)
                 .map((item, i) => {
                     if (i % 2 === 0) return item;
-                    const [_, text, id] = item.match(rxLink)!; // Safe since it was split by the same RegExp.
+                    const [, text, id] = item.match(rxLink)!; // Safe since it was split by the same RegExp.
                     return isNaN(+id)
                         ? <a key={i} tabIndex={-1} href={id}>{text}</a>
                         : <a key={i} tabIndex={-1} href="#" onClick={e => {
@@ -272,4 +272,5 @@ export function renderMessageTextWithEmbeddedLinks(text: string, result: Result,
                 })
             : text;
     }
+    return undefined;
 }
