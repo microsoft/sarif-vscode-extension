@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
@@ -23,9 +24,6 @@ import { UriRebaser } from './uriRebaser';
 import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
-import { AdoAuthenticationHandler } from '../shared/authentication/authenticationHandler';
-import { createServer } from 'http';
-//import { meter } from 'stream-meter';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -56,67 +54,35 @@ export async function activate(context: ExtensionContext) {
 
     // URI handler
     window.registerUriHandler({
-        async handleUri() {
-            startWebServer();
+        async handleUri(uri: vscode.Uri) {
+            if (uri.path === '/alert') {
+                // Launched by Azure DevOps Advanced Security alert page.
+                const pairs = uri.query.split('&');
+                // Find the url parameter.
+                for (const param in pairs) {
+                    const pair = param.split('=');
+                    if (pair[0] === 'url') {
+                        // Decode the alert API URL and pass it to the load function.
+                        await loadAlertSarif(new URL(decodeURIComponent(pair[1])));
+                        break;
+                    }
+                }
+            }
         }
     });
 
-    async function startWebServer() {
-        const port = 4169;
-        createServer((request, response) => {
-            outputChannel.appendLine(`${request.method} request received for ${request.url}}`);
-            if (request.method === 'POST') {
-                const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
-                const stream = request
-                    //.pipe(meter(1024 * 1024)) // Cap at 1 MB
-                    .pipe(fs.createWriteStream(filePath));
-                stream.on('finish', async () => {
-                    store.logs.push(...await loadLogs([Uri.file(filePath)]));
-                    if (store.results.length) panel.show();
-                });
-    
-                response.statusCode = 200;
-                response.end();
-    
-            }
-        }).listen(port, () => {
-            outputChannel.appendLine(`Server running at http://localhost:${port}`);
-        });
-    }
-
     async function loadAlertSarif(url: URL) {
         try {
-            //const azureAccount: AzureAccountExtensionApi = (<AzureAccountExtensionApi>extensions.getExtension('ms-vscode.azure-account')?.exports); //.getApi('1.0.0'); // = (<AzureExtensionApiProvider>extensions.getExtension('ms-vscode.azure-account')!.exports).getApi('1.0.0');
-            //const session = azureAccount.subscriptions[0].session;
-            //const credentials2 = (session as AzureSession).credentials2 as TokenCredentialsBase;
-            //const accessToken = credentials2.getToken();
-            //const sessions = AuthenticationManager.getSessions();
-
-            //const session = await authentication.getSession(
-            //    'microsoft',
-            //    [
-            //        'VSCODE_CLIENT_ID:dde281b2-f277-479b-9c1c-2e84bd84092f',
-            //        'VSCODE_TENANT:common',
-            //        'offline_access', // Necessary for refresh token
-            //        'vso.advsec', // Advanced Security Read scope
-            //    ],
-            //    { createIfNone: true }
-            //);
-
-            //const token = await getAuthorizationToken();
-
-            //const authToken = await AdoAuthenticationHandler.getAccessToken();
-
-            const session = await vscode.authentication.getSession('microsoft', ['vso.advsec'], { createIfNone: true });
+            const session = await vscode.authentication.getSession('microsoft', ['499b84ac-1321-427f-aa17-267ca6975798/.default'], { createIfNone: true });
             const accessToken = session?.accessToken;
 
             const response = await fetch(url, {
+                method: 'GET',
                 headers: {
                     'Accept': 'application/sarif+json',
                     'Authorization': `Bearer ${accessToken}`,
                     'User-Agent': 'MS-SarifVSCode.sarif-viewer',
-                },
-                method: 'GET'
+                }
             });
 
             if (response.ok) {
@@ -124,8 +90,8 @@ export async function activate(context: ExtensionContext) {
                 const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
 
                 try {
-                    const buffer = await response.buffer();
-                    await fs.promises.writeFile(filePath, buffer);
+                    const jsonObject = await response.json();
+                    await fs.promises.writeFile(filePath, jsonObject.value);
                 } catch (error) {
                     outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
                 }
@@ -143,29 +109,8 @@ export async function activate(context: ExtensionContext) {
         return undefined;
     }
 
-    //await loadAlertSarif(new URL('https://advsec.codedev.ms/cmeyer/_apis/advancedsecurity/alerts/18/?project=ProjektEins&repository=1213f32a-071a-4282-b9a2-2f6141590138'));
-    /*
-    const port = 4169;
-    createServer((request, response) => {
-        outputChannel.appendLine(`${request.method} request received for ${request.url}}`);
-        if (request.method === 'POST') {
-            const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
-            const stream = request
-                //.pipe(meter(1024 * 1024)) // Cap at 1 MB
-                .pipe(fs.createWriteStream(filePath));
-            stream.on('finish', async () => {
-                store.logs.push(...await loadLogs([Uri.file(filePath)]));
-                if (store.results.length) panel.show();
-            });
+    //await loadAlertSarif(new URL('https://advsec.dev.azure.com/tfspfcusctest/_apis/advancedsecurity/alerts/2431/?project=advsecpreflightTest&repository=e5e5540d-9a50-4687-b485-617af4255b4e'));
 
-            response.statusCode = 200;
-            response.end();
-
-        }
-    }).listen(port, () => {
-        outputChannel.appendLine(`Server running at http://localhost:${port}`);
-    });
-*/
     // General Activation
     activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser, outputChannel);
