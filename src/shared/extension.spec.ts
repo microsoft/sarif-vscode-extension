@@ -5,21 +5,6 @@
 import assert from 'assert';
 
 describe('Extension', () => {
-    describe('Array.commonLength', () => {
-        it('finds the length of common consecutive elements when common elements start from index 0', () => {
-            assert.strictEqual(Array.commonLength(['a', 'b', 'c'], ['a', 'b', 'd', 'e']), 2);
-        });
-        it('returns zero if common consecutive elements do not start from 0 index', () => {
-            assert.strictEqual(Array.commonLength(['a', 'b', 'c'], ['b', 'c', 'd']), 0);
-        });
-        it('returns zero if no common consecutive elements', () => {
-            assert.strictEqual(Array.commonLength(['a', 'b', 'c'], ['x', 'y', 'z']), 0);
-        });
-        it('returns zero if one array is empty', () => {
-            assert.strictEqual(Array.commonLength(['a', 'b', 'c'], []), 0);
-            assert.strictEqual(Array.commonLength([], ['a', 'b']), 0);
-        });
-    });
     describe('Array.prototype.last', () => {
         it('finds the last element when more than 1 elements are present', () => {
             assert.strictEqual(['a', 'b', 'c'].last, 'c');

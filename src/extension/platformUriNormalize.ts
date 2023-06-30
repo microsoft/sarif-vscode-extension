@@ -4,9 +4,9 @@
 import { Uri } from 'vscode';
 import platform from './platform';
 
-export default function(uri: string): string {
-    if (platform === 'win32' && Uri.parse(uri).scheme === 'file') {
-        return uri.toLowerCase();
+export default function(uri: Uri): Uri {
+    if (platform === 'win32' && uri.scheme === 'file') {
+        return Uri.parse(uri.toString().toLowerCase(), true);
     }
     return uri;
 }

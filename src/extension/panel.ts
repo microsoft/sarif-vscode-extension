@@ -123,14 +123,14 @@ export class Panel {
                     break;
                 }
                 case 'select': {
-                    const {logUri, uri, region} = message as { logUri: string, uri: string, region: Region};
+                    const {logUri, uri, uriBase, region} = message as { logUri: string, uri: string, uriBase: string | undefined, region: Region};
                     const [_, runIndex] = message.id as ResultId;
 
                     const log = store.logs.find(log => log._uri === logUri);
                     if (!log) return;
 
                     const versionControlProvenance = log.runs[runIndex].versionControlProvenance;
-                    const validatedUri = await basing.translateArtifactToLocal(uri, versionControlProvenance);
+                    const validatedUri = await basing.translateArtifactToLocal(uri, uriBase, versionControlProvenance);
                     if (!validatedUri) return;
                     await this.selectLocal(logUri, validatedUri, region);
                     break;
@@ -140,9 +140,9 @@ export class Panel {
                     const log = store.logs.find(log => log._uri === logUri);
                     if (!log) return;
 
-                    const logUriUpgraded = log._uriUpgraded ?? log._uri;
+                    const logUriUpgraded = Uri.parse(log._uriUpgraded ?? log._uri, true);
                     if (!log._jsonMap) {
-                        const file = fs.readFileSync(Uri.parse(logUriUpgraded).fsPath, 'utf8')  // Assume scheme file.
+                        const file = fs.readFileSync(logUriUpgraded.fsPath, 'utf8')  // Assume scheme file.
                             .replace(/^\uFEFF/, ''); // Trim BOM.
                         log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
                     }
@@ -178,7 +178,7 @@ export class Panel {
         }, undefined, context.subscriptions);
     }
 
-    public async selectLocal(logUri: string, localUri: string, region: Region | undefined) {
+    public async selectLocal(logUri: string, localUri: Uri, region: Region | undefined) {
         // Keep/pin active Log as needed
         for (const editor of window.visibleTextEditors.slice()) {
             if (editor.document.uri.toString() !== logUri) continue;
@@ -186,7 +186,7 @@ export class Panel {
             await commands.executeCommand('workbench.action.keepEditor');
         }
 
-        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true));
+        const currentDoc = await workspace.openTextDocument(localUri);
 
         // `disableSelectionSync` prevents a selection sync feedback loop in cases where:
         // 1) `showTextDocument` creates a new editor (where no editor was already open).
