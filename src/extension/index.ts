@@ -53,7 +53,7 @@ export async function activate(context: ExtensionContext) {
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // URI handler
-    window.registerUriHandler({
+    disposables.push(window.registerUriHandler({
         async handleUri(uri: vscode.Uri) {
             if (uri.path === '/alert') {
                 // Launched by Azure DevOps Advanced Security alert page.
@@ -69,7 +69,7 @@ export async function activate(context: ExtensionContext) {
                 }
             }
         }
-    });
+    }));
 
     async function loadAlertSarif(url: URL) {
         try {
@@ -92,13 +92,13 @@ export async function activate(context: ExtensionContext) {
                 try {
                     const jsonObject = await response.json();
                     await fs.promises.writeFile(filePath, jsonObject.value);
+
+                    // Load the log into the Viewer.
+                    store.logs.push(...await loadLogs([Uri.file(filePath)]));
+                    if (store.results.length) panel.show();
                 } catch (error) {
                     outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
                 }
-
-                // Load the log into the Viewer.
-                store.logs.push(...await loadLogs([Uri.file(filePath)]));
-                if (store.results.length) panel.show();
             } else {
                 outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
             }
