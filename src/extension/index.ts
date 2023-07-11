@@ -23,6 +23,7 @@ import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
 import fetch from 'node-fetch';
 
 export async function activate(context: ExtensionContext) {
@@ -63,8 +64,11 @@ export async function activate(context: ExtensionContext) {
                     const pair = param.split('=');
                     if (pair[0] === 'url') {
                         // Decode the alert API URL and pass it to the load function.
-                        await loadAlertSarif(new URL(decodeURIComponent(pair[1])));
-                        break;
+                        const url = decodeURIComponent(pair[1]);
+                        if (url.startsWith('https://advsec.dev.azure.com/')) {
+                            await loadAlertSarif(new URL(url));
+                            break;
+                        }
                     }
                 }
             }
@@ -87,7 +91,7 @@ export async function activate(context: ExtensionContext) {
 
             if (response.ok) {
                 // Save the log to a new temp file.
-                const filePath = `${os.tmpdir}\\${(new Date()).getTime()}.sarif`;
+                const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.sarif`);
 
                 try {
                     const jsonObject = await response.json();
