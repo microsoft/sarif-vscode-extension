@@ -21,7 +21,7 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
-import * as fs from 'fs';
+import { promises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import fetch from 'node-fetch';
@@ -58,13 +58,13 @@ export async function activate(context: ExtensionContext) {
         async handleUri(uri: vscode.Uri) {
             if (uri.path === '/alert') {
                 // Launched by Azure DevOps Advanced Security alert page.
-                const params = uri.query.split('&');
+                const params = new URLSearchParams(uri.query);
+
                 // Find the url parameter.
                 for (const param of params) {
-                    const pair = param.split('=');
-                    if (pair[0] === 'url') {
+                    if (param[0] === 'url') {
                         // Decode the alert API URL and pass it to the load function.
-                        const url = decodeURIComponent(pair[1]);
+                        const url = decodeURIComponent(param[1]);
                         if (url.startsWith('https://advsec.dev.azure.com/')) {
                             await loadAlertSarif(new URL(url));
                         } else {
@@ -82,6 +82,8 @@ export async function activate(context: ExtensionContext) {
             const session = await vscode.authentication.getSession('microsoft', ['499b84ac-1321-427f-aa17-267ca6975798/.default'], { createIfNone: true });
             const accessToken = session?.accessToken;
 
+            if (!accessToken) { return; }
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -97,7 +99,7 @@ export async function activate(context: ExtensionContext) {
 
                 try {
                     const jsonObject = await response.json();
-                    await fs.promises.writeFile(filePath, jsonObject.value);
+                    await promises.writeFile(filePath, jsonObject.value);
 
                     // Load the log into the Viewer.
                     store.logs.push(...await loadLogs([Uri.file(filePath)]));
@@ -111,8 +113,6 @@ export async function activate(context: ExtensionContext) {
         } catch (error) {
             outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
         }
-
-        return undefined;
     }
 
     //await loadAlertSarif(new URL('https://advsec.dev.azure.com/tfspfcusctest/_apis/advancedsecurity/alerts/2431/?project=advsecpreflightTest&repository=e5e5540d-9a50-4687-b485-617af4255b4e'));
