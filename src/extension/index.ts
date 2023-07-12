@@ -112,7 +112,6 @@ export async function activate(context: ExtensionContext) {
             outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
         }
 
-        return undefined;
     }
 
     //await loadAlertSarif(new URL('https://advsec.dev.azure.com/tfspfcusctest/_apis/advancedsecurity/alerts/2431/?project=advsecpreflightTest&repository=e5e5540d-9a50-4687-b485-617af4255b4e'));
