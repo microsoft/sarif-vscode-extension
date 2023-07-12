@@ -68,7 +68,7 @@ export async function activate(context: ExtensionContext) {
                         if (url.startsWith('https://advsec.dev.azure.com/')) {
                             await loadAlertSarif(new URL(url));
                         } else {
-                            await window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
+                            void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
                         }
                         break;
                     }
@@ -114,8 +114,6 @@ export async function activate(context: ExtensionContext) {
             outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
         }
     }
-
-    //await loadAlertSarif(new URL('https://advsec.dev.azure.com/tfspfcusctest/_apis/advancedsecurity/alerts/2431/?project=advsecpreflightTest&repository=e5e5540d-9a50-4687-b485-617af4255b4e'));
 
     // General Activation
     activateSarifStatusBarItem(disposables);
