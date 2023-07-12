@@ -5,16 +5,17 @@
 import { diffChars } from 'diff';
 import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
-import { Disposable, languages, Range, ThemeColor, window, workspace } from 'vscode';
+import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
 import { findResult, parseArtifactLocation, ResultId } from '../shared';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
+import { UriRebaser } from './uriRebaser';
 
 // Decorations are for Analysis Steps.
-export function activateDecorations(disposables: Disposable[], store: Store) {
+export function activateDecorations(disposables: Disposable[], store: Store, baser: UriRebaser) {
     // Navigating away from a diagnostic/result will not clear the `activeResultId`.
     // This keeps the decorations "pinned" while users navigate the thread flow steps.
     const activeResultId = observable.box<string | undefined>();
@@ -71,11 +72,9 @@ export function activateDecorations(disposables: Disposable[], store: Store) {
             const currentDoc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
-            const docUriString = currentDoc.uri.toString();
-            const locationsInDoc = locations.filter(tfl => {
-                const workspaceUri = workspace.workspaceFolders?.[0]?.uri.toString(); // TODO: Handle multiple workspaces.
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation, workspaceUri);
-                return docUriString === artifactUriString;
+            const locationsInDoc = locations.filter(async tfl => {
+                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
+                return await baser.translateLocalToArtifact(currentDoc.uri) === artifactUriString;
             });
 
             const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);

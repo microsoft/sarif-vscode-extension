@@ -11,9 +11,6 @@ export {};
 type Selector<T> = (_: T) => number | string
 
 declare global {
-    interface ArrayConstructor {
-        commonLength(a: any[], b: any[]): number;
-    }
     interface Array<T> {
         last: T;
         replace(items: T[]): void; // From Mobx, but not showing up.
@@ -26,16 +23,6 @@ declare global {
         path: string;
     }
 }
-
-!Array.hasOwnProperty('commonLength') &&
-Object.defineProperty(Array, 'commonLength', {
-    value: function(a: any[], b: any[]): number {
-        let i = 0;
-        // eslint-disable-next-line no-empty
-        for (; a[i] === b[i] && i < a.length && i < b.length; i++) {}
-        return i;
-    }
-});
 
 !Array.prototype.hasOwnProperty('last') &&
 Object.defineProperty(Array.prototype, 'last', {
