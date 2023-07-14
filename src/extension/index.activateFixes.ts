@@ -23,10 +23,10 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 // { value: 'quickFix' } │ Invoke=1             │ Before hover tooltip is shown. Return only specific code actions.
 
                 const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
-                if (!diagnostic) return;
+                if (!diagnostic) return undefined;
 
                 const result = diagnostic?.result;
-                if (!result) return;
+                if (!result) return undefined;
 
                 return [
                     new ResultQuickFix(diagnostic, result), // Mark as fixed
@@ -41,7 +41,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
             async resolveCodeAction(codeAction: ResultQuickFix) {
                 const { result, fix, command } = codeAction;
 
-                if (command) return; // VS Code will execute the command on our behalf.
+                if (command) return undefined; // VS Code will execute the command on our behalf.
 
                 if (fix) {
                     const edit = new WorkspaceEdit();
