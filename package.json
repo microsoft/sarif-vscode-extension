@@ -1,6 +1,6 @@
 {
     "name": "sarif-viewer",
-    "displayName": "Sarif Viewer",
+    "displayName": "SARIF Viewer",
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
@@ -21,7 +21,7 @@
         "sarif"
     ],
     "engines": {
-        "vscode": "^1.72.0"
+        "vscode": "^1.79.1"
     },
     "activationEvents": [
         "onLanguage:json",
@@ -34,7 +34,7 @@
     "main": "./out/context.js",
     "contributes": {
         "configuration": {
-            "title": "Sarif Viewer",
+            "title": "SARIF Viewer",
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
