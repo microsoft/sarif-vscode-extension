@@ -56,7 +56,7 @@ export async function activate(context: ExtensionContext) {
     // URI handler
     disposables.push(window.registerUriHandler({
         async handleUri(uri: vscode.Uri) {
-            if (uri.path === '/alert') {
+            if (uri.path.toLowerCase() === '/alert') {
                 // Launched by Azure DevOps Advanced Security alert page.
                 const params = new URLSearchParams(uri.query);
 
@@ -79,6 +79,7 @@ export async function activate(context: ExtensionContext) {
 
     async function loadAlertSarif(url: URL) {
         try {
+            // Get the user's session with the ADO service's user_impersonation scope
             const session = await vscode.authentication.getSession('microsoft', ['499b84ac-1321-427f-aa17-267ca6975798/.default'], { createIfNone: true });
             const accessToken = session?.accessToken;
 
