@@ -46,7 +46,7 @@ Build is already integrated with `F5`. If you must build separately, run `npx we
 1) To view console log output, run `Help > Toggle Developer Tools` from the menu of the Extension Development Host window.
 
 ### Key Break Points
-* `src/extension/index.ts` function `activate` - This covers all the one-time prepration before any SARIF Logs are loaded.
+* `src/extension/index.ts` function `activate` - This covers all the one-time preparation before any SARIF Logs are loaded.
 * `src/extension/loadLogs.ts` function `loadLogs` - This runs each time one or more SARIF Logs are opened.
 * `src/panel/indexStore.ts` function `IndexStore.constructor`- This is the core of the WebView which houses the bulk of the UI.
 

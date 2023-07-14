@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
@@ -20,6 +21,10 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
+import { promises } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import fetch from 'node-fetch';
 
 export async function activate(context: ExtensionContext) {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
@@ -47,6 +52,69 @@ export async function activate(context: ExtensionContext) {
     // Panel
     const panel = new Panel(context, baser, store);
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
+
+    // URI handler
+    disposables.push(window.registerUriHandler({
+        async handleUri(uri: vscode.Uri) {
+            if (uri.path.toLowerCase() === '/alert') {
+                // Launched by Azure DevOps Advanced Security alert page.
+                const params = new URLSearchParams(uri.query);
+
+                // Find the url parameter.
+                for (const param of params) {
+                    if (param[0] === 'url') {
+                        // Decode the alert API URL and pass it to the load function.
+                        const url = decodeURIComponent(param[1]);
+                        if (url.startsWith('https://advsec.dev.azure.com/')) {
+                            await loadAlertSarif(new URL(url));
+                        } else {
+                            void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }));
+
+    async function loadAlertSarif(url: URL) {
+        try {
+            // Get the user's session with the ADO service's user_impersonation scope
+            const session = await vscode.authentication.getSession('microsoft', ['499b84ac-1321-427f-aa17-267ca6975798/.default'], { createIfNone: true });
+            const accessToken = session?.accessToken;
+
+            if (!accessToken) { return; }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/sarif+json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'User-Agent': 'MS-SarifVSCode.sarif-viewer',
+                }
+            });
+
+            if (response.ok) {
+                // Save the log to a new temp file.
+                const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.sarif`);
+
+                try {
+                    const jsonObject = await response.json();
+                    await promises.writeFile(filePath, jsonObject.value);
+
+                    // Load the log into the Viewer.
+                    store.logs.push(...await loadLogs([Uri.file(filePath)]));
+                    if (store.results.length) panel.show();
+                } catch (error) {
+                    outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
+                }
+            } else {
+                outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
+            }
+        } catch (error) {
+            outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
+        }
+    }
 
     // General Activation
     activateSarifStatusBarItem(disposables);
@@ -226,7 +294,7 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
     }));
 }
 
-// Syncronize selection between editor and panel.
+// Synchronize selection between editor and panel.
 function activateSelectionSync(disposables: Disposable[], store: Store, panel: Panel) {
     disposables.push(window.onDidChangeTextEditorSelection(({ selections, textEditor }) => {
         if (store.disableSelectionSync) return; // See `panel.selectLocal` for details.

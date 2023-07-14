@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.8",
+    "version": "3.3.9",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -198,6 +198,7 @@
         "react": "16.13.1",
         "react-dom": "16.13.1",
         "react-markdown": "^5.0.3",
+        "stream-meter": "^1.0.4",
         "semver": "7.5.2",
         "tmp": "0.1.0",
         "vscode-codicons": "0.0.2",
