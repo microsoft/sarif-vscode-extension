@@ -88,10 +88,13 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const repo = getPrimaryRepository(git);
         if (!repo) return sendGithubEligibility('No Git repository');
 
-        const origin = await repo.getConfig('remote.origin.url');
+        const origin = findRemote(repo);
+        if (!origin) {
+            return sendGithubEligibility('No remote');
+        }
 
         const [, user, repoName] = (() => {
-            // Example: https:/github.com/user/repoName.git
+            // Example: https://github.com/user/repoName.git
             const matchHTTPS = origin.match(/https:\/\/github\.com\/([^/]+)\/([^/]+)/);
             if (matchHTTPS) return matchHTTPS;
 
@@ -391,6 +394,27 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     });
 }
 
+/**
+ * Gets the URL associated with the remote to retrieve alerts for.
+ * Uses these heuristics in order:
+ *
+ * 1. The remote associated with the current head
+ * 2. The `origin` remote
+ * 3. The first remote in the configuration
+ * 4. undefined
+ *
+ * @param repo The repo to retrieve analyses for
+ * @returns the url associated with this remote or undefined if there are no remotes
+ * for this repo.
+ */
+function findRemote(repo: Repository) {
+    const remoteName = repo.state.HEAD?.upstream?.remote ||'origin';
+    let remoteUrl = repo.state.remotes.find(remote => remote.name === remoteName)?.fetchUrl;
+    if (!remoteUrl && repo.state.remotes.length) {
+        remoteUrl = repo.state.remotes[0].fetchUrl;
+    }
+    return remoteUrl;
+}
 /*
     Regarding workspace.getConfiguration():
     Determined (via experiments) that is not possible to discern between default and unset.
