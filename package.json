@@ -1,10 +1,10 @@
 {
     "name": "sarif-viewer",
-    "displayName": "Sarif Viewer",
+    "displayName": "SARIF Viewer",
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.9",
+    "version": "3.4.0",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -34,7 +34,7 @@
     "main": "./out/context.js",
     "contributes": {
         "configuration": {
-            "title": "Sarif Viewer",
+            "title": "SARIF Viewer",
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
