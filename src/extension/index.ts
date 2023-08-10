@@ -58,20 +58,14 @@ export async function activate(context: ExtensionContext) {
         async handleUri(uri: vscode.Uri) {
             if (uri.path.toLowerCase() === '/alert') {
                 // Launched by Azure DevOps Advanced Security alert page.
-                const params = new URLSearchParams(uri.query);
+                const param = uri.query.split('url=');
 
-                // Find the url parameter.
-                for (const param of params) {
-                    if (param[0] === 'url') {
-                        // Decode the alert API URL and pass it to the load function.
-                        const url = decodeURIComponent(param[1]);
-                        if (url.startsWith('https://advsec.dev.azure.com/')) {
-                            await loadAlertSarif(new URL(url));
-                        } else {
-                            void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
-                        }
-                        break;
-                    }
+                // Decode the alert API URL and pass it to the load function.
+                const url = decodeURIComponent(param[1]);
+                if (url.startsWith('https://advsec.dev.azure.com/')) {
+                    await loadAlertSarif(new URL(url));
+                } else {
+                    void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
                 }
             }
         }
