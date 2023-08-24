@@ -172,7 +172,7 @@ export class UriRebaser {
             // Known Bases
             for (const [artifactBase, localBase] of this.basesArtifactToLocal) {
                 if (!artifactUri.startsWith(artifactBase)) continue; // Just let it fall through?
-                const localUri = Uri.parse(artifactUri.replace(artifactBase, localBase), true);
+                const localUri = Uri.parse(artifactUri.replace(artifactBase, localBase), false);
                 if (await uriExists(localUri)) {
                     this.updateValidatedUris(artifactUri, localUri);
                     return localUri;
@@ -265,8 +265,8 @@ export class UriRebaser {
                             this.updateBases(artifactUri, fileUrl);
                             return fileUrl;
                         }
-                        catch (error: any) {
-                            await window.showErrorMessage(error.toString());
+                        catch (error) {
+                            await window.showErrorMessage((error as Error).toString());
                             // continue with file open dialog
                         }
                     }

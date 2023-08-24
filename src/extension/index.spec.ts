@@ -6,10 +6,10 @@
 /// Todo: Migrate to tsconfig.files
 
 import assert from 'assert';
-import { URI as Uri } from 'vscode-uri';
 import { postSelectLog } from '../panel/indexStore';
 import { log } from '../test/mockLog';
-import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
+import { mockVscode, mockVscodeTestFacing, uriForRealFile } from '../test/mockVscode';
+import { URI as Uri } from 'vscode-uri';
 
 // Log object may be modified during testing, thus we need to keep a clean string copy.
 const mockLogString = JSON.stringify(log, null, 2);
@@ -20,7 +20,7 @@ describe('activate', () => {
     before(async () => {
         const { activate } = proxyquire('.', {
             'fs': {
-                '@global': true,
+                // '@global': true,
                 readFileSync: () => {
                     return mockLogString;
                 }
@@ -34,29 +34,33 @@ describe('activate', () => {
             },
         });
         const api = await mockVscodeTestFacing.activateExtension(activate);
-        api.openLogs([Uri.parse('file:///.sarif/test.sarif')]);
+        api.openLogs([uriForRealFile]);
+        mockVscode.window.createWebviewPanel();
     });
 
     it('can postSelectArtifact', async () => {
+        await mockVscode.commands.executeCommand('sarif.showPanel');
         const { postSelectArtifact } = proxyquire('../panel/indexStore', {
             '../panel/isActive': {
                 isActive: () => true,
             },
         });
+        mockVscodeTestFacing.showOpenDialogResult = [Uri.file('/file.txt')];
         const result = mockVscodeTestFacing.store!.results[0]!;
         await postSelectArtifact(result, result.locations![0].physicalLocation);
-        assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
-            'showTextDocument file:///folder/file.txt',
-            `selection 0 1 0 ${Number.MAX_SAFE_INTEGER}`, // 1 = mock firstNonWhitespaceCharacterIndex.
+        assert.deepStrictEqual(mockVscodeTestFacing.events.splice(0), [
+            'showTextDocument file:///file.txt',
+            'selection 0 1 0 2',
         ]);
     });
 
     it('can postSelectLog', async () => {
         const result = mockVscodeTestFacing.store!.results[0];
+        mockVscodeTestFacing.showOpenDialogResult = [uriForRealFile];
         await postSelectLog(result);
-        assert.deepEqual(mockVscodeTestFacing.events.splice(0), [
-            'showTextDocument file:///.sarif/test.sarif',
-            'selection 9 7 25 8', // Location in mockLogString.
+        assert.deepStrictEqual(mockVscodeTestFacing.events.splice(0), [
+            `showTextDocument ${uriForRealFile.toString()}`,
+            'selection 10 15 24 16', // Location in mockLogString.
         ]);
     });
 });

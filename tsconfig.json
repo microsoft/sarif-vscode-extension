@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
+        "outDir": "out",
         "module": "commonjs",
         "target": "es2019",
         "sourceMap": true,
-        
+
 
         "experimentalDecorators": true,
         "esModuleInterop": true,
@@ -12,8 +13,8 @@
 
         "noFallthroughCasesInSwitch": true,
         "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
+        // "noUnusedLocals": true,
+        // "noUnusedParameters": true,
         "strict": true
     },
     "exclude": [

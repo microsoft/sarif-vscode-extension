@@ -13,6 +13,7 @@ import { URI as Uri } from 'vscode-uri';
 import { IndexStore } from '../panel/indexStore';
 import { filtersColumn, filtersRow } from '../shared';
 import { log } from './mockLog';
+import * as path from 'path';
 
 global.fetch = async () => ({ json: async () => log }) as unknown as Promise<Response>;
 global.vscode = {
@@ -22,10 +23,12 @@ global.vscode = {
     }
 };
 
+export const uriForRealFile = Uri.file(path.normalize(path.join(__dirname, '..', '..', 'samples', 'propertyBags.sarif')));
+
 export const mockVscodeTestFacing = {
     mockFileSystem: undefined as string[] | undefined,
     events: [] as string[],
-    showOpenDialogResult: undefined as string[] | undefined,
+    showOpenDialogResult: undefined as Uri[] | undefined,
     store: null as IndexStore | null,
     activateExtension: async (activate: Function) => {
         const context = {
@@ -38,10 +41,19 @@ export const mockVscodeTestFacing = {
     panel_onDidReceiveMessage: null as Function | null,
 };
 
+const registeredCommands: Record<string, Function> = {};
+
 export const mockVscode = {
     // Extension-facing
     commands: {
-        registerCommand: () => {},
+        registerCommand: (name: string, func: Function) => {
+            registeredCommands[name] = func;
+        },
+        executeCommand: async (name: string, ...args: any[]) => {
+            const func = registeredCommands[name];
+            if (!func) throw new Error(`Command '${name}' not registered.`);
+            return await func(...args);
+        }
     },
     Diagnostic: class {
         constructor(readonly range: Range, readonly message: string, readonly severity?: DiagnosticSeverity) {}
@@ -72,13 +84,14 @@ export const mockVscode = {
                 const spliceLogsData = {
                     command: 'spliceLogs',
                     removed: [],
-                    added: [{ uri: 'file:///.sarif/test.sarif', webviewUri: 'anyValue' }]
+                    added: [{ uri: uriForRealFile.toString(true), webviewUri: 'anyValue' }]
                 };
                 await mockVscodeTestFacing.store.onMessage({ data: spliceLogsData } as any);
             })();
 
             return {
                 onDidDispose: () => {},
+                reveal: () => {},
                 webview: {
                     asWebviewUri: () => '',
                     onDidReceiveMessage: (f: Function) => mockVscodeTestFacing.panel_onDidReceiveMessage = f,
@@ -92,7 +105,7 @@ export const mockVscode = {
         onDidChangeTextEditorSelection: () => {},
         showErrorMessage: (message: any) => console.error(`showErrorMessage: '${message}'`),
         showInformationMessage: async (_message: string, ...choices: string[]) => choices[0], // = [0] => 'Locate...'
-        showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult!.map(path => ({ path })),
+        showOpenDialog: async () => mockVscodeTestFacing.showOpenDialogResult,
         showTextDocument: (doc: { uri: any }) => {
             mockVscodeTestFacing.events.push(`showTextDocument ${doc.uri}`);
             const editor = {
@@ -104,7 +117,13 @@ export const mockVscode = {
             return editor;
         },
         visibleTextEditors: [],
-        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} })
+        withProgress: (_options: Record<string, any>, task: Function) => task({ report: () => {} }),
+        createOutputChannel: () => {},
+        registerUriHandler: () => {},
+        createStatusBarItem: () => ({
+            show: () => {},
+        }),
+        onDidChangeVisibleTextEditors: () => {},
     },
     workspace: {
         onDidChangeConfiguration: () => {},
@@ -132,12 +151,33 @@ export const mockVscode = {
         findFiles: (include: string, _exclude?: string) => {
             if (include === '.sarif/**/*.sarif') {
                 return [
-                    Uri.parse('file:///.sarif/test.sarif')
+                    uriForRealFile
+                ];
+            } else if (include === '**/file1.txt') {
+                return [
+                    Uri.file('/projects/project/file1.txt')
+                ];
+            } else if (include === '**/file.txt') {
+                return [
+                    Uri.file('/x/y/a/file.txt')
                 ];
             }
             return [];
         },
         registerTextDocumentContentProvider: () => {},
         textDocuments: [],
+        onDidCreateFiles: () => {},
+        onDidRenameFiles: () => {},
+        onDidDeleteFiles: () => {},
+        onDidChangeTextDocument: () => {},
+    },
+
+    CodeAction: class {
+        constructor() { }
+    },
+    CodeActionKind: { QuickFix: { value: 'quickFix' } },
+    StatusBarAlignment: { Left: 1, Right: 2 },
+    Disposable: class {
+        dispose() {}
     },
 };

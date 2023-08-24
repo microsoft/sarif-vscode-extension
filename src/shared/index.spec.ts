@@ -32,7 +32,7 @@ describe('augmentLog', () => {
 
     it('add augmented fields', () => {
         augmentLog(log);
-        assert.strictEqual(result._uri, 'file:///folder/file.txt');
+        assert.strictEqual(result._uri, '/folder/file.txt');
         assert.strictEqual(result._message, 'Message 1');
     });
 
@@ -167,8 +167,12 @@ describe('decodeFileUri', () => {
         const originalUriString = 'file:///c%3A/Users/muraina/sarif-tutorials/samples/3-Beyond-basics/Results_2.sarif';
         assert.strictEqual(decodeFileUri(originalUriString), 'c:\\Users\\muraina\\sarif-tutorials\\samples\\3-Beyond-basics\\Results_2.sarif');
     });
-    it(`does not affect 'non-file' uri schemes`, () => {
-        assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com'), 'https://programmers.stackexchange.com');
+    it(`gets authority for https uri schemes`, () => {
+        assert.strictEqual(decodeFileUri('https://programmers.stackexchange.com/x/y?a=b#123'), 'programmers.stackexchange.com');
+    });
+
+    it(`does not affect other uri schemes`, () => {
+        assert.strictEqual(decodeFileUri('sarif://programmers.stackexchange.com/x/y?a=b#123'), 'sarif://programmers.stackexchange.com/x/y?a=b#123');
     });
 });
 
