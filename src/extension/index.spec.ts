@@ -20,7 +20,6 @@ describe('activate', () => {
     before(async () => {
         const { activate } = proxyquire('.', {
             'fs': {
-                // '@global': true,
                 readFileSync: () => {
                     return mockLogString;
                 }
