@@ -17,10 +17,10 @@ export class IndexStore {
     constructor(state: Record<string, Record<string, Record<string, Visibility>>>, workspaceUri?: string, defaultSelection?: boolean) {
         this.filtersRow = state.filtersRow;
         this.filtersColumn = state.filtersColumn;
-        const setState = () => {
+        const setState = async () => {
             const {filtersRow, filtersColumn} = this;
             const state = { filtersRow: toJS(filtersRow), filtersColumn: toJS(filtersColumn) };
-            vscode.postMessage({ command: 'setState', state: JSON.stringify(state, null, '    ') });
+            await vscode.postMessage({ command: 'setState', state: JSON.stringify(state, null, '    ') });
             // PostMessage object key order unstable. Stringify is stable.
         };
         // Sadly unable to observe at the root.
