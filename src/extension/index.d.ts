@@ -9,8 +9,9 @@ export interface Api {
      * @param logs An array of Uris to open.
      */
     openLogs(logs: Uri[]): Promise<void>;
-    closeLogs(logs: Uri[]): Promise<void>;
-    closeAllLogs(): Promise<void>;
-    selectByIndex(uri: Uri, runIndex: number, resultIndex: number): Promise<void>;
+    closeLogs(logs: Uri[]): void;
+    closeAllLogs(): void;
+    selectByIndex(uri: Uri, runIndex: number, resultIndex: number): void;
     uriBases: ReadonlyArray<Uri>;
+    dispose(): void;
 }
