@@ -152,7 +152,7 @@ export async function activate(context: ExtensionContext): Promise<Api> {
 
     // API
     const api = {
-        async openLogs(logs: Uri[], cancellationToken?: CancellationToken) {
+        async openLogs(logs: Uri[], _options?: unknown, cancellationToken?: CancellationToken) {
             watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
             if (cancellationToken ?.isCancellationRequested) return;
@@ -161,18 +161,17 @@ export async function activate(context: ExtensionContext): Promise<Api> {
                 void panel.show();
             }
         },
-        closeLogs(logs: Uri[]) {
+        async closeLogs(logs: Uri[]) {
             watcher.unwatch(logs.map(log => log.fsPath));
             for (const uri of logs) {
                 store.logs.removeFirst(log => log._uri === uri.toString());
             }
         },
-        closeAllLogs() {
+        async closeAllLogs() {
             watcher.unwatch('**/*');
             store.logs.splice(0);
         },
-
-        selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
+        async selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
             panel.selectByIndex(uri, runIndex, resultIndex);
         },
         get uriBases() {
@@ -181,7 +180,6 @@ export async function activate(context: ExtensionContext): Promise<Api> {
         set uriBases(values) {
             baser.uriBases = values.map(uri => uri.toString());
         },
-
         dispose: () => {
             Telemetry.deactivate();
             api.closeAllLogs();
@@ -190,10 +188,10 @@ export async function activate(context: ExtensionContext): Promise<Api> {
     };
 
     // By convention, auto-open any logs in the `./.sarif` folder.
-    api.openLogs(await workspace.findFiles('.sarif/**.sarif'));
+    await api.openLogs(await workspace.findFiles('.sarif/**.sarif'));
 
     // During development, use the following line to auto-load a log.
-    // api.openLogs([Uri.parse('/path/to/log.sarif')]);
+    // await api.openLogs([Uri.parse('/path/to/log.sarif')]);
 
     return api;
 }
