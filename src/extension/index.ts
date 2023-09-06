@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { Api } from './index.d';
 import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
@@ -26,7 +27,7 @@ import * as os from 'os';
 import * as path from 'path';
 import fetch from 'node-fetch';
 
-export async function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext): Promise<Api> {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
     const isDebugOrTestMode =
         process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
@@ -151,11 +152,14 @@ export async function activate(context: ExtensionContext) {
 
     // API
     const api = {
-        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+        async openLogs(logs: Uri[], _options?: unknown, cancellationToken?: CancellationToken) {
             watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
-            if (cancellationToken?.isCancellationRequested) return;
-            if (store.results.length) panel.show();
+            if (cancellationToken ?.isCancellationRequested) return;
+            if (store.results.length) {
+                // TODO should we await?
+                void panel.show();
+            }
         },
         async closeLogs(logs: Uri[]) {
             watcher.unwatch(logs.map(log => log.fsPath));
@@ -176,13 +180,18 @@ export async function activate(context: ExtensionContext) {
         set uriBases(values) {
             baser.uriBases = values.map(uri => uri.toString());
         },
+        dispose: () => {
+            Telemetry.deactivate();
+            api.closeAllLogs();
+            disposables.forEach(disposable => disposable ?.dispose ?.());
+        }
     };
 
     // By convention, auto-open any logs in the `./.sarif` folder.
-    api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
+    await api.openLogs(await workspace.findFiles('.sarif/**.sarif'));
 
     // During development, use the following line to auto-load a log.
-    // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
+    // await api.openLogs([Uri.parse('/path/to/log.sarif')]);
 
     return api;
 }
@@ -309,8 +318,4 @@ function activateSelectionSync(disposables: Disposable[], store: Store, panel: P
 
         panel.select(result);
     }));
-}
-
-export function deactivate() {
-    Telemetry.deactivate();
 }
