@@ -74,6 +74,12 @@
                     ],
                     "default": "Default",
                     "scope": "application"
+                },
+                "sarif-viewer.githubCodeScanningInitialAlert": {
+                        "description": "Specifies an initial alert to load into the UI on when the IDE starts. This is meant to be set programmatically.",
+                        "type": "string",
+                        "ignoreSync": true,
+                        "scope": "machine"
                 }
             }
         },

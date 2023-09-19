@@ -4,13 +4,16 @@
 
 import { diffChars } from 'diff';
 import { Fix, Result } from 'sarif';
-import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, workspace, WorkspaceEdit } from 'vscode';
+import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, Uri, workspace, WorkspaceEdit } from 'vscode';
 import { parseArtifactLocation } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import { getInitializedGitApi } from './index.activateGithubAnalyses';
+import * as path from 'path';
+import * as os from 'os';
 
 export function activateFixes(disposables: Disposable[], store: Pick<Store, 'analysisInfo' | 'resultsFixed'>, baser: UriRebaser) {
     disposables.push(languages.registerCodeActionsProvider('*',
@@ -44,28 +47,7 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 if (command) return undefined; // VS Code will execute the command on our behalf.
 
                 if (fix) {
-                    const edit = new WorkspaceEdit();
-                    for (const artifactChange of fix.artifactChanges) {
-                        const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
-                        const artifactUri = uri;
-                        if (!artifactUri) continue;
-
-                        const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
-                        if (!localUri) continue;
-
-                        const currentDoc = await workspace.openTextDocument(localUri);
-                        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
-                        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
-
-                        for (const replacement of artifactChange.replacements) {
-                            edit.replace(
-                                localUri,
-                                driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
-                                replacement.insertedContent?.text ?? '',
-                            );
-                        }
-                    }
-                    workspace.applyEdit(edit);
+                    await applyFix(fix, result, baser, store);
                 }
 
                 store.resultsFixed.push(JSON.stringify(result._id));
@@ -97,4 +79,48 @@ class DismissCodeAction extends CodeAction {
             arguments: [{ resultId: JSON.stringify(result._id) }],
         };
     }
+}
+
+export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, store: Pick<Store, 'analysisInfo'>) {
+    if (fix.properties?.diff) {
+        const git = await getInitializedGitApi();
+        if (!git) {
+            throw new Error('Unable to initialize Git API.');
+        }
+        const diff = fix.properties?.diff;
+        // save diff to a temp file
+        const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.patch`);
+
+        try {
+            await workspace.fs.writeFile(Uri.parse(filePath), Buffer.from(diff, 'utf-8'));
+
+            // TODO assume exactly one repository, which will be the case when working in a codespace.
+            await git?.repositories[0].apply(filePath);
+        } finally {
+            await workspace.fs.delete(Uri.parse(filePath));
+        }
+        return;
+    }
+    const edit = new WorkspaceEdit();
+    for (const artifactChange of fix.artifactChanges) {
+        const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
+        const artifactUri = uri;
+        if (!artifactUri) continue;
+
+        const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
+        if (!localUri) continue;
+
+        const currentDoc = await workspace.openTextDocument(localUri);
+        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+        for (const replacement of artifactChange.replacements) {
+            edit.replace(
+                localUri,
+                driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
+                replacement.insertedContent?.text ?? '',
+            );
+        }
+    }
+    workspace.applyEdit(edit);
 }

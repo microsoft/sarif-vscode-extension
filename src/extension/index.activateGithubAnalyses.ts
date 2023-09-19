@@ -6,8 +6,8 @@ import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch, { Response } from 'node-fetch';
-import { Log } from 'sarif';
-import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
+import { Fix, Log, Result } from 'sarif';
+import { authentication, ConfigurationTarget, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -15,7 +15,9 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
-import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound } from './telemetry';
+import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound, sendGithubAutofixApplied } from './telemetry';
+import { applyFix } from './index.activateFixes';
+import { UriRebaser } from './uriRebaser';
 
 // Subset of the GitHub API.
 interface AnalysisInfo {
@@ -74,7 +76,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
     // See configurations comments at the bottom of this file.
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
-    if (connectToGithubCodeScanning === 'off') return;
+    const fullCodeScanningAlert = workspace.getConfiguration('sarif-viewer').get<string>('githubCodeScanningInitialAlert');
+    if (connectToGithubCodeScanning === 'off' && !fullCodeScanningAlert) return;
 
     const config = {
         user: '',
@@ -117,7 +120,8 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         sendGithubEligibility('Eligible');
 
-        if (connectToGithubCodeScanning === 'prompt') {
+        if (!fullCodeScanningAlert // bypass the prompt if there is a full codescanning alert to process
+            && connectToGithubCodeScanning === 'prompt') {
             const choice = await window.showInformationMessage(
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
                 'Connect', 'Not now', 'Never',
@@ -128,7 +132,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
-                    await onBranchChanged(repo, gitHeadPath, store, true);
+                    await onBranchChanged(repo, gitHeadPath, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
                         progress.report({ message, increment: 20 });
                     });
@@ -156,24 +160,36 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             }
         } else {
             // At this point all the local requirements have been satisfied.
-            // We preemptively show the panel (even before the result as fetched)
+            // We preemptively show the panel (even before the result was fetched)
             // so that the banner is visible.
             await panel.show();
-            await onBranchChanged(repo, gitHeadPath, store);
+
+            if (fullCodeScanningAlert) {
+                // bypass downloading analyses. Instead, use the fullCodeScanningAlert as the analysis to apply.
+                await handleSingleLog(fullCodeScanningAlert);
+
+                // Now that the analysis has been successfully applied, avoid re-applying it in the future.
+                // Make sure to update the config value to '' instead of `undefined` to ensure that the
+                // default value is not used. This default value may have been injected by a codespace.
+                await workspace.getConfiguration('sarif-viewer').update('githubCodeScanningInitialAlert', '', ConfigurationTarget.Global);
+            } else {
+                // force a fetch of the analysis for the current branch.
+                await onBranchChanged(repo, gitHeadPath);
+            }
+
             beginWatch(repo);
         }
-
         function beginWatch(repo: Repository) {
             const watcher = watch([
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
             watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-                onBranchChanged(repo, gitHeadPath, store);
+                onBranchChanged(repo, gitHeadPath);
             });
         }
     })();
 
-    async function onBranchChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
+    async function onBranchChanged(repo: Repository, gitHeadPath: string, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
@@ -327,12 +343,13 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const session = await authentication.getSession('github', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
-        const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
+        const ids = analysisInfo?.ids;
+        const logs = !ids?.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
             ? undefined
             : await (async () => {
                 try {
                     const logs = [] as Log[];
-                    for (const analysisId of analysisInfo.ids) {
+                    for (const analysisId of ids) {
                         const uri = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
                         const analysisResponse = await fetch(uri, {
                             headers: {
@@ -343,11 +360,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                         const logText = await analysisResponse.text();
                         // Useful for saving/examining fetched logs:
                         // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
-                        const log = JSON.parse(logText) as Log;
-                        log._text = logText;
-                        log._uri = uri;
-                        const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
-                        augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+                        const log = parseLog(logText, uri);
                         logs.push(log);
                     }
                     return logs;
@@ -371,8 +384,42 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         panel.show();
         isSpinning.set(false);
-
         setBannerResultsUpdated(analysisInfo);
+    }
+
+    async function handleSingleLog(logText: string) {
+        try {
+            const log = parseLog(logText);
+            store.logs.push(log);
+            await applyFixes(log);
+            panel.show();
+            isSpinning.set(false);
+            store.banner = `Results loaded for default alert.`;
+            const provenance = log.runs?.[0]?.versionControlProvenance?.[0];
+            if (provenance) {
+                sendGithubAutofixApplied('success');
+            }
+        } catch (e) {
+            window.showErrorMessage(`Unable to parse SARIF and apply fixes: ${errorToString(e)}`);
+            sendGithubAutofixApplied('failure', errorToString(e));
+        }
+    }
+
+    async function applyFixes(log: Log) {
+        const baser = new UriRebaser(store);
+        const fixes: { result: Result, fix: Fix }[] = [];
+
+        // Gather all fixes
+        log.runs?.forEach(run => {
+            run.results?.forEach(result => {
+                result.fixes?.forEach(fix => fixes.push({ result, fix }));
+            });
+        });
+
+        // Apply them serially
+        for (const f of fixes) {
+            await applyFix(f.fix, f.result, baser, store);
+        }
     }
 
     function setBannerResultsUpdated(analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
@@ -394,6 +441,19 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     });
 }
 
+function errorToString(e: unknown) {
+    return e instanceof Error ? e.message : String(e);
+}
+
+function parseLog(logText: string, uri?: string) {
+    const log = JSON.parse(logText) as Log;
+    log._text = logText;
+    log._uri = uri ?? 'file:///synthetic.sarif';
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+    augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+    return log;
+}
+
 /**
  * Gets the URL associated with the remote to retrieve alerts for.
  * Uses these heuristics in order:
@@ -408,13 +468,14 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
  * for this repo.
  */
 function findRemote(repo: Repository) {
-    const remoteName = repo.state.HEAD?.upstream?.remote ||'origin';
+    const remoteName = repo.state.HEAD?.upstream?.remote || 'origin';
     let remoteUrl = repo.state.remotes.find(remote => remote.name === remoteName)?.fetchUrl;
     if (!remoteUrl && repo.state.remotes.length) {
         remoteUrl = repo.state.remotes[0].fetchUrl;
     }
     return remoteUrl;
 }
+
 /*
     Regarding workspace.getConfiguration():
     Determined (via experiments) that is not possible to discern between default and unset.

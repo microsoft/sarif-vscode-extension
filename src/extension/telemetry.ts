@@ -3,6 +3,7 @@
 
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { publisher, name, version } from '../../package.json';
+import { VersionControlDetails } from 'sarif';
 
 let reporter: TelemetryReporter;
 
@@ -33,4 +34,8 @@ export function sendGithubAnalysisFound(value: string) {
 
 export function sendGithubConfig(value: string) {
     reporter?.sendTelemetryEvent('githubConfig', { value });
+}
+
+export function sendGithubAutofixApplied(status: 'success' | 'failure', message = '') {
+    reporter?.sendTelemetryEvent('githubAutofixApplied', { status, message });
 }
