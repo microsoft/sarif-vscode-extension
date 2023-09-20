@@ -65,7 +65,9 @@ export function getPrimaryRepository(git: API): Repository | undefined {
     return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];
 }
 
-export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
+//  'off' | 'on' | 'prompt' are valid setting values. 'injected' is used if there is a value for
+// githubCodeScanningInitialAlert.
+type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt' | 'injected' | undefined;
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
@@ -75,9 +77,12 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     }));
 
     // See configurations comments at the bottom of this file.
-    const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     const fullCodeScanningAlert = workspace.getConfiguration('sarif-viewer').get<string>('githubCodeScanningInitialAlert');
-    if (connectToGithubCodeScanning === 'off' && !fullCodeScanningAlert) return;
+    const connectToGithubCodeScanning: ConnectToGithubCodeScanning = fullCodeScanningAlert
+        ? 'injected'
+        : workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
+
+    if (connectToGithubCodeScanning === 'off') return;
 
     const config = {
         user: '',
@@ -120,8 +125,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         sendGithubEligibility('Eligible');
 
-        if (!fullCodeScanningAlert // bypass the prompt if there is a full codescanning alert to process
-            && connectToGithubCodeScanning === 'prompt') {
+        if (connectToGithubCodeScanning === 'prompt') {
             const choice = await window.showInformationMessage(
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
                 'Connect', 'Not now', 'Never',
@@ -158,27 +162,28 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     sendGithubAnalysisFound('Found');
                 }
             }
-        } else {
-            // At this point all the local requirements have been satisfied.
-            // We preemptively show the panel (even before the result was fetched)
-            // so that the banner is visible.
-            await panel.show();
-
-            if (fullCodeScanningAlert) {
-                // bypass downloading analyses. Instead, use the fullCodeScanningAlert as the analysis to apply.
-                await handleSingleLog(fullCodeScanningAlert);
-
-                // Now that the analysis has been successfully applied, avoid re-applying it in the future.
-                // Make sure to update the config value to '' instead of `undefined` to ensure that the
-                // default value is not used. This default value may have been injected by a codespace.
-                await workspace.getConfiguration('sarif-viewer').update('githubCodeScanningInitialAlert', '', ConfigurationTarget.Global);
-            } else {
-                // force a fetch of the analysis for the current branch.
-                await onBranchChanged(repo, gitHeadPath);
-            }
-
-            beginWatch(repo);
         }
+
+        // At this point all the local requirements have been satisfied.
+        // We preemptively show the panel (even before the result is fetched)
+        // so that the banner is visible.
+        await panel.show();
+
+        if (connectToGithubCodeScanning === 'injected') {
+            // bypass downloading analyses. Instead, use the fullCodeScanningAlert as the analysis to apply.
+            await handleSingleLog(fullCodeScanningAlert!);
+
+            // Now that the analysis has been successfully applied, avoid re-applying it in the future.
+            // Make sure to update the config value to '' instead of `undefined` to ensure that the
+            // default value is not used. This default value may have been injected by a codespace.
+            await workspace.getConfiguration('sarif-viewer').update('githubCodeScanningInitialAlert', '', ConfigurationTarget.Global);
+        } else {
+            // force a fetch of the analysis for the current branch.
+            await onBranchChanged(repo, gitHeadPath);
+        }
+
+        beginWatch(repo);
+
         function beginWatch(repo: Repository) {
             const watcher = watch([
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
