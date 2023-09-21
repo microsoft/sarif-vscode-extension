@@ -420,10 +420,11 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                 result.fixes?.forEach(fix => fixes.push({ result, fix }));
             });
         });
+        outputChannel.appendLine(`Found ${fixes.length} fix(es).`);
 
         // Apply them serially
         for (const f of fixes) {
-            await applyFix(f.fix, f.result, baser, store);
+            await applyFix(f.fix, f.result, baser, store, outputChannel);
         }
     }
 
@@ -468,16 +469,28 @@ function parseLog(logText: string, uri?: string) {
  * 3. The first remote in the configuration
  * 4. undefined
  *
+ * On codespaces, if this extension starts too early, then the Git API may not be fully
+ * initialized. Even though the git extension is activated, the codespace's filesystem
+ * may not be ready. This is why we retry a few times.
+ *
  * @param repo The repo to retrieve analyses for
  * @returns the url associated with this remote or undefined if there are no remotes
  * for this repo.
  */
-function findRemote(repo: Repository) {
-    const remoteName = repo.state.HEAD?.upstream?.remote || 'origin';
-    let remoteUrl = repo.state.remotes.find(remote => remote.name === remoteName)?.fetchUrl;
-    if (!remoteUrl && repo.state.remotes.length) {
-        remoteUrl = repo.state.remotes[0].fetchUrl;
+async function findRemote(repo: Repository, outputChannel: OutputChannel): Promise<string | undefined> {
+    let remoteUrl: string | undefined;
+    for(let count = 0; count < 5 && !remoteUrl; count++) {
+        const remoteName = repo.state.HEAD?.upstream?.remote || 'origin';
+        remoteUrl = repo.state.remotes.find(remote => remote.name === remoteName)?.fetchUrl;
+        if (!remoteUrl && repo.state.remotes.length) {
+            remoteUrl = repo.state.remotes[0].fetchUrl;
+        }
+        if (!remoteUrl) {
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for Git to initialize.
+            outputChannel.appendLine('Git not initialized. Waiting...');
+        }
     }
+
     return remoteUrl;
 }
 
