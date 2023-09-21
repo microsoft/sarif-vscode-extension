@@ -4,7 +4,7 @@
 
 import { diffChars } from 'diff';
 import { Fix, Result } from 'sarif';
-import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, Uri, workspace, WorkspaceEdit } from 'vscode';
+import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, OutputChannel, Uri, workspace, WorkspaceEdit } from 'vscode';
 import { parseArtifactLocation } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
@@ -81,26 +81,31 @@ class DismissCodeAction extends CodeAction {
     }
 }
 
-export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, store: Pick<Store, 'analysisInfo'>) {
-    if (fix.properties?.diff) {
+export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, store: Pick<Store, 'analysisInfo'>, outputChannel?: OutputChannel) {
+    // Some fixes are injected as raw diffs. If so, apply them directly.
+    const diff = fix.properties?.diff;
+    if (diff) {
+        outputChannel?.appendLine('diff found:');
+        outputChannel?.appendLine('--------');
+        outputChannel?.appendLine(diff);
+        outputChannel?.appendLine('--------');
         const git = await getInitializedGitApi();
         if (!git) {
             throw new Error('Unable to initialize Git API.');
         }
-        const diff = fix.properties?.diff;
         // save diff to a temp file
         const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.patch`);
-
         try {
             await workspace.fs.writeFile(Uri.parse(filePath), Buffer.from(diff, 'utf-8'));
-
             // TODO assume exactly one repository, which will be the case when working in a codespace.
             await git?.repositories[0].apply(filePath);
+            outputChannel?.appendLine('diff applied.');
         } finally {
             await workspace.fs.delete(Uri.parse(filePath));
         }
         return;
     }
+    outputChannel?.appendLine(JSON.stringify('Edit found.'));
     const edit = new WorkspaceEdit();
     for (const artifactChange of fix.artifactChanges) {
         const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
@@ -109,6 +114,7 @@ export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, stor
 
         const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
         if (!localUri) continue;
+        outputChannel?.appendLine(`Applying fix to ${localUri.toString()}`);
 
         const currentDoc = await workspace.openTextDocument(localUri);
         const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);

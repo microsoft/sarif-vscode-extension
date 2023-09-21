@@ -81,9 +81,10 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     const connectToGithubCodeScanning: ConnectToGithubCodeScanning = fullCodeScanningAlert
         ? 'injected'
         : workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
-
-    if (connectToGithubCodeScanning === 'off') return;
-
+    outputChannel.appendLine(`Connect to GitHub Code Scanning: ${connectToGithubCodeScanning}.`);
+    if (connectToGithubCodeScanning === 'off') {
+        return;
+    }
     const config = {
         user: '',
         repoName: '',
@@ -91,13 +92,20 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
     (async () => {
         const git = await getInitializedGitApi();
-        if (!git) return sendGithubEligibility('No Git api');
+        if (!git) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No Git api.');
+            return sendGithubEligibility('No Git api');
+        }
 
         const repo = getPrimaryRepository(git);
-        if (!repo) return sendGithubEligibility('No Git repository');
+        if (!repo) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No Git repository.');
+            return sendGithubEligibility('No Git repository');
+        }
 
-        const origin = findRemote(repo);
+        const origin = await findRemote(repo, outputChannel);
         if (!origin) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No remote');
             return sendGithubEligibility('No remote');
         }
 
@@ -113,16 +121,27 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return [];
         })();
 
-        if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
+        if (!user || !repoName) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No GitHub origin.');
+            return sendGithubEligibility('No GitHub origin');
+        }
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
+        outputChannel.appendLine(`Repository name with owner: ${config.user}/${config.repoName}.`);
 
         // process.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
-        if (!workspacePath) return sendGithubEligibility('No workspace');
+        if (!workspacePath) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No workspace.');
+            return sendGithubEligibility('No workspace');
+        }
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
-        if (!existsSync(gitHeadPath)) return sendGithubEligibility('No .git/HEAD');
+        if (!existsSync(gitHeadPath)) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No .git/HEAD.');
+            return sendGithubEligibility('No .git/HEAD');
+        }
 
+        outputChannel.appendLine('Eligible to connect to GitHub Code Scanning.');
         sendGithubEligibility('Eligible');
 
         if (connectToGithubCodeScanning === 'prompt') {
@@ -132,6 +151,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             );
             sendGithubPromptChoice(choice);
             if (choice === 'Never') {
+                outputChannel.appendLine('Never connect to GitHub Code Scanning by user request.');
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
@@ -171,14 +191,15 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         if (connectToGithubCodeScanning === 'injected') {
             // bypass downloading analyses. Instead, use the fullCodeScanningAlert as the analysis to apply.
-            await handleSingleLog(fullCodeScanningAlert!);
+            await handleSingleLog(fullCodeScanningAlert!, outputChannel);
 
             // Now that the analysis has been successfully applied, avoid re-applying it in the future.
             // Make sure to update the config value to '' instead of `undefined` to ensure that the
             // default value is not used. This default value may have been injected by a codespace.
             await workspace.getConfiguration('sarif-viewer').update('githubCodeScanningInitialAlert', '', ConfigurationTarget.Global);
         } else {
-            // force a fetch of the analysis for the current branch.
+            // Note that if connectToGithubCodeScanning is undefined, it is treated as 'on'.
+            // Force a fetch of the analysis for the current branch.
             await onBranchChanged(repo, gitHeadPath);
         }
 
@@ -392,25 +413,26 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         setBannerResultsUpdated(analysisInfo);
     }
 
-    async function handleSingleLog(logText: string) {
+    async function handleSingleLog(logText: string, outputChannel: OutputChannel) {
         try {
             const log = parseLog(logText);
+            outputChannel.appendLine(`Handling injected log with ${log.runs.length} runs.`);
             store.logs.push(log);
-            await applyFixes(log);
+            await applyFixes(log, outputChannel);
             panel.show();
             isSpinning.set(false);
             store.banner = `Results loaded for default alert.`;
-            const provenance = log.runs?.[0]?.versionControlProvenance?.[0];
-            if (provenance) {
-                sendGithubAutofixApplied('success');
-            }
+            outputChannel.appendLine('Success.');
+            sendGithubAutofixApplied('success');
         } catch (e) {
             window.showErrorMessage(`Unable to parse SARIF and apply fixes: ${errorToString(e)}`);
+            outputChannel.appendLine(`Unable to parse SARIF and apply fixes: ${errorToString(e)}`);
             sendGithubAutofixApplied('failure', errorToString(e));
         }
     }
 
-    async function applyFixes(log: Log) {
+    async function applyFixes(log: Log, outputChannel: OutputChannel) {
+        outputChannel.appendLine('Applying fixes...');
         const baser = new UriRebaser(store);
         const fixes: { result: Result, fix: Fix }[] = [];
 
