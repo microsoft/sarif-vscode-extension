@@ -473,11 +473,11 @@ function errorToString(e: unknown) {
     return e instanceof Error ? e.message : String(e);
 }
 
-function parseLog(logText: string, uri?: string) {
+function parseLog(logText: string, uri = 'file:///synthetic.sarif') {
     const log = JSON.parse(logText) as Log;
     log._text = logText;
-    log._uri = uri ?? 'file:///synthetic.sarif';
-    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
+    log._uri = uri;
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(true); // No trailing slash
     augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
     return log;
 }

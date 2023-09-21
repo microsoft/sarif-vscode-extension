@@ -97,7 +97,8 @@ export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, stor
         const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.patch`);
         try {
             await workspace.fs.writeFile(Uri.parse(filePath), Buffer.from(diff, 'utf-8'));
-            // TODO assume exactly one repository, which will be the case when working in a codespace.
+            // TODO assume exactly one repository, which will usually be the case for codespaces.
+            // All the situations we need to handle right now are single repository.
             await git?.repositories[0].apply(filePath);
             outputChannel?.appendLine('diff applied.');
         } finally {
@@ -105,7 +106,7 @@ export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, stor
         }
         return;
     }
-    outputChannel?.appendLine(JSON.stringify('Edit found.'));
+    outputChannel?.appendLine('Edit found.');
     const edit = new WorkspaceEdit();
     for (const artifactChange of fix.artifactChanges) {
         const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
