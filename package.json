@@ -4,7 +4,7 @@
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.4.1",
+    "version": "3.4.2",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -74,6 +74,12 @@
                     ],
                     "default": "Default",
                     "scope": "application"
+                },
+                "sarif-viewer.githubCodeScanningInitialAlert": {
+                    "description": "Specifies an initial alert to load into the UI on when the IDE starts. This is meant to be set programmatically.",
+                    "type": "string",
+                    "ignoreSync": true,
+                    "scope": "machine"
                 }
             }
         },
