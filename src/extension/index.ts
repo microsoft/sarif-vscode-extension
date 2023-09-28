@@ -63,7 +63,7 @@ export async function activate(context: ExtensionContext): Promise<Api> {
 
                 // Decode the alert API URL and pass it to the load function.
                 const url = decodeURIComponent(param[1]);
-                if (url.startsWith('https://advsec.dev.azure.com/')) {
+                if (url.startsWith('https://advsec.dev.azure.com/') || url.startsWith('https://advsec.codedev.ms/')) {
                     await loadAlertSarif(new URL(url));
                 } else {
                     void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
