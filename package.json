@@ -103,11 +103,6 @@
                 "title": "Clear State"
             },
             {
-                "command": "sarif.toggleDrift",
-                "category": "SARIF",
-                "title": "Toggle Drift"
-            },
-            {
                 "command": "sarif.alertDismissFalsePositive",
                 "category": "SARIF",
                 "title": "Dismiss - False Positive"
