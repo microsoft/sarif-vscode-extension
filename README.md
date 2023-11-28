@@ -1,5 +1,7 @@
 
-# SARIF Viewer for Visual Studio Code
+# Monokle SARIF Viewer for Visual Studio Code
+
+> **IMPORTANT**: This is a fork of [Sarif Viewer extension by Microsoft Corporation](https://github.com/microsoft/sarif-vscode-extension). Used by [Monokle](https://github.com/kubeshop/vscode-monokle) extension.
 
 A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/VSCode) that adds support for viewing [SARIF](https://sarifweb.azurewebsites.net/) logs. SARIF log results can be viewed as squiggles in your source, in the Problems list, or in a dedicated **SARIF Results Panel**. The **SARIF Results Panel** offers richer grouping, filtering, column, and details options over the standard Problems list.
 

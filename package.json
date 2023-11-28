@@ -1,17 +1,17 @@
 {
-    "name": "sarif-viewer",
-    "displayName": "SARIF Viewer",
-    "description": "Adds support for viewing SARIF logs",
-    "author": "Microsoft Corporation",
+    "name": "monokle-sarif-viewer",
+    "displayName": "Monokle SARIF Viewer",
+    "description": "Adds support for viewing SARIF logs, fork of Sarif Viewer by Microsoft Corporation",
+    "author": "Kubeshop",
     "license": "MIT",
     "version": "3.4.2",
-    "publisher": "MS-SarifVSCode",
+    "publisher": "Kubeshop",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/sarif-vscode-extension.git"
+        "url": "https://github.com/kubeshop/vscode-monokle.git"
     },
     "bugs": {
-        "url": "https://github.com/Microsoft/sarif-vscode-extension/issues"
+        "url": "https://github.com/kubeshop/vscode-monokle/issues"
     },
     "icon": "icon.png",
     "categories": [
