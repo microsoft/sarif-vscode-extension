@@ -192,7 +192,7 @@
         "@types/diff": "^5.0.2",
         "chokidar": "^3.3.0",
         "diff": "^3.5.0",
-        "follow-redirects": "1.14.8",
+        "follow-redirects": "1.15.4",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
         "mobx-react": "6.1.8",
