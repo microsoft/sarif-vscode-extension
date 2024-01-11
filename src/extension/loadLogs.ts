@@ -73,8 +73,9 @@ export function detectSupport(log: Log, logsSupported: Log[], logsNotSupported: 
         const normalizedSchema = normalizeSchema(log.$schema ?? '');
         const supportedSchemas = [
             '',
+            'sarif-2.1.0-rtm.6',
             'sarif-2.1.0-rtm.5',
-            'sarif-2.1.0', // As of Aug 2020 the contents of `2.1.0` = `2.1.0-rtm.5`. Still true on May 2022.
+            'sarif-2.1.0', // As of Aug 2020 the contents of `2.1.0` = `2.1.0-rtm.6`. Still true April 2023.
         ];
         if (supportedSchemas.includes(normalizedSchema)) {
             logsSupported.push(log);
@@ -100,6 +101,9 @@ export function tryFastUpgradeLog(log: Log): boolean {
         case '2.1.0-rtm.3':
         case '2.1.0-rtm.4':
             applyRtm5(log);
+            return true;
+        case '2.1.0-rtm.6':
+            // No impactful changes between rtm.6 and rtm.5.
             return true;
         default:
             return false;

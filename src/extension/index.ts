@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import { Api } from './index.d';
+import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
@@ -20,8 +22,12 @@ import { Store } from './store';
 import * as Telemetry from './telemetry';
 import { update, updateChannelConfigSection } from './update';
 import { UriRebaser } from './uriRebaser';
+import { promises } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import fetch from 'node-fetch';
 
-export async function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext): Promise<Api> {
     // Borrowed from: https://github.com/Microsoft/vscode-languageserver-node/blob/db0f0f8c06b89923f96a8a5aebc8a4b5bb3018ad/client/src/main.ts#L217
     const isDebugOrTestMode =
         process.execArgv.some(arg => /^--extensionTestsPath=?/.test(arg)) // Debug
@@ -48,11 +54,68 @@ export async function activate(context: ExtensionContext) {
     const panel = new Panel(context, baser, store);
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
+    // URI handler
+    disposables.push(window.registerUriHandler({
+        async handleUri(uri: vscode.Uri) {
+            if (uri.path.toLowerCase() === '/alert') {
+                // Launched by Azure DevOps Advanced Security alert page.
+                const param = uri.query.split('url=');
+
+                // Decode the alert API URL and pass it to the load function.
+                const url = decodeURIComponent(param[1]);
+                if (url.startsWith('https://advsec.dev.azure.com/')) {
+                    await loadAlertSarif(new URL(url));
+                } else {
+                    void window.showWarningMessage(`Invalid callback URL '${url}'. URL must point to 'https://advsec.dev.azure.com/'.`, 'OK');
+                }
+            }
+        }
+    }));
+
+    async function loadAlertSarif(url: URL) {
+        try {
+            // Get the user's session with the ADO service's user_impersonation scope
+            const session = await vscode.authentication.getSession('microsoft', ['499b84ac-1321-427f-aa17-267ca6975798/.default'], { createIfNone: true });
+            const accessToken = session?.accessToken;
+
+            if (!accessToken) { return; }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/sarif+json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'User-Agent': 'MS-SarifVSCode.sarif-viewer',
+                }
+            });
+
+            if (response.ok) {
+                // Save the log to a new temp file.
+                const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.sarif`);
+
+                try {
+                    const jsonObject = await response.json();
+                    await promises.writeFile(filePath, jsonObject.value);
+
+                    // Load the log into the Viewer.
+                    store.logs.push(...await loadLogs([Uri.file(filePath)]));
+                    if (store.results.length) panel.show();
+                } catch (error) {
+                    outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***File path: ${filePath}\n`);
+                }
+            } else {
+                outputChannel.appendLine(`***Failed request in loadAlertSarif\n***Response code ${response.status} ${response.statusText}\n***URL: ${url.toString()}\n`);
+            }
+        } catch (error) {
+            outputChannel.appendLine(`***Exception in loadAlertSarif\n***${error}\n***URL: ${url.toString()}\n`);
+        }
+    }
+
     // General Activation
     activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser, outputChannel);
     activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store);
+    activateDecorations(disposables, store, baser);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, store, panel);
     activateGithubAnalyses(disposables, store, panel, outputChannel);
@@ -89,11 +152,14 @@ export async function activate(context: ExtensionContext) {
 
     // API
     const api = {
-        async openLogs(logs: Uri[], _options: unknown, cancellationToken?: CancellationToken) {
+        async openLogs(logs: Uri[], _options?: unknown, cancellationToken?: CancellationToken) {
             watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
-            if (cancellationToken?.isCancellationRequested) return;
-            if (store.results.length) panel.show();
+            if (cancellationToken ?.isCancellationRequested) return;
+            if (store.results.length) {
+                // TODO should we await?
+                void panel.show();
+            }
         },
         async closeLogs(logs: Uri[]) {
             watcher.unwatch(logs.map(log => log.fsPath));
@@ -105,19 +171,27 @@ export async function activate(context: ExtensionContext) {
             watcher.unwatch('**/*');
             store.logs.splice(0);
         },
+        async selectByIndex(uri: Uri, runIndex: number, resultIndex: number) {
+            panel.selectByIndex(uri, runIndex, resultIndex);
+        },
         get uriBases() {
             return baser.uriBases.map(uri => Uri.file(uri)) as ReadonlyArray<Uri>;
         },
         set uriBases(values) {
             baser.uriBases = values.map(uri => uri.toString());
         },
+        dispose: () => {
+            Telemetry.deactivate();
+            api.closeAllLogs();
+            disposables.forEach(disposable => disposable ?.dispose ?.());
+        }
     };
 
     // By convention, auto-open any logs in the `./.sarif` folder.
-    api.openLogs(await workspace.findFiles('.sarif/**.sarif'), {});
+    await api.openLogs(await workspace.findFiles('.sarif/**.sarif'));
 
     // During development, use the following line to auto-load a log.
-    // api.openLogs([Uri.parse('/path/to/log.sarif')], {});
+    // await api.openLogs([Uri.parse('/path/to/log.sarif')]);
 
     return api;
 }
@@ -130,12 +204,14 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.fileName.endsWith('.git')) return;
         if (doc.uri.scheme === 'output') return; // Example "output:extension-output-MS-SarifVSCode.sarif-viewer-%231-Sarif%20Viewer"
         if (doc.uri.scheme === 'vscode') return; // Example "vscode:scm/git/scm0/input?rootUri..."
+        if (doc.uri.scheme === 'comment') return; // Represents a comment thread (from the VS Code Comments API)
+        if (doc.uri.scheme === 'vscode-terminal') return; // Represents a terminal (either integrated or from the VS Code Terminal API)
 
         const artifactUri = await (async () => {
             if (doc.uri.scheme === 'sarif') {
                 return doc.uri.toString();
             }
-            return await baser.translateLocalToArtifact(doc.uri.toString());
+            return baser.translateLocalToArtifact(doc.uri);
         })();
         const severities = {
             error: DiagnosticSeverity.Error,
@@ -221,7 +297,7 @@ function activateVirtualDocuments(disposables: Disposable[], store: Store) {
     }));
 }
 
-// Syncronize selection between editor and panel.
+// Synchronize selection between editor and panel.
 function activateSelectionSync(disposables: Disposable[], store: Store, panel: Panel) {
     disposables.push(window.onDidChangeTextEditorSelection(({ selections, textEditor }) => {
         if (store.disableSelectionSync) return; // See `panel.selectLocal` for details.
@@ -242,8 +318,4 @@ function activateSelectionSync(disposables: Disposable[], store: Store, panel: P
 
         panel.select(result);
     }));
-}
-
-export function deactivate() {
-    Telemetry.deactivate();
 }

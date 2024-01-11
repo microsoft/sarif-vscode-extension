@@ -1,4 +1,27 @@
 {
+    "files.exclude": {
+        "**/out": true,
+        "**/dist": true,
+        "**/node_modules": true,
+        "common/temp": true,
+        "**/.vscode-test": true
+    },
+    "files.watcherExclude": {
+        "**/.git/**": true,
+        "**/out": true,
+        "**/dist": true,
+        "**/node_modules": true,
+        "common/temp": true,
+        "**/.vscode-test": true
+    },
+    "search.exclude": {
+        "**/out": true, // set this to false to include "out" folder in search results
+        "**/dist": true,
+        "**/node_modules": true,
+        "common/temp": true,
+        "**/.vscode-test": true
+    },
+
     "cSpell.words": [
         "Callout",
         "Callouts",

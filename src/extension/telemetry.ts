@@ -37,4 +37,7 @@ export function sendGithubConfig(value: string) {
 
 export function sendGithubEndpointChanged(value: string) {
     reporter?.sendTelemetryEvent('githubEndpointChanged', { value });
+
+export function sendGithubAutofixApplied(status: 'success' | 'failure', message = '') {
+    reporter?.sendTelemetryEvent('githubAutofixApplied', { status, message });
 }

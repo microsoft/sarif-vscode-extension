@@ -1,10 +1,10 @@
 {
     "name": "sarif-viewer",
-    "displayName": "Sarif Viewer",
+    "displayName": "SARIF Viewer",
     "description": "Adds support for viewing SARIF logs",
     "author": "Microsoft Corporation",
     "license": "MIT",
-    "version": "3.3.4",
+    "version": "3.4.2",
     "publisher": "MS-SarifVSCode",
     "repository": {
         "type": "git",
@@ -25,8 +25,7 @@
     },
     "activationEvents": [
         "onLanguage:json",
-        "onCommand:sarif.showPanel",
-        "onCommand:sarif.clearState",
+        "onUri",
         "workspaceContains:.git",
         "workspaceContains:.sarif"
     ],
@@ -36,7 +35,7 @@
     "main": "./out/context.js",
     "contributes": {
         "configuration": {
-            "title": "Sarif Viewer",
+            "title": "SARIF Viewer",
             "properties": {
                 "sarif-viewer.rootpaths": {
                     "type": "array",
@@ -80,6 +79,12 @@
                     ],
                     "default": "Default",
                     "scope": "application"
+                },
+                "sarif-viewer.githubCodeScanningInitialAlert": {
+                    "description": "Specifies an initial alert to load into the UI on when the IDE starts. This is meant to be set programmatically.",
+                    "type": "string",
+                    "ignoreSync": true,
+                    "scope": "machine"
                 }
             }
         },
@@ -101,11 +106,6 @@
                 "command": "sarif.clearState",
                 "category": "SARIF",
                 "title": "Clear State"
-            },
-            {
-                "command": "sarif.toggleDrift",
-                "category": "SARIF",
-                "title": "Toggle Drift"
             },
             {
                 "command": "sarif.alertDismissFalsePositive",
@@ -189,7 +189,7 @@
         "tslint": "5.12.1",
         "typescript": "3.8.3",
         "vsce": "^1.100.0",
-        "webpack": "^5.75.0",
+        "webpack": "^5.76.0",
         "webpack-cli": "^4.8.0",
         "webpack-dev-server": "^4.2.1"
     },
@@ -205,9 +205,9 @@
         "react": "16.13.1",
         "react-dom": "16.13.1",
         "react-markdown": "^5.0.3",
-        "semver": "7.3.2",
+        "stream-meter": "^1.0.4",
+        "semver": "7.5.2",
         "tmp": "0.1.0",
-        "url-join": "4.0.1",
         "vscode-codicons": "0.0.2",
         "vscode-extension-telemetry": "0.1.6",
         "vscode-uri": "2.1.2"

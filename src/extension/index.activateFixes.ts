@@ -4,13 +4,16 @@
 
 import { diffChars } from 'diff';
 import { Fix, Result } from 'sarif';
-import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, Uri, workspace, WorkspaceEdit } from 'vscode';
+import { CodeAction, CodeActionKind, Diagnostic, Disposable, languages, OutputChannel, Uri, workspace, WorkspaceEdit } from 'vscode';
 import { parseArtifactLocation } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import { getInitializedGitApi } from './index.activateGithubAnalyses';
+import * as path from 'path';
+import * as os from 'os';
 
 export function activateFixes(disposables: Disposable[], store: Pick<Store, 'analysisInfo' | 'resultsFixed'>, baser: UriRebaser) {
     disposables.push(languages.registerCodeActionsProvider('*',
@@ -23,10 +26,10 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 // { value: 'quickFix' } │ Invoke=1             │ Before hover tooltip is shown. Return only specific code actions.
 
                 const diagnostic = context.diagnostics[0] as ResultDiagnostic | undefined;
-                if (!diagnostic) return;
+                if (!diagnostic) return undefined;
 
                 const result = diagnostic?.result;
-                if (!result) return;
+                if (!result) return undefined;
 
                 return [
                     new ResultQuickFix(diagnostic, result), // Mark as fixed
@@ -41,29 +44,10 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
             async resolveCodeAction(codeAction: ResultQuickFix) {
                 const { result, fix, command } = codeAction;
 
-                if (command) return; // VS Code will execute the command on our behalf.
+                if (command) return undefined; // VS Code will execute the command on our behalf.
 
                 if (fix) {
-                    const edit = new WorkspaceEdit();
-                    for (const artifactChange of fix.artifactChanges) {
-                        const [uri, _uriContents] = parseArtifactLocation(result, artifactChange.artifactLocation);
-                        const artifactUri = uri;
-                        if (!artifactUri) continue;
-
-                        const localUri = await baser.translateArtifactToLocal(artifactUri);
-                        const currentDoc = await workspace.openTextDocument(Uri.parse(localUri, true /* Why true? */));
-                        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
-                        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
-
-                        for (const replacement of artifactChange.replacements) {
-                            edit.replace(
-                                Uri.parse(localUri),
-                                driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
-                                replacement.insertedContent?.text ?? '',
-                            );
-                        }
-                    }
-                    workspace.applyEdit(edit);
+                    await applyFix(fix, result, baser, store);
                 }
 
                 store.resultsFixed.push(JSON.stringify(result._id));
@@ -95,4 +79,55 @@ class DismissCodeAction extends CodeAction {
             arguments: [{ resultId: JSON.stringify(result._id) }],
         };
     }
+}
+
+export async function applyFix(fix: Fix, result: Result, baser: UriRebaser, store: Pick<Store, 'analysisInfo'>, outputChannel?: OutputChannel) {
+    // Some fixes are injected as raw diffs. If so, apply them directly.
+    const diff = fix.properties?.diff;
+    if (diff) {
+        outputChannel?.appendLine('diff found:');
+        outputChannel?.appendLine('--------');
+        outputChannel?.appendLine(diff);
+        outputChannel?.appendLine('--------');
+        const git = await getInitializedGitApi();
+        if (!git) {
+            throw new Error('Unable to initialize Git API.');
+        }
+        // save diff to a temp file
+        const filePath = path.join(os.tmpdir(), `${(new Date()).getTime()}.patch`);
+        try {
+            await workspace.fs.writeFile(Uri.parse(filePath), Buffer.from(diff, 'utf-8'));
+            // TODO assume exactly one repository, which will usually be the case for codespaces.
+            // All the situations we need to handle right now are single repository.
+            await git?.repositories[0].apply(filePath);
+            outputChannel?.appendLine('diff applied.');
+        } finally {
+            await workspace.fs.delete(Uri.parse(filePath));
+        }
+        return;
+    }
+    outputChannel?.appendLine('Edit found.');
+    const edit = new WorkspaceEdit();
+    for (const artifactChange of fix.artifactChanges) {
+        const [uri, uriBase] = parseArtifactLocation(result, artifactChange.artifactLocation);
+        const artifactUri = uri;
+        if (!artifactUri) continue;
+
+        const localUri = await baser.translateArtifactToLocal(artifactUri, uriBase);
+        if (!localUri) continue;
+        outputChannel?.appendLine(`Applying fix to ${localUri.toString()}`);
+
+        const currentDoc = await workspace.openTextDocument(localUri);
+        const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
+        const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
+
+        for (const replacement of artifactChange.replacements) {
+            edit.replace(
+                localUri,
+                driftedRegionToSelection(diffBlocks, currentDoc, replacement.deletedRegion, originalDoc),
+                replacement.insertedContent?.text ?? '',
+            );
+        }
+    }
+    workspace.applyEdit(edit);
 }

@@ -6,8 +6,8 @@ import { watch } from 'chokidar';
 import { readFileSync, existsSync } from 'fs';
 import { observe } from 'mobx';
 import fetch, { Response } from 'node-fetch';
-import { Log } from 'sarif';
-import { authentication, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
+import { Fix, Log, Result } from 'sarif';
+import { authentication, ConfigurationTarget, Disposable, extensions, OutputChannel, ProgressLocation, window, workspace } from 'vscode';
 import { augmentLog } from '../shared';
 import '../shared/extension';
 import { API, GitExtension, Repository } from './git';
@@ -15,7 +15,9 @@ import { driverlessRules } from './loadLogs';
 import { Panel } from './panel';
 import { isSpinning } from './statusBarItem';
 import { Store } from './store';
-import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound, sendGithubEndpointChanged } from './telemetry';
+import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound, sendGithubAutofixApplied, sendGithubEndpointChanged } from './telemetry';
+import { applyFix } from './index.activateFixes';
+import { UriRebaser } from './uriRebaser';
 
 // Subset of the GitHub API.
 interface AnalysisInfo {
@@ -63,7 +65,9 @@ export function getPrimaryRepository(git: API): Repository | undefined {
     return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];
 }
 
-export type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt'
+//  'off' | 'on' | 'prompt' are valid setting values. 'injected' is used if there is a value for
+// githubCodeScanningInitialAlert.
+type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt' | 'injected' | undefined;
 
 export type GitHubCodeScanningEndpoint = 'https://api.github.com';
 
@@ -78,11 +82,21 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         sendGithubConfig(connectToGithubCodeScanning ?? 'undefined');
     }));
 
-    // See configurations comments at the bottom of this file.
+
     const connectToGithubCodeScanning = workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
     if (connectToGithubCodeScanning === 'off') return;
 
     const gitHubCodeScanningEndpoint = workspace.getConfiguration('sarif-viewer').get<GitHubCodeScanningEndpoint>('githubCodeScanningEndpoint') ?? 'https://api.github.com';
+
+    // See configurations comments at the bottom of this file.
+    const fullCodeScanningAlert = workspace.getConfiguration('sarif-viewer').get<string>('githubCodeScanningInitialAlert');
+    const connectToGithubCodeScanning: ConnectToGithubCodeScanning = fullCodeScanningAlert
+        ? 'injected'
+        : workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
+    outputChannel.appendLine(`Connect to GitHub Code Scanning: ${connectToGithubCodeScanning}.`);
+    if (connectToGithubCodeScanning === 'off') {
+        return;
+    }
 
     const config = {
         user: '',
@@ -91,15 +105,26 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
     (async () => {
         const git = await getInitializedGitApi();
-        if (!git) return sendGithubEligibility('No Git api');
+        if (!git) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No Git api.');
+            return sendGithubEligibility('No Git api');
+        }
 
         const repo = getPrimaryRepository(git);
-        if (!repo) return sendGithubEligibility('No Git repository');
+        if (!repo) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No Git repository.');
+            return sendGithubEligibility('No Git repository');
+        }
 
-        const origin = await repo.getConfig('remote.origin.url');
+        const origin = await findRemote(repo, outputChannel);
+        if (!origin) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No remote');
+            return sendGithubEligibility('No remote');
+        }
 
         const [, user, repoName] = (() => {
-            // Example: https:/github.com/user/repoName.git
+            const matchHTTPS = origin.match(/https:\/\/github\.com\/([^/]+)\/([^/]+)/);
+            if (matchHTTPS) return matchHTTPS;
 
             // Try githubCodeScanningEndpoint first, then try it without a "api." prefix.
             // This is to support GitHub Enterprise Server, which may have a different endpoint.
@@ -119,16 +144,27 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return [];
         })();
 
-        if (!user || !repoName) return sendGithubEligibility('No GitHub origin');
+        if (!user || !repoName) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No GitHub origin.');
+            return sendGithubEligibility('No GitHub origin');
+        }
         config.user = user;
         config.repoName = repoName.replace('.git', ''); // A repoName may optionally end with '.git'. Normalize it out.
+        outputChannel.appendLine(`Repository name with owner: ${config.user}/${config.repoName}.`);
 
         // process.cwd() returns '/'
         const workspacePath = workspace.workspaceFolders?.[0]?.uri?.fsPath; // TODO: Multiple workspaces.
-        if (!workspacePath) return sendGithubEligibility('No workspace');
+        if (!workspacePath) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No workspace.');
+            return sendGithubEligibility('No workspace');
+        }
         const gitHeadPath = `${workspacePath}/.git/HEAD`;
-        if (!existsSync(gitHeadPath)) return sendGithubEligibility('No .git/HEAD');
+        if (!existsSync(gitHeadPath)) {
+            outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No .git/HEAD.');
+            return sendGithubEligibility('No .git/HEAD');
+        }
 
+        outputChannel.appendLine('Eligible to connect to GitHub Code Scanning.');
         sendGithubEligibility('Eligible');
 
         if (connectToGithubCodeScanning === 'prompt') {
@@ -138,11 +174,12 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             );
             sendGithubPromptChoice(choice);
             if (choice === 'Never') {
+                outputChannel.appendLine('Never connect to GitHub Code Scanning by user request.');
                 workspace.getConfiguration('sarif-viewer').update('connectToGithubCodeScanning', 'off');
             } else if (choice === 'Connect') {
                 const analysisFound = await window.withProgress<boolean>({ location: ProgressLocation.Notification }, async progress => {
                     progress.report({ increment: 20 }); // 20 is arbitrary as we have a non-deterministic number of steps.
-                    await onBranchChanged(repo, gitHeadPath, store, true);
+                    await onBranchChanged(repo, gitHeadPath, true);
                     const analysisInfo = await fetchAnalysisInfo(message => {
                         progress.report({ message, increment: 20 });
                     });
@@ -168,26 +205,40 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     sendGithubAnalysisFound('Found');
                 }
             }
-        } else {
-            // At this point all the local requirements have been satisfied.
-            // We preemptively show the panel (even before the result as fetched)
-            // so that the banner is visible.
-            await panel.show();
-            await onBranchChanged(repo, gitHeadPath, store);
-            beginWatch(repo);
         }
+
+        // At this point all the local requirements have been satisfied.
+        // We preemptively show the panel (even before the result is fetched)
+        // so that the banner is visible.
+        await panel.show();
+
+        if (connectToGithubCodeScanning === 'injected') {
+            // bypass downloading analyses. Instead, use the fullCodeScanningAlert as the analysis to apply.
+            await handleSingleLog(fullCodeScanningAlert!, outputChannel);
+
+            // Now that the analysis has been successfully applied, avoid re-applying it in the future.
+            // Make sure to update the config value to '' instead of `undefined` to ensure that the
+            // default value is not used. This default value may have been injected by a codespace.
+            await workspace.getConfiguration('sarif-viewer').update('githubCodeScanningInitialAlert', '', ConfigurationTarget.Global);
+        } else {
+            // Note that if connectToGithubCodeScanning is undefined, it is treated as 'on'.
+            // Force a fetch of the analysis for the current branch.
+            await onBranchChanged(repo, gitHeadPath);
+        }
+
+        beginWatch(repo);
 
         function beginWatch(repo: Repository) {
             const watcher = watch([
                 `${workspacePath}/.git/refs/heads`, // TODO: Only watch specific branch.
             ], { ignoreInitial: true });
             watcher.on('all', (/* examples: eventName = change, path = .git/refs/heads/demo */) => {
-                onBranchChanged(repo, gitHeadPath, store);
+                onBranchChanged(repo, gitHeadPath);
             });
         }
     })();
 
-    async function onBranchChanged(repo: Repository, gitHeadPath: string, store: Store, skipAnalysisInfo = false) {
+    async function onBranchChanged(repo: Repository, gitHeadPath: string, skipAnalysisInfo = false) {
         // Get current branch. No better way:
         // * repo.log does not show branch info
         // * repo.getBranch('') returns the alphabetical first
@@ -345,13 +396,16 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         const session = await authentication.getSession(gitHubCodeScanningEndpoint === 'https://api.github.com' ? 'github' : 'github-enterprise', ['security_events'], { createIfNone: true });
         const { accessToken } = session; // Assume non-null as we already called it recently.
 
-        const logs = !analysisInfo?.ids.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
+        const ids = analysisInfo?.ids;
+        const logs = !ids?.length // AnalysesForCommit.ids should not be zero-length, but this is an extra guard.
             ? undefined
             : await (async () => {
                 try {
                     const logs = [] as Log[];
-                    for (const analysisId of analysisInfo.ids) {
+
+                    for (const analysisId of ids) {
                         const uri = `${gitHubCodeScanningEndpoint}/repos/${config.user}/${config.repoName}/code-scanning/analyses/${analysisId}`;
+
                         const analysisResponse = await fetch(uri, {
                             headers: {
                                 accept: 'application/sarif+json',
@@ -361,11 +415,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                         const logText = await analysisResponse.text();
                         // Useful for saving/examining fetched logs:
                         // (await import('fs')).writeFileSync(`${workspace.workspaceFolders?.[0]?.uri.fsPath}/${analysisInfo.id}.sarif`, logText);
-                        const log = JSON.parse(logText) as Log;
-                        log._text = logText;
-                        log._uri = uri;
-                        const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
-                        augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+                        const log = parseLog(logText, uri);
                         logs.push(log);
                     }
                     return logs;
@@ -389,8 +439,44 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
 
         panel.show();
         isSpinning.set(false);
-
         setBannerResultsUpdated(analysisInfo);
+    }
+
+    async function handleSingleLog(logText: string, outputChannel: OutputChannel) {
+        try {
+            const log = parseLog(logText);
+            outputChannel.appendLine(`Handling injected log with ${log.runs.length} runs.`);
+            store.logs.push(log);
+            await applyFixes(log, outputChannel);
+            panel.show();
+            isSpinning.set(false);
+            store.banner = `Results loaded for default alert.`;
+            outputChannel.appendLine('Success.');
+            sendGithubAutofixApplied('success');
+        } catch (e) {
+            window.showErrorMessage(`Unable to parse SARIF and apply fixes: ${errorToString(e)}`);
+            outputChannel.appendLine(`Unable to parse SARIF and apply fixes: ${errorToString(e)}`);
+            sendGithubAutofixApplied('failure', errorToString(e));
+        }
+    }
+
+    async function applyFixes(log: Log, outputChannel: OutputChannel) {
+        outputChannel.appendLine('Applying fixes...');
+        const baser = new UriRebaser(store);
+        const fixes: { result: Result, fix: Fix }[] = [];
+
+        // Gather all fixes
+        log.runs?.forEach(run => {
+            run.results?.forEach(result => {
+                result.fixes?.forEach(fix => fixes.push({ result, fix }));
+            });
+        });
+        outputChannel.appendLine(`Found ${fixes.length} fix(es).`);
+
+        // Apply them serially
+        for (const f of fixes) {
+            await applyFix(f.fix, f.result, baser, store, outputChannel);
+        }
     }
 
     function setBannerResultsUpdated(analysisInfo: AnalysisInfosForCommit | undefined, verb: 'updated' | 'unchanged' = 'updated') {
@@ -404,12 +490,59 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         store.banner = `Results ${verb} for current commit ${store.commitHash.slice(0, 7)}.` + messageWarnStale;
     }
 
-    // TODO: Block re-entrancy.
+    // TODO: Block re-entrance.
     observe(store, 'analysisInfo', () => fetchAnalysis(store.analysisInfo));
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
         const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
         updateAnalysisInfo(analysisInfo);
     });
+}
+
+function errorToString(e: unknown) {
+    return e instanceof Error ? e.message : String(e);
+}
+
+function parseLog(logText: string, uri = 'file:///synthetic.sarif') {
+    const log = JSON.parse(logText) as Log;
+    log._text = logText;
+    log._uri = uri;
+    const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(true); // No trailing slash
+    augmentLog(log, driverlessRules, primaryWorkspaceFolderUriString);
+    return log;
+}
+
+/**
+ * Gets the URL associated with the remote to retrieve alerts for.
+ * Uses these heuristics in order:
+ *
+ * 1. The remote associated with the current head
+ * 2. The `origin` remote
+ * 3. The first remote in the configuration
+ * 4. undefined
+ *
+ * On codespaces, if this extension starts too early, then the Git API may not be fully
+ * initialized. Even though the git extension is activated, the codespace's filesystem
+ * may not be ready. This is why we retry a few times.
+ *
+ * @param repo The repo to retrieve analyses for
+ * @returns the url associated with this remote or undefined if there are no remotes
+ * for this repo.
+ */
+async function findRemote(repo: Repository, outputChannel: OutputChannel): Promise<string | undefined> {
+    let remoteUrl: string | undefined;
+    for(let count = 0; count < 5 && !remoteUrl; count++) {
+        const remoteName = repo.state.HEAD?.upstream?.remote || 'origin';
+        remoteUrl = repo.state.remotes.find(remote => remote.name === remoteName)?.fetchUrl;
+        if (!remoteUrl && repo.state.remotes.length) {
+            remoteUrl = repo.state.remotes[0].fetchUrl;
+        }
+        if (!remoteUrl) {
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for Git to initialize.
+            outputChannel.appendLine('Git not initialized. Waiting...');
+        }
+    }
+
+    return remoteUrl;
 }
 
 /*
