@@ -14,7 +14,7 @@ import fetch from 'node-fetch';
 const workspaceDistinctFilenameCache: Map<string, Uri | undefined> = new Map();
 
 async function workspaceHasDistinctFilename(filename: string): Promise<Uri | undefined> {
-    const distinctFileName =  workspaceDistinctFilenameCache.get(filename);
+    const distinctFileName = workspaceDistinctFilenameCache.get(filename);
     if (distinctFileName !== undefined) {
         return distinctFileName;
     }
