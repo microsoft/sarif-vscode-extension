@@ -3,7 +3,6 @@
 
 import { Uri, window, workspace, ConfigurationTarget } from 'vscode';
 import '../shared/extension';
-import platformUriNormalize from './platformUriNormalize';
 import { Store } from './store';
 import uriExists from './uriExists';
 import { VersionControlDetails } from 'sarif';
@@ -15,12 +14,13 @@ import fetch from 'node-fetch';
 const workspaceDistinctFilenameCache: Map<string, Uri | undefined> = new Map();
 
 async function workspaceHasDistinctFilename(filename: string): Promise<Uri | undefined> {
-    const distinctFileName = workspaceDistinctFilenameCache.get(filename);
+    const distinctFileName =  workspaceDistinctFilenameCache.get(filename);
     if (distinctFileName !== undefined) {
         return distinctFileName;
     }
 
-    const matches = await workspace.findFiles(`**/${filename}`); // Is `.git` folder excluded?
+    // We specify a limit of 5000 files to avoid performance issues and over-indexing on large workspaces.
+    const matches = await workspace.findFiles(`**/${filename}`, undefined, 5000); // Is `.git` folder excluded?
     if (matches.length === 1) {
         workspaceDistinctFilenameCache.set(filename, matches[0]);
         return matches[0];
@@ -91,16 +91,16 @@ export class UriRebaser {
     public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> {
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri.toString())) {
-            const { file } = platformUriNormalize(localUri).toString();
+            const filename = path.basename(localUri.fsPath);
 
             // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
             // but obviously can't always be true.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
             const noWorkspace = !workspace.workspaceFolders?.length;
-            if ((noWorkspace || await workspaceHasDistinctFilename(file))
-                && this.store.distinctArtifactNames.has(file)) {
+            if ((noWorkspace || await workspaceHasDistinctFilename(filename))
+                && this.store.distinctArtifactNames.has(filename)) {
 
-                const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
+                const artifactUri = this.store.distinctArtifactNames.get(filename)!; // Not undefined due to surrounding if.
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(artifactUri, localUri);
             }
