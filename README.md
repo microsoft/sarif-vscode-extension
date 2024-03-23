@@ -58,4 +58,4 @@ Other common tasks:
 | `npm test` | Run and watch unit tests. Bails on failure. Useful during development.
 | `npm test -- --bail false --watch false` | Run tests once. Useful for reporting.
 | `npx webpack` | Build manually. |
-| `npx vsce package` | Produce a VSIX. |
+| `npx @vscode/vsce package` | Produce a VSIX. |
