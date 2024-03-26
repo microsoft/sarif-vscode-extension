@@ -62,8 +62,8 @@ describe('baser', () => {
 
     it('translates uris - local -> artifact - case-sensitive file system (uppercase)', async () => {
         // Spaces inserted to emphasize common segments.
-        const artifactUri = 'file://  /a/b'.replace(/ /g, '');
-        const localUri    = 'file://  /a/b'.replace(/ /g, '');
+        const artifactUri = 'file://  /a/B'.replace(/ /g, '');
+        const localUri    = 'file://  /a/B'.replace(/ /g, '');
         const { UriRebaser } = proxyquire('./uriRebaser', {
             'vscode': {
                 '@global': true,
