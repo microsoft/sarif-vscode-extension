@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import platformUriNormalize from './platformUriNormalize';
+import platform from './platform';
 
 const workspaceDistinctFilenameCache: Map<string, Uri | undefined> = new Map();
 
@@ -20,11 +21,13 @@ async function workspaceHasDistinctFilename(filename: string): Promise<Uri | und
         return distinctFileName;
     }
 
-    // Perform a case-insensitive search for the filename in the workspace.
-    // Because we are searching for a single unique match, this approach is sufficient regardless of file-system case sensitivity.
-    // We specify a limit of 5000 files to avoid performance issues and over-indexing on large workspaces.
-    const allFiles = await workspace.findFiles('**/*', undefined, 5000); // Is `.git` folder excluded?
-    const matches = allFiles.filter(file => path.basename(file.toString().toLowerCase()) === filename.toLowerCase());
+    // Since Windows is case-insensitive, perform a case-insensitive search for the filename in the workspace.
+    // Otherwise, perform a case-sensitive search on all other platforms.
+    // Note: We specify a max search limit of 5000 files to avoid performance issues and over-indexing on large workspaces.
+    const matches: Uri[] = platform === 'win32'
+        ? (await workspace.findFiles('**/*', undefined, 5000)).filter(file => path.basename(file.toString().toLowerCase()) === filename)
+        : await workspace.findFiles(`**/${filename}`, undefined, 5000);
+
     if (matches.length === 1) {
         workspaceDistinctFilenameCache.set(filename, matches[0]);
         return matches[0];
