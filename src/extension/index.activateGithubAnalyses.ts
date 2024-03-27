@@ -67,7 +67,7 @@ export function getPrimaryRepository(git: API): Repository | undefined {
 
 //  'off' | 'on' | 'prompt' are valid setting values. 'injected' is used if there is a value for
 // githubCodeScanningInitialAlert.
-type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt' | 'injected' | undefined;
+type ConnectToGithubCodeScanning = 'off' | 'on' | 'prompt' | 'injected';
 
 export function activateGithubAnalyses(disposables: Disposable[], store: Store, panel: Panel, outputChannel: OutputChannel) {
     disposables.push(workspace.onDidChangeConfiguration(e => {
@@ -80,7 +80,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     const fullCodeScanningAlert = workspace.getConfiguration('sarif-viewer').get<string>('githubCodeScanningInitialAlert');
     const connectToGithubCodeScanning: ConnectToGithubCodeScanning = fullCodeScanningAlert
         ? 'injected'
-        : workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning');
+        : workspace.getConfiguration('sarif-viewer').get<ConnectToGithubCodeScanning>('connectToGithubCodeScanning', 'prompt');
     outputChannel.appendLine(`Connect to GitHub Code Scanning: ${connectToGithubCodeScanning}.`);
     if (connectToGithubCodeScanning === 'off') {
         return;
@@ -144,6 +144,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         outputChannel.appendLine('Eligible to connect to GitHub Code Scanning.');
         sendGithubEligibility('Eligible');
 
+        let showPanel = connectToGithubCodeScanning !== 'prompt';
         if (connectToGithubCodeScanning === 'prompt') {
             const choice = await window.showInformationMessage(
                 'This repository has an origin (GitHub) that may have code scanning results. Connect to GitHub and display these results?',
@@ -180,8 +181,13 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
                     }
                 } else {
                     sendGithubAnalysisFound('Found');
+                    showPanel = true;
                 }
             }
+        }
+
+        if (!showPanel) {
+            return;
         }
 
         // At this point all the local requirements have been satisfied.
