@@ -157,6 +157,10 @@ export const mockVscode = {
                 return [
                     Uri.file('/projects/project/file1.txt')
                 ];
+            } else if (include === '**/*') {
+                return [
+                    Uri.file('/projects/project/file1.txt')
+                ];
             } else if (include === '**/file.txt') {
                 return [
                     Uri.file('/x/y/a/file.txt')

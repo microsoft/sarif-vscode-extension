@@ -41,7 +41,7 @@ describe('baser', () => {
         assert.strictEqual(await rebaser.translateLocalToArtifact(Uri.parse(localUri)), artifactUri);
     });
 
-    it('translates uris - local -> artifact - case-sensitive file system', async () => {
+    it('translates uris - local -> artifact - case-sensitive file system (lowercase)', async () => {
         // Spaces inserted to emphasize common segments.
         const artifactUri = 'file://  /a/b'.replace(/ /g, '');
         const localUri    = 'file://  /a/b'.replace(/ /g, '');
@@ -57,7 +57,26 @@ describe('baser', () => {
             [artifactUri.file, artifactUri]
         ]);
         const rebaser = new UriRebaser({ distinctArtifactNames });
-        assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), localUri);
+        assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), artifactUri);
+    });
+
+    it('translates uris - local -> artifact - case-sensitive file system (uppercase)', async () => {
+        // Spaces inserted to emphasize common segments.
+        const artifactUri = 'file://  /a/B'.replace(/ /g, '');
+        const localUri    = 'file://  /a/B'.replace(/ /g, '');
+        const { UriRebaser } = proxyquire('./uriRebaser', {
+            'vscode': {
+                '@global': true,
+                ...mockVscode,
+            },
+            './platformUriNormalize': platformUriNormalize,
+            './uriExists': () => { throw new Error(); },
+        });
+        const distinctArtifactNames = new Map([
+            [artifactUri.file, artifactUri]
+        ]);
+        const rebaser = new UriRebaser({ distinctArtifactNames });
+        assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), artifactUri);
     });
 
     it('Distinct 1', async () => {
