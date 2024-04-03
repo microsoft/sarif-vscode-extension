@@ -6,6 +6,9 @@ jobs:
   createPrerelease:
     name: Create Release
     runs-on: ubuntu-latest
+    permissions:
+      # Release creation
+      contents: write
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
