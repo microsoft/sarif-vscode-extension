@@ -14,9 +14,12 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - run: |
-          npm install
-          npm run package
+      - run: npm install
+        name: npm install
+      - run: npm install --global @vscode/vsce
+        name: Install vsce
+      - run: vsce package
+        name: Create VSIX
       - id: package_version
         uses: Saionaro/extract-package-version@v1.1.1
       - id: create_release
