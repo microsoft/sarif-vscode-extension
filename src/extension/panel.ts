@@ -13,6 +13,7 @@ import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import * as vscode from 'vscode';
 
 export class Panel {
     private title = 'SARIF Result'
@@ -99,6 +100,37 @@ export class Panel {
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
             switch (message.command as CommandPanelToExtension) {
+                case 'sendWebhookUrl':{
+                    const webhookUrl = vscode.workspace.getConfiguration('sarif-viewer').get<string>('webhookUrl');
+
+                    if (!webhookUrl) {
+                        console.error('Webhook URL is not defined.');
+                        return;
+                    }
+                    // 创建请求体
+                    const body = JSON.stringify({ data: message.result }); // 假设 message 中有 result
+                    // 发送 POST 请求
+                    try {
+                        const response = await fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: body,
+                        });
+                
+                        // 处理响应
+                        if (!response.ok) {
+                            throw new Error(`Error: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const responseData = await response.json();
+                        console.log('Response from webhook:', responseData);
+                    } catch (error) {
+                        console.error('Error posting to webhook:', error);
+                    }
+                    break;
+                }
                 case 'load' : {
                     // Extension sends Panel an initial set of logs.
                     await this.panel?.webview.postMessage(this.createSpliceLogsMessage([], store.logs));

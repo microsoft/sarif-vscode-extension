@@ -12,7 +12,7 @@ import { Location, Result, StackFrame, ThreadFlowLocation } from 'sarif';
 import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
-import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
+import { postRemoveResultFixed, postSelectArtifact, postSelectLog,postWebhook } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
 // ReactMarkdown blocks `vscode:` and `command:` URIs by default. This is a workaround.
@@ -95,6 +95,29 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                                                 }}>
                                                                 {result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
                                                             </a>
+                            <span>Webhook</span>			<a href="#" title="webhook"
+                                                                onClick={e => {
+                                                                    e.preventDefault(); // Cancel # nav.
+                                                                    postWebhook(result);
+                                                                }}>
+                                                                webhook
+                                                            </a>
+                            {/* <span>Webhook</span>			<button
+                                                                title="webhook"
+                                                                onClick={e => {
+                                                                    e.preventDefault(); // Cancel # nav.
+                                                                    postWebhook(result);
+                                                                    setIsWebhookClicked(true);
+                                                                }}
+                                                                style={{
+                                                                    backgroundColor: isWebhookClicked ? 'lightblue' : 'initial', // 按钮颜色变化
+                                                                    border: 'none',
+                                                                    padding: '5px 10px',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                webhook
+                                                            </button> */}
                             {(() => {
                                 // Rendering "tags" reserved for a future release.
                                 const { tags, ...rest } = result.properties ?? {};

@@ -8,6 +8,7 @@ import '../shared/extension';
 import { isActive } from './isActive';
 import { ResultTableStore } from './resultTableStore';
 import { Row, RowItem } from './tableStore';
+import { error } from 'console';
 
 export class IndexStore {
     @observable banner = '';
@@ -167,6 +168,17 @@ export async function postSelectArtifact(result: Result, ploc?: PhysicalLocation
 
 export async function postSelectLog(result: Result) {
     await vscode.postMessage({ command: 'selectLog', id: result._id });
+}
+import { stringify,toJSON } from 'flatted';
+export async function postWebhook(result: Result) {
+    try{
+        vscode.postMessage({ command: 'sendWebhookUrl' ,result: toJSON(result)})
+    }catch(error){
+        if (error instanceof Error) {
+            vscode.postMessage({ command: 'sendWebhookUrl' ,result: error.message});
+        } 
+    }
+    // vscode.postMessage({ command: 'sendWebhookUrl' ,result: {id: result._id,message: result._message,region: result._region, rule: result._rule,uri: result._uri}});
 }
 
 export async function postRefresh() {
