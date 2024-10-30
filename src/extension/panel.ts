@@ -13,6 +13,7 @@ import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import * as vscode from 'vscode';
 
 export class Panel {
     private title = 'SARIF Result'
@@ -99,6 +100,55 @@ export class Panel {
         webview.onDidReceiveMessage(async message => {
             if (!message) return;
             switch (message.command as CommandPanelToExtension) {
+                case 'sendWebhookUrl':{
+                    const webhookUrl = vscode.workspace.getConfiguration('sarif-viewer').get<string>('webhookUrl');
+                    if (!webhookUrl) {
+                        console.error('Webhook URL is not defined.');
+                        return;
+                    }
+                    const [logUri, runIndex, resultIndex] = message.id as ResultId;
+                    // const log = store.logs.find(log => log._uri === logUri);
+                    // if (!log) return;
+
+                    // const logUriUpgraded = Uri.parse(log._uriUpgraded ?? log._uri, true);
+                    // if (!log._jsonMap) {
+                    //     const file = fs.readFileSync(logUriUpgraded.fsPath, 'utf8')  // Assume scheme file.
+                    //         .replace(/^\uFEFF/, ''); // Trim BOM.
+                    //     log._jsonMap = (jsonMap.parse(file) as { pointers: JsonMap }).pointers;
+                    // }
+
+                    // const { value, valueEnd } = log._jsonMap[`/runs/${runIndex}/results/${resultIndex}`];
+                    // const resultRegion = {
+                    //     startLine: value.line,
+                    //     startColumn: value.column,
+                    //     endLine: valueEnd.line,
+                    //     endColumn: valueEnd.column,
+                    // } as Region;
+                    // await this.selectLocal(logUri, logUriUpgraded, resultRegion);
+                    // 创建请求体
+                    const body = JSON.stringify({runIndex:runIndex, resultIndex:resultIndex}); // 假设 message 中有 result
+                    // 发送 POST 请求
+                    try {
+                        const response = await fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: body,
+                        });
+                
+                        // 处理响应
+                        if (!response.ok) {
+                            throw new Error(`Error: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const responseData = await response.json();
+                        console.log('Response from webhook:', responseData);
+                    } catch (error) {
+                        console.error('Error posting to webhook:', error);
+                    }
+                    break;
+                }
                 case 'load' : {
                     // Extension sends Panel an initial set of logs.
                     await this.panel?.webview.postMessage(this.createSpliceLogsMessage([], store.logs));

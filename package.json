@@ -80,6 +80,12 @@
                     "type": "string",
                     "ignoreSync": true,
                     "scope": "machine"
+                },
+                "sarif-viewer.webhookUrl": {
+                    "description": "webhook url, eg. http://sast.tool:8080/processResult",
+                    "type": "string",
+                    "ignoreSync": true,
+                    "scope": "machine"
                 }
             }
         },
@@ -190,6 +196,7 @@
         "@types/diff": "^5.0.2",
         "chokidar": "^3.3.0",
         "diff": "^3.5.0",
+        "flatted": "^3.3.1",
         "follow-redirects": "1.15.6",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
