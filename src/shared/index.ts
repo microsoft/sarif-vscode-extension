@@ -45,6 +45,7 @@ declare module 'sarif' {
         _message: string; // '—' if empty.
         _markdown?: string;
         _suppression?: 'not suppressed' | 'suppressed';
+        _justification?: string;
     }
 }
 
@@ -132,6 +133,17 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             result._suppression = !result.suppressions || result.suppressions.every(sup => sup.status === 'rejected')
                 ? 'not suppressed'
                 : 'suppressed';
+            result._justification = undefined;
+            if (result.suppressions)
+            {
+                const justifications = result.suppressions.filter(sup => sup && sup.justification).map(sup => sup.justification!);
+                if (justifications.length != 0)
+                {
+                    let _rest = undefined;
+                    // TODO (@carsonradtke): Can we make a better decision than just taking the first justification?
+                    [result._justification, ..._rest] = justifications;
+                }
+            }
         });
     });
     log._distinct = mapDistinct(fileAndUris);

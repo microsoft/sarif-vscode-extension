@@ -50,6 +50,17 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                 : renderMessageTextWithEmbeddedLinks(desc.text, result, vscode.postMessage);
         };
 
+        const renderSuppressionInformation = (result: Result) => {
+            const text = result._suppression;
+            const justification = result._justification;
+            if (!text && !justification) return '—'; // unreachable
+            if (!justification)
+            {
+                return text;
+            }
+            return `${text}: ${justification}`;
+        };
+
         const {result, resultsFixed, height} = this.props;
         const helpUri = result?._rule?.helpUri;
 
@@ -95,6 +106,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                                                 }}>
                                                                 {result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
                                                             </a>
+                            <span>Suppression</span>        <span>{renderSuppressionInformation(result)}</span>
                             {(() => {
                                 // Rendering "tags" reserved for a future release.
                                 const { tags, ...rest } = result.properties ?? {};
