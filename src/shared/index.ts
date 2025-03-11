@@ -137,11 +137,9 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             if (result.suppressions)
             {
                 const justifications = result.suppressions.filter(sup => sup && sup.justification).map(sup => sup.justification!);
-                if (justifications.length != 0)
+                if (justifications.length > 0)
                 {
-                    let _rest = undefined;
-                    // TODO (@carsonradtke): Can we make a better decision than just taking the first justification?
-                    [result._justification, ..._rest] = justifications;
+                    result._justification = justifications[0];
                 }
             }
         });
