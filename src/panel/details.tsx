@@ -53,9 +53,10 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
         const renderSuppressionInformation = (result: Result) => {
             const text = result._suppression;
             const justification = result._justification;
-            if (!text && !justification) return '—'; // unreachable
-            if (!justification)
-            {
+            if (!text && !justification) {
+                return '—'; // unreachable
+            }
+            if (!justification) {
                 return text;
             }
             return `${text}: ${justification}`;
