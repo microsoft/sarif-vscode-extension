@@ -136,7 +136,9 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             result._justification = undefined;
             if (result.suppressions)
             {
-                const justifications = result.suppressions.filter(sup => sup && sup.justification).map(sup => sup.justification!);
+                const justifications = result.suppressions
+                    .map(sup => sup?.justification)
+                    .filter(justification => !!justification);
                 if (justifications.length > 0)
                 {
                     result._justification = justifications[0];
