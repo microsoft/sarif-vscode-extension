@@ -11,7 +11,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -24,7 +24,7 @@ jobs:
       - run: vsce package
         name: Create VSIX
       - id: package_version
-        uses: Saionaro/extract-package-version@v1.1.1
+        uses: Saionaro/extract-package-version@35ced6bfe3b1491af23de4db27c601697e6d8d17
       - id: create_release
         uses: actions/create-release@v1
         env:
