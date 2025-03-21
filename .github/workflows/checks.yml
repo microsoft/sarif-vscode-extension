@@ -7,6 +7,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  security-events: write # for sending sarif to code scanning
+  contents: write # for accessing the cache
+  
+
 jobs:
   eslint:
     timeout-minutes: 10
