@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 20 # Increase history for bumpPrerelease. Subsequent `git fetch --depth=20` not working.
-      - uses: actions/cache@v1
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -32,7 +32,7 @@ jobs:
           tag_name: ${{ steps.bumpPrerelease.outputs.version }}
           release_name: ${{ steps.bumpPrerelease.outputs.version }}
           prerelease: true
-      - id: upload-release-asset 
+      - id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

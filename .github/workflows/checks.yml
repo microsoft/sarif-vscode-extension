@@ -17,6 +17,11 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     steps:
       - uses: actions/checkout@v3
 
@@ -30,7 +35,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: eslint.sarif
 
@@ -42,6 +47,10 @@ jobs:
 
 
   unit-test:
+    permissions:
+      actions: read
+      contents: read
+
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
 
