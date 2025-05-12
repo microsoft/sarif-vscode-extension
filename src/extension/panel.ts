@@ -13,6 +13,7 @@ import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
 import { Store } from './store';
 import { UriRebaser } from './uriRebaser';
+import { updateSuppressionFile } from './editFile/submitSuppression';
 
 export class Panel {
     private title = 'SARIF Result'
@@ -170,6 +171,18 @@ export class Panel {
                 case 'removeResultFixed': {
                     const idToRemove = JSON.stringify(message.id);
                     store.resultsFixed.removeFirst(id => id === idToRemove);
+                    break;
+                }
+                case 'updateSuppressionFile' : {
+                    try {
+                        await updateSuppressionFile(message);
+                    }
+                    catch (error) {
+                        await webview.postMessage({
+                            command: 'updateResult',
+                            error: error,
+                        });
+                    }
                     break;
                 }
                 default:

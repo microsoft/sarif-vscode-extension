@@ -34,10 +34,6 @@ const SuppressionComponent: React.FC<SuppressionComponentProps> = ({ suppression
         e.target.style.height = `${Math.max(24, e.target.scrollHeight)}px`;
     };
 
-    const handleCancelEditing = () => {
-        setIsEditing(false);
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSubmit(editedSuppression);
