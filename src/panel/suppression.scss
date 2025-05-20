@@ -1,0 +1,121 @@
+.suppressionComponent {
+    padding: 12px 22px;
+    background-color: var(--vscode--background);
+    color: var(--vscode-editor-foreground);
+
+    .suppressionDetails {
+        margin-bottom: 16px;
+
+        p {
+            margin: 8px 0;
+        }
+
+        strong {
+            color: var(--vscode-editor-foreground);
+            font-weight: bold;
+        }
+    }
+
+
+    .locationBlock {
+        margin-bottom: 12px;
+        
+        strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .locationDetails {
+            padding-left: 12px;
+            gap: 4px;
+            
+            span {
+                display: block;
+                color: var(--vscode-editor-foreground);
+            }
+        }
+    }
+
+
+    .suppressionForm {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+    
+        label {
+            color: var(--vscode-input-foreground);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+    
+        input, select, textarea {
+            width: 100%;
+            padding: 4px 8px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 2px;
+    
+            &:focus {
+                outline: none;
+                border-color: var(--vscode-focusBorder);
+            }
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 24px;
+            height: 24px;
+            overflow-y: hidden;
+        }
+    }
+
+    button {
+        margin-top: 12px;
+        padding: 6px 12px;
+        background-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+        }
+    }
+}
+
+.suppressionListComponent {
+    .noSuppressions {
+        padding: 12px 22px;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .addSuppressionButton {
+        margin: 12px 22px;
+        padding: 8px 16px;
+        background-color: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+        }
+    }
+}
