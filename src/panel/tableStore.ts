@@ -47,8 +47,8 @@ export class RowItem<T> extends Row {
 }
 
 enum SortDir {
-    Asc = 'arrow-down',
-    Dsc = 'arrow-up',
+    Asc = 'arrow-up',
+    Dsc = 'arrow-down',
 }
 
 export class TableStore<T, G> {
