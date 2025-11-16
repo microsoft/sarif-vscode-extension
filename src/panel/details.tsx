@@ -99,7 +99,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
     }
 
     componentWillUnmount() {
-        // Component will unmount
+        // Remove event listener for component being unmounted
         document.removeEventListener('click', this.handleDocumentClick);
     }
 
@@ -723,7 +723,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                 const locationColumnWidth = calculateMaxLocationWidth();
 
                                 const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
-                                    const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 16; // Reduced from 24
+                                    const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 16;
                                     const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
                                     const filename = uri?.file ?? '—';
                                     const location = `${region?.startLine}:${region?.startColumn ?? 1}`;

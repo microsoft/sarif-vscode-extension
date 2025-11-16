@@ -73,11 +73,11 @@
     // Selection styling for list items
     .svListItem {
         cursor: pointer;
-        padding: 2px 6px; // Further reduced from 4px 8px
+        padding: 2px 6px;
         border: 1px solid transparent;
 
         .svIconBackground {
-            margin-right: 4px; // Reduced from 8px
+            margin-right: 4px;
         }
 
         &:hover {
@@ -126,7 +126,7 @@
 
     & > .svListItem {
         cursor: pointer;
-        padding: 1px 6px 0px; // Further reduced from 2px 8px 1px
+        padding: 1px 6px 0px;
         margin: 0; // Ensure no margin
 
         & > div {
@@ -134,13 +134,13 @@
             align-items: center;
             border-bottom: 1px solid transparent;
             text-transform: uppercase;
-            font-size: 10px; // Reduced from 11px
-            line-height: 16px; // Further reduced from 20px
+            font-size: 10px;
+            line-height: 16px;
             color: var(--vscode-panelTitle-activeForeground);
             color: rgb(139, 139, 139); // svSecondary
 
             .svBadge {
-                margin-left: 4px; // Reduced from 6px
+                margin-left: 4px;
             }
         }
 

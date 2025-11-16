@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { computed, IArrayWillSplice, intercept, observable } from 'mobx';
-import { Log } from 'sarif';
+import { Log, Region } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
 import '../shared/extension';
@@ -15,7 +15,7 @@ export class Store {
 
     @observable.shallow logs = [] as Log[]
     @observable resultsFixed = [] as string[] // JSON string of ResultId. TODO: Migrate to set.
-    @observable selectedLocation: { uri: string, region: any } | undefined = undefined
+    @observable selectedLocation: { uri: string, region: Region | undefined } | undefined = undefined
     @computed get results() {
         const runs = this.logs.map(log => log.runs).flat();
         return runs.map(run => run.results ?? []).flat()

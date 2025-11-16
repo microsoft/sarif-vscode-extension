@@ -28,7 +28,7 @@
 
     .svTableHeader {
         display: grid;
-        grid-auto-rows: 20px; // Further reduced from 33px
+        grid-auto-rows: 20px;
         color: rgb(139, 139, 139);
         background-color: var(--vscode-editor-background);
         position: sticky;
