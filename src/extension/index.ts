@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Api } from './index.d';
+import { Api, OpenLogsOptions } from './index.d';
 import * as vscode from 'vscode';
 import { watch } from 'chokidar';
 import { diffChars } from 'diff';
@@ -152,11 +152,11 @@ export async function activate(context: ExtensionContext): Promise<Api> {
 
     // API
     const api = {
-        async openLogs(logs: Uri[], _options?: unknown, cancellationToken?: CancellationToken) {
+        async openLogs(logs: Uri[], options?: OpenLogsOptions, cancellationToken?: CancellationToken) {
             watcher.add(logs.map(log => log.fsPath));
             store.logs.push(...await loadLogs(logs, cancellationToken));
-            if (cancellationToken ?.isCancellationRequested) return;
-            if (store.results.length) {
+            if (cancellationToken?.isCancellationRequested) return;
+            if (store.results.length && options?.openPanel !== false) {
                 // TODO should we await?
                 void panel.show();
             }
@@ -183,7 +183,7 @@ export async function activate(context: ExtensionContext): Promise<Api> {
         dispose: () => {
             Telemetry.deactivate();
             api.closeAllLogs();
-            disposables.forEach(disposable => disposable ?.dispose ?.());
+            disposables.forEach(disposable => disposable?.dispose?.());
         }
     };
 
