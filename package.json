@@ -189,7 +189,7 @@
     "dependencies": {
         "@types/diff": "^5.0.2",
         "chokidar": "^3.3.0",
-        "diff": "^3.5.0",
+        "diff": "^8.0.3",
         "follow-redirects": "1.15.6",
         "https-proxy-agent": "5.0.0",
         "mobx": "5.15.4",
