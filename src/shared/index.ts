@@ -252,5 +252,5 @@ export const filtersColumn: Record<string, Record<string, Visibility>> = {
     },
 };
 
-export type CommandPanelToExtension = 'load' | 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState' | 'refresh' | 'removeResultFixed';
+export type CommandPanelToExtension = 'load' | 'open' | 'closeLog' | 'closeAllLogs' | 'select' | 'selectLog' | 'setState' | 'refresh' | 'removeResultFixed' | 'setActiveResult';
 export type CommandExtensionToPanel = 'select' | 'spliceLogs' | 'spliceResultsFixed' | 'setBanner';

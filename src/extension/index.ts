@@ -50,8 +50,11 @@ export async function activate(context: ExtensionContext): Promise<Api> {
     // Basing
     const baser = new UriRebaser(store);
 
-    // Panel
-    const panel = new Panel(context, baser, store);
+    // Create decorations first to get the reference
+    const decorations = activateDecorations(disposables, store, baser);
+
+    // Panel (now with decorations reference)
+    const panel = new Panel(context, baser, store, decorations);
     disposables.push(commands.registerCommand('sarif.showPanel', () => panel.show()));
 
     // URI handler
@@ -115,7 +118,6 @@ export async function activate(context: ExtensionContext): Promise<Api> {
     activateSarifStatusBarItem(disposables);
     activateDiagnostics(disposables, store, baser, outputChannel);
     activateWatchDocuments(disposables, store, panel);
-    activateDecorations(disposables, store, baser);
     activateVirtualDocuments(disposables, store);
     activateSelectionSync(disposables, store, panel);
     activateGithubAnalyses(disposables, store, panel, outputChannel);

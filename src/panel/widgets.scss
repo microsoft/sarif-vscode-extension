@@ -44,7 +44,7 @@
             opacity: 0;
         }
 
-        &.svChecked { 
+        &.svChecked {
             .codicon { opacity: 1; }
         }
     }
@@ -68,6 +68,27 @@
         display: grid;
         align-items: center;
         justify-items: center;
+    }
+
+    // Selection styling for list items
+    .svListItem {
+        cursor: pointer;
+        padding: 2px 6px;
+        border: 1px solid transparent;
+
+        .svIconBackground {
+            margin-right: 4px;
+        }
+
+        &:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        &.svItemSelected {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            color: var(--vscode-list-activeSelectionForeground);
+            border-color: var(--vscode-list-focusOutline, transparent);
+        }
     }
 }
 
@@ -105,26 +126,31 @@
 
     & > .svListItem {
         cursor: pointer;
-        padding: 4px 10px 3px;
+        padding: 1px 6px 0px;
+        margin: 0; // Ensure no margin
 
         & > div {
             display: flex;
             align-items: center;
             border-bottom: 1px solid transparent;
             text-transform: uppercase;
-            font-size: 11px;
-            line-height: 27px;
+            font-size: 10px;
+            line-height: 16px;
             color: var(--vscode-panelTitle-activeForeground);
             color: rgb(139, 139, 139); // svSecondary
 
             .svBadge {
-                margin-left: 6px;
+                margin-left: 4px;
             }
         }
 
         &.svItemSelected > div {
             color: var(--vscode-panelTitle-activeForeground);
             border-bottom-color: var(--vscode-panelTitle-activeForeground);
+        }
+
+        &:hover {
+            background-color: var(--vscode-list-hoverBackground);
         }
     }
 }
