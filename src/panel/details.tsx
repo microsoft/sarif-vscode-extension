@@ -31,6 +31,9 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
     @computed private get threadFlowLocations(): ThreadFlowLocation[] {
 		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations ?? [];
 	}
+    @computed private get relatedLocations(): Location[] {
+        return this.props.result?.relatedLocations ?? [];
+    }
     @computed private get stacks() {
         return this.props.result?.stacks;
     }
@@ -204,6 +207,41 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                     </div>;
                                 }
                             });
+                        })()}
+                    </div>
+                </Tab>
+                <Tab name="Related Locations" count={this.relatedLocations.length}>
+                    <div className="svDetailsBody svDetailsInfo">
+                        {(() => {
+                            if (!this.relatedLocations.length)
+                                return <div className="svZeroData">
+                                    <span className="svSecondary">No related locations in selected result.</span>
+                                </div>;
+
+                            const renderRelatedLocation = (relatedLocation: Location, i: number) => {
+                                const physicalLocation = relatedLocation.physicalLocation;
+                                const { uri, message } = parseLocation(result, relatedLocation);
+                                return <div key={i} className="svDetailsGrid svDetailsGridRelatedLocationItem">
+                                    <span>Location</span>
+                                    <a href="#" className="ellipsis" title={uri}
+                                        onClick={e => {
+                                            e.preventDefault();
+                                            postSelectArtifact(result, physicalLocation);
+                                        }}>
+                                        {uri?.file ?? '—'}
+                                    </a>
+                                    <span>Message</span>
+                                    <span>
+                                        {message
+                                            ? renderMessageTextWithEmbeddedLinks(message, result, vscode.postMessage)
+                                            : '—'}
+                                    </span>
+                                </div>;
+                            };
+
+                            return <div className="svDetailsRelatedLocationsList">
+                                {this.relatedLocations.map(renderRelatedLocation)}
+                            </div>;
                         })()}
                     </div>
                 </Tab>
