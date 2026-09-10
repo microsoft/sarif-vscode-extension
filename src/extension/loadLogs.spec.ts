@@ -6,7 +6,6 @@
 import assert from 'assert';
 import { Log } from 'sarif';
 import { URI as Uri } from 'vscode-uri';
-import '../shared/extension';
 
 const proxyquire = require('proxyquire').noCallThru();
 

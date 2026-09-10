@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { Log, ReportingDescriptor, Result, Run } from 'sarif';
-import { augmentLog, decodeFileUri, effectiveLevel } from '.';
+import { augmentLog, decodeFileUri, effectiveLevel, getDirPath, getFileName, lastOf, removeFirstMatch, sortByInPlace } from '.';
 import './extension';
 
 describe('augmentLog', () => {
@@ -175,6 +175,129 @@ describe('decodeFileUri', () => {
         assert.strictEqual(decodeFileUri('sarif://programmers.stackexchange.com/x/y?a=b#123'), 'sarif://programmers.stackexchange.com/x/y?a=b#123');
     });
 });
+
+
+describe('String utils', () => {
+    describe('file', () => {
+        it('returns the file name from a path', () => {
+            assert.strictEqual(getFileName('/C:/Users/user.cs'), 'user.cs');
+        });
+        it('does not fail when there is no file type', () => {
+            assert.doesNotThrow(() => getFileName('/C:/Users/user'));
+        });
+        it('does not fail when there is no hierarchical directory path as part of input', () => {
+            assert.doesNotThrow(() => getFileName('user.cs'));
+        });
+        it('does not fail when input is empty', () => {
+            assert.doesNotThrow(() => getFileName(''));
+        });
+    });
+    describe('path', () => {
+        it('returns the hierarchical directory from the file path', () => {
+            assert.strictEqual(getDirPath('/C:/Users/user.cs'), 'C:/Users');
+        });
+        it('does not fail when when no hierarchical directory is in the input', () => {
+            assert.doesNotThrow(() => getDirPath('user.cs'));
+        });
+        it('does not fail when input is empty', () => {
+            assert.doesNotThrow(() => getDirPath(''));
+        });
+    });
+});
+
+describe('Array utils', () => {
+    describe('last', () => {
+        it('finds the last element when more than 1 elements are present', () => {
+            assert.strictEqual(lastOf(['a', 'b', 'c']), 'c');
+        });
+        it('returns the only element in the array when there is a single element present', () => {
+            assert.strictEqual(lastOf(['a']), 'a');
+        });
+        it('does not fail if array is empty', () => {
+            assert.doesNotThrow(() => lastOf([]));
+        });
+    });
+    describe('removeFirst', () => {
+        const logs = [{ _uri: 'uri1' }, { _uri: 'uri2' }, { _uri: 'uri2' }];
+        it('removes the first occurrence of matching', () => {
+            assert.deepStrictEqual(
+                removeFirstMatch(logs, (log) => log._uri === 'uri2'),
+                { _uri: 'uri2' }
+            );
+            assert.deepStrictEqual(
+                logs.map((log) => log),
+                [{ _uri: 'uri1' }, { _uri: 'uri2' }]
+            );
+        });
+        it('returns false no element match', () => {
+            assert.strictEqual(
+                removeFirstMatch(logs, (log) => log._uri === 'uri5'),
+                false
+            );
+            assert.deepStrictEqual(
+                logs.map((log) => log),
+                [{ _uri: 'uri1' }, { _uri: 'uri2' }]
+            );
+        });
+        it('returns false when tries to remove from empty array', () => {
+            assert.strictEqual(
+                removeFirstMatch([], (log) => log === 'uri5'),
+                false
+            );
+        });
+    });
+    describe('sortBy', () => {
+        it('sorts strings', () => {
+            const sortedArrayAsc = sortByInPlace(['c', 'b', 'a', 'd'], (item) => String(item));
+            assert.deepStrictEqual(
+                sortedArrayAsc.map((i) => i),
+                ['a', 'b', 'c', 'd']
+            );
+            const sortedArrayDesc = sortByInPlace(['c', 'b', 'a', 'd'], (item) => String(item), true);
+            assert.deepStrictEqual(
+                sortedArrayDesc.map((i) => i),
+                ['d', 'c', 'b', 'a']
+            );
+        });
+        it('sorts numbers', () => {
+            const sortedArray = sortByInPlace([1, 3, 2, 4], (item) => Number(item));
+            assert.deepStrictEqual(
+                sortedArray.map((i) => i),
+                [1, 2, 3, 4]
+            );
+            const sortedArrayDesc = sortByInPlace([1, 3, 2, 4], (item) => Number(item), true);
+            assert.deepStrictEqual(
+                sortedArrayDesc.map((i) => i),
+                [4, 3, 2, 1]
+            );
+        });
+        it('sorts in-place', () => {
+            const originalArrayStrings = ['c', 'b', 'a', 'd'];
+            sortByInPlace(originalArrayStrings, (item) => String(item));
+            assert.deepStrictEqual(
+                originalArrayStrings.map((i) => i),
+                ['a', 'b', 'c', 'd']
+            );
+            sortByInPlace(originalArrayStrings, (item) => String(item), true);
+            assert.deepStrictEqual(
+                originalArrayStrings.map((i) => i),
+                ['d', 'c', 'b', 'a']
+            );
+            const originalArrayNumbers = [1, 4, 2, 3];
+            sortByInPlace(originalArrayNumbers, (item) => Number(item));
+            assert.deepStrictEqual(
+                originalArrayNumbers.map((i) => i),
+                [1, 2, 3, 4]
+            );
+            sortByInPlace(originalArrayNumbers, (item) => Number(item), true);
+            assert.deepStrictEqual(
+                originalArrayNumbers.map((i) => i),
+                [4, 3, 2, 1]
+            );
+        });
+    });
+});
+
 
 /*
 Global State Test Notes

@@ -7,7 +7,6 @@ import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
 import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
 import { findResult, parseArtifactLocation, ResultId } from '../shared';
-import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';

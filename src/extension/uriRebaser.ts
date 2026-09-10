@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { Uri, window, workspace, ConfigurationTarget } from 'vscode';
-import '../shared/extension';
+import { getFileName } from '../shared';
 import { Store } from './store';
 import uriExists from './uriExists';
 import { VersionControlDetails } from 'sarif';
@@ -98,7 +98,7 @@ export class UriRebaser {
     public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> {
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri.toString())) {
-            const { file } = platformUriNormalize(localUri).toString();
+            const file = getFileName(platformUriNormalize(localUri).toString());
 
             // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
             // but obviously can't always be true.
@@ -187,7 +187,7 @@ export class UriRebaser {
             }
 
             // Distinct Project Items
-            const {file} = artifactUri;
+            const file = getFileName(artifactUri);
             const distinctFilename = await workspaceHasDistinctFilename(file);
             if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
                 const localUri = distinctFilename;
@@ -199,7 +199,7 @@ export class UriRebaser {
             // Open Docs
             for (const doc of workspace.textDocuments) {
                 const localUri = doc.uri;
-                if (localUri.toString().file !== artifactUri.file) continue;
+                if (getFileName(localUri.toString()) !== getFileName(artifactUri)) continue;
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(artifactUri, localUri);
                 return localUri;
@@ -281,7 +281,7 @@ export class UriRebaser {
             }
 
             this.activeInfoMessages.add(artifactUri);
-            const choice = await window.showInformationMessage(`Unable to find '${artifactUri.file}'`, 'Locate...');
+            const choice = await window.showInformationMessage(`Unable to find '${getFileName(artifactUri)}'`, 'Locate...');
             this.activeInfoMessages.delete(artifactUri);
             if (choice) {
                 const extension = artifactUri.match(/\.([\w]+)$/)?.[1] ?? '';
@@ -294,8 +294,8 @@ export class UriRebaser {
 
                 this.updateBases(artifactUri, files[0]);
 
-                const artifactFile = artifactUri.file;
-                const localFile = files[0].toString().file;
+                const artifactFile = getFileName(artifactUri);
+                const localFile = getFileName(files[0].toString());
                 if (artifactFile !== localFile) {
                     void window.showErrorMessage(`File names must match: "${artifactFile}" and "${localFile}"`);
                     return undefined;

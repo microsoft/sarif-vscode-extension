@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import { URI as Uri } from 'vscode-uri';
-import '../shared/extension';
+import { getFileName } from '../shared';
 import { mockVscode, mockVscodeTestFacing } from '../test/mockVscode';
 
 const proxyquire = require('proxyquire').noCallThru();
@@ -33,7 +33,7 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [getFileName(artifactUri), artifactUri]
         ]);
 
         // Need to restructure product+test to better simulate the calculation distinctLocalNames.
@@ -54,7 +54,7 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [getFileName(artifactUri), artifactUri]
         ]);
         const rebaser = new UriRebaser({ distinctArtifactNames });
         assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), artifactUri);
@@ -73,7 +73,7 @@ describe('baser', () => {
             './uriExists': () => { throw new Error(); },
         });
         const distinctArtifactNames = new Map([
-            [artifactUri.file, artifactUri]
+            [getFileName(artifactUri), artifactUri]
         ]);
         const rebaser = new UriRebaser({ distinctArtifactNames });
         assert.strictEqual(await rebaser.translateLocalToArtifact(localUri), artifactUri);

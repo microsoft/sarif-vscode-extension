@@ -7,7 +7,7 @@ import jsonMap from 'json-source-map';
 import { autorun, IArraySplice, observable, observe } from 'mobx';
 import { Log, Region, Result } from 'sarif';
 import { commands, ExtensionContext, TextEditorRevealType, Uri, ViewColumn, WebviewPanel, window, workspace } from 'vscode';
-import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId } from '../shared';
+import { CommandPanelToExtension, filtersColumn, filtersRow, JsonMap, ResultId, removeFirstMatch } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { loadLogs } from './loadLogs';
 import { driftedRegionToSelection } from './regionToSelection';
@@ -115,7 +115,7 @@ export class Panel {
                     break;
                 }
                 case 'closeLog': {
-                    store.logs.removeFirst(log => log._uri === message.uri);
+                    removeFirstMatch(store.logs, (log => log._uri === message.uri));
                     break;
                 }
                 case 'closeAllLogs': {
@@ -169,7 +169,7 @@ export class Panel {
                 }
                 case 'removeResultFixed': {
                     const idToRemove = JSON.stringify(message.id);
-                    store.resultsFixed.removeFirst(id => id === idToRemove);
+                    removeFirstMatch(store.resultsFixed, (id => id === idToRemove));
                     break;
                 }
                 default:

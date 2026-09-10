@@ -5,7 +5,6 @@ import { computed, IArrayWillSplice, intercept, observable } from 'mobx';
 import { Log } from 'sarif';
 import { Memento } from 'vscode';
 import { mapDistinct } from '../shared';
-import '../shared/extension';
 import { AnalysisInfosForCommit } from './index.activateGithubAnalyses';
 
 export class Store {

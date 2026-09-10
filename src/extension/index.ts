@@ -7,7 +7,7 @@ import { watch } from 'chokidar';
 import { diffChars } from 'diff';
 import { observe } from 'mobx';
 import { CancellationToken, commands, DiagnosticSeverity, Disposable, ExtensionContext, languages, OutputChannel, TextDocument, Uri, window, workspace } from 'vscode';
-import '../shared/extension';
+import { removeFirstMatch } from '../shared';
 import { getOriginalDoc } from './getOriginalDoc';
 import { activateDecorations } from './index.activateDecorations';
 import { activateFixes } from './index.activateFixes';
@@ -143,10 +143,10 @@ export async function activate(context: ExtensionContext): Promise<Api> {
     const watcher = watch([], {
         ignoreInitial: true
     }).on('change', async path => {
-        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+        removeFirstMatch(store.logs, (log => log._uri === Uri.file(path).toString()));
         store.logs.push(...await loadLogs([Uri.file(path)]));
     }).on('unlink', path => {
-        store.logs.removeFirst(log => log._uri === Uri.file(path).toString());
+        removeFirstMatch(store.logs, (log => log._uri === Uri.file(path).toString()));
     });
     disposables.push(new Disposable(async () => await watcher.close()));
 
@@ -164,7 +164,7 @@ export async function activate(context: ExtensionContext): Promise<Api> {
         async closeLogs(logs: Uri[]) {
             watcher.unwatch(logs.map(log => log.fsPath));
             for (const uri of logs) {
-                store.logs.removeFirst(log => log._uri === uri.toString());
+                removeFirstMatch(store.logs, (log => log._uri === uri.toString()));
             }
         },
         async closeAllLogs() {
@@ -268,7 +268,7 @@ function activateWatchDocuments(disposables: Disposable[], store: Store, panel: 
     disposables.push(workspace.onDidOpenTextDocument(addLog));
     disposables.push(workspace.onDidCloseTextDocument(doc => {
         if (!doc.fileName.match(/\.sarif$/i)) return;
-        store.logs.removeFirst(log => log._uri === doc.uri.toString());
+        removeFirstMatch(store.logs, (log => log._uri === doc.uri.toString()));
     }));
 }
 
