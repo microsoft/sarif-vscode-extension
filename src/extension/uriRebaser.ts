@@ -11,53 +11,58 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import platformUriNormalize from './platformUriNormalize';
-import platform from './platform';
 
-const workspaceDistinctFilenameCache: Map<string, Uri | undefined> = new Map();
+const workspaceDistinctFilenameCache = new Map<string, Promise<Uri | undefined>>();
+let workspaceFilenameSearchQueue = Promise.resolve();
+
+function workspaceFilename(uri: Uri): string {
+    return path.basename(platformUriNormalize(uri).path);
+}
 
 async function workspaceHasDistinctFilename(filename: string): Promise<Uri | undefined> {
-    const distinctFileName = workspaceDistinctFilenameCache.get(filename);
-    if (distinctFileName !== undefined) {
-        return distinctFileName;
-    }
+    const cached = workspaceDistinctFilenameCache.get(filename);
+    if (cached) return cached;
 
-    // Since Windows is case-insensitive, perform a case-insensitive search for the filename in the workspace.
-    // Otherwise, perform a case-sensitive search on all other platforms.
-    // Note: We specify a max search limit of 5000 files to avoid performance issues and over-indexing on large workspaces.
-    const matches: Uri[] = platform === 'win32'
-        ? (await workspace.findFiles('**/*', undefined, 5000)).filter(file => path.basename(file.toString().toLowerCase()) === filename)
-        : await workspace.findFiles(`**/${filename}`, undefined, 5000);
-
-    if (matches.length === 1) {
-        workspaceDistinctFilenameCache.set(filename, matches[0]);
-        return matches[0];
-    }
-
-    return undefined;
+    const search: Promise<Uri | undefined> = workspaceFilenameSearchQueue.then(async () => {
+        // Quote glob characters and include letter cases in the search, then apply
+        // the existing URI normalization to retain the filename matching rules.
+        const pattern = filename.replace(/[?*[\]{}a-z]/gi, character =>
+            /[a-z]/i.test(character) ? `[${character.toLowerCase()}${character.toUpperCase()}]` : `[${character}]`);
+        const matches = (await workspace.findFiles(`**/${pattern}`))
+            .filter(uri => workspaceFilename(uri) === filename);
+        const result = matches.length === 1 ? matches[0] : undefined;
+        return workspaceDistinctFilenameCache.get(filename) === search ? result : undefined;
+    });
+    // A failed lookup must not block subsequent searches in the global queue.
+    workspaceFilenameSearchQueue = search.then(() => undefined, () => undefined);
+    workspaceDistinctFilenameCache.set(filename, search);
+    search.catch(() => {
+        if (workspaceDistinctFilenameCache.get(filename) === search) workspaceDistinctFilenameCache.delete(filename);
+    });
+    return search;
 }
 
 workspace.onDidCreateFiles(async (event) => {
     for (const file of event.files) {
-        const filename = path.basename(file.path);
-        workspaceDistinctFilenameCache.delete(filename);
+        workspaceDistinctFilenameCache.delete(workspaceFilename(file));
     }
 });
 
 workspace.onDidRenameFiles(async (event) => {
     for (const file of event.files) {
-        const oldFilename = path.basename(file.oldUri.path);
-        const newFilename = path.basename(file.newUri.path);
-        if (oldFilename !== newFilename) {
-            workspaceDistinctFilenameCache.delete(oldFilename);
-        }
+        workspaceDistinctFilenameCache.delete(workspaceFilename(file.oldUri));
+        workspaceDistinctFilenameCache.delete(workspaceFilename(file.newUri));
     }
 });
 
 workspace.onDidDeleteFiles(async (event) => {
     for (const file of event.files) {
-        const filename = path.basename(file.path);
-        workspaceDistinctFilenameCache.delete(filename);
+        workspaceDistinctFilenameCache.delete(workspaceFilename(file));
     }
+});
+
+workspace.onDidChangeWorkspaceFolders(() => {
+    workspaceDistinctFilenameCache.clear();
 });
 
 export class UriRebaser {
@@ -98,14 +103,15 @@ export class UriRebaser {
     public async translateLocalToArtifact(localUri: Uri): Promise<string | undefined> {
         // Need to refresh on uri map update.
         if (!this.validatedUrisLocalToArtifact.has(localUri.toString())) {
-            const { file } = platformUriNormalize(localUri).toString();
+            const normalizedLocalUri = platformUriNormalize(localUri);
+            const { file } = normalizedLocalUri.toString();
 
             // If no workspace then we choose to over-assume the localUri in-question is unique. It usually is,
             // but obviously can't always be true.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
             const noWorkspace = !workspace.workspaceFolders?.length;
-            if ((noWorkspace || await workspaceHasDistinctFilename(file))
-                && this.store.distinctArtifactNames.has(file)) {
+            if (this.store.distinctArtifactNames.has(file)
+                && (noWorkspace || await workspaceHasDistinctFilename(path.basename(normalizedLocalUri.path)))) {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
                 this.updateValidatedUris(artifactUri, localUri);
@@ -188,8 +194,10 @@ export class UriRebaser {
 
             // Distinct Project Items
             const {file} = artifactUri;
-            const distinctFilename = await workspaceHasDistinctFilename(file);
-            if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
+            const distinctFilename = this.store.distinctArtifactNames.has(file)
+                ? await workspaceHasDistinctFilename(workspaceFilename(Uri.parse(artifactUri)))
+                : undefined;
+            if (distinctFilename) {
                 const localUri = distinctFilename;
                 this.updateValidatedUris(artifactUri, localUri);
                 this.updateBases(artifactUri, localUri);

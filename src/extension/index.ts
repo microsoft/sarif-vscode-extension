@@ -207,6 +207,11 @@ function activateDiagnostics(disposables: Disposable[], store: Store, baser: Uri
         if (doc.uri.scheme === 'comment') return; // Represents a comment thread (from the VS Code Comments API)
         if (doc.uri.scheme === 'vscode-terminal') return; // Represents a terminal (either integrated or from the VS Code Terminal API)
 
+        if (!store.results.length) {
+            diagsAll.set(doc.uri, []);
+            return;
+        }
+
         const artifactUri = await (async () => {
             if (doc.uri.scheme === 'sarif') {
                 return doc.uri.toString();
