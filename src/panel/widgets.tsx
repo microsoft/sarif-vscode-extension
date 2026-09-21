@@ -77,37 +77,41 @@ export interface ListProps<T> {
     allowClear?: boolean;
     className?: string;
     horizontal?: boolean;
+    isSelectable?: (item: T) => boolean;
+    itemKey?: (item: T, i: number) => string | number;
     items?: ReadonlyArray<T>;
     renderItem: (item: T, i: number) => React.ReactNode;
     selection: IObservableValue<T | undefined>;
 }
 @observer export class List<T> extends PureComponent<ListProps<T>> {
     render() {
-        const {allowClear, className, items, renderItem, selection, children} = this.props;
+        const {allowClear, className, isSelectable, itemKey, items, renderItem, selection, children} = this.props;
         return !items?.length
             ? <div className={css('svList', 'svListZero', className)}>{children}</div>
             : <div tabIndex={0} className={css('svList', selection.get() && 'svSelected' ,className)}
                 onClick={() => allowClear && selection.set(undefined)} onKeyDown={this.onKeyDown}>
                 {(items || []).map((item, i) => {
+                    const selectable = isSelectable?.(item) ?? true;
                     const isSelected = item === selection.get();
-                    return <div key={i}
+                    return <div key={itemKey?.(item, i) ?? i}
                         ref={ele => {
                             if (!isSelected || !ele) return;
                             requestAnimationFrame(() => ele.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                         }}
-                        className={css('svListItem', isSelected && 'svItemSelected')}
-                        onClick={e => { e.stopPropagation(); selection.set(item); }}>
+                        className={css('svListItem', !selectable && 'svListItemStatic', isSelected && 'svItemSelected')}
+                        onClick={selectable ? e => { e.stopPropagation(); selection.set(item); } : undefined}>
                         {renderItem(item, i)}
                     </div>;
                 })}
             </div>;
     }
     @action.bound private onKeyDown(e: React.KeyboardEvent<Element>) {
-        const {allowClear, items, selection} = this.props;
+        const {allowClear, isSelectable, items, selection} = this.props;
         if (!items) return;
-        const index = items.indexOf(selection.get());
-        const prev = () => selection.set(items[index - 1] ?? items[index]);
-        const next = () => selection.set(items[index + 1] ?? items[index]);
+        const selectableItems = items.filter(item => isSelectable?.(item) ?? true);
+        const index = selectableItems.indexOf(selection.get() as T);
+        const prev = () => selection.set(selectableItems[index - 1] ?? selectableItems[index]);
+        const next = () => selection.set(selectableItems[index + 1] ?? selectableItems[index] ?? selectableItems[0]);
         const clear = () => allowClear && selection.set(undefined);
         const handlers: Record<string, () => void> = this.props.horizontal
             ? { ArrowLeft: prev, ArrowRight: next, Escape: clear }
