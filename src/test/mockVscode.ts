@@ -153,7 +153,7 @@ export const mockVscode = {
                 return [
                     uriForRealFile
                 ];
-            } else if (include === '**/file1.txt') {
+            } else if (include === '**/file1.txt' || include === '**/[fF][iI][lL][eE]1.[tT][xX][tT]') {
                 return [
                     Uri.file('/projects/project/file1.txt')
                 ];
@@ -161,7 +161,7 @@ export const mockVscode = {
                 return [
                     Uri.file('/projects/project/file1.txt')
                 ];
-            } else if (include === '**/file.txt') {
+            } else if (include === '**/file.txt' || include === '**/[fF][iI][lL][eE].[tT][xX][tT]') {
                 return [
                     Uri.file('/x/y/a/file.txt')
                 ];
@@ -174,6 +174,7 @@ export const mockVscode = {
         onDidRenameFiles: () => {},
         onDidDeleteFiles: () => {},
         onDidChangeTextDocument: () => {},
+        onDidChangeWorkspaceFolders: () => {},
     },
 
     CodeAction: class {

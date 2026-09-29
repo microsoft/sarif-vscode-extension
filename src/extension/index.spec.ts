@@ -72,3 +72,65 @@ describe.skip('activate', () => {
         ]);
     });
 });
+
+describe('activate diagnostics with no results', () => {
+    it('does not rebase existing, opened, changed, or observed documents', async () => {
+        const document = { fileName: '/workspace/source.ts', uri: Uri.file('/workspace/source.ts') };
+        type TestDocument = typeof document;
+        const openHandlers: Array<(document: TestDocument) => void> = [];
+        const changeHandlers: Array<(event: { document: TestDocument }) => void> = [];
+        let resultsObserver: (() => void) | undefined;
+        let rebaseCalls = 0;
+        let diagnosticClears = 0;
+        const diagnostics = { set: () => diagnosticClears++, delete: () => {} };
+        const watcher = { add() {}, close() {}, unwatch() {},
+            on(_event: string, _handler: () => void) { return watcher; } };
+        const workspace = {
+            ...mockVscode.workspace,
+            textDocuments: [document],
+            findFiles: async () => [], // The startup .sarif discovery is outside this regression.
+            onDidOpenTextDocument: (handler: (document: TestDocument) => void) => openHandlers.push(handler),
+            onDidChangeTextDocument: (handler: (event: { document: TestDocument }) => void) => changeHandlers.push(handler),
+        };
+        class EmptyStore { static globalState: unknown; readonly logs: unknown[] = [];
+            get results() { return []; } }
+        const { activate } = proxyquire('.', {
+            'vscode': {
+                '@global': true,
+                ...mockVscode,
+                DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2 },
+                Disposable: class { dispose() {} },
+                languages: { createDiagnosticCollection: () => diagnostics, getDiagnostics: () => [],
+                    registerCodeActionsProvider: () => {} },
+                window: { ...mockVscode.window, createOutputChannel: () => ({ appendLine: () => {} }),
+                    registerUriHandler: () => {} },
+                workspace,
+            },
+            'chokidar': { watch: () => watcher },
+            'mobx': { observe: (_store: unknown, property: string, handler: () => void) => {
+                if (property === 'results') resultsObserver = handler;
+                return () => {};
+            } },
+            './store': { Store: EmptyStore },
+            './uriRebaser': { UriRebaser: class { translateLocalToArtifact() { rebaseCalls++; } } },
+            './panel': { Panel: class { show() {} select() {} selectByIndex() {} } },
+            './loadLogs': { loadLogs: async () => [] },
+            './index.activateDecorations': { activateDecorations: () => {} },
+            './index.activateFixes': { activateFixes: () => {} },
+            './index.activateGithubAnalyses': { activateGithubAnalyses: () => {} },
+            './index.activateGithubCommands': { activateGithubCommands: () => {} },
+            './statusBarItem': { activateSarifStatusBarItem: () => {} },
+            './telemetry': { activate: () => {}, deactivate: () => {} },
+            './update': { update: () => {}, updateChannelConfigSection: '' },
+        });
+
+        await mockVscodeTestFacing.activateExtension(activate);
+        openHandlers.forEach(handler => handler(document));
+        changeHandlers.forEach(handler => handler({ document }));
+        resultsObserver!();
+        await Promise.resolve();
+
+        assert.strictEqual(rebaseCalls, 0);
+        assert.strictEqual(diagnosticClears, 4);
+    });
+});
