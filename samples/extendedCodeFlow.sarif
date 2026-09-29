@@ -1,0 +1,275 @@
+{
+    "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+    "version": "2.1.0",
+    "properties": {
+        "comment": "Demonstrates nestingLevel, importance, kinds, executionOrder, and state in a code flow."
+    },
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "Extended code-flow demo",
+                    "rules": [
+                        {
+                            "id": "DEMO-CODEFLOW-001",
+                            "name": "UntrustedCommandExecution",
+                            "shortDescription": {
+                                "text": "Untrusted input reaches a command execution function."
+                            }
+                        }
+                    ]
+                }
+            },
+            "artifacts": [
+                {
+                    "location": {
+                        "uri": "file:///tmp/sarif-trace-demo.c"
+                    },
+                    "contents": {
+                        "text": "#include <stdlib.h>\n\nstatic const char *decode_request(const char *request) {\n    return request;\n}\n\nvoid handle_request(const char *request) {\n    const char *command = decode_request(request);\n    log_request(command);\n    if (command != NULL)\n        system(command);\n}\n"
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "ruleId": "DEMO-CODEFLOW-001",
+                    "level": "error",
+                    "message": {
+                        "text": "Untrusted request data reaches system()."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "index": 0
+                                },
+                                "region": {
+                                    "startLine": 11,
+                                    "startColumn": 9,
+                                    "endColumn": 24
+                                }
+                            }
+                        }
+                    ],
+                    "codeFlows": [
+                        {
+                            "message": {
+                                "text": "Flow of untrusted request data to command execution."
+                            },
+                            "threadFlows": [
+                                {
+                                    "message": {
+                                        "text": "Request-processing thread"
+                                    },
+                                    "locations": [
+                                        {
+                                            "executionOrder": 1,
+                                            "nestingLevel": 0,
+                                            "importance": "important",
+                                            "kinds": ["enter", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Enter handle_request with untrusted input"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 7,
+                                                        "startColumn": 1
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 2,
+                                            "nestingLevel": 1,
+                                            "importance": "unimportant",
+                                            "kinds": ["call", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Call decode_request"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 8,
+                                                        "startColumn": 27,
+                                                        "endColumn": 50
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 3,
+                                            "nestingLevel": 2,
+                                            "importance": "unimportant",
+                                            "kinds": ["enter", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Enter decode_request"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 3,
+                                                        "startColumn": 1
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 4,
+                                            "nestingLevel": 2,
+                                            "importance": "unimportant",
+                                            "kinds": ["return", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Return the decoded request"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 4,
+                                                        "startColumn": 5,
+                                                        "endColumn": 20
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 5,
+                                            "nestingLevel": 1,
+                                            "importance": "important",
+                                            "kinds": ["acquire", "taint"],
+                                            "state": {
+                                                "command": {
+                                                    "text": "untrusted request data"
+                                                }
+                                            },
+                                            "location": {
+                                                "message": {
+                                                    "text": "Assign untrusted data to command"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 8,
+                                                        "startColumn": 5,
+                                                        "endColumn": 51
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 6,
+                                            "nestingLevel": 1,
+                                            "importance": "unimportant",
+                                            "kinds": ["call", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Record the request in the audit log"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 9,
+                                                        "startColumn": 5,
+                                                        "endColumn": 26
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 7,
+                                            "nestingLevel": 1,
+                                            "importance": "important",
+                                            "kinds": ["branch", "true"],
+                                            "state": {
+                                                "command": {
+                                                    "text": "{expr} != NULL"
+                                                }
+                                            },
+                                            "location": {
+                                                "message": {
+                                                    "text": "The non-null branch is taken"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 10,
+                                                        "startColumn": 5,
+                                                        "endColumn": 25
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 8,
+                                            "nestingLevel": 1,
+                                            "importance": "essential",
+                                            "kinds": ["call", "function", "danger"],
+                                            "state": {
+                                                "command": {
+                                                    "text": "untrusted request data"
+                                                }
+                                            },
+                                            "location": {
+                                                "message": {
+                                                    "text": "Execute the untrusted command"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 11,
+                                                        "startColumn": 9,
+                                                        "endColumn": 24
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "executionOrder": 9,
+                                            "nestingLevel": 0,
+                                            "importance": "important",
+                                            "kinds": ["exit", "function"],
+                                            "location": {
+                                                "message": {
+                                                    "text": "Exit handle_request"
+                                                },
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "index": 0
+                                                    },
+                                                    "region": {
+                                                        "startLine": 12,
+                                                        "startColumn": 1
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
