@@ -13,7 +13,7 @@ const proxyquire = require('proxyquire').noCallThru();
 // modules only available in the VS Code extension host / Node runtime (vscode, chokidar, mobx,
 // node-fetch). Stub them out, using `@global` so the `vscode` stub also satisfies nested `require`s,
 // so we can unit test the pure `selectLatestAnalysesPerCategory` helper in isolation.
-const { selectLatestAnalysesPerCategory } = proxyquire('./index.activateGithubAnalyses', {
+const { selectLatestAnalysesPerCategory, parseNextLinkUrl } = proxyquire('./index.activateGithubAnalyses', {
     'chokidar': { watch: () => ({}) },
     'mobx': { observe: () => { } },
     'node-fetch': { default: () => { }, Response: class { } },
@@ -54,7 +54,7 @@ describe('selectLatestAnalysesPerCategory', () => {
         assert.deepStrictEqual(result.map((a: any) => a.id), [2]);
     });
 
-    it('falls back to tool.name when category is absent', () => {
+    it('dedupes by tool.name when category is absent', () => {
         const analyses = [
             { id: 2, commit_sha: commitSha, created_at: '2024-01-01T02:00:00Z', tool: { name: 'ESLint' }, results_count: 1 },
             { id: 1, commit_sha: commitSha, created_at: '2024-01-01T01:00:00Z', tool: { name: 'ESLint' }, results_count: 1 },
@@ -63,6 +63,21 @@ describe('selectLatestAnalysesPerCategory', () => {
         const result = selectLatestAnalysesPerCategory(analyses, commitSha);
 
         assert.deepStrictEqual(result.map((a: any) => a.id), [2]);
+    });
+
+    // GitHub only treats a new upload as superseding an earlier one when BOTH tool and category
+    // match, so two different tools can legitimately share the same category string. Deduping by
+    // category alone would incorrectly collapse these into a single analysis, silently dropping one
+    // tool's results.
+    it('keeps both analyses when different tools share the same category', () => {
+        const analyses = [
+            { id: 2, commit_sha: commitSha, created_at: '2024-01-01T02:00:00Z', tool: { name: 'ESLint' }, results_count: 1, category: '/language:javascript' },
+            { id: 1, commit_sha: commitSha, created_at: '2024-01-01T01:00:00Z', tool: { name: 'CodeQL' }, results_count: 1, category: '/language:javascript' },
+        ];
+
+        const result = selectLatestAnalysesPerCategory(analyses, commitSha);
+
+        assert.deepStrictEqual(result.map((a: any) => a.id).sort(), [1, 2]);
     });
 
     it('excludes analyses for other commits', () => {
@@ -74,5 +89,27 @@ describe('selectLatestAnalysesPerCategory', () => {
         const result = selectLatestAnalysesPerCategory(analyses, commitSha);
 
         assert.deepStrictEqual(result.map((a: any) => a.id), [1]);
+    });
+});
+
+describe('parseNextLinkUrl', () => {
+    it('returns undefined when the header is missing', () => {
+        assert.strictEqual(parseNextLinkUrl(null), undefined);
+        assert.strictEqual(parseNextLinkUrl(undefined), undefined);
+        assert.strictEqual(parseNextLinkUrl(''), undefined);
+    });
+
+    it('extracts the rel="next" url amongst other rels', () => {
+        const linkHeader = '<https://api.github.com/repos/o/r/code-scanning/analyses?page=2>; rel="next", '
+            + '<https://api.github.com/repos/o/r/code-scanning/analyses?page=5>; rel="last"';
+
+        assert.strictEqual(parseNextLinkUrl(linkHeader), 'https://api.github.com/repos/o/r/code-scanning/analyses?page=2');
+    });
+
+    it('returns undefined when there is no next page (last page reached)', () => {
+        const linkHeader = '<https://api.github.com/repos/o/r/code-scanning/analyses?page=1>; rel="prev", '
+            + '<https://api.github.com/repos/o/r/code-scanning/analyses?page=1>; rel="first"';
+
+        assert.strictEqual(parseNextLinkUrl(linkHeader), undefined);
     });
 });

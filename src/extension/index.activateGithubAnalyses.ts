@@ -256,48 +256,66 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return undefined;
         }
 
-        // STEP 2: Fetch
+        // STEP 2 & 3: Fetch and parse, following pagination.
+        // The default page size (30) can be smaller than the number of analyses GitHub retains for a
+        // branch, which previously meant only the first page was ever inspected: a commit with many
+        // analyses (or one that happened to sit near a page boundary) could silently lose categories.
+        // Request the max page size and follow `Link: rel="next"` up to a generous safety cap so we
+        // reliably see every analysis for the intersecting commit without risking an unbounded crawl
+        // of the repository's entire analysis history.
         const branchName = store.branch;
-        let analysesResponse: Response | undefined;
-        try {
-            // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
-            analysesResponse = await fetch(`https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}`, {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
-                },
-            });
-        } catch (error) {
-            // Expected error value if the network is disabled.
-            // {
-            //     "message": "request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com",
-            //     "type": "system",
-            //     "errno": "ENOTFOUND",
-            //     "code": "ENOTFOUND"
-            // }
-            updateMessage('Network error. Refresh to try again.');
-        }
-        if (!analysesResponse) {
-            return undefined;
-        }
-        if (analysesResponse.status === 403) {
-            updateMessage('GitHub Advanced Security is not enabled for this repository.');
-            return undefined;
-        }
+        let nextUrl: string | undefined = `https://api.github.com/repos/${config.user}/${config.repoName}/code-scanning/analyses?ref=refs/heads/${branchName}&per_page=100`;
+        const analyses: AnalysisInfo[] = [];
+        const maxPages = 10; // 10 * 100 = 1000 analyses, far more than any branch should need for this lookup.
+        for (let page = 0; nextUrl && page < maxPages; page++) {
+            let analysesResponse: Response | undefined;
+            try {
+                // Useful for debugging the progress indicator: await new Promise(resolve => setTimeout(resolve, 2000));
+                analysesResponse = await fetch(nextUrl, {
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                });
+            } catch (error) {
+                // Expected error value if the network is disabled.
+                // {
+                //     "message": "request to https://api.github.com/repos/microsoft/sarif-vscode-extension/code-scanning/analyses?ref=refs/heads/main failed, reason: getaddrinfo ENOTFOUND api.github.com",
+                //     "type": "system",
+                //     "errno": "ENOTFOUND",
+                //     "code": "ENOTFOUND"
+                // }
+                if (page === 0) {
+                    updateMessage('Network error. Refresh to try again.');
+                    return undefined;
+                }
+                break; // Keep whatever we already gathered from prior pages.
+            }
+            if (analysesResponse.status === 403) {
+                if (page === 0) {
+                    updateMessage('GitHub Advanced Security is not enabled for this repository.');
+                    return undefined;
+                }
+                break;
+            }
 
-        // STEP 3: Parse
-        const anyResponse = await analysesResponse.json();
-        if (anyResponse.message) {
-            // Sample message response:
-            // {
-            //     "message": "You are not authorized to read code scanning alerts.",
-            //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
-            // }
-            const messageResponse = anyResponse as { message: string, documentation_url: string };
-            updateMessage(messageResponse.message);
-            return undefined;
-        }
+            const anyResponse = await analysesResponse.json();
+            if (anyResponse.message) {
+                // Sample message response:
+                // {
+                //     "message": "You are not authorized to read code scanning alerts.",
+                //     "documentation_url": "https://docs.github.com/rest/reference/code-scanning#list-code-scanning-analyses-for-a-repository"
+                // }
+                if (page === 0) {
+                    const messageResponse = anyResponse as { message: string, documentation_url: string };
+                    updateMessage(messageResponse.message);
+                    return undefined;
+                }
+                break;
+            }
 
-        const analyses = anyResponse as AnalysisInfo[];
+            analyses.push(...anyResponse as AnalysisInfo[]);
+            nextUrl = parseNextLinkUrl(analysesResponse.headers.get('link'));
+        }
 
         // Possibilities:
         // a) analysis is not enabled for repo or branch.
@@ -481,25 +499,44 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
  * a distinct `category`. Previously this extension deduplicated by `tool.name`, which meant only the
  * single most-recent CodeQL analysis (e.g. just `java`) was ever loaded, silently dropping the rest.
  *
- * This instead deduplicates by `category` (falling back to `tool.name` for older/incomplete API
- * responses that don't report a category) so that one analysis per category/language/tool is kept.
+ * GitHub only considers a new upload to supersede an earlier one when *both* `tool` and `category`
+ * match (https://docs.github.com/rest/code-scanning/code-scanning), so `category` alone is not a
+ * unique analysis-stream key: two different tools can legitimately share the same category (or both
+ * omit it). This instead deduplicates by the `(tool.name, category)` pair, so that one analysis per
+ * tool+category "stream" is kept, instead of conflating different tools or discarding one of them.
  * Analyses are assumed to already be sorted most-recent-first (as the GitHub API returns them), so
- * the first analysis seen for a given category is the one retained.
+ * the first analysis seen for a given stream is the one retained.
  *
  * @param analyses All analyses returned by the `GET /code-scanning/analyses` API, in API (most-recent-first) order.
  * @param commitSha The commit to select analyses for.
  */
 export function selectLatestAnalysesPerCategory(analyses: AnalysisInfo[], commitSha: string): AnalysisInfo[] {
-    const categoriesSeen = new Set<string>();
+    const streamsSeen = new Set<string>();
     return analyses.filter(analysis => {
         if (analysis.commit_sha !== commitSha) return false;
 
-        const category = analysis.category ?? analysis.tool.name;
-        if (categoriesSeen.has(category)) return false;
+        // Use a separator that cannot appear in a tool name or category to avoid key collisions
+        // between e.g. tool "A", category "B\x00C" and tool "A\x00B", category "C".
+        const streamKey = `${analysis.tool.name}\x00${analysis.category ?? ''}`;
+        if (streamsSeen.has(streamKey)) return false;
 
-        categoriesSeen.add(category);
+        streamsSeen.add(streamKey);
         return true;
     });
+}
+
+/**
+ * Parses the next-page URL, if any, from a GitHub REST API `Link` response header.
+ * Sample header value:
+ * `<https://api.github.com/.../analyses?page=2>; rel="next", <https://api.github.com/.../analyses?page=5>; rel="last"`
+ */
+export function parseNextLinkUrl(linkHeader: string | null | undefined): string | undefined {
+    if (!linkHeader) return undefined;
+    for (const part of linkHeader.split(',')) {
+        const match = /<([^>]+)>\s*;\s*rel="next"/.exec(part.trim());
+        if (match) return match[1];
+    }
+    return undefined;
 }
 
 function errorToString(e: unknown) {
