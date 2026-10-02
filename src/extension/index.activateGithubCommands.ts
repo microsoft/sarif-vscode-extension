@@ -34,8 +34,9 @@ export function activateGithubCommands(disposables: Disposable[], store: Store, 
             ignoreFocusOut: true,
             prompt: 'Provide a comment for this code scanning alert dismissal',
             validateInput: value => {
-                if (!value.trim()) return 'A dismissal comment is required.';
-                if (value.length > dismissedCommentMaxLength) return `Dismissal comments cannot exceed ${dismissedCommentMaxLength} characters.`;
+                const normalizedValue = value.trim();
+                if (!normalizedValue) return 'A dismissal comment is required.';
+                if (normalizedValue.length > dismissedCommentMaxLength) return `Dismissal comments cannot exceed ${dismissedCommentMaxLength} characters.`;
                 return undefined;
             },
         });

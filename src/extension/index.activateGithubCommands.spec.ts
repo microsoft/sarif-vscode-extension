@@ -16,6 +16,7 @@ function makeStubs(response: { status: number, statusText?: string, json: () => 
     const fetch = fake.resolves(response);
     const showErrorMessage = fake.resolves(undefined);
     const showInformationMessage = fake.resolves(undefined);
+    let showInputBoxOptions: { validateInput: (value: string) => string | undefined } | undefined;
     let showInputBox = async (): Promise<string | undefined> => 'Dismissal comment';
     const stubs = {
         'node-fetch': fetch,
@@ -29,7 +30,10 @@ function makeStubs(response: { status: number, statusText?: string, json: () => 
             window: {
                 showErrorMessage,
                 showInformationMessage,
-                showInputBox: () => showInputBox(),
+                showInputBox: (options: { validateInput: (value: string) => string | undefined }) => {
+                    showInputBoxOptions = options;
+                    return showInputBox();
+                },
             },
         },
     };
@@ -65,6 +69,7 @@ function makeStubs(response: { status: number, statusText?: string, json: () => 
         showInformationMessage,
         store,
         stubs,
+        getShowInputBoxOptions: () => showInputBoxOptions,
         setShowInputBox: (value: string | undefined) => showInputBox = async () => value,
     };
 }
@@ -142,5 +147,19 @@ describe('activateGithubCommands', () => {
         await context.dismiss();
 
         assert.strictEqual(context.fetch.callCount, 0);
+    });
+
+    it('validates the trimmed dismissal comment length', async () => {
+        const context = makeStubs({
+            status: 200,
+            json: async () => ({ state: 'dismissed' }),
+        });
+        context.setShowInputBox(undefined);
+
+        await context.dismiss();
+
+        const validateInput = context.getShowInputBoxOptions()!.validateInput;
+        assert.strictEqual(validateInput(` ${'a'.repeat(280)} `), undefined);
+        assert.strictEqual(validateInput(` ${'a'.repeat(281)} `), 'Dismissal comments cannot exceed 280 characters.');
     });
 });
