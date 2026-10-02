@@ -20,12 +20,18 @@ import { applyFix } from './index.activateFixes';
 import { UriRebaser } from './uriRebaser';
 
 // Subset of the GitHub API.
-interface AnalysisInfo {
+export interface AnalysisInfo {
     id: number;
     commit_sha: string;
     created_at: string;
     tool: { name: string };
     results_count: number;
+    // Identifies the analysis "stream" a result came from (e.g. a language or a custom category
+    // set at upload time via `upload-sarif`'s `category` input). A single commit can have multiple
+    // analyses that share the same tool (e.g. CodeQL analyzing several languages, or a merged SARIF
+    // file uploaded alongside per-language SARIF files) but each will have a distinct `category`.
+    // Older API responses / some third-party tools may omit this field.
+    category?: string;
 }
 
 // A concise representation of AnalysisInfo[] aligned by commit.
@@ -300,7 +306,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             updateMessage('Refresh to check for more current results.');
             return undefined;
         }
-        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${results_count}`).join('\n');
+        const analysesString = analyses.map(({ created_at, commit_sha, id, tool, results_count, category }) => `${created_at} ${commit_sha} ${id} ${tool.name} ${category ?? '(no category)'} ${results_count}`).join('\n');
         outputChannel.appendLine(`Analyses:\n${analysesString}\n`);
 
         // STEP 4: Cross-reference with Git
@@ -324,16 +330,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
 
         // GitHub sorts analyses by most recent first.
-        const toolsSeen = new Set<string>();
-        const analysisInfos = analyses.filter(analysis => {
-            if (analysis.commit_sha !== intersectingCommit) return false;
-
-            // Some repos have duplicate logs/runs per commit. To mitigate this, we only allow one run/log per tool.
-            if (toolsSeen.has(analysis.tool.name)) return false;
-
-            toolsSeen.add(analysis.tool.name);
-            return true;
-        });
+        const analysisInfos = selectLatestAnalysesPerCategory(analyses, intersectingCommit);
         if (!analysisInfos.length) {
             return undefined;
         }
@@ -472,6 +469,36 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
     observe(store, 'remoteAnalysisInfoUpdated', async () => {
         const analysisInfo = await fetchAnalysisInfo(message => store.banner = message);
         updateAnalysisInfo(analysisInfo);
+    });
+}
+
+/**
+ * Selects the set of analyses belonging to `commitSha` that should be downloaded and merged.
+ *
+ * A single commit can have multiple analyses uploaded against it (GitHub Code Scanning calls this
+ * SARIF "category"). For example, a CodeQL default-setup scan can upload one analysis per language
+ * (java, javascript, actions, ...), and each of these shares the same `tool.name` ("CodeQL") but has
+ * a distinct `category`. Previously this extension deduplicated by `tool.name`, which meant only the
+ * single most-recent CodeQL analysis (e.g. just `java`) was ever loaded, silently dropping the rest.
+ *
+ * This instead deduplicates by `category` (falling back to `tool.name` for older/incomplete API
+ * responses that don't report a category) so that one analysis per category/language/tool is kept.
+ * Analyses are assumed to already be sorted most-recent-first (as the GitHub API returns them), so
+ * the first analysis seen for a given category is the one retained.
+ *
+ * @param analyses All analyses returned by the `GET /code-scanning/analyses` API, in API (most-recent-first) order.
+ * @param commitSha The commit to select analyses for.
+ */
+export function selectLatestAnalysesPerCategory(analyses: AnalysisInfo[], commitSha: string): AnalysisInfo[] {
+    const categoriesSeen = new Set<string>();
+    return analyses.filter(analysis => {
+        if (analysis.commit_sha !== commitSha) return false;
+
+        const category = analysis.category ?? analysis.tool.name;
+        if (categoriesSeen.has(category)) return false;
+
+        categoriesSeen.add(category);
+        return true;
     });
 }
 
