@@ -20,10 +20,10 @@ export class DetailsLayouts extends Component {
         } as unknown as Result;
 
         return <div className="svDetailsLayouts">
-            <Details result={result} height={observable.box(300)} />
-            <Details result={result} height={observable.box(600)} />
-            <Details result={result} height={observable.box(300)} />
-            <Details result={result} height={observable.box(600)} />
+            <Details result={result} resultsFixed={[]} height={observable.box(300)} />
+            <Details result={result} resultsFixed={[]} height={observable.box(600)} />
+            <Details result={result} resultsFixed={[]} height={observable.box(300)} />
+            <Details result={result} resultsFixed={[]} height={observable.box(600)} />
         </div>;
     }
 }
