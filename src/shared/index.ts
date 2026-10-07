@@ -47,6 +47,11 @@ declare module 'sarif' {
         _suppression?: 'not suppressed' | 'suppressed';
         _justification?: string;
     }
+
+    interface Location {
+        _message?: string;
+        _markdown?: string;
+    }
 }
 
 // console.log(format(`'{0}' was not evaluated for check '{2}' as the analysis is not relevant based on observed metadata: {1}.`, ['x', 'y', 'z']))
@@ -127,6 +132,11 @@ export function augmentLog(log: Log, rules?: Map<string, ReportingDescriptor>, w
             const message = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
             result._message = format(message.text || result.message?.text, result.message.arguments) ?? '—';
             result._markdown = format(message.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
+            result.relatedLocations?.forEach(location => {
+                const locMessage = result._rule?.messageStrings?.[location.message?.id ?? -1] ?? location.message;
+                location._message = format(locMessage?.text || location.message?.text, location.message?.arguments) ?? '—';
+                location._markdown = format(locMessage?.markdown || location.message?.markdown, location.message?.arguments);
+            });
 
             result.level = effectiveLevel(result);
             result.baselineState = result.baselineState ?? 'new';
@@ -182,7 +192,7 @@ Run.artifacts: Art[]
    contents: ArtCon
 */
 export function parseLocation(result: Result, loc?: Location) {
-    const message = loc?.message?.text;
+    const message = loc?._message ?? loc?.message?.text;
     const [uri, _, uriContent] = parseArtifactLocation(result, loc?.physicalLocation?.artifactLocation);
     const region = loc?.physicalLocation?.region;
     return { message, uri, uriContent, region };

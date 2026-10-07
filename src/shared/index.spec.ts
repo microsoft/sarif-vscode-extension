@@ -83,6 +83,28 @@ describe('augmentLog', () => {
         augmentLog(log, new Map<string, ReportingDescriptor>());
         assert.strictEqual(run0result._rule, run1result._rule);
     });
+
+    it('augments related location messages from message id', () => {
+        log._augmented = false;
+        log.runs[0].tool.driver.rules = [{
+            id: 'TEST001',
+            messageStrings: {
+                relatedMessage: {
+                    text: 'Related {0}'
+                }
+            }
+        }];
+        result.ruleId = 'TEST001';
+        result.relatedLocations = [{
+            message: {
+                id: 'relatedMessage',
+                arguments: ['location']
+            }
+        }];
+
+        augmentLog(log);
+        assert.strictEqual(result.relatedLocations![0]._message, 'Related location');
+    });
 });
 
 describe('effectiveLevel', () => {
