@@ -10,8 +10,8 @@ jobs:
       # Release creation
       contents: write
     steps:
-      - uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2.8.0
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -24,7 +24,7 @@ jobs:
       - run: vsce package
         name: Create VSIX
       - id: package_version
-        uses: Saionaro/extract-package-version@35ced6bfe3b1491af23de4db27c601697e6d8d17 # v1.3.0
+        uses: Saionaro/extract-package-version@a5ea15b23669502732d230f62cabfa92fb137a38 # v1.4.0
       - id: create_release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
