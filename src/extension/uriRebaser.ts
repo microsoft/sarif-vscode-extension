@@ -104,7 +104,9 @@ export class UriRebaser {
             // but obviously can't always be true.
             // Over-assuming the localUri.name is distinct. There could be 2+ open docs with the same name.
             const noWorkspace = !workspace.workspaceFolders?.length;
-            if ((noWorkspace || await workspaceHasDistinctFilename(file))
+            // Checked before the search to avoid it, and after it because the log can close during it.
+            if (this.store.distinctArtifactNames.has(file)
+                && (noWorkspace || await workspaceHasDistinctFilename(file))
                 && this.store.distinctArtifactNames.has(file)) {
 
                 const artifactUri = this.store.distinctArtifactNames.get(file)!; // Not undefined due to surrounding if.
@@ -188,7 +190,8 @@ export class UriRebaser {
 
             // Distinct Project Items
             const {file} = artifactUri;
-            const distinctFilename = await workspaceHasDistinctFilename(file);
+            // Checked before the search to avoid it, and after it because the log can close during it.
+            const distinctFilename = this.store.distinctArtifactNames.has(file) ? await workspaceHasDistinctFilename(file) : undefined;
             if (distinctFilename && this.store.distinctArtifactNames.has(file)) {
                 const localUri = distinctFilename;
                 this.updateValidatedUris(artifactUri, localUri);

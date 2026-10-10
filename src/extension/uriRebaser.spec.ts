@@ -193,4 +193,86 @@ describe('baser', () => {
         const rebasedArtifactUri = await rebaser.translateArtifactToLocal(artifactUri);
         assert.strictEqual(rebasedArtifactUri.toString(), localUri);
     });
+
+    describe('workspace search for a distinct filename', () => {
+        const directions = ['local to artifact', 'artifact to local'];
+        // Each search waits until the test ends it, so a test can act while the search runs.
+        const releasedSearches = () => {
+            const searches: { resolve: (files: Uri[]) => void }[] = [];
+            const findFiles = () => new Promise<Uri[]>(resolve => searches.push({ resolve }));
+            return { findFiles, searches };
+        };
+        const searchStarted = () => new Promise(resolve => setImmediate(resolve));
+
+        for (const platform of ['linux', 'win32']) {
+            const loadUriRebaser = (findFiles: () => Promise<Uri[]>) => {
+                const { UriRebaser } = proxyquire('./uriRebaser', {
+                    'vscode': {
+                        '@global': true,
+                        ...mockVscode,
+                        // No 'Locate...' choice, so a lookup that finds nothing does not open a file dialog.
+                        window: { ...mockVscode.window, showInformationMessage: async () => undefined },
+                        workspace: { ...mockVscode.workspace, workspaceFolders: [{ uri: Uri.file('/w') }], findFiles },
+                    },
+                    './platform': platform,
+                    './platformUriNormalize': platformUriNormalize,
+                    './uriExists': () => false,
+                });
+                return UriRebaser;
+            };
+
+            it(`does not search for a name that is not a distinct SARIF artifact name (${platform})`, async () => {
+                let searches = 0;
+                const UriRebaser = loadUriRebaser(async () => { searches++; return [Uri.file('/w/a.c')]; });
+                const rebaser = new UriRebaser({ distinctArtifactNames: new Map() });
+                assert.strictEqual(await rebaser.translateLocalToArtifact(Uri.file('/w/a.c')), undefined);
+                assert.strictEqual(await rebaser.translateArtifactToLocal('file:///ci/a.c', undefined), undefined);
+                assert.strictEqual(searches, 0);
+            });
+
+            it(`does not search for a name that the loaded logs do not hold (${platform})`, async () => {
+                for (const direction of directions) {
+                    let searches = 0;
+                    const UriRebaser = loadUriRebaser(async () => { searches++; return [Uri.file('/w/a.c')]; });
+                    const rebaser = new UriRebaser({ distinctArtifactNames: new Map([['b.c', 'file:///ci/b.c']]) });
+                    const translated = direction === 'local to artifact'
+                        ? await rebaser.translateLocalToArtifact(Uri.file('/w/a.c'))
+                        : await rebaser.translateArtifactToLocal('file:///ci/a.c', undefined);
+                    assert.strictEqual(translated, undefined, direction);
+                    assert.strictEqual(searches, 0, direction);
+                }
+            });
+
+            it(`maps a distinct SARIF artifact name that the search finds once (${platform})`, async () => {
+                for (const direction of directions) {
+                    let searches = 0;
+                    const UriRebaser = loadUriRebaser(async () => { searches++; return [Uri.file('/w/a.c')]; });
+                    const rebaser = new UriRebaser({ distinctArtifactNames: new Map([['a.c', 'file:///ci/a.c']]) });
+                    const translated = direction === 'local to artifact'
+                        ? await rebaser.translateLocalToArtifact(Uri.file('/w/a.c'))
+                        : await rebaser.translateArtifactToLocal('file:///ci/a.c', undefined);
+                    assert.strictEqual(translated?.toString(), direction === 'local to artifact' ? 'file:///ci/a.c' : 'file:///w/a.c', direction);
+                    assert.strictEqual(searches, 1, direction);
+                }
+            });
+
+            it(`does not map a name whose log closes during the search (${platform})`, async () => {
+                for (const direction of directions) {
+                    const distinctArtifactNames = new Map([['a.c', 'file:///ci/a.c']]);
+                    const { findFiles, searches } = releasedSearches();
+                    const UriRebaser = loadUriRebaser(findFiles);
+                    const rebaser = new UriRebaser({ distinctArtifactNames });
+                    const translated = direction === 'local to artifact'
+                        ? rebaser.translateLocalToArtifact(Uri.file('/w/a.c'))
+                        : rebaser.translateArtifactToLocal('file:///ci/a.c', undefined);
+                    await searchStarted();
+                    assert.strictEqual(searches.length, 1, direction);
+                    distinctArtifactNames.clear();
+                    searches[0].resolve([Uri.file('/w/a.c')]);
+                    assert.strictEqual(await translated, undefined, direction);
+                    assert.strictEqual(searches.length, 1, direction);
+                }
+            });
+        }
+    });
 });
