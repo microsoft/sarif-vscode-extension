@@ -82,7 +82,7 @@ export class ResultTableStore<G> extends TableStore<Result, G> {
 
     public menuContext(result: Result): Record<string, string> | undefined {
         // If no alertNumber, then don't show the context menu (which contains the Dismiss Alert commands).
-        if (!result.properties?.['github/alertNumber']) return undefined;
+        if (typeof result.properties?.['github/alertNumber'] !== 'number') return undefined;
 
         return { webviewSection: 'isGithubAlert', resultId: JSON.stringify(result._id) };
     }

@@ -31,14 +31,15 @@ export function activateFixes(disposables: Disposable[], store: Pick<Store, 'ana
                 const result = diagnostic?.result;
                 if (!result) return undefined;
 
+                const hasGithubAlert = typeof result.properties?.['github/alertNumber'] === 'number';
                 return [
                     new ResultQuickFix(diagnostic, result), // Mark as fixed
                     ...result.fixes?.map(fix => new ResultQuickFix(diagnostic, result, fix)) ?? [],
-                    ...result.properties?.['github/alertNumber'] === undefined ? [] : [ // Assumes only GitHub will use `github/alertNumber`.
+                    ...(hasGithubAlert ? [ // Assumes only GitHub will use `github/alertNumber`.
                         new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissFalsePositive', 'False Positive'),
                         new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissUsedInTests', 'Used in Tests'),
                         new  DismissCodeAction(diagnostic, result, 'sarif.alertDismissWontFix', 'Won\'t Fix'),
-                    ],
+                    ] : []),
                 ];
             },
             async resolveCodeAction(codeAction: ResultQuickFix) {

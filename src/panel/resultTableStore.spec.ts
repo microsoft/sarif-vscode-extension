@@ -35,6 +35,24 @@ describe('ResultTableStore', () => {
         assert.deepStrictEqual(resultTableStore3.visibleColumns.map((col) => col.name), ['Line', 'File']);
     });
 
+    it('only shows dismissal actions for numeric GitHub alert numbers', () => {
+        const resultTableStore = new ResultTableStore('File', result => result._relativeUri, resultsSource, filtersSource, selection);
+        const resultId = ['log', 0, 0];
+
+        assert.strictEqual(resultTableStore.menuContext({ _id: resultId } as Result), undefined);
+        assert.strictEqual(resultTableStore.menuContext({
+            _id: resultId,
+            properties: { 'github/alertNumber': '42' },
+        } as unknown as Result), undefined);
+        assert.deepStrictEqual(resultTableStore.menuContext({
+            _id: resultId,
+            properties: { 'github/alertNumber': 42 },
+        } as unknown as Result), {
+            webviewSection: 'isGithubAlert',
+            resultId: JSON.stringify(resultId),
+        });
+    });
+
     it.skip('groups the rows and rowItems based the grouping logic applied on resultsSource', () => {
         const groupBy = (result: Result) => result.locations
             ? result.locations[0].physicalLocation?.artifactLocation?.uri === '/folder/file_1.txt' ? 'file_1' : 'non file_1'
