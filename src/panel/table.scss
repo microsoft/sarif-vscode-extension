@@ -1,7 +1,8 @@
 .svTable {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    height: 100%;
+    overflow: auto;
     cursor: pointer;
     user-select: none;
 
@@ -27,11 +28,23 @@
 
     .svTableHeader {
         display: grid;
-        grid-auto-rows: 33px;
+        grid-auto-rows: 20px;
         color: rgb(139, 139, 139);
+        background-color: var(--vscode-editor-background);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-size: 10px; // Reduced font size
+        line-height: 18px; // Adjusted line height
         & > * { // Cell.
             position: relative; // For resize handle.
-            &:hover { background-color: var(--vscode-list-hoverBackground); }
+            padding: 1px 4px; // Minimal padding
+            display: flex;
+            align-items: center;
+            &:hover {
+                background-color: var(--vscode-list-hoverBackground);
+                z-index: 11; // Ensure hover is above other cells
+            }
         }
     }
 
@@ -39,8 +52,6 @@
         flex: 1 1;
         display: grid;
         grid-auto-rows: 22px;
-        overflow: auto;
-        scroll-padding: 48px 0;
 
         .svTableRow {
             grid-column: 1 / -1;

@@ -40,7 +40,7 @@ For future releases, see the [Release Page](https://github.com/microsoft/sarif-v
 
 ## 2.13.1
 * Security fix for a dependency
-* Fixed Extension not loading sarif results when 
+* Fixed Extension not loading sarif results when
 * Fixed Extension fails to load SARIF files without $schema property [issue #168](https://github.com/Microsoft/sarif-vscode-extension/issues/168)
 * Fixed Cannot load SARIF files with $schema set from sarif-spec github repo [issue #169](https://github.com/Microsoft/sarif-vscode-extension/issues/169)
 
@@ -109,7 +109,7 @@ For future releases, see the [Release Page](https://github.com/microsoft/sarif-v
 ## 2.5.0
 * Added feature to open and convert non-sarif static analysis file to sarif for analysis [issue #79](https://github.com/Microsoft/sarif-vscode-extension/issues/79)
     * New command to activate the converter is "Sarif: Convert and open a non-sarif file"
-    * Supported analysis tool files are: 
+    * Supported analysis tool files are:
         * AndroidStudio, ClangAnalyzer, CppCheck, ContrastSecurity, Fortify, FortifyFpr, FxCop, PREfast, Pylint, SemmleQL, StaticDriverVerifier, TSLint
 * Added support for showing QuickFix light bulb and context menu in the Problems panel when a Sarif result can be remapped
 * Fixed bug where the UI dialog for remapping allowed a non valid path to be entered [issue #92](https://github.com/Microsoft/sarif-vscode-extension/issues/92)

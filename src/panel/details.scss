@@ -3,7 +3,7 @@
     flex: 0 0 auto;
     display: grid;
     grid-template-rows: auto 1fr;
-    
+
     .svDetailsBody {
         overflow-y: overlay;
 
@@ -68,14 +68,18 @@
                 }
 
                 & {
-                    & > :hover { background-color: var(--vscode-list-hoverBackground); }
+                    .svListItem:hover { background-color: var(--vscode-list-hoverBackground); }
                 }
                 &.svSelected {
-                    & > .svItemSelected { background: var(--vscode-list-inactiveSelectionBackground); }
+                    .svListItem.svItemSelected { background: var(--vscode-list-inactiveSelectionBackground); }
                 }
                 &.svSelected:focus {
                     outline: none !important;
-                    & > .svItemSelected { background: var(--vscode-list-activeSelectionBackground); }
+                    .svListItem.svItemSelected { background: var(--vscode-list-activeSelectionBackground); }
+                }
+
+                & {
+                    & > :hover { background-color: var(--vscode-list-hoverBackground); }
                 }
             }
         }
@@ -88,5 +92,65 @@
 			padding-left: 22px;
 			margin-bottom: -10px;
 		}
+
+        .svStatesTable {
+            font-family: var(--vscode-editor-font-family);
+
+            & > div {
+                padding: 4px 8px;
+                border-bottom: 1px solid var(--vscode-panel-border);
+
+                &:nth-child(odd) {
+                    background-color: var(--vscode-list-hoverBackground);
+                }
+
+                &:hover {
+                    background-color: var(--vscode-list-activeSelectionBackground);
+                }
+            }
+        }
+    }
+
+    .svDetailsCodeflowAndStates {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .svStatesPane {
+        position: relative;
+        border-top: 1px solid var(--vscode-panel-border);
+        min-height: 150px;
+        display: flex;
+        flex-direction: column;
+
+        .svStatesPaneHeader {
+            font-size: 11px;
+            font-weight: bold;
+            padding: 8px;
+            color: var(--vscode-foreground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            background-color: var(--vscode-sideBar-background);
+        }
+
+        .svStatesPaneBody {
+            flex: 1;
+            overflow: hidden;
+
+            .svTable {
+                height: 100%;
+
+                .svTableHeader {
+                    background-color: var(--vscode-sideBar-background);
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                }
+
+                .svTableBody {
+                    overflow-y: auto;
+                    height: calc(100% - 20px); // Updated to match new header height
+                }
+            }
+        }
     }
 }

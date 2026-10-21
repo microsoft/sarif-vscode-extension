@@ -24,11 +24,34 @@ interface ResultTableProps<G> {
     renderGroup: (group: G) => ReactNode;
 }
 @observer export class ResultTable<G> extends PureComponent<ResultTableProps<G>> {
+    // Helper function to create span with conditional tooltip
+    private createSpanWithConditionalTooltip = (text: string, children?: React.ReactNode) => {
+        const content = children ?? text;
+        return (
+            <span
+                ref={(element) => {
+                    if (element && text) {
+                        // Check for truncation after layout
+                        setTimeout(() => {
+                            if (element.scrollWidth > element.clientWidth) {
+                                element.setAttribute('title', text);
+                            } else {
+                                element.removeAttribute('title');
+                            }
+                        }, 0);
+                    }
+                }}
+            >
+                {content}
+            </span>
+        );
+    };
+
     private renderCell = (column: Column<Result>, result: Result) => {
         const customRenderers = {
-            'File':     result => <span title={result._uri}>{result._uri?.file ?? '—'}</span>,
+            'File':     result => this.createSpanWithConditionalTooltip(result._uri ?? '', result._uri?.file ?? '—'),
             'Line':     result => <span>{result._region?.startLine ?? '—'}</span>,
-            'Message':  result => <span>{renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)}</span>,
+            'Message':  result => this.createSpanWithConditionalTooltip(result._message, renderMessageTextWithEmbeddedLinks(result._message, result, vscode.postMessage)),
             'Rule':     result => <>
                 <span>{result._rule?.name ?? '—'}</span>
                 <span className="svSecondary">{result.ruleId}</span>

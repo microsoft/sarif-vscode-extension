@@ -10,7 +10,6 @@ on:
 permissions:
   security-events: write # for sending sarif to code scanning
   contents: write # for accessing the cache
-  
 
 jobs:
   eslint:
@@ -44,7 +43,6 @@ jobs:
         with:
           name: eslint
           path: eslint.sarif
-
 
   unit-test:
     permissions:
