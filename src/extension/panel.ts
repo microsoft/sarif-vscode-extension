@@ -21,7 +21,8 @@ export class Panel {
     constructor(
         readonly context: Pick<ExtensionContext, 'extensionPath' | 'subscriptions'>,
         readonly basing: UriRebaser,
-        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'disableSelectionSync' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated'>) {
+        readonly store: Pick<Store, 'analysisInfo' | 'banner' | 'disableSelectionSync' | 'logs' | 'results' | 'resultsFixed' | 'remoteAnalysisInfoUpdated' | 'selectedLocation'>,
+        readonly decorations?: { setActiveResultId: (resultId: string | undefined) => void }) {
         observe(store.logs, change => {
             const {type, removed, added} = change as unknown as IArraySplice<Log>;
             if (type !== 'splice') throw new Error('Only splice allowed on store.logs.');
@@ -132,6 +133,15 @@ export class Panel {
                     const versionControlProvenance = log.runs[runIndex].versionControlProvenance;
                     const validatedUri = await basing.translateArtifactToLocal(uri, uriBase, versionControlProvenance);
                     if (!validatedUri) return;
+
+                    // Store the selected location for decorations
+                    store.selectedLocation = { uri: validatedUri.toString(), region };
+
+                    // Set the active result ID for decorations
+                    if (this.decorations) {
+                        this.decorations.setActiveResultId(JSON.stringify(message.id));
+                    }
+
                     await this.selectLocal(logUri, validatedUri, region);
                     break;
                 }
@@ -170,6 +180,12 @@ export class Panel {
                 case 'removeResultFixed': {
                     const idToRemove = JSON.stringify(message.id);
                     store.resultsFixed.removeFirst(id => id === idToRemove);
+                    break;
+                }
+                case 'setActiveResult': {
+                    if (this.decorations) {
+                        this.decorations.setActiveResultId(JSON.stringify(message.id));
+                    }
                     break;
                 }
                 default:

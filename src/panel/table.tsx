@@ -12,7 +12,7 @@ import { Column, RowGroup, RowItem, TableStore } from './tableStore';
 interface TableProps<T, G> {
     columns: Column<T>[];
     renderIconName?: (item: T) => string;
-    renderGroup: (group: G) => ReactNode;
+    renderGroup?: (group: G) => ReactNode;
     renderCell: (column: Column<T>, itemData: T) => ReactNode;
     store: TableStore<T, G>;
 }
@@ -57,16 +57,16 @@ interface TableProps<T, G> {
         return !rows.length
             ? children // Zero data.
             : <div className="svTable" data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-                <div className="svTableHeader" style={{ gridTemplateColumns: this.gridTemplateColumns }}>
-                    <div></div>
-                    {columns.map(col => <div key={col.name} tabIndex={0} className="svTableCell"
-                        onClick={action(() => store.toggleSort(col.name))}>
-                        {col.name}{/* No spacing */}
-                        {store.sortColumn === col.name && <Icon title="Sort" name={store.sortDir} />}
-                        <ResizeHandle size={col.width} horizontal />
-                    </div>)}
-                </div>
                 <div tabIndex={0} className={css('svTableBody', selection.get() && 'svSelected')} onKeyDown={this.onKeyDown}>
+                    <div className="svTableHeader" style={{ gridTemplateColumns: this.gridTemplateColumns }}>
+                        <div></div>
+                        {columns.map(col => <div key={col.name} tabIndex={0} className="svTableCell"
+                            onClick={action(() => store.toggleSort(col.name))}>
+                            {col.name}{/* No spacing */}
+                            {store.sortColumn === col.name && <Icon title="Sort" name={store.sortDir} />}
+                            <ResizeHandle size={col.width} horizontal />
+                        </div>)}
+                    </div>
                     {rows.map(row => {
                         const isSelected = selection.get() === row;
                         if (row instanceof RowGroup) {
@@ -78,7 +78,7 @@ interface TableProps<T, G> {
                                 }}>
                                 <div style={{ width: 6 }}></div>
                                 <Icon name={row.expanded ? 'chevron-down' : 'chevron-right'} />
-                                {renderGroup(row.title)}
+                                {renderGroup ? renderGroup(row.title) : <span>{String(row.title)}</span>}
                                 <Badge text={row.itemsFiltered.length} />
                             </Hi>;
                         }

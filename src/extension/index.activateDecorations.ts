@@ -20,13 +20,21 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
     // This keeps the decorations "pinned" while users navigate the thread flow steps.
     const activeResultId = observable.box<string | undefined>();
 
+    // Function to set the active result ID from external sources (like panel selections)
+    const setActiveResultId = (resultId: string | undefined) => {
+        activeResultId.set(resultId);
+    };
+
     const decorationTypeCallout = window.createTextEditorDecorationType({
         after: { color: new ThemeColor('problemsWarningIcon.foreground') }
     });
     const decorationTypeHighlight = window.createTextEditorDecorationType({
-        border: '1px',
+        backgroundColor: new ThemeColor('editor.selectionHighlightBackground'),
+        border: '2px',
         borderStyle: 'solid',
-        borderColor: new ThemeColor('problemsWarningIcon.foreground'),
+        borderColor: new ThemeColor('editor.selectionBackground'),
+        borderRadius: '3px',
+        isWholeLine: false, // Only highlight the specific region, not the whole line
     });
 
     // On selection change, set the `activeResultId`.
@@ -56,11 +64,14 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
     //    We don't trigger on log added as the user would need to select a result first.
     async function update() {
         const resultId = activeResultId.get();
+        const selectedLoc = store.selectedLocation;
+
         if (!resultId) {
             // This code path is only expected if `activeResultId` has not be set yet. See `activeResultId` comments.
             // Thus we are not concerned with clearing any previously rendered decorations.
             return;
         }
+
         const result = findResult(store.logs, JSON.parse(resultId) as ResultId);
         if (!result) {
             // Only in rare cases does `findResult` fail to resolve a `resultId` into a `result`.
@@ -72,15 +83,29 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
             const currentDoc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
-            const locationsInDoc = locations.filter(async tfl => {
+            // Filter locations that are in this document
+            const locationsInDoc = [];
+            for (const tfl of locations) {
                 const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
-                return await baser.translateLocalToArtifact(currentDoc.uri) === artifactUriString;
-            });
+                const localUri = await baser.translateLocalToArtifact(currentDoc.uri);
+                if (localUri === artifactUriString) {
+                    locationsInDoc.push(tfl);
+                }
+            }
 
             const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
             const ranges = locationsInDoc.map(tfl => driftedRegionToSelection(diffBlocks, currentDoc, tfl.location?.physicalLocation?.region, originalDoc));
-            editor.setDecorations(decorationTypeHighlight, ranges);
+
+            // Highlight the selected location if there's a selection and it matches this editor
+            if (selectedLoc && currentDoc.uri.toString() === selectedLoc.uri) {
+                // Find the range that matches the selected location
+                const selectedRange = driftedRegionToSelection(diffBlocks, currentDoc, selectedLoc.region, originalDoc);
+                editor.setDecorations(decorationTypeHighlight, [selectedRange]);
+            } else {
+                // Clear highlights if no selection or different editor
+                editor.setDecorations(decorationTypeHighlight, []);
+            }
 
             { // Sub-scope for callouts.
                 const messages = locationsInDoc.map((tfl) => {
@@ -96,11 +121,11 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
                     const tabCharAdj = tabCount * (editor.options.tabSize as number - 1); // Intra-character tabs are counted wrong.
                     return range.end.character + tabCharAdj;
                 });
-                const maxRangeEnd = Math.max(...rangesEndAdj) + 2; // + for Padding
+                const maxRangeEnd = Math.max(...rangesEndAdj, 0) + 2; // + for Padding, protect against empty array
                 const decorCallouts = rangesEnd.map((range, i) => ({
                     range,
                     hoverMessage: messages[i],
-                    renderOptions: { after: { contentText: ` ${'┄'.repeat(maxRangeEnd - rangesEndAdj[i])} ${messages[i]}`, } }, // ←
+                    renderOptions: { after: { contentText: ` ${'┄'.repeat(Math.max(0, maxRangeEnd - rangesEndAdj[i]))} ${messages[i]}`, } }, // ←
                 }));
                 editor.setDecorations(decorationTypeCallout, decorCallouts);
             }
@@ -108,6 +133,7 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
     }
 
     disposables.push({ dispose: observe(activeResultId, update) });
+    disposables.push({ dispose: observe(store, 'selectedLocation', update) });
     disposables.push(window.onDidChangeVisibleTextEditors(update));
     disposables.push({ dispose: observe(store.logs, change => {
         const {removed} = change as unknown as IArraySplice<Log>;
@@ -117,4 +143,7 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
             editor.setDecorations(decorationTypeHighlight, []);
         });
     }) });
+
+    // Return the function to set active result ID for external use
+    return { setActiveResultId };
 }

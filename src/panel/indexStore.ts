@@ -176,3 +176,7 @@ export async function postRefresh() {
 export async function postRemoveResultFixed(result: Result) {
     await vscode.postMessage({ command: 'removeResultFixed', id: result._id });
 }
+
+export async function postSetActiveResult(result: Result) {
+    await vscode.postMessage({ command: 'setActiveResult', id: result._id });
+}

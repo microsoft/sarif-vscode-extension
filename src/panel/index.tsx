@@ -24,7 +24,7 @@ export { DetailsLayouts } from './details.layouts';
 
 @observer export class Index extends Component<{ store: IndexStore }> {
     private showFilterPopup = observable.box(false)
-    private detailsPaneHeight = observable.box(300)
+    private detailsPaneHeight = observable.box(Math.floor(window.innerHeight * 0.6))
 
     render() {
         const {store} = this.props;
@@ -83,7 +83,21 @@ export { DetailsLayouts } from './details.layouts';
                                 const {pathname} = new URL(title, 'file:');
                                 return <>
                                     <span>{pathname.file || 'No Location'}</span>
-                                    <span className="ellipsis svSecondary">{pathname.path}</span>
+                                    <span
+                                        className="ellipsis svSecondary"
+                                        ref={(element) => {
+                                            if (element && pathname.path) {
+                                                // Check for truncation after layout
+                                                setTimeout(() => {
+                                                    if (element.scrollWidth > element.clientWidth) {
+                                                        element.setAttribute('title', pathname.path);
+                                                    } else {
+                                                        element.removeAttribute('title');
+                                                    }
+                                                }, 0);
+                                            }
+                                        }}
+                                    >{pathname.path}</span>
                                 </>;
                             }} />
                     </Tab>
@@ -92,7 +106,22 @@ export { DetailsLayouts } from './details.layouts';
                             renderGroup={(rule: ReportingDescriptor | undefined) => {
                                 return <>
                                     <span>{rule?.name ?? '—'}</span>
-                                    <span className="ellipsis svSecondary">{rule?.id ?? '—'}</span>
+                                    <span
+                                        className="ellipsis svSecondary"
+                                        ref={(element) => {
+                                            if (element) {
+                                                const ruleId = rule?.id ?? '—';
+                                                // Check for truncation after layout
+                                                setTimeout(() => {
+                                                    if (element.scrollWidth > element.clientWidth) {
+                                                        element.setAttribute('title', ruleId);
+                                                    } else {
+                                                        element.removeAttribute('title');
+                                                    }
+                                                }, 0);
+                                            }
+                                        }}
+                                    >{rule?.id ?? '—'}</span>
                                 </>;
                             }} />
                     </Tab>
@@ -102,7 +131,22 @@ export { DetailsLayouts } from './details.layouts';
                                 const {pathname} = new URL(log._uri);
                                 return <div key={i} className="svListItem">
                                     <div>{pathname.file}</div>
-                                    <div className="ellipsis svSecondary">{decodeFileUri(log._uri)}</div>
+                                    <div
+                                        className="ellipsis svSecondary"
+                                        ref={(element) => {
+                                            if (element) {
+                                                const uri = decodeFileUri(log._uri);
+                                                // Check for truncation after layout
+                                                setTimeout(() => {
+                                                    if (element.scrollWidth > element.clientWidth) {
+                                                        element.setAttribute('title', uri);
+                                                    } else {
+                                                        element.removeAttribute('title');
+                                                    }
+                                                }, 0);
+                                            }
+                                        }}
+                                    >{decodeFileUri(log._uri)}</div>
                                     <Icon name="close" title="Close Log"
                                         onClick={() => vscode.postMessage({ command: 'closeLog', uri: log._uri })} />
                                 </div>;
