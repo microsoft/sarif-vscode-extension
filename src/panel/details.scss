@@ -43,6 +43,36 @@
         &.svDetailsCodeflowAndStacks {
             display: grid;
 
+            &.svDetailsTrace {
+                grid-template-rows: auto minmax(0, 1fr);
+
+                .svTraceToolbar {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 12px;
+                    border-bottom: 1px solid var(--vscode-panel-border);
+
+                    button {
+                        margin-left: auto;
+                        border: 0;
+                        padding: 3px 8px;
+                        cursor: pointer;
+                        color: var(--vscode-button-secondaryForeground);
+                        background: var(--vscode-button-secondaryBackground);
+
+                        &:hover {
+                            background: var(--vscode-button-secondaryHoverBackground);
+                        }
+
+                        &:focus-visible {
+                            outline: 1px solid var(--vscode-focusBorder);
+                            outline-offset: 1px;
+                        }
+                    }
+                }
+            }
+
             & > .svList {
                 padding: 12px 0px;
                 scroll-padding: 12px 0;
@@ -57,6 +87,94 @@
 
                     & > * + * { margin-left: 6px; } // Standard
                     & > :first-child { flex: 1 1; }
+
+                    &.svListItemStatic {
+                        cursor: default;
+                    }
+
+                    .svTraceCollapsed {
+                        padding-left: 22px;
+
+                        button {
+                            border: 0;
+                            padding: 2px 6px;
+                            cursor: pointer;
+                            color: var(--vscode-textLink-foreground);
+                            background: transparent;
+
+                            &:hover {
+                                color: var(--vscode-textLink-activeForeground);
+                                text-decoration: underline;
+                            }
+
+                            &:focus-visible {
+                                outline: 1px solid var(--vscode-focusBorder);
+                            }
+                        }
+                    }
+
+                    .svTraceMessage {
+                        display: flex;
+                        align-items: center;
+                        min-width: 0;
+                        gap: 6px;
+
+                        .svTraceIndent {
+                            align-self: stretch;
+                            display: inline-flex;
+                            flex: none;
+
+                            & > span {
+                                width: 16px;
+                                border-left: 1px solid var(--vscode-tree-indentGuidesStroke);
+                            }
+                        }
+
+                        .svTraceStepNumber {
+                            box-sizing: border-box;
+                            flex: none;
+                            min-width: 20px;
+                            padding: 0 4px;
+                            border-radius: 3px;
+                            text-align: center;
+                            color: var(--vscode-badge-foreground);
+                            background: var(--vscode-badge-background);
+                        }
+
+                        .svTraceText {
+                            min-width: 0;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
+
+                        .svTraceKinds {
+                            display: inline-flex;
+                            flex: none;
+                            gap: 3px;
+
+                            .svTraceKind {
+                                padding: 0 4px;
+                                border: 1px solid var(--vscode-widget-border);
+                                border-radius: 8px;
+                                color: var(--vscode-descriptionForeground);
+                                font-size: 10px;
+                                line-height: 14px;
+                            }
+                        }
+
+                        &.svTrace-essential {
+                            font-weight: 600;
+
+                            .svTraceStepNumber {
+                                color: var(--vscode-editor-background);
+                                background: var(--vscode-problemsWarningIcon-foreground);
+                            }
+                        }
+
+                        &.svTrace-unimportant {
+                            color: var(--vscode-disabledForeground);
+                        }
+                    }
 
                     .svLineNum {
                         line-height: 16px;
