@@ -72,10 +72,14 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
             const currentDoc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
-            const locationsInDoc = locations.filter(async tfl => {
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
-                return await baser.translateLocalToArtifact(currentDoc.uri) === artifactUriString;
-            });
+            const locationChecks = await Promise.all(
+                locations.map(async tfl => {
+                    const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
+                    const matches = await baser.translateLocalToArtifact(currentDoc.uri) === artifactUriString;
+                    return { tfl, matches };
+                })
+            );
+            const locationsInDoc = locationChecks.filter(check => check.matches).map(check => check.tfl);
 
             const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
