@@ -14,6 +14,7 @@ import './details.scss';
 import './index.scss';
 import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
 import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
+import SuppressionListComponent from './suppressionlist';
 
 // ReactMarkdown blocks `vscode:` and `command:` URIs by default. This is a workaround.
 // vscode scheme: https://code.visualstudio.com/api/references/vscode-api#window.registerUriHandler
@@ -107,6 +108,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                                                 }}>
                                                                 {result._log._uri.file}{result._log._uriUpgraded && ' (upgraded)'}
                                                             </a>
+                            <span>Suppression</span>        <span><SuppressionListComponent initial_suppressions={result?.suppressions ?? []} result_id={result._id} /></span>
                             <span>Suppression</span>        <span>{renderSuppressionInformation(result)}</span>
                             {(() => {
                                 // Rendering "tags" reserved for a future release.
