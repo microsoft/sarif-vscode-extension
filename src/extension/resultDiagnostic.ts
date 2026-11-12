@@ -7,5 +7,8 @@ import { Diagnostic, DiagnosticSeverity, Range } from 'vscode';
 export class ResultDiagnostic extends Diagnostic {
     constructor(range: Range, message: string, severity: DiagnosticSeverity, readonly result: Result) {
         super(range, message, severity);
+        // Expose SARIF(ruleId) in problem panel - code'.
+        this.code = result.ruleId
+        this.source = 'SARIF'
     }
 }
