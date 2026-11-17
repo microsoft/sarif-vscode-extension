@@ -32,7 +32,7 @@
     };
     const state = localStorage.getItem('state');
     const store = new Store(JSON.parse(state) ?? defaultState, true);
-    const file = 'samples/demoSarif.json';
+    const file = 'samples/extendedCodeFlow.sarif';
     const response = await fetch(file);
     const log = await response.json();
     log._uri = `file:///Users/username/projects/${file}`;

@@ -13,7 +13,8 @@ import { parseArtifactLocation, parseLocation, decodeFileUri } from '../shared';
 import './details.scss';
 import './index.scss';
 import { postRemoveResultFixed, postSelectArtifact, postSelectLog } from './indexStore';
-import { List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
+import { buildTraceItems, isCollapsedTraceGroup, traceBaseNestingLevel, traceImportance, TraceItem, traceNestingDepth } from './traceView';
+import { css, List, Tab, TabPanel, renderMessageTextWithEmbeddedLinks } from './widgets';
 
 // ReactMarkdown blocks `vscode:` and `command:` URIs by default. This is a workaround.
 // vscode scheme: https://code.visualstudio.com/api/references/vscode-api#window.registerUriHandler
@@ -28,6 +29,11 @@ type TabName = 'Info' | 'Analysis Steps';
 interface DetailsProps { result: Result, resultsFixed: string[], height: IObservableValue<number> }
 @observer export class Details extends Component<DetailsProps> {
     private selectedTab = observable.box<TabName>('Info')
+    private showAllAnalysisSteps = observable.box(false)
+    private expandedTraceGroups = observable.set<string>()
+    private analysisStepSelection = observable.box<TraceItem | undefined>(undefined, { deep: false })
+    private disposers: (() => void)[] = []
+
     @computed private get threadFlowLocations(): ThreadFlowLocation[] {
 		return this.props.result?.codeFlows?.[0]?.threadFlows?.[0].locations ?? [];
 	}
@@ -36,10 +42,25 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
     }
     constructor(props: DetailsProps) {
         super(props);
-        autorun(() => {
+        this.disposers.push(autorun(() => {
             const hasThreadFlows = !!this.threadFlowLocations.length;
             this.selectedTab.set(hasThreadFlows ? 'Analysis Steps' : 'Info');
-        });
+        }));
+        this.disposers.push(this.analysisStepSelection.observe(change => {
+            const item = change.newValue;
+            if (!item || isCollapsedTraceGroup(item)) return;
+            postSelectArtifact(this.props.result, item.location?.physicalLocation);
+        }));
+    }
+    componentDidUpdate(prevProps: DetailsProps) {
+        if (prevProps.result === this.props.result) return;
+        this.showAllAnalysisSteps.set(false);
+        this.expandedTraceGroups.clear();
+        this.analysisStepSelection.set(undefined);
+        this.selectedTab.set(this.threadFlowLocations.length ? 'Analysis Steps' : 'Info');
+    }
+    componentWillUnmount() {
+        this.disposers.forEach(dispose => dispose());
     }
     render() {
         const renderRuleDesc = (result: Result) => {
@@ -64,6 +85,11 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
 
         const {result, resultsFixed, height} = this.props;
         const helpUri = result?._rule?.helpUri;
+        const traceLocations = this.threadFlowLocations;
+        const showAllAnalysisSteps = this.showAllAnalysisSteps.get();
+        const traceItems = buildTraceItems(traceLocations, showAllAnalysisSteps, this.expandedTraceGroups);
+        const unimportantStepCount = traceLocations.filter(location => traceImportance(location) === 'unimportant').length;
+        const baseNestingLevel = traceBaseNestingLevel(traceLocations);
 
         return <div className="svDetailsPane" style={{ height: height.get() }}>
             {result && <TabPanel selection={this.selectedTab}>
@@ -141,25 +167,67 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                     </div>
                 </Tab>
                 <Tab name="Analysis Steps" count={this.threadFlowLocations.length}>
-                    <div className="svDetailsBody svDetailsCodeflowAndStacks">
+                    <div className="svDetailsBody svDetailsCodeflowAndStacks svDetailsTrace">
+                        <div className="svTraceToolbar">
+                            <span className="svSecondary">
+                                {showAllAnalysisSteps
+                                    ? `${traceLocations.length} steps`
+                                    : `${traceLocations.length - unimportantStepCount} key steps`}
+                            </span>
+                            {unimportantStepCount > 0 && <button onClick={() => {
+                                if (showAllAnalysisSteps) {
+                                    this.expandedTraceGroups.clear();
+                                    const selection = this.analysisStepSelection.get();
+                                    if (selection && !isCollapsedTraceGroup(selection) && traceImportance(selection) === 'unimportant') {
+                                        this.analysisStepSelection.set(undefined);
+                                    }
+                                }
+                                this.showAllAnalysisSteps.set(!showAllAnalysisSteps);
+                            }}>
+                                {showAllAnalysisSteps
+                                    ? 'Hide unimportant steps'
+                                    : `Show full trace (${unimportantStepCount})`}
+                            </button>}
+                        </div>
                         {(() => {
-                            const renderThreadFlowLocation = (threadFlowLocation: ThreadFlowLocation) => {
-                                const marginLeft = ((threadFlowLocation.nestingLevel ?? 1) - 1) * 24;
-                                const { message, uri, region } = parseLocation(result, threadFlowLocation.location);
+                            const renderTraceItem = (item: TraceItem) => {
+                                if (isCollapsedTraceGroup(item)) {
+                                    const expanded = this.expandedTraceGroups.has(item.key);
+                                    return <div className="svTraceCollapsed">
+                                        <button aria-expanded={expanded} onClick={event => {
+                                            event.stopPropagation();
+                                            if (expanded) this.expandedTraceGroups.delete(item.key);
+                                            else this.expandedTraceGroups.add(item.key);
+                                        }}>
+                                            {expanded ? 'Hide' : 'Show'} {item.locations.length} unimportant {item.locations.length === 1 ? 'step' : 'steps'}
+                                        </button>
+                                    </div>;
+                                }
+
+                                const importance = traceImportance(item);
+                                const depth = traceNestingDepth(item, baseNestingLevel);
+                                const { message, uri, region } = parseLocation(result, item.location);
+                                const stepNumber = traceLocations.indexOf(item) + 1;
                                 return <>
-                                    <div className="ellipsis" style={{ marginLeft }}>{message ?? '—'}</div>
+                                    <div className={css('svTraceMessage', `svTrace-${importance}`)} title={`Step ${stepNumber}: ${message ?? '—'}`}>
+                                        <span className="svTraceIndent" aria-hidden="true">
+                                            {Array.from({ length: depth }, (_, i) => <span key={i}></span>)}
+                                        </span>
+                                        <span className="svTraceStepNumber">{stepNumber}</span>
+                                        <span className="svTraceText">{message ?? '—'}</span>
+                                        {!!item.kinds?.length && <span className="svTraceKinds">
+                                            {item.kinds.map(kind => <span className="svTraceKind" key={kind}>{kind}</span>)}
+                                        </span>}
+                                    </div>
                                     <div className="svSecondary">{uri?.file ?? '—'}</div>
                                     <div className="svLineNum">{region?.startLine}:{region?.startColumn ?? 1}</div>
                                 </>;
                             };
 
-                            const selection = observable.box<ThreadFlowLocation | undefined>(undefined, { deep: false });
-                            selection.observe(change => {
-                                const threadFlowLocation = change.newValue;
-                                postSelectArtifact(result, threadFlowLocation?.location?.physicalLocation);
-                            });
-
-                            return <List items={this.threadFlowLocations} renderItem={renderThreadFlowLocation} selection={selection} allowClear>
+                            return <List items={traceItems} renderItem={renderTraceItem} selection={this.analysisStepSelection}
+                                isSelectable={item => !isCollapsedTraceGroup(item)}
+                                itemKey={(item, i) => isCollapsedTraceGroup(item) ? `collapsed-${item.key}` : `step-${traceLocations.indexOf(item)}-${i}`}
+                                allowClear>
                                 <span className="svSecondary">No analysis steps in selected result.</span>
                             </List>;
                         })()}
@@ -203,6 +271,7 @@ interface DetailsProps { result: Result, resultsFixed: string[], height: IObserv
                                         </div>
                                     </div>;
                                 }
+                                return undefined;
                             });
                         })()}
                     </div>
