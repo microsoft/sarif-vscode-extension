@@ -18,6 +18,7 @@ import { Store } from './store';
 import { sendGithubConfig, sendGithubEligibility, sendGithubPromptChoice, sendGithubAnalysisFound, sendGithubAutofixApplied } from './telemetry';
 import { applyFix } from './index.activateFixes';
 import { UriRebaser } from './uriRebaser';
+import { openPrimaryRepository } from './gitRepository';
 
 // Subset of the GitHub API.
 interface AnalysisInfo {
@@ -60,9 +61,9 @@ export async function getInitializedGitApi(): Promise<API | undefined> {
 }
 
 // In the case of sub-modules, pick the root repo.
-export function getPrimaryRepository(git: API): Repository | undefined {
+export async function getPrimaryRepository(git: API): Promise<Repository | undefined> {
     const primaryWorkspaceFolderUriString = workspace.workspaceFolders?.[0]?.uri.toString(); // No trailing slash
-    return git.repositories.filter(repo => repo.rootUri.toString() === primaryWorkspaceFolderUriString)[0];
+    return openPrimaryRepository(git, primaryWorkspaceFolderUriString);
 }
 
 //  'off' | 'on' | 'prompt' are valid setting values. 'injected' is used if there is a value for
@@ -97,7 +98,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
             return sendGithubEligibility('No Git api');
         }
 
-        const repo = getPrimaryRepository(git);
+        const repo = await getPrimaryRepository(git);
         if (!repo) {
             outputChannel.appendLine('Not eligible to connect to GitHub Code Scanning: No Git repository.');
             return sendGithubEligibility('No Git repository');
@@ -311,7 +312,7 @@ export function activateGithubAnalyses(disposables: Disposable[], store: Store, 
         }
 
         // Find the intersection.
-        const repo = getPrimaryRepository(git);
+        const repo = await getPrimaryRepository(git);
         const commits = await repo?.log({}) ?? [];
         const commitsString = commits.map(({ commitDate, hash }) => `${commitDate?.toISOString().replace('.000', '')} ${hash}`).join('\n');
         outputChannel.appendLine(`Commits:\n${commitsString}\n`);
