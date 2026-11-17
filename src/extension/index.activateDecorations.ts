@@ -6,12 +6,13 @@ import { diffChars } from 'diff';
 import { IArraySplice, observable, observe } from 'mobx';
 import { Log } from 'sarif';
 import { Disposable, languages, Range, ThemeColor, window } from 'vscode';
-import { findResult, parseArtifactLocation, ResultId } from '../shared';
+import { findResult, ResultId } from '../shared';
 import '../shared/extension';
 import { getOriginalDoc } from './getOriginalDoc';
 import { driftedRegionToSelection } from './regionToSelection';
 import { ResultDiagnostic } from './resultDiagnostic';
 import { Store } from './store';
+import { traceLocationsInArtifact } from './traceLocationFilter';
 import { UriRebaser } from './uriRebaser';
 
 // Decorations are for Analysis Steps.
@@ -72,10 +73,8 @@ export function activateDecorations(disposables: Disposable[], store: Store, bas
             const currentDoc = editor.document;
             const locations = result.codeFlows?.[0]?.threadFlows?.[0]?.locations ?? [];
 
-            const locationsInDoc = locations.filter(async tfl => {
-                const [artifactUriString] = parseArtifactLocation(result, tfl.location?.physicalLocation?.artifactLocation);
-                return await baser.translateLocalToArtifact(currentDoc.uri) === artifactUriString;
-            });
+            const artifactUri = await baser.translateLocalToArtifact(currentDoc.uri);
+            const locationsInDoc = traceLocationsInArtifact(result, locations, artifactUri);
 
             const originalDoc = await getOriginalDoc(store.analysisInfo?.commit_sha, currentDoc);
             const diffBlocks = originalDoc ? diffChars(originalDoc.getText(), currentDoc.getText()) : [];
